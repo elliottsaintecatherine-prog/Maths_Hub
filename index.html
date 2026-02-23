@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HUB - Missions Mathématiques</title>
+
+    <style>
+        /* --- CSS THEME TERMINAL/HUB --- */
+        body {
+            background-color: #050505;
+            color: #e0e0e0;
+            font-family: 'Courier New', Courier, monospace;
+            margin: 0; padding: 20px;
+            min-height: 100vh;
+            display: flex; flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-align: center;
+            margin-bottom: 5px;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+        }
+
+        h3 {
+            color: #888;
+            font-weight: normal;
+            margin-top: 0;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        f1 {
+            color: #555;
+            font-size: 0.9rem;
+            font-style: italic;
+        }
+
+        /* Système de Filtres */
+        .filters {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .filter-btn {
+            background: #111;
+            border: 1px solid #333;
+            color: #aaa;
+            padding: 8px 15px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+            text-transform: uppercase;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .filter-btn:hover { background: #222; color: #fff; }
+        .filter-btn.active { border-color: #00f3ff; color: #00f3ff; background: rgba(0, 243, 255, 0.1); }
+
+        /* Grille des Jeux */
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        /* Carte de Jeu */
+        .game-card {
+            background: #0a0a0a;
+            border: 2px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .game-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--theme-color);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5), 0 0 15px var(--theme-color-glow);
+        }
+
+        .game-icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .game-title {
+            color: var(--theme-color);
+            font-size: 1.4rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin: 0 0 5px 0;
+            text-align: center;
+        }
+
+        .game-tags {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .tag {
+            font-size: 0.7rem;
+            padding: 3px 8px;
+            border-radius: 10px;
+            background: #222;
+            color: #fff;
+            border: 1px solid #444;
+        }
+
+        .tag.level { border-color: #aaa; color: #aaa; }
+        .tag.chapter { border-color: var(--theme-color); color: var(--theme-color); }
+
+        .game-desc {
+            font-size: 0.9rem;
+            color: #aaa;
+            text-align: center;
+            margin-bottom: 20px;
+            flex-grow: 1;
+        }
+
+        .play-btn {
+            background: var(--theme-color);
+            color: #000;
+            border: none;
+            padding: 12px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            cursor: pointer;
+            text-transform: uppercase;
+            border-radius: 4px;
+            text-decoration: none;
+            text-align: center;
+            display: block;
+        }
+
+        .play-btn:hover {
+            filter: brightness(1.2);
+        }
+
+        .game-card.disabled {
+            opacity: 0.5;
+            filter: grayscale(100%);
+            border-color: #333 !important;
+        }
+        .game-card.disabled:hover {
+            transform: none; box-shadow: none; cursor: not-allowed;
+        }
+        .game-card.disabled .play-btn {
+            background: #333; color: #666; cursor: not-allowed; pointer-events: none;
+        }
+
+        /* --- Bouton de Don --- */
+        .footer {
+            margin-top: 50px;
+            padding: 20px;
+            text-align: center;
+            width: 100%;
+        }
+
+        .donate-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #111;
+            color: #777;
+            border: 1px solid #333;
+            padding: 8px 16px;
+            border-radius: 20px;
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+        }
+
+        .donate-btn:hover {
+            color: #fff;
+            border-color: #ff9d00;
+            background: rgba(255, 157, 0, 0.1);
+            box-shadow: 0 0 10px rgba(255, 157, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+
+    <h1>DASHBOARD SCOLARIS</h1>
+    <h2>Missions d'entraînement Mathématiques</h2>
+    <br/>
+    <f1>Jeux élaborés par le seul et unique Elliott Sainte-Catherine</f1>
+    <br/>
+
+    <div class="filters">
+        <button class="filter-btn active" onclick="filtrerJeux('Tous')">Tous les niveaux</button>
+        <button class="filter-btn" onclick="filtrerJeux('Seconde')">Seconde</button>
+        <button class="filter-btn" onclick="filtrerJeux('Première')">Première</button>
+        <button class="filter-btn" onclick="filtrerJeux('Terminale')">Terminale</button>
+    </div>
+
+    <div class="games-grid" id="games-container">
+        </div>
+
+    <div class="footer">
+        <a href="VOTRE_LIEN_PAYPAL_ICI" target="_blank" class="donate-btn">
+            ☕ Soutenir le créateur
+        </a>
+    </div>
+
+    <script>
+        const listeJeux = [
+            {
+                id: "voleur",
+                titre: "Le Voleur de Copies",
+                icon: "🕵️‍♂️",
+                couleur: "#00f3ff",          
+                niveau: "Seconde",         
+                chapitre: "Fonctions & Graphiques",
+                description: "Infiltrez le système du lycée. Résolvez des calculs d'images, lisez des graphiques et interceptez le voleur.",
+                fichier: "le_voleur.html?jeu=Voleur", // <-- LE PARAMÈTRE EST LÀ
+                disponible: true
+            },
+            {
+                id: "enigma",
+                titre: "Projet Enigma",
+                icon: "🎲",
+                couleur: "#ff00ff",          
+                niveau: "Terminale",
+                chapitre: "Probabilités Conditionnelles",
+                description: "Déchiffrez les communications secrètes en utilisant les lois de probabilités et les arbres pondérés.",
+                fichier: "#", 
+                disponible: false            
+            },
+            {
+                id: "matrice",
+                titre: "La Matrice",
+                icon: "📊",
+                couleur: "#ffea00",          
+                niveau: "Terminale",
+                chapitre: "Vecteurs & Espace",
+                description: "Naviguez dans un espace en 3D en utilisant les équations paramétriques et cartésiennes pour trouver la sortie.",
+                fichier: "#", 
+                disponible: false
+            }
+        ];
+
+        const conteneur = document.getElementById('games-container');
+
+        function afficherJeux(filtreNiveau) {
+            conteneur.innerHTML = ""; 
+
+            listeJeux.forEach(jeu => {
+                if (filtreNiveau === "Tous" || jeu.niveau === filtreNiveau) {
+                    
+                    const carte = document.createElement('div');
+                    carte.className = `game-card ${jeu.disponible ? '' : 'disabled'}`;
+                    carte.style.setProperty('--theme-color', jeu.couleur);
+                    carte.style.setProperty('--theme-color-glow', jeu.couleur + '66'); 
+
+                    let bouttonHTML = jeu.disponible 
+                        ? `<a href="${jeu.fichier}" class="play-btn">LANCER LA MISSION</a>`
+                        : `<span class="play-btn">EN DÉVELOPPEMENT</span>`;
+
+                    carte.innerHTML = `
+                        <div class="game-icon">${jeu.icon}</div>
+                        <h2 class="game-title">${jeu.titre}</h2>
+                        <div class="game-tags">
+                            <span class="tag level">${jeu.niveau}</span>
+                            <span class="tag chapter">${jeu.chapitre}</span>
+                        </div>
+                        <p class="game-desc">${jeu.description}</p>
+                        ${bouttonHTML}
+                    `;
+
+                    conteneur.appendChild(carte);
+                }
+            });
+        }
+
+        function filtrerJeux(niveau) {
+            const boutons = document.querySelectorAll('.filter-btn');
+            boutons.forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.innerText.includes(niveau)) {
+                    btn.classList.add('active');
+                }
+            });
+            afficherJeux(niveau);
+        }
+
+        afficherJeux("Tous");
+    </script>
+</body>
+</html>

@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Le Voleur - MISSION CYBER</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- VARIABLES DE THEME --- */
+        :root {
+            --bg-color: #0b0f19;
+            --primary: #00f3ff;
+            --primary-glow: rgba(0, 243, 255, 0.4);
+            --secondary: #3b82f6;
+            --alert: #ff3366;
+            --alert-glow: rgba(255, 51, 102, 0.4);
+            --panel-bg: rgba(16, 22, 35, 0.6);
+            --panel-border: rgba(255, 255, 255, 0.1);
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+        }
+
+        /* --- GLOBAL --- */
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 100% 100%, 40px 40px, 40px 40px;
+            background-attachment: fixed;
+            color: var(--text-main);
+            font-family: 'Rajdhani', sans-serif;
+            margin: 0; padding: 15px;
+            min-height: 100vh;
+            display: flex; flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* Mode Urgence Phase 5 */
+        body.alert-mode {
+            animation: pulse-red-screen 2s infinite;
+        }
+        @keyframes pulse-red-screen {
+            0% { box-shadow: inset 0 0 0px rgba(255,51,102,0); }
+            50% { box-shadow: inset 0 0 100px rgba(255,51,102,0.3); }
+            100% { box-shadow: inset 0 0 0px rgba(255,51,102,0); }
+        }
+
+        /* --- NAVIGATION (GLASSMORPHISM) --- */
+        #top-bar {
+            background: rgba(11, 15, 25, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 12px 20px; 
+            margin-bottom: 25px;
+            display: flex; justify-content: space-between; align-items: center;
+            position: sticky; top: 10px; z-index: 100;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        #btn-retour {
+            background: transparent; border: 1px solid var(--primary); color: var(--primary);
+            padding: 6px 12px; font-weight: 600; font-size: 1.1rem; border-radius: 6px;
+            cursor: pointer; visibility: hidden; transition: all 0.3s;
+            font-family: 'Rajdhani', sans-serif;
+        }
+        #btn-retour:hover { background: var(--primary); color: #000; box-shadow: 0 0 15px var(--primary-glow);}
+        
+        .hud-item { display: flex; align-items: center; gap: 8px; font-size: 1.2rem; font-weight: 700; font-family: 'Share Tech Mono', monospace;}
+        .hud-icon { font-size: 1.3rem; }
+        #score-display { color: var(--primary); text-shadow: 0 0 10px var(--primary-glow); }
+        #combo-display { font-size: 0.8em; color: var(--text-muted); transition: color 0.3s; }
+        #timer { font-size: 1.4rem; color: #fff; letter-spacing: 1px;}
+
+        /* --- ÉCRANS & TRANSITIONS --- */
+        .screen { display: none; padding-bottom: 80px; max-width: 600px; margin: 0 auto; width: 100%;}
+        .active { display: block !important; animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes fadeIn { from{opacity:0; transform: translateY(15px) scale(0.98)} to{opacity:1; transform: translateY(0) scale(1)} }
+
+        h1 { font-size: 3rem; font-weight: 700; margin-bottom: 5px; text-shadow: 0 0 20px var(--primary-glow); letter-spacing: 2px;}
+        h2 { font-size: 1.8rem; font-weight: 600; border-bottom: 1px solid var(--panel-border); padding-bottom: 10px; margin-bottom: 20px; letter-spacing: 1px;}
+        .h-red { color: var(--alert); } .h-cyan { color: var(--primary); }
+
+        /* --- CONTENEURS (PANELS) --- */
+        .story-box, .game-box {
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 20px; 
+            margin-bottom: 20px; 
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        
+        .story-box { border-left: 4px solid var(--primary); font-size: 1.1rem; line-height: 1.6; color: #cbd5e1; }
+        .story-title {
+            color: var(--primary); font-weight: 700; font-size: 1.2rem; margin-bottom: 12px; display: block;
+            text-transform: uppercase; letter-spacing: 2px;
+        }
+       
+        /* --- ELEMENTS DE FORMULAIRE --- */
+        input { 
+            width: 100%; padding: 15px; margin: 10px 0; box-sizing: border-box; 
+            background: rgba(0,0,0,0.4); border: 1px solid #334155; color: #fff; 
+            font-family: 'Share Tech Mono', monospace; font-size: 1.2rem; text-align: center;
+            border-radius: 8px; transition: all 0.3s;
+        }
+        input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 15px var(--primary-glow); background: rgba(0, 243, 255, 0.05);}
+        
+        .code-container { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 25px 0; }
+        .digit-input { font-size: 1.8rem; padding: 15px 0; border: 2px solid #334155; color: var(--primary); font-weight: bold;}
+
+        /* --- BOUTONS MODERNES --- */
+        button { 
+            width: 100%; padding: 16px; margin-top: 15px; 
+            font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 1.2rem; 
+            cursor: pointer; text-transform: uppercase; letter-spacing: 2px;
+            border-radius: 8px; transition: all 0.2s ease;
+            border: none; position: relative; overflow: hidden;
+        }
+        button:active { transform: scale(0.97); }
+        
+        button.story-btn { 
+            background: linear-gradient(135deg, #0ea5e9, #06b6d4); color: #fff; 
+            box-shadow: 0 4px 15px rgba(6, 182, 212, 0.3);
+        }
+        button.story-btn:hover { box-shadow: 0 6px 20px rgba(6, 182, 212, 0.5); filter: brightness(1.1); }
+        
+        button.action-btn { 
+            background: linear-gradient(135deg, #e11d48, #f43f5e); color: #fff; 
+            box-shadow: 0 4px 15px rgba(244, 63, 94, 0.3);
+        }
+        button.action-btn:hover { box-shadow: 0 6px 20px rgba(244, 63, 94, 0.5); filter: brightness(1.1); }
+
+        button.secondary-btn { 
+            background: rgba(255,255,255,0.05); color: var(--text-muted); 
+            border: 1px solid var(--panel-border);
+        }
+        button.secondary-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+        /* --- IMAGES --- */
+        .story-img {
+            width: 100%; height: auto; border-radius: 8px;
+            margin: 15px 0; display: block;
+            border: 1px solid var(--panel-border);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            opacity: 0.9;
+        }
+        .story-img.red-alert { border-color: var(--alert); box-shadow: 0 0 20px var(--alert-glow); }
+
+        /* --- GRAPHIQUES --- */
+        .radar-wrapper {
+            position: relative; border-radius: 8px; margin-bottom: 15px;
+            background: #000; border: 1px solid var(--primary);
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.1); overflow: hidden;
+        }
+        .radar-scanner {
+            position: absolute; top: 0; left: 0; width: 100%; height: 2px;
+            background: var(--primary); box-shadow: 0 0 15px var(--primary), 0 0 30px var(--primary);
+            animation: scan 3s linear infinite; z-index: 10; opacity: 0.6;
+        }
+        @keyframes scan { 0% { top: -2%; opacity: 0;} 10% { opacity: 0.8;} 90% { opacity: 0.8;} 100% { top: 102%; opacity: 0;} }
+
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 25px; }
+        .card { height: 140px; background: #000; border: 1px solid #334155; border-radius: 8px; position: relative; cursor: pointer; transition: all 0.2s; overflow: hidden;}
+        .card:hover { border-color: #64748b; }
+        .selected-drone { border-color: var(--primary); box-shadow: 0 0 20px var(--primary-glow); transform: translateY(-3px); z-index: 5;}
+        .selected-voleur { border-color: var(--alert); box-shadow: 0 0 20px var(--alert-glow); transform: translateY(-3px); z-index: 5;}
+        .label-overlay { position: absolute; top: 8px; right: 8px; font-size: 0.75rem; font-weight: bold; background: rgba(0,0,0,0.8); padding: 4px 10px; border-radius: 12px; z-index: 10; font-family: 'Share Tech Mono', monospace;}
+        
+        canvas { width: 100%; height: 100%; display: block; }
+        #canvas-lecture, #canvas-lecture-2 { height: 300px; width: 100%; }
+
+        /* --- BARRE DE PROGRESSION --- */
+        #prog-bar-container { border: 1px solid #334155; height: 24px; margin: 10px 0; position: relative; background: rgba(0,0,0,0.5); border-radius: 12px; overflow: hidden; }
+        #prog-bar { width: 0%; height: 100%; background: linear-gradient(90deg, var(--secondary), var(--primary)); transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .prog-text { position: absolute; top: 0; left: 0; width: 100%; text-align: center; font-size: 0.85rem; color: white; line-height: 24px; font-weight: bold; letter-spacing: 1px;}
+
+        /* --- PAVE NUMERIQUE --- */
+        .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; max-width: 380px; margin: 20px auto; }
+        .key { 
+            padding: 20px; background: rgba(255,255,255,0.03); border: 1px solid var(--panel-border); 
+            text-align: center; font-size: 1.6rem; font-family: 'Share Tech Mono', monospace; font-weight: bold; color: #fff; 
+            user-select: none; cursor: pointer; border-radius: 12px; transition: all 0.1s; 
+        }
+        .key:hover { background: rgba(255,255,255,0.08); }
+        .key:active { transform: scale(0.95); background: rgba(255,255,255,0.15); }
+        .key-ok { grid-column: span 3; background: var(--primary); color: #000; font-family: 'Rajdhani', sans-serif; font-size: 1.3rem; letter-spacing: 2px;}
+        .key-ok:hover { background: #06b6d4; box-shadow: 0 0 20px var(--primary-glow);}
+        
+        #question-math { font-family: 'Share Tech Mono', monospace; letter-spacing: 2px; }
+
+        /* --- GLITCH --- */
+        .glitch {
+            position: relative; color: var(--text-main); font-size: 3.5rem; font-weight: bold; margin:15px 0;
+            text-shadow: 2px 0 var(--primary), -2px 0 var(--alert);
+            animation: glitch-anim 2s infinite linear alternate-reverse;
+        }
+        @keyframes glitch-anim {
+            0% { transform: translate(0) }
+            20% { transform: translate(-2px, 2px) }
+            40% { transform: translate(-2px, -2px) }
+            60% { transform: translate(2px, 2px) }
+            80% { transform: translate(2px, -2px) }
+            100% { transform: translate(0) }
+        }
+
+        /* --- TABLEAUX --- */
+        table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 20px; border-radius: 8px; overflow: hidden; }
+        th, td { padding: 14px 10px; text-align: left; border-bottom: 1px solid var(--panel-border); background: rgba(0,0,0,0.2);}
+        th { color: var(--primary); background: rgba(0, 243, 255, 0.05); font-weight: 700; letter-spacing: 1px;}
+        td.score-num { color: var(--primary); font-family: 'Share Tech Mono', monospace; font-weight: bold; font-size: 1.2em;}
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: rgba(255,255,255,0.03); }
+
+        .btn-group { display: flex; gap: 12px; margin-top: 20px; }
+        .btn-group button { margin-top: 0; }
+
+        .math-font { font-family: 'Share Tech Mono', monospace; color: #fff; font-size: 1.2rem;}
+
+        /* --- SLIDERS DE VOLUME --- */
+        input[type="range"].vol-slider {
+            width: 60px; height: 4px; padding: 0; margin: 5px 0 0 0;
+            background: var(--text-muted); border: none; box-shadow: none;
+            cursor: pointer;
+        }
+        input[type="range"].vol-slider:focus { box-shadow: none; background: var(--primary); }
+    </style>
+</head>
+<body>
+<div id="error-box" style="display:none; color: var(--alert); background: #000; padding: 20px; text-align: center; border: 2px solid var(--alert); margin: 20px; font-weight: bold; z-index: 1000; position: relative;"></div>
+
+    <audio id="bg-music" loop autoplay>
+        <source src="Le_voleurBGM.mp3" type="audio/mpeg">
+    </audio>
+
+    <div id="top-bar">
+        <button id="btn-retour" onclick="window.jouerSon('click'); window.actionRetour()">◀ RETOUR</button>
+        <div class="hud-item">
+            <span class="hud-icon">⚡</span>
+            <span id="score-display">0</span>
+            <span id="combo-display">[x1.0]</span>
+        </div>
+        <div class="hud-item">
+            <span class="hud-icon">⏱</span>
+            <span id="timer">00:00</span>
+        </div>
+        
+        <div style="display: flex; gap: 15px; align-items: center; margin-left: auto;">
+            <div style="display: flex; flex-direction: column; align-items: center;">
+                <span style="font-size: 0.6rem; color: var(--text-muted); font-family: 'Share Tech Mono';">BGM</span>
+                <input type="range" id="vol-bgm" class="vol-slider" min="0" max="1" step="0.05" value="0.2">
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: center;">
+                <span style="font-size: 0.6rem; color: var(--text-muted); font-family: 'Share Tech Mono';">SFX</span>
+                <input type="range" id="vol-sfx" class="vol-slider" min="0" max="1" step="0.05" value="0.8">
+            </div>
+            <button id="btn-mute" onclick="window.jouerSon('click'); window.toggleMute()" style="background:transparent; border:none; font-size:1.5rem; cursor:pointer; padding:0; margin-left: 5px;">🔊</button>
+        </div>
+    </div>
+
+
+    <div id="ecran-accueil" class="screen active">
+        <div style="text-align:center; margin-bottom: 40px;">
+        <img src="le_voleur.png" alt="Le Voleur" style="width: 100%; max-width: 350px; border-radius: 12px; box-shadow: 0 0 20px rgba(0,243,255,0.4); margin-bottom: 15px; object-fit: cover;">            <h1 style="color:#00f3ff; margin:0;">LE VOLEUR</h1>
+            <p style="color:var(--text-muted); letter-spacing: 2px; font-size: 0.7rem; opacity: 0.3; margin-top: 0;">Par Elliott S-C</p>
+        </div>
+        
+        <button onclick="window.jouerSon('click'); window.lancerJeu()" class="story-btn">DÉMARRER LA MISSION</button>
+        
+        <div class="btn-group">
+            <button onclick="window.jouerSon('click'); window.voirScores('global')" class="secondary-btn">RÉSEAU MONDIAL</button>
+            <button onclick="window.jouerSon('click'); window.voirScores('local')" class="secondary-btn">ARCHIVES LOCALES</button>
+        </div>
+        
+        <a href="index.html" class="secondary-btn" style="text-decoration:none; display:block; text-align:center; margin-top:12px; padding:16px; border-radius: 8px;">DÉCONNEXION DU TERMINAL</a>
+    </div>
+
+    <div id="ecran-classement" class="screen">
+        <h2 id="titre-classement" style="color:var(--primary); text-align:center">TOP AGENTS</h2>
+        <div id="liste-scores"></div>
+        <button onclick="window.jouerSon('click'); window.retourAccueil()" class="secondary-btn">RETOUR AU TERMINAL</button>
+    </div>
+
+    <div id="ecran-0" class="screen">
+        <div class="story-box">
+            <span class="story-title">Briefing de Mission</span>
+            
+            <img src="https://images.unsplash.com/photo-1558494949-ef010cbdcc31?q=80&w=1000&auto=format&fit=crop" class="story-img" alt="Salle Serveur">
+
+            "Agent, situation critique au Lycée. Ce matin, le serveur sécurisé du bureau des examens a été piraté. Les copies numériques du Bac Blanc sont portées disparues."
+            <br><br>
+            "Le voleur a laissé une trace dans le pare-feu. Si les données ne sont pas récupérées dans le temps imparti, l'épreuve nationale sera annulée."
+        </div>
+        <button onclick="window.jouerSon('click'); window.debuterMission()" class="story-btn">ACCEPTER L'AFFECTATION</button>
+    </div>
+
+    <div id="story-1" class="screen">
+        <h2 class="h-cyan">PHASE 1 : INTRUSION</h2>
+        <div class="story-box">
+            <span class="story-title">Contournement Pare-Feu</span>
+            "Vous êtes connecté au terminal principal. L'accès nécessite une clé cryptographique mathématique."
+            <br><br>
+            "Résolvez ces 4 fonctions générées aléatoirement par la sécurité. Chaque résultat débloquera un segment du code PIN."
+        </div>
+        <button onclick="window.jouerSon('click'); window.naviguerVers('phase-1')" class="story-btn">DÉMARRER LE DÉCRYPTAGE</button>
+    </div>
+
+    <div id="phase-1" class="screen">
+        <h2>DÉCRYPTAGE PIN</h2>
+        <div class="game-box"><p><strong class="h-cyan">SÉQUENCE 1 :</strong> <span id="p1-txt-1" class="math-font">...</span><br><span id="p1-q-1">...</span> ?</p></div>
+        <div class="game-box"><p><strong class="h-cyan">SÉQUENCE 2 :</strong> <span id="p1-txt-2" class="math-font">...</span><br><span id="p1-q-2">...</span> ?</p></div>
+        <div class="game-box"><p><strong class="h-cyan">SÉQUENCE 3 :</strong> <span id="p1-txt-3" class="math-font">...</span><br><span id="p1-q-3">...</span> ?</p></div>
+        <div class="game-box"><p><strong class="h-cyan">SÉQUENCE 4 :</strong> <span id="p1-txt-4" class="math-font">...</span><br><span id="p1-q-4">...</span> ?</p></div>
+
+        <div class="code-container">
+            <input type="number" id="digit1" class="digit-input" placeholder="0" onfocus="window.jouerSon('click')">
+            <input type="number" id="digit2" class="digit-input" placeholder="0" onfocus="window.jouerSon('click')">
+            <input type="number" id="digit3" class="digit-input" placeholder="0" onfocus="window.jouerSon('click')">
+            <input type="number" id="digit4" class="digit-input" placeholder="0" onfocus="window.jouerSon('click')">
+        </div>
+        <button onclick="window.jouerSon('click'); window.verifierPhase1()" class="story-btn">INJECTER LE CODE</button>
+    </div>
+
+    <div id="story-2" class="screen">
+        <h2 class="h-cyan">PHASE 2 : EXTRACTION</h2>
+        <div class="story-box">            
+            <span class="story-title">Accès Réseau Réussi</span>
+            "Pare-feu neutralisé. Excellent travail. Nous interceptons les données GPS en temps réel."
+            <br><br>
+            "Deux signatures thermiques fuient vers la zone industrielle. L'IA a modélisé leurs trajectoires sous forme d'équations mathématiques strictes."
+        </div>
+        <div class="game-box" style="text-align:center">
+            <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:5px;">UNITÉ DRONE D'ESCORTE (Parabole) : </p>
+            <span class="h-cyan math-font" id="p2-drone-txt" style="font-size:1.4em;">...</span>
+            <hr style="border-color:var(--panel-border); margin:20px 0;">
+            <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:5px;">VÉHICULE DU SUSPECT (Droite) : </p>
+            <span class="h-red math-font" id="p2-voleur-txt" style="font-size:1.4em;">...</span>
+        </div>
+        <button onclick="window.jouerSon('click'); window.naviguerVers('story-3')" class="story-btn">CONNECTER LE SATELLITE</button>
+    </div>
+
+    <div id="story-3" class="screen">
+        <h2 class="h-cyan">PHASE 3 : SCAN SATELLITE</h2>
+        <div class="story-box">
+            <span class="story-title">Brouillage Radar</span>
+            
+            <img src="https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=1000&auto=format&fit=crop" class="story-img" alt="Circuit Radar">
+
+            "Attention ! Le suspect a activé un brouilleur militaire. Notre radar est saturé de signaux fantômes."
+            <br><br>
+            "Isolez manuellement les vraies cibles parmi les leurres. Rappel : le drone suit une trajectoire parabolique (courbe) et le véhicule une trajectoire linéaire (droite)."
+        </div>
+        <button onclick="window.jouerSon('click'); window.naviguerVers('phase-3')" class="story-btn">LANCER L'ANALYSE</button>
+    </div>
+
+    <div id="phase-3" class="screen">
+        <h2>IDENTIFICATION VISUELLE</h2>
+        <div class="game-box" style="text-align:center; padding: 15px;">
+            <p style="margin-bottom:10px; color:var(--text-muted); font-size:0.85rem; letter-spacing:1px;">RAPPEL DES TRAJECTOIRES :</p>
+            <span class="h-cyan math-font" id="p3-drone-txt">...</span> | <span class="h-red math-font" id="p3-voleur-txt">...</span>
+        </div>
+        <p style="font-size:0.95rem; color:var(--text-muted); text-align:center;">Appuyez pour assigner (1x = Drone Bleu, 2x = Voleur Rouge) :</p>
+        <div class="grid" id="zone-graphes"></div>
+        <button onclick="window.jouerSon('click'); window.verifierPhase3()" class="story-btn">VERROUILLER LES CIBLES</button>
+    </div>
+
+    <div id="story-4" class="screen">
+        <h2 class="h-cyan">PHASE 4.1 : CIBLAGE VÉHICULE</h2>
+        <div class="story-box">
+            <span class="story-title">Mode Manuel</span>
+            "Cibles confirmées, mais l'assistance de visée est instable."
+            <br><br>
+            "Ajustez manuellement le radar. Lisez les coordonnées sur l'écran pour trouver l'image et l'antécédent de la trajectoire du véhicule (linéaire)."
+        </div>
+        <button onclick="window.jouerSon('click'); window.naviguerVers('phase-4')" class="story-btn">OUVRIR RADAR VÉHICULE</button>
+    </div>
+
+    <div id="phase-4" class="screen">
+        <h2>CALIBRAGE (1/2)</h2>
+        <p style="text-align:center; color:var(--text-muted); font-size:1rem; margin-top:0;">Trajectoire Linéaire (Véhicule).</p>
+        
+        <div class="radar-wrapper">
+            <div class="radar-scanner"></div>
+            <canvas id="canvas-lecture"></canvas>
+        </div>
+
+        <div class="game-box">
+            <p><strong class="h-cyan">1.</strong> <span id="p4-q1">...</span></p>
+            <input type="number" id="rep4-1" placeholder="Valeur (y) ...">
+            <hr style="border-color:var(--panel-border); margin:15px 0;">
+            <p><strong class="h-cyan">2.</strong> <span id="p4-q2">...</span></p>
+            <input type="number" id="rep4-2" placeholder="Valeur (x) ...">
+        </div>
+        <button onclick="window.jouerSon('click'); window.verifierPhase4()" class="story-btn">SYNCHRONISER</button>
+    </div>
+
+    <div id="story-4b" class="screen">
+        <h2 class="h-cyan">PHASE 4.2 : CIBLAGE DRONE</h2>
+        <div class="story-box">
+            <span class="story-title">Manœuvre Évasive</span>
+            "Le drone entame une boucle d'évasion parabolique !"
+            <br><br>
+            "Le système détecte deux points d'impact possibles. Lisez le graphique pour déterminer l'image demandée et les DEUX antécédents."
+        </div>
+        <button onclick="window.jouerSon('click'); window.naviguerVers('phase-4b')" class="story-btn">OUVRIR RADAR DRONE</button>
+    </div>
+
+    <div id="phase-4b" class="screen">
+        <h2>CALIBRAGE (2/2)</h2>
+        <p style="text-align:center; color:var(--text-muted); font-size:1rem; margin-top:0;">Trajectoire Parabolique (Drone).</p>
+        
+        <div class="radar-wrapper" style="border-color:var(--primary)">
+            <div class="radar-scanner" style="animation-duration: 2s;"></div>
+            <canvas id="canvas-lecture-2"></canvas>
+        </div>
+
+        <div class="game-box">
+            <p><strong class="h-cyan">1.</strong> <span id="p4b-q1">...</span></p>
+            <input type="number" id="rep4b-1" placeholder="Valeur (y) ...">
+            <hr style="border-color:var(--panel-border); margin:15px 0;">
+            <p><strong class="h-cyan">2.</strong> <span id="p4b-q2">...</span></p>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                <input type="number" id="rep4b-2a" placeholder="X1 = ...">
+                <input type="number" id="rep4b-2b" placeholder="X2 = ...">
+            </div>
+        </div>
+        <button onclick="window.jouerSon('click'); window.verifierPhase4b()" class="story-btn">VERROUILLAGE DÉFINITIF</button>
+    </div>
+
+    <div id="story-5" class="screen">
+        <h2 class="h-red">PHASE 5 : URGENCE CRITIQUE</h2>
+        <div class="story-box" style="border-color:var(--alert); background:rgba(255,51,102,0.1)">
+            <span class="story-title" style="color:var(--alert);">Piratage Détecté</span>
+            "ALERTE ! Le suspect a hacké le drone d'escorte ! Il part en vrille et va s'écraser !"
+            <br><br>
+            "Prenez les commandes manuelles du drone. Le guidage de secours exige la résolution de calculs simples très rapidement.<br><br><strong>ATTENTION :</strong> Une erreur ou un délai dépassé éloignera le drone de sa cible !"
+        </div>
+        <button onclick="window.jouerSon('click'); window.naviguerVers('phase-5')" class="action-btn">ENGAGER MODE MANUEL</button>
+    </div>
+
+    <div id="phase-5" class="screen">
+        <h2 class="h-red" style="text-align:center;">STABILISATION EN COURS</h2>
+
+        <div id="prog-bar-container">
+            <div id="prog-bar"></div>
+            <span class="prog-text">PROXIMITÉ CIBLE</span>
+        </div>
+
+        <div id="q-timer-display" style="text-align:center; font-size:4rem; font-weight:700; color:var(--alert); margin:20px 0; font-family: 'Share Tech Mono', monospace; text-shadow: 0 0 15px var(--alert-glow);">10</div>
+
+        <div class="game-box" style="text-align:center; padding:25px;">
+            <div id="question-math" style="font-size:2.5rem;">...</div>
+        </div>
+        
+        <div style="text-align:center; height:30px; color:var(--primary); font-weight:bold; margin-bottom:15px; font-size:1.5rem; font-family: 'Share Tech Mono', monospace;" id="feedback"></div>
+       
+        <div class="numpad">
+    <div class="key" onclick="window.jouerSon('click'); window.touche(7)">7</div>
+    <div class="key" onclick="window.jouerSon('click'); window.touche(8)">8</div>
+    <div class="key" onclick="window.jouerSon('click'); window.touche(9)">9</div>
+    <div class="key" onclick="window.jouerSon('click'); window.touche(4)">4</div>
+    <div class="key" onclick="window.jouerSon('click'); window.touche(5)">5</div>
+    <div class="key" onclick="window.jouerSon('click'); window.touche(6)">6</div>
+    <div class="key" onclick="window.jouerSon('click'); window.touche(1)">1</div>
+    <div class="key" onclick="window.jouerSon('click'); window.touche(2)">2</div>
+    <div class="key" onclick="window.jouerSon('click'); window.touche(3)">3</div>
+    <div class="key" onclick="window.jouerSon('click'); window.touche('-')">-</div>
+    <div class="key" onclick="window.jouerSon('click'); window.touche(0)">0</div>
+    <div class="key" style="background:rgba(255,51,102,0.1); color:var(--alert); border-color:rgba(255,51,102,0.3);" onclick="window.jouerSon('click'); window.touche('DEL')">DEL</div>
+    <div class="key key-ok" onclick="window.jouerSon('click'); window.touche('OK')">TRANSMETTRE</div>
+</div>
+    </div>
+
+    <div id="ecran-revelation" class="screen" style="text-align:center">
+        <h1 id="titre-revelation" style="font-size: 2.8rem; margin-top:30px;">...</h1>
+        
+        <div id="bloc-suspect" style="display:none; border:2px solid var(--alert); padding:30px 20px; margin:30px 0; background:var(--panel-bg); box-shadow: 0 0 30px var(--alert-glow); border-radius: 12px;">
+            <p style="color:#ff8888; font-size:1.1rem; letter-spacing: 4px; margin:0 0 15px 0;">CIBLE INTERCEPTÉE</p>
+            
+            <img src="https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=1000&auto=format&fit=crop" class="story-img red-alert" alt="Hacker Profile">
+
+            <div class="glitch">EMMA-ROSE</div>
+            <p style="font-style:italic; margin-top:20px; color:var(--text-muted); font-size:1.1rem;">"Je voulais juste voir le système s'effondrer..."</p>
+        </div>
+        
+        <div id="bloc-echec" style="display:none; color: var(--text-muted); margin: 40px 0; border: 1px dashed #334155; padding: 40px; border-radius: 12px; background: rgba(0,0,0,0.3);">
+            <div style="font-size: 5rem; margin-bottom:20px; filter: grayscale(1);">⏱️</div>
+            <p style="font-size: 1.2rem;">Le temps est écoulé. La trace numérique a disparu avec les copies.</p>
+        </div>
+        
+        <button onclick="window.jouerSon('click'); window.voirRapportScore()" class="story-btn" style="margin-top:20px; padding: 20px;">TÉLÉCHARGER LE RAPPORT</button>
+    </div>
+
+    <div id="ecran-fin" class="screen" style="text-align:center">
+        <h1 style="color:var(--primary)">FIN DE TRANSMISSION</h1>
+        
+        <div class="game-box" style="margin: 30px 0; border-color: var(--primary); box-shadow: inset 0 0 30px rgba(0,243,255,0.05);">
+            <p style="margin:0; color:var(--text-muted); font-size:1rem; letter-spacing:3px;">SCORE TOTAL ACQUIS</p>
+            <div id="final-score-display" style="font-size:5rem; font-weight:700; color:#fff; text-shadow: 0 0 20px var(--primary-glow); margin:15px 0; font-family: 'Share Tech Mono', monospace;">0</div>
+            <p id="bonus-detail" style="font-size:0.95rem; color:var(--primary); margin-top:5px;"></p>
+        </div>
+        
+        <div style="text-align:left; margin-bottom:12px; font-size:1rem; color:var(--text-muted); font-weight:600;">IDENTIFICATION AGENT :</div>
+        <div style="display:flex; gap:12px; flex-direction: column;">
+            <input type="text" id="player-name" placeholder="ENTREZ VOTRE PSEUDO" maxlength="12" style="text-transform:uppercase; margin:0; padding: 18px;">
+            <button onclick="window.jouerSon('click'); window.sauvegarderScore()" class="action-btn" style="margin:0; padding:18px;">SAUVEGARDER DANS LA BASE</button>
+        </div>
+        <button onclick="window.jouerSon('click'); window.retourAccueil()" class="secondary-btn" style="margin-top:40px; border:none;">QUITTER VERS LE HUB</button>
+    </div>
+
+    <script>
+        try {
+            // --- FORCER L'AUTOPLAY DE LA MUSIQUE ---
+        window.addEventListener('DOMContentLoaded', (event) => {
+            let bgm = document.getElementById('bg-music');
+            bgm.volume = document.getElementById('vol-bgm').value;
+            
+            // On essaie de forcer la lecture instantanément (marche souvent si on vient du Hub)
+            let playPromise = bgm.play();
+            
+            if (playPromise !== undefined) {
+                playPromise.catch(error => {
+                    // SI (et seulement si) le navigateur bloque pour des raisons de sécurité, 
+                    // on attend le premier clic du joueur n'importe où sur l'écran.
+                    console.log("Autoplay bloqué, attente d'interaction...");
+                    document.body.addEventListener('click', function() {
+                        if (bgm.paused && !window.isMuted) bgm.play();
+                    }, { once: true });
+                });
+            }
+        });
+// Variables globales de volume
+        window.sfxVolume = 0.8; // SFX à 80% par défaut
+
+        
+        // Initialiser le volume BGM au chargement
+        document.getElementById('bg-music').volume = document.getElementById('vol-bgm').value;
+
+        // Écouter les changements du curseur BGM
+        document.getElementById('vol-bgm').addEventListener('input', function(e) {
+            document.getElementById('bg-music').volume = e.target.value/4;
+            if(window.isMuted) window.toggleMute(); // Enlève le mode "muet" si on touche au curseur
+        });
+
+        // Écouter les changements du curseur SFX
+        document.getElementById('vol-sfx').addEventListener('input', function(e) {
+            window.sfxVolume = e.target.value;
+            window.jouerSon('click'); // Fait un petit clic pour tester le volume !
+            if(window.isMuted) window.toggleMute();
+        });
+            // ==========================================
+// MOTEUR AUDIO AVANCÉ (CHEMINS RELATIFS & ALÉATOIRE)
+// ==========================================
+const cheminSons = "../Son/";
+window.sfx = {
+    // Les sons avec plusieurs variations sont mis dans des tableaux (arrays)
+    click: [
+        new Audio(cheminSons + 'mouseclick1.mp3'),
+        new Audio(cheminSons + 'mouseclick2.mp3'),
+        new Audio(cheminSons + 'mouseclick3.mp3')
+    ],
+    typing: [
+        new Audio(cheminSons + 'typing1.mp3'),
+        new Audio(cheminSons + 'typing2.mp3'),
+        new Audio(cheminSons + 'typing3.mp3')
+    ],
+    // Les sons uniques
+    error: new Audio(cheminSons + 'error.mp3'),
+    success: new Audio(cheminSons + 'success.mp3')
+};
+
+        window.jouerSon = function(type) {
+            if (window.isMuted) return;
+            
+            let sonAJouer;
+            if (Array.isArray(window.sfx[type])) {
+                const indexAleatoire = Math.floor(Math.random() * window.sfx[type].length);
+                sonAJouer = window.sfx[type][indexAleatoire];
+            } else {
+                sonAJouer = window.sfx[type];
+            }
+
+            if (sonAJouer) {
+                sonAJouer.currentTime = 0;
+                sonAJouer.volume = window.sfxVolume; // <-- AJOUTE CETTE LIGNE ICI
+                sonAJouer.play().catch(e => console.log("Son bloqué :", e));
+            }
+        };
+// ==========================================
+        // --- GESTION DU BOUTON MUSIQUE ---
+        window.isMuted = false;
+            window.toggleMute = function() {
+            window.isMuted = !window.isMuted;
+            var btn = document.getElementById('btn-mute');
+            var bgMusic = document.getElementById('bg-music');
+            
+            if(window.isMuted) {
+                btn.innerText = "🔇";
+                bgMusic.pause();
+            } else {
+                btn.innerText = "🔊";
+                // Relance la musique uniquement si le joueur n'est pas sur le menu d'accueil
+                if(window.historique[window.historique.length-1] !== 'ecran-accueil') {
+                    bgMusic.play();
+                }
+            }
+        };
+        
+        // ... la suite de votre code (window.getRandomInt = function...)
+        window.getRandomInt = function(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; };
+
+        window.genererQuestionMath = function() {
+            var a = window.getRandomInt(-9, 9);
+            var b = window.getRandomInt(-9, 9);
+            if(a===0) a=1; if(b===0) b=2;
+            
+            var rand = Math.random();
+            var op, res;
+            if (rand < 0.33) { op = '+'; res = a + b; } 
+            else if (rand < 0.66) { op = '-'; res = a - b; } 
+            else { op = '×'; res = a * b; }
+            
+            var textB = (b < 0) ? "(" + b + ")" : b;
+            return { t: a + " " + op + " " + textB, r: res };
+        };
+
+        window.temps = 30 * 60;
+        window.intervalle = null;
+        window.timerPhase5 = null;
+        window.compteurQ = 10;
+        window.historique = ['ecran-accueil'];
+        window.score = 0;
+        window.multiplicateur = 3.00; // DÉPART À x3.00
+        window.gameData = { p1: {}, drone: {}, voleur: {}, lectureG: {}, lectureG2: {} };
+        window.graphesGeneres = false;
+        window.phase5Init = false;
+        window.mathQ = []; window.mathIndex = 0; window.inputMath = ""; window.currentQ = {};
+
+        // LIEN GOOGLE SCRIPT MONDAL
+        const GOOGLE_APP_URL = "https://script.google.com/macros/s/AKfycbxhLdAHHn9rtVDufA3asid6IrHMlcF7YxqT-yq07bKWv5KCeGKJpeTpSVa8AvBk1VOmsQ/exec";
+        
+        // LECTURE DU NOM DU JEU VIA L'URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const NOM_DU_JEU = urlParams.get('jeu') || 'Voleur';
+
+        window.dessinerCourbe = function(canvas, func, color, showAxes) {
+            var ctx = canvas.getContext('2d');
+            var w = canvas.width = canvas.offsetWidth;
+            var h = canvas.height = canvas.offsetHeight;
+           
+            var minX = -10, maxX = 10;
+            var minY = Infinity, maxY = -Infinity;
+           
+            for(var ix = minX; ix <= maxX; ix += 1) {
+                var val = func(ix);
+                if(val < minY) minY = val;
+                if(val > maxY) maxY = val;
+            }
+            if(maxY === minY) { maxY += 10; minY -= 10; }
+           
+            var rangeX = maxX - minX;
+            var rangeY = maxY - minY; 
+            var paddingY = rangeY * 0.15;
+            var effectiveMinY = minY - paddingY; 
+            var effectiveRangeY = (maxY + paddingY) - effectiveMinY;
+            var scaleX = w / rangeX; var scaleY = h / effectiveRangeY;
+
+            ctx.fillStyle = "#000"; ctx.fillRect(0,0,w,h);
+
+            if(showAxes) {
+                var zeroX = (0 - minX) * scaleX;
+                var zeroY = h - (0 - effectiveMinY) * scaleY;
+
+                ctx.lineWidth = 1; ctx.strokeStyle = "#1e293b";
+                for(var i=minX; i<=maxX; i+=2) {
+                    var x = (i - minX) * scaleX;
+                    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+                }
+
+                ctx.strokeStyle = "#475569"; ctx.lineWidth = 1.5;
+                ctx.beginPath(); ctx.moveTo(zeroX, 0); ctx.lineTo(zeroX, h); ctx.stroke(); 
+                if(effectiveMinY < 0 && (maxY + paddingY) > 0) {
+                    ctx.beginPath(); ctx.moveTo(0, zeroY); ctx.lineTo(w, zeroY); ctx.stroke(); 
+                } else { zeroY = h - 5; }
+
+                ctx.fillStyle = "#94a3b8"; ctx.font = "10px 'Share Tech Mono', monospace";
+                ctx.textAlign = "center"; ctx.textBaseline = "top";
+                [-10, -5, 5, 10].forEach(v => {
+                    var px = (v - minX) * scaleX;
+                    ctx.fillText(v, px, zeroY > h - 15 ? h - 15 : zeroY + 5);
+                });
+                ctx.textAlign = "left"; ctx.textBaseline = "middle";
+                ctx.fillText(Math.round(maxY), zeroX + 5, 10);
+                ctx.fillText(Math.round(minY), zeroX + 5, h - 10);
+            }
+
+            ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = 3;
+            for(var x=minX; x<=maxX; x+=0.5) {
+                var yVal = func(x); var plotX = (x - minX) * scaleX; var plotY = h - (yVal - effectiveMinY) * scaleY;
+                if(x===minX) ctx.moveTo(plotX, plotY); else ctx.lineTo(plotX, plotY);
+            }
+            ctx.stroke();
+        };
+
+        window.dessinerGrilleLecture = function(canvas, func, color) {
+            var ctx = canvas.getContext('2d');
+            var w = canvas.width = canvas.offsetWidth; 
+            var h = canvas.height = canvas.offsetHeight;
+            ctx.fillStyle = "#000"; ctx.fillRect(0,0,w,h);
+            
+            var min = -6; var max = 6; var range = max - min;
+            var scaleX = w / range; var scaleY = h / range;
+
+            var zeroX = (0 - min) * scaleX;
+            var zeroY = h - (0 - min) * scaleY;
+
+            ctx.font = "12px 'Share Tech Mono'"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+
+            for(var i=min; i<=max; i++) {
+                var plotX = (i - min) * scaleX;
+                ctx.lineWidth = (i === 0) ? 2 : 1; ctx.strokeStyle = (i === 0) ? "#475569" : "#1e293b";
+                ctx.beginPath(); ctx.moveTo(plotX, 0); ctx.lineTo(plotX, h); ctx.stroke();
+                
+                var plotY = h - (i - min) * scaleY;
+                ctx.lineWidth = (i === 0) ? 2 : 1; ctx.strokeStyle = (i === 0) ? "#475569" : "#1e293b";
+                ctx.beginPath(); ctx.moveTo(0, plotY); ctx.lineTo(w, plotY); ctx.stroke();
+
+                ctx.fillStyle = "#94a3b8";
+                if(i !== 0) { ctx.fillText(i, plotX, zeroY + 12); ctx.fillText(i, zeroX - 12, plotY); }
+            }
+            ctx.fillText("0", zeroX - 10, zeroY + 12);
+
+            ctx.beginPath(); ctx.strokeStyle = color || "#00f3ff"; ctx.lineWidth = 3;
+            for(var x_val=min; x_val<=max; x_val+=0.1) { 
+                var yVal = func(x_val); var plotX = (x_val - min) * scaleX; var plotY = h - (yVal - min) * scaleY; 
+                if(x_val===min) ctx.moveTo(plotX, plotY); else ctx.lineTo(plotX, plotY); 
+            }
+            ctx.stroke();
+        };
+
+        // --- GESTION DYNAMIQUE DU SCORE ET MULTIPLICATEUR ---
+        window.updateScoreUI = function() {
+            var elScore = document.getElementById('score-display');
+            if(elScore) elScore.innerText = Math.round(window.score);
+            
+            var elCombo = document.getElementById('combo-display');
+            if(elCombo) {
+                // Affichage avec 2 décimales
+                elCombo.innerText = "[x" + window.multiplicateur.toFixed(2) + "]";
+                
+                // Adaptation des couleurs (Max 3.0)
+                if (window.multiplicateur >= 2.5) elCombo.style.color = "#00ff41";
+                else if (window.multiplicateur > 1.5) elCombo.style.color = "#eab308";
+                else elCombo.style.color = "var(--alert)";
+            }
+        };
+
+        window.retourAccueil = function() {
+            document.body.classList.remove('alert-mode');
+            document.getElementById('bg-music').pause(); // COUPE LA MUSIQUE
+            window.historique = ['ecran-accueil'];
+            window.afficherEcran('ecran-accueil');
+        };
+
+        window.afficherEcran = function(id) {
+            var ecrans = document.querySelectorAll('.screen');
+            ecrans.forEach(function(e){ e.classList.remove('active'); });
+            var cible = document.getElementById(id);
+            if(cible) cible.classList.add('active');
+            window.majRetour();
+            window.scrollTo(0,0);
+        };
+
+        window.lancerJeu = function() {
+            // Lancement de la musique avec un volume réduit
+            if(!window.isMuted) {
+                var bgMusic = document.getElementById('bg-music');
+                bgMusic.volume = 0.05; // <-- Règle le volume à 20% (0.0 à 1.0)
+                bgMusic.play().catch(e => console.log("Son bloqué par le navigateur"));
+            }
+            // Lancement de la musique
+            if(!window.isMuted) {
+                document.getElementById('bg-music').play().catch(e => console.log("Son bloqué par le navigateur"));
+            }
+
+
+            window.score = 0; window.temps = 30 * 60;
+            window.multiplicateur = 3.00; // DEPART A x3.00
+            window.graphesGeneres = false; window.selection = []; window.phase5Init = false; window.mathIndex = 0;
+            var inputs = document.querySelectorAll('input'); inputs.forEach(function(i){ i.value = ""; });
+            window.updateScoreUI();
+
+            var a1 = window.getRandomInt(2, 4); var b1 = window.getRandomInt(1, 10); var x1 = window.getRandomInt(0, 4);
+            window.gameData.p1.c1 = { txt: "f(x)="+a1+"x+"+b1, q: "Image de "+x1, sol: (a1*x1)+b1 };
+            var a2 = window.getRandomInt(2, 4); var sol2 = window.getRandomInt(1, 8); var y2 = a2 * sol2;
+            window.gameData.p1.c2 = { txt: "g(x)="+a2+"x", q: "Antécédent de "+y2, sol: sol2 };
+            var c3 = window.getRandomInt(0, 4); var x3 = window.getRandomInt(1, 4);
+            window.gameData.p1.c3 = { txt: "h(x)=x²"+(c3>0?"+"+c3:""), q: "Image de "+x3, sol: (x3*x3)+c3 };
+            var c4 = window.getRandomInt(1, 9); window.gameData.p1.c4 = { txt: "k(x)="+c4, q: "Image de 2024", sol: c4 };
+
+            var t_final = window.getRandomInt(18, 25); var t_fictif = window.getRandomInt(-12, -5);
+            var a_drone = window.getRandomInt(1, 3);
+            var m_voleur = a_drone * (t_final + t_fictif); var p_voleur = -a_drone * (t_final * t_fictif);
+            var txt_a = (a_drone === 1) ? "" : a_drone;
+            window.gameData.drone = { txt: "f(x) = " + txt_a + "x²", f: function(x){ return a_drone * x * x; }, color: '#00f3ff' };
+            var sign = p_voleur >= 0 ? "+" : "";
+            window.gameData.voleur = { txt: "g(x) = " + m_voleur + "x " + sign + " " + p_voleur, f: function(x){ return m_voleur * x + p_voleur; }, color: '#ff3366' };
+
+            var a_lec = window.getRandomInt(1, 2) * (Math.random() < 0.5 ? 1 : -1);
+            var b_lec = window.getRandomInt(-2, 2);
+            var xImg = window.getRandomInt(-3, 3); var yImg = a_lec * xImg + b_lec;
+            var xAnt = window.getRandomInt(-4, 4); while(xAnt === xImg) xAnt = window.getRandomInt(-4, 4); 
+            var yAnt = a_lec * xAnt + b_lec;
+            window.gameData.lectureG = { f: function(x) { return a_lec * x + b_lec; }, q1_txt: "Quelle est l'image de " + xImg + " ?", q1_sol: yImg, q2_txt: "Quel est l'antécédent de " + yAnt + " ?", q2_sol: xAnt };
+
+            var x0 = window.getRandomInt(-2, 2); 
+            var d = window.getRandomInt(1, 2); 
+            var sign2 = Math.random() < 0.5 ? 1 : -1;
+            var yTarget2 = window.getRandomInt(-2, 2);
+            var f_para = function(x) { return sign2 * ( (x - x0)*(x - x0) - d*d ) + yTarget2; };
+            
+            var xImg2, yImg2;
+            do {
+                xImg2 = window.getRandomInt(x0 - 2, x0 + 2);
+                yImg2 = f_para(xImg2);
+            } while (yImg2 < -6 || yImg2 > 6 || xImg2 === x0 - d || xImg2 === x0 + d);
+
+            window.gameData.lectureG2 = {
+                f: f_para, q1_txt: "Quelle est l'image de " + xImg2 + " ?", q1_sol: yImg2,
+                q2_txt: "Quels sont les antécédents de " + yTarget2 + " ?", q2_sol1: x0 - d, q2_sol2: x0 + d
+            };
+
+            document.getElementById('p1-txt-1').innerText = window.gameData.p1.c1.txt; document.getElementById('p1-q-1').innerText = window.gameData.p1.c1.q;
+            document.getElementById('p1-txt-2').innerText = window.gameData.p1.c2.txt; document.getElementById('p1-q-2').innerText = window.gameData.p1.c2.q;
+            document.getElementById('p1-txt-3').innerText = window.gameData.p1.c3.txt; document.getElementById('p1-q-3').innerText = window.gameData.p1.c3.q;
+            document.getElementById('p1-txt-4').innerText = window.gameData.p1.c4.txt; document.getElementById('p1-q-4').innerText = window.gameData.p1.c4.q;
+            document.getElementById('p2-drone-txt').innerText = window.gameData.drone.txt; document.getElementById('p2-voleur-txt').innerText = window.gameData.voleur.txt;
+            document.getElementById('p3-drone-txt').innerText = window.gameData.drone.txt; document.getElementById('p3-voleur-txt').innerText = window.gameData.voleur.txt;
+            document.getElementById('p4-q1').innerText = window.gameData.lectureG.q1_txt; document.getElementById('p4-q2').innerText = window.gameData.lectureG.q2_txt;
+            document.getElementById('p4b-q1').innerText = window.gameData.lectureG2.q1_txt; document.getElementById('p4b-q2').innerText = window.gameData.lectureG2.q2_txt;
+
+            if(window.intervalle) clearInterval(window.intervalle);
+            window.intervalle = setInterval(function() {
+                window.temps--; // Le chronomètre global de 30 minutes continue de tourner
+                
+                // NOUVEAU : On vérifie sur quel écran le joueur se trouve actuellement
+                var ecranActuel = window.historique[window.historique.length - 1];
+                var estUneEnigme = ['phase-1', 'phase-3', 'phase-4', 'phase-4b', 'phase-5'].includes(ecranActuel);
+
+                // Le multiplicateur ne baisse QUE si on est sur une page d'énigme
+                if (estUneEnigme) {
+                    window.multiplicateur = Math.max(1.00, window.multiplicateur - 0.10);
+                }
+                
+                window.updateScoreUI();
+
+                var m = Math.floor(Math.abs(window.temps) / 60); var s = Math.abs(window.temps) % 60;
+                document.getElementById('timer').innerText = (window.temps<0?"- ":"")+(m<10?"0":"")+m+":"+(s<10?"0":"")+s;
+                if(window.temps<0) document.getElementById('timer').style.color="var(--alert)";
+            }, 1000);
+
+            window.naviguerVers('ecran-0');
+        };
+
+        window.debuterMission = function() { window.naviguerVers('story-1'); };
+
+        window.naviguerVers = function(id) {
+            window.afficherEcran(id); 
+            window.historique.push(id); 
+            window.majRetour();
+
+            // --- NOUVEAUTÉ : On remet la pression (et le bonus) à fond à chaque nouvelle page ! ---
+            window.multiplicateur = 3.00;
+            window.updateScoreUI();
+
+            if(id === 'phase-3') window.genererGraphes();
+            if(id === 'phase-4') { setTimeout(function(){ window.dessinerGrilleLecture(document.getElementById('canvas-lecture'), window.gameData.lectureG.f, "#ff3366"); }, 50); }
+            if(id === 'phase-4b') { setTimeout(function(){ window.dessinerGrilleLecture(document.getElementById('canvas-lecture-2'), window.gameData.lectureG2.f, "#00f3ff"); }, 50); }
+            
+            if(id === 'phase-5') {
+                document.body.classList.add('alert-mode');
+                window.lancerPhase5();
+            } else {
+                document.body.classList.remove('alert-mode');
+            }
+        };
+
+        window.actionRetour = function() {
+            if(window.historique.length > 1) {
+                window.historique.pop(); 
+                var prevId = window.historique[window.historique.length - 1];
+                if(prevId !== 'phase-5') document.body.classList.remove('alert-mode');
+                window.afficherEcran(prevId);
+            }
+        };
+
+        window.majRetour = function() {
+            var btn = document.getElementById('btn-retour');
+            if(window.historique.length <= 1 || window.historique[window.historique.length-1] === 'ecran-accueil') btn.style.visibility = 'hidden';
+            else btn.style.visibility = 'visible';
+        };
+
+        // --- PHASES DE JEU : VERIFICATIONS & PENALITÉS ---
+        window.verifierPhase1 = function() {
+            var d1 = parseInt(document.getElementById('digit1').value); var d2 = parseInt(document.getElementById('digit2').value);
+            var d3 = parseInt(document.getElementById('digit3').value); var d4 = parseInt(document.getElementById('digit4').value);
+            if(d1===window.gameData.p1.c1.sol && d2===window.gameData.p1.c2.sol && d3===window.gameData.p1.c3.sol && d4===window.gameData.p1.c4.sol) {
+                window.score += (500 * window.multiplicateur); 
+                window.updateScoreUI(); window.naviguerVers('story-2');
+            } else { 
+                alert("CODE INCORRECT ! Pénalité : Multiplicateur à x1.00 et -3 min."); 
+                window.temps-=180; window.score -= 250; window.multiplicateur = 1.0; window.updateScoreUI();
+            }
+        };
+
+        window.genererGraphes = function() {
+            if(window.graphesGeneres) return;
+            var zone = document.getElementById('zone-graphes'); zone.innerHTML = "";
+            var configs = [
+                {id:'ok1', f: window.gameData.voleur.f}, 
+                {id:'ok2', f: window.gameData.drone.f},
+                {id:'no1', f:function(x){return -20 * x + 100;}}, 
+                {id:'no2', f:function(x){return 150;}},           
+                {id:'no3', f:function(x){return -2 * x * x + 400;}}, 
+                {id:'no4', f:function(x){return 35 * x;}},        
+                {id:'no5', f:function(x){return Math.abs(x) * 30;}}, 
+                {id:'no6', f:function(x){return 2 * (x - 5) * (x - 5);}} 
+            ];
+            configs.sort(function(){return 0.5 - Math.random()});
+            configs.forEach(function(c) {
+                var div = document.createElement('div'); div.className = 'card radar-wrapper'; div.dataset.id = c.id; div.dataset.state = "0"; div.style.marginBottom = "0";
+                
+                var scanner = document.createElement('div'); scanner.className = 'radar-scanner'; div.appendChild(scanner);
+                
+                var lbl = document.createElement('div'); lbl.className = 'label-overlay'; div.appendChild(lbl);
+                var cvs = document.createElement('canvas'); div.appendChild(cvs); zone.appendChild(div);
+                window.dessinerCourbe(cvs, c.f, "rgba(255,255,255,0.7)", true);
+                
+                div.onclick = function() {
+                    window.jouerSon('click'); // <--- AJOUTER CETTE LIGNE ICI
+                    var st = parseInt(div.dataset.state); var nst = (st+1)%3; div.dataset.state = nst;
+                    div.classList.remove('selected-drone', 'selected-voleur'); lbl.innerText = ""; var col = "rgba(255,255,255,0.7)";
+                    scanner.style.background = "var(--primary)"; scanner.style.boxShadow = "0 0 10px var(--primary)";
+                    
+                    if(nst===1) { 
+                        div.classList.add('selected-drone'); lbl.innerText = "DRONE"; lbl.style.color="var(--primary)"; col = "var(--primary)"; 
+                    } else if(nst===2) { 
+                        div.classList.add('selected-voleur'); lbl.innerText = "VOLEUR"; lbl.style.color="var(--alert)"; col = "var(--alert)"; 
+                        scanner.style.background = "var(--alert)"; scanner.style.boxShadow = "0 0 10px var(--alert)";
+                    } else {
+                        scanner.style.background = "rgba(255,255,255,0.2)"; scanner.style.boxShadow = "none";
+                    }
+                    window.dessinerCourbe(cvs, c.f, col, true);
+                };
+            });
+            window.graphesGeneres = true;
+        };
+
+        window.verifierPhase3 = function() {
+            var dr = document.querySelector('.card.selected-drone'); var vo = document.querySelector('.card.selected-voleur');
+            if(!dr || !vo) { alert("Associez un Drone (Bleu) et un Voleur (Rouge) pour continuer."); return; }
+            if(dr.dataset.id === 'ok2' && vo.dataset.id === 'ok1') {
+                var tot = document.querySelectorAll('.selected-drone, .selected-voleur').length;
+                if(tot>2) { alert("Surcharge radar : Trop de cibles sélectionnées !"); return; }
+                window.score += (300 * window.multiplicateur); 
+                window.updateScoreUI(); window.naviguerVers('story-4');
+            } else { 
+                alert("Erreur d'identification ! Multiplicateur à x1.00 et -2 min."); 
+                window.temps-=120; window.score -= 150; window.multiplicateur = 1.0; window.updateScoreUI();
+            }
+        };
+
+        window.verifierPhase4 = function() {
+            var r1 = parseInt(document.getElementById('rep4-1').value);
+            var r2 = parseInt(document.getElementById('rep4-2').value);
+            if(r1 === window.gameData.lectureG.q1_sol && r2 === window.gameData.lectureG.q2_sol) { 
+                window.score += (200 * window.multiplicateur); 
+                window.updateScoreUI(); window.naviguerVers('story-4b'); 
+            } else { 
+                alert("Échec du calibrage manuel. Multiplicateur à x1.00 et -2 min."); 
+                window.temps-=120; window.score -= 150; window.multiplicateur = 1.0; window.updateScoreUI();
+            }
+        };
+
+        window.verifierPhase4b = function() {
+            var r1 = parseInt(document.getElementById('rep4b-1').value);
+            var r2a = parseInt(document.getElementById('rep4b-2a').value);
+            var r2b = parseInt(document.getElementById('rep4b-2b').value);
+            
+            var sol1 = window.gameData.lectureG2.q1_sol;
+            var sol2a = window.gameData.lectureG2.q2_sol1;
+            var sol2b = window.gameData.lectureG2.q2_sol2;
+            
+            var imgOk = (r1 === sol1);
+            var antOk = (r2a === sol2a && r2b === sol2b) || (r2a === sol2b && r2b === sol2a);
+            
+            if(imgOk && antOk) {
+                window.score += (200 * window.multiplicateur); 
+                window.updateScoreUI(); window.naviguerVers('story-5');
+            } else { 
+                alert("Impact manqué. Calibrage erroné. Multiplicateur à x1.00 et -2 min."); 
+                window.temps -= 120; window.score -= 150; window.multiplicateur = 1.0; window.updateScoreUI(); 
+            }
+        };
+
+        window.lancerPhase5 = function() {
+            if(window.phase5Init) { window.showQ(); return; }
+            window.mathQ = []; for(var i=0; i<10; i++) window.mathQ.push(window.genererQuestionMath());
+            document.getElementById('prog-bar').style.width = "0%"; window.phase5Init = true; 
+            window.updateScoreUI(); window.showQ();
+        };
+
+        window.showQ = function() {
+            if(window.mathIndex>=window.mathQ.length) { window.fin(); return; }
+            var percent = (window.mathIndex / window.mathQ.length) * 100;
+            document.getElementById('prog-bar').style.width = percent + "%";
+
+            if(window.timerPhase5) clearInterval(window.timerPhase5);
+            window.compteurQ = 10; document.getElementById('q-timer-display').innerText = window.compteurQ; window.updateScoreUI(); 
+           
+            window.timerPhase5 = setInterval(function() {
+                window.compteurQ--; document.getElementById('q-timer-display').innerText = window.compteurQ; window.updateScoreUI(); 
+
+                if(window.compteurQ <= 0) {
+                    clearInterval(window.timerPhase5);
+                    document.getElementById('feedback').innerText = "DÉLAI DÉPASSÉ (-1 min)"; document.getElementById('feedback').style.color = "var(--alert)";
+                    window.temps -= 60; window.score -= 150; window.multiplicateur = 1.0; window.updateScoreUI();
+                   
+                    if(window.mathIndex > 0) window.mathIndex--;
+                    window.mathQ[window.mathIndex] = window.genererQuestionMath(); setTimeout(window.showQ, 1000);
+                }
+            }, 1000);
+
+            window.currentQ = window.mathQ[window.mathIndex];
+            document.getElementById('question-math').innerText = window.currentQ.t + " = ?";
+            window.inputMath = ""; document.getElementById('feedback').innerText = "";
+        };
+
+        window.touche = function(k) {
+            window.jouerSon('typing'); // Jouera aléatoirement typing 1, 2 ou 3
+            if(k==='DEL') window.inputMath = window.inputMath.slice(0, -1);
+            else if(k==='-') { if(window.inputMath.length===0) window.inputMath += "-"; }
+            else if(k==='OK') {
+                if(parseInt(window.inputMath)===window.currentQ.r) {
+                    clearInterval(window.timerPhase5);
+                    
+                    var points = Math.round(100 * window.multiplicateur);
+                    window.score += points; 
+                    
+                    // Récompense phase finale (Max x3.00)
+                    window.multiplicateur = Math.min(3.00, window.multiplicateur + 0.20);
+                    window.updateScoreUI();
+                    
+                    document.getElementById('feedback').innerText = "+" + points + " pts"; document.getElementById('feedback').style.color = "#00ff41";
+                    window.mathIndex++; window.showQ();
+                } else {
+                    document.getElementById('feedback').innerText="ERREUR DE CALCUL (-1 min)"; document.getElementById('feedback').style.color = "var(--alert)";
+                    window.inputMath=""; window.temps-=60; window.score -= 150; window.multiplicateur = 1.0; window.updateScoreUI();
+                    if(window.mathIndex > 0) window.mathIndex--;
+                    window.mathQ[window.mathIndex] = window.genererQuestionMath(); setTimeout(window.showQ, 500);
+                }
+            } else { if(window.inputMath.length<5) window.inputMath+=k; } 
+            if(k!=='OK') document.getElementById('feedback').innerText=window.inputMath;
+        };
+
+        window.fin = function() {
+            document.body.classList.remove('alert-mode');
+            if(window.intervalle) clearInterval(window.intervalle);
+            if(window.timerPhase5) clearInterval(window.timerPhase5);
+           
+            window.afficherEcran('ecran-revelation');
+            document.getElementById('btn-retour').style.visibility="hidden";
+
+            var titre = document.getElementById('titre-revelation');
+            var blocSuspect = document.getElementById('bloc-suspect');
+            var blocEchec = document.getElementById('bloc-echec');
+
+            if(window.temps > 0) {
+                titre.innerText = "MISSION ACCOMPLIE"; titre.style.color = "var(--primary)"; titre.style.textShadow = "0 0 15px var(--primary-glow)";
+                blocSuspect.style.display = "block"; blocEchec.style.display = "none";
+                var timeBonus = window.temps * 5; window.score += timeBonus;
+                document.getElementById('bonus-detail').innerText = "(Bonus temps d'extraction: " + timeBonus + " pts)";
+            } else {
+                titre.innerText = "ÉCHEC DE LA MISSION"; titre.style.color = "var(--alert)"; titre.style.textShadow = "0 0 15px var(--alert-glow)";
+                blocSuspect.style.display = "none"; blocEchec.style.display = "block";
+                document.getElementById('bonus-detail').innerText = "(Temps imparti écoulé)";
+            }
+           
+            window.updateScoreUI(); document.getElementById('final-score-display').innerText = Math.round(window.score);
+        };
+
+        window.voirRapportScore = function() { 
+            var btn = document.querySelector("#ecran-fin .action-btn");
+            if(btn) { btn.innerText = "SAUVEGARDER DANS LA BASE"; btn.disabled = false; }
+            window.afficherEcran('ecran-fin'); 
+        };
+
+        window.sauvegarderScore = function() {
+            var name = document.getElementById('player-name').value; 
+            if(!name) { alert("Saisie identifiant obligatoire."); return; }
+            
+            var btn = document.querySelector("#ecran-fin .action-btn");
+            btn.innerText = "ENVOI EN COURS...";
+            btn.disabled = true;
+
+            var t = Math.max(0, window.temps);
+            var m = Math.floor(t / 60); 
+            var s = t % 60;
+            var mStr = (m < 10 ? "0" : "") + m;
+            var sStr = (s < 10 ? "0" : "") + s;
+            var tempsFormate = mStr + " min " + sStr + "s";
+
+            var sLocal = JSON.parse(localStorage.getItem('hackerScores')) || [];
+            sLocal.push({ name: name, score: Math.round(window.score), date: new Date().toLocaleDateString('fr-FR'), time: tempsFormate });
+            sLocal.sort((a,b) => b.score - a.score);
+            localStorage.setItem('hackerScores', JSON.stringify(sLocal.slice(0, 10)));
+
+            if(GOOGLE_APP_URL.includes("library")) {
+                alert("Archive locale mise à jour.");
+                window.retourAccueil(); return;
+            }
+
+            var urlSauvegarde = GOOGLE_APP_URL 
+                + "?action=save"
+                + "&Jeu=" + encodeURIComponent(NOM_DU_JEU)
+                + "&Name=" + encodeURIComponent(name)
+                + "&Score=" + Math.round(window.score)
+                + "&Date=" + encodeURIComponent(new Date().toLocaleDateString('fr-FR'))
+                + "&Time=" + encodeURIComponent(tempsFormate);
+
+            fetch(urlSauvegarde, { method: 'GET', mode: 'no-cors' })
+            .then(() => {
+                alert("Données transmises à la base centrale."); 
+                window.retourAccueil();
+            })
+            .catch(error => {
+                alert("Échec réseau distant. Enregistré localement.");
+                window.retourAccueil();
+            });
+        };
+
+        window.voirScores = function(mode) {
+            window.naviguerVers('ecran-classement'); 
+            var div = document.getElementById('liste-scores'); 
+            var titre = document.getElementById('titre-classement');
+            
+            if(mode === 'local') {
+                titre.innerText = "ARCHIVES LOCALES";
+                affichageLocalSeulement(div); return;
+            }
+
+            titre.innerText = "RÉSEAU MONDIAL";
+            div.innerHTML = "<p style='text-align:center; animation: blink 1s infinite;'>Connexion à la base de données...</p>";
+            
+            if(GOOGLE_APP_URL.includes("library")) {
+                 div.innerHTML = "<p style='text-align:center; color:red;'>Liaison montante rompue.</p>"; return;
+            }
+
+            var urlLecture = GOOGLE_APP_URL + "?action=read&Jeu=" + encodeURIComponent(NOM_DU_JEU);
+            
+            fetch(urlLecture)
+                .then(res => res.json())
+                .then(scores => {
+                    if(scores.length === 0) { div.innerHTML = "<p style='text-align:center'>Base de données vierge.</p>"; return; }
+                    var html = "<table><tr><th>RANG</th><th>AGENT</th><th>SCORE</th><th>TEMPS</th><th>DATE</th></tr>";
+                    scores.forEach((x, i) => {
+                        var tempsAffiche = x.time ? x.time : "-- min --s";
+                        var dateAffiche = x.date;
+                        if(dateAffiche && dateAffiche.includes('T')) dateAffiche = new Date(dateAffiche).toLocaleDateString('fr-FR');
+                        html += "<tr><td>#"+(i+1)+"</td><td>"+x.name+"</td><td class='score-num'>"+x.score+"</td><td>"+tempsAffiche+"</td><td>"+dateAffiche+"</td></tr>";
+                    });
+                    div.innerHTML = html + "</table>";
+                })
+                .catch(error => { 
+                    div.innerHTML = "<p style='text-align:center; color:red;'>Échec de l'extraction des données.</p>"; 
+                });
+        };
+
+        function affichageLocalSeulement(div) {
+            var sLocal = JSON.parse(localStorage.getItem('hackerScores')) || [];
+            if(sLocal.length === 0) { div.innerHTML = "<p style='text-align:center; color:#94a3b8;'>Aucune archive locale trouvée.</p>"; return; }
+            var html = "<table><tr><th>RANG</th><th>AGENT</th><th>SCORE</th><th>TEMPS</th><th>DATE</th></tr>";
+            sLocal.forEach((x, i) => {
+                var tempsAffiche = x.time ? x.time : "-- min --s";
+                html += "<tr><td>#"+(i+1)+"</td><td>"+x.name+"</td><td class='score-num'>"+x.score+"</td><td>"+tempsAffiche+"</td><td>"+x.date+"</td></tr>";
+            });
+            div.innerHTML = html + "</table>";
+        }
+
+    } catch(e) { document.getElementById('error-box').style.display = 'block'; document.getElementById('error-box').innerText = "FATAL ERROR: " + e.message; }
+    </script>
+</body>
+</html>

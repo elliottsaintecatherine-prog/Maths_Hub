@@ -558,8 +558,7 @@
 // MOTEUR AUDIO AVANCÉ (CHEMINS RELATIFS & ALÉATOIRE)
 // ==========================================
 const cheminSons = "../Son/";
-window.sfx = {
-    // Les sons avec plusieurs variations sont mis dans des tableaux (arrays)
+const fichiersAudio = {    // Les sons avec plusieurs variations sont mis dans des tableaux (arrays)
     click: [
         new Audio(cheminSons + 'mouseclick1.mp3'),
         new Audio(cheminSons + 'mouseclick2.mp3'),
@@ -575,22 +574,31 @@ window.sfx = {
     success: new Audio(cheminSons + 'success.mp3')
 };
 
+        // 2. Votre fonction principale pour jouer les sons
         window.jouerSon = function(type) {
             if (window.isMuted) return;
             
             let sonAJouer;
-            if (Array.isArray(window.sfx[type])) {
-                const indexAleatoire = Math.floor(Math.random() * window.sfx[type].length);
-                sonAJouer = window.sfx[type][indexAleatoire];
+            if (Array.isArray(fichiersAudio[type])) {
+                const indexAleatoire = Math.floor(Math.random() * fichiersAudio[type].length);
+                sonAJouer = fichiersAudio[type][indexAleatoire];
             } else {
-                sonAJouer = window.sfx[type];
+                sonAJouer = fichiersAudio[type];
             }
 
             if (sonAJouer) {
                 sonAJouer.currentTime = 0;
-                sonAJouer.volume = window.sfxVolume; // <-- AJOUTE CETTE LIGNE ICI
+                sonAJouer.volume = window.sfxVolume;
                 sonAJouer.play().catch(e => console.log("Son bloqué :", e));
             }
+        };
+        // 3. LA SOLUTION : On reconnecte les anciennes commandes du jeu à votre nouvelle fonction !
+        window.sfx = {
+            click: () => window.jouerSon('click'),
+            typing: () => window.jouerSon('typing'),
+            success: () => window.jouerSon('success'),
+            error: () => window.jouerSon('error'),
+            alert: () => window.jouerSon('error') // Remplace l'ancienne alarme par le son d'erreur
         };
 // ==========================================
         // --- GESTION DU BOUTON MUSIQUE ---

@@ -460,16 +460,8 @@
 
         if (btnBackHub) {
             btnBackHub.addEventListener('click', () => {
-                // Si on vient du hub, revenir à la page précédente
-                if (document.referrer && document.referrer.includes('index.html')) {
-                    window.location.href = document.referrer;
-                    openDev()
-                    return;
-                }
-                // Copie de développement : on vise le hub "Jeux maths lycée"
-                window.location.href = "../Jeux maths lycée/index.html";
-                openDev();
-
+                // Retour direct vers le hub secret du dossier "Jeux maths lycée"
+                window.location.href = "../Jeux maths lycée/index.html?hub=secret";
             });
         }
 

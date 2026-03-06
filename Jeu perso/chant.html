@@ -484,11 +484,33 @@
         let gainOrig, gainInstru;
         let isIsolated = false;
         let recordedAudioUrl = null;
+        let gameSong = null; // données de notes cibles pour le mode jeu (chargées depuis le localStorage)
 
         catalogue.forEach((fichier, index) => {
             let option = document.createElement('option');
             option.value = index; option.text = fichier.replace('.mp3', ''); selectMenu.appendChild(option);
         });
+
+        const GAME_STORAGE_PREFIX = "studioMusic:notes:";
+
+        function songIdFromFilenameSimple(nomFichier) {
+            const base = String(nomFichier || "chant.mp3").replace(/\.mp3$/i, '');
+            return base.toLowerCase().replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '');
+        }
+
+        function chargerGameSong() {
+            const nomFichier = catalogue[selectMenu.value];
+            if (!nomFichier) { gameSong = null; return; }
+            const key = GAME_STORAGE_PREFIX + songIdFromFilenameSimple(nomFichier);
+            try {
+                const raw = localStorage.getItem(key);
+                if (!raw) { gameSong = null; return; }
+                const obj = JSON.parse(raw);
+                gameSong = obj && obj.lanes && obj.lanes[0] ? obj : null;
+            } catch {
+                gameSong = null;
+            }
+        }
 
         function chargerChanson() {
             const nomFichier = catalogue[selectMenu.value];
@@ -506,6 +528,7 @@
             };
 
             resetPlayerUI();
+            chargerGameSong();
             
             // Si le moteur audio avancé a été allumé, il faut recharger la page pour changer de musique en toute sécurité (limitation navigateur local)
             if(routingInitialized) { window.location.reload(); }
@@ -854,6 +877,55 @@
         });
 
         // --- 4. VISUALISEUR ---
+
+        function findCurrentTargetNote(timeSec) {
+            if (!gameSong || !gameSong.lanes || !gameSong.lanes[0] || !Array.isArray(gameSong.lanes[0].notes)) return null;
+            const notes = gameSong.lanes[0].notes;
+            for (let i = 0; i < notes.length; i++) {
+                const n = notes[i];
+                const t0 = Number(n.t0) || 0;
+                const d = Number(n.d) || 0;
+                if (timeSec >= t0 && timeSec <= t0 + d) return n;
+            }
+            return null;
+        }
+
+        function drawTargetNoteOnCanvas() {
+            if (!gameSong) return;
+            const now = Number(playerInstru?.currentTime || 0);
+            if (!Number.isFinite(now)) return;
+
+            const target = findCurrentTargetNote(now);
+            if (!target || typeof target.midi !== 'number') return;
+
+            const rootStyles = getComputedStyle(document.documentElement);
+            const border = rootStyles.getPropertyValue('--border').trim();
+            const success = rootStyles.getPropertyValue('--success').trim() || '#10b981';
+
+            const midi = target.midi;
+            const baseMidi = 40;
+            const y = canvas.height - ((midi - baseMidi) * 5);
+            const h = 14;
+
+            ctx.save();
+            ctx.fillStyle = "rgba(15,23,42,0.70)";
+            ctx.fillRect(0, y - h / 2, canvas.width, h);
+            ctx.strokeStyle = border || "rgba(148,163,184,0.8)";
+            ctx.lineWidth = 1;
+            ctx.strokeRect(0.5, y - h / 2 + 0.5, canvas.width - 1, h - 1);
+
+            // Nom de la note / syllabe
+            const noteName = noteStrings[midi % 12] || '';
+            const syll = target.lyric && target.lyric.text ? String(target.lyric.text) : '';
+            const label = syll ? `${noteName} · ${syll}` : noteName;
+            if (label) {
+                ctx.fillStyle = success;
+                ctx.font = "12px system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
+                ctx.fillText(label, 10, y - 6);
+            }
+            ctx.restore();
+        }
+
         function autoCorrelate(buf, sampleRate) {
             let SIZE = buf.length; let rms = 0;
             for (let i = 0; i < SIZE; i++) rms += buf[i] * buf[i];
@@ -876,6 +948,9 @@
             let pitch = autoCorrelate(buffer, audioContext.sampleRate);
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Cible actuelle (notes à chanter)
+            drawTargetNoteOnCanvas();
             
             if (pitch !== -1) {
                 let noteNum = 12 * (Math.log(pitch / 440) / Math.log(2)); let note = Math.round(noteNum) + 69;

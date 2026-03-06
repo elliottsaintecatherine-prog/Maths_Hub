@@ -210,9 +210,12 @@
 
     <nav class="top-nav">
         <div class="logo">🎧 StudioMusic</div>
-        <button class="theme-toggle" id="btn-theme">
-            <span id="theme-icon">☀️</span> <span id="theme-text">Mode Clair</span>
-        </button>
+        <div style="display:flex; gap:10px; align-items:center;">
+            <button class="theme-toggle" id="btn-theme">
+                <span id="theme-icon">☀️</span> <span id="theme-text">Mode Clair</span>
+            </button>
+            <button class="theme-toggle" id="btn-back-hub" title="Retour au Hub">🏠 Hub</button>
+        </div>
     </nav>
 
     <main class="main-content">
@@ -443,6 +446,7 @@
     <script>
         // --- 0. THÈME ---
         const btnTheme = document.getElementById('btn-theme');
+        const btnBackHub = document.getElementById('btn-back-hub');
         const htmlDoc = document.documentElement;
         btnTheme.addEventListener('click', () => {
             if (htmlDoc.getAttribute('data-theme') === 'dark') {
@@ -453,6 +457,18 @@
                 document.getElementById('theme-icon').innerText = '☀️'; document.getElementById('theme-text').innerText = 'Mode Clair';
             }
         });
+
+        if (btnBackHub) {
+            btnBackHub.addEventListener('click', () => {
+                // Si on vient du hub, revenir à la page précédente
+                if (document.referrer && document.referrer.includes('index.html')) {
+                    window.location.href = document.referrer;
+                    return;
+                }
+                // Copie de développement : on vise le hub "Jeux maths lycée"
+                window.location.href = "../Jeux maths lycée/index.html";
+            });
+        }
 
         // ==========================================
         // 🛠️ TON CATALOGUE DE CHANSONS

@@ -299,7 +299,6 @@
         <button class="filter-btn" onclick="filtrerJeux('Seconde')">Seconde</button>
         <button class="filter-btn" onclick="filtrerJeux('Première')">Première</button>
         <button class="filter-btn" onclick="filtrerJeux('Terminale')">Terminale</button>
-        <button class="filter-btn" onclick="filtrerJeux('Bonus')">Bonus</button>
     </div>
 
     <div class="games-grid" id="games-container">
@@ -349,7 +348,8 @@
                 chapitre: "Coaching vocal / SingStar",
                 description: "Détection de justesse + harmonies + éditeur de notes (PIN 1702 dans le jeu).",
                 fichier: "Jeu%20perso/chant.html",
-                disponible: true
+                disponible: true,
+                secretOnly: true
             },
             {
                 id: "enigma",
@@ -388,6 +388,7 @@
             conteneur.innerHTML = ""; 
 
             listeJeux.forEach(jeu => {
+                if (jeu.secretOnly) return; // caché dans le hub normal
                 if (filtreNiveau === "Tous" || jeu.niveau === filtreNiveau) {
                     
                     const carte = document.createElement('div');

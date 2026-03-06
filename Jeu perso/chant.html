@@ -1,0 +1,1731 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Studio Vocal & Karaoké</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        /* --- DESIGN SYSTEM DYNAMIQUE --- */
+        :root {
+            --bg-base: #f3f4f6;
+            --bg-panel: #ffffff;
+            --text-main: #111827;
+            --text-muted: #6b7280;
+            --primary: #6366f1; 
+            --primary-hover: #4f46e5;
+            --border: #e5e7eb;
+            --danger: #ef4444;
+            --success: #10b981;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --canvas-bg: #f9fafb;
+        }
+
+        [data-theme="dark"] {
+            --bg-base: #000000;
+            --bg-panel: #121212;
+            --text-main: #ffffff;
+            --text-muted: #a1a1aa;
+            --primary: #1db954; 
+            --primary-hover: #1ed760;
+            --border: #27272a;
+            --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            --canvas-bg: #09090b;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; transition: background-color 0.3s, color 0.3s, border-color 0.3s; }
+
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: var(--bg-base); color: var(--text-main); padding-bottom: 40px; }
+
+        /* --- EN-TÊTE --- */
+        .top-nav { display: flex; justify-content: space-between; align-items: center; padding: 20px 30px; background-color: var(--bg-panel); border-bottom: 1px solid var(--border); }
+        .logo { font-size: 24px; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+        .theme-toggle { background: var(--bg-base); border: 1px solid var(--border); color: var(--text-main); padding: 8px 16px; border-radius: 20px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        .theme-toggle:hover { filter: brightness(0.95); }
+
+        /* --- GRILLE PRINCIPALE --- */
+        .main-content { max-width: 1000px; margin: 30px auto; padding: 0 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 768px) { .main-content { grid-template-columns: 1fr; } }
+
+        .panel { background-color: var(--bg-panel); border-radius: 12px; padding: 25px; box-shadow: var(--shadow); border: 1px solid var(--border); }
+        .panel-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; color: var(--text-main); display: flex; align-items: center; gap: 10px;}
+
+        /* --- SÉLECTION MUSIQUE ET POCHETTE --- */
+        .album-art-placeholder { width: 100%; height: 220px; background: linear-gradient(135deg, var(--border), var(--bg-base)); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 50px; margin-bottom: 15px; overflow: hidden; }
+        .album-art-placeholder img { width: 100%; height: 100%; object-fit: cover; display: none; }
+        select { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background-color: var(--bg-base); color: var(--text-main); font-size: 16px; cursor: pointer; outline: none; margin-bottom: 15px; }
+        select:focus { border-color: var(--primary); }
+
+        /* --- CONTRÔLES LECTURE INTÉGRÉS --- */
+        .player-box { background: var(--bg-base); padding: 15px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 20px; }
+        .progress-wrapper { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums;}
+        input[type="range"].seek-bar { -webkit-appearance: none; appearance: none; width: 100%; background: transparent; cursor: pointer; }
+        input[type="range"].seek-bar::-webkit-slider-runnable-track { height: 4px; background: var(--border); border-radius: 2px; }
+        input[type="range"].seek-bar::-webkit-slider-thumb { -webkit-appearance: none; height: 12px; width: 12px; background: var(--primary); border-radius: 50%; margin-top: -4px; }
+
+        .controls-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;}
+        .main-playback { display: flex; gap: 15px; align-items: center; }
+        .btn-circle { background: transparent; border: none; color: var(--text-main); width: 40px; height: 40px; border-radius: 50%; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .btn-circle:hover { background: var(--border); }
+        .btn-play-main { background: var(--text-main); color: var(--bg-panel); width: 45px; height: 45px; }
+        .btn-play-main:hover { background: var(--primary); color: white; transform: scale(1.05); }
+
+        .mixer-controls { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-main); font-weight: 500; flex-wrap: wrap;}
+        .mixer-controls input[type="range"] { width: 90px; -webkit-appearance: none; appearance: none; background: transparent; cursor: pointer; }
+        .mixer-controls input[type="range"]::-webkit-slider-runnable-track { height: 4px; background: var(--border); border-radius: 2px; }
+        .mixer-controls input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; height: 12px; width: 12px; background: var(--primary); border-radius: 50%; margin-top: -4px; }
+
+        /* --- BOUTONS --- */
+        .btn { background: var(--bg-base); color: var(--text-main); border: 1px solid var(--border); padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; justify-content: center; width: 100%; margin-bottom: 10px; }
+        .btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary { background: var(--primary); color: white; border: none; }
+        .btn-primary:hover:not(:disabled) { background: var(--primary-hover); color: white; }
+        .btn-danger { background: var(--danger); color: white; border: none; }
+        .btn-danger:hover:not(:disabled) { filter: brightness(1.2); color: white;}
+        .btn-isolate { background: var(--bg-panel); border: 1px solid var(--primary); color: var(--primary); padding: 5px 10px; font-size: 12px; width: auto; margin: 0; border-radius: 20px;}
+        .btn-isolate.active { background: var(--primary); color: white; box-shadow: 0 0 10px rgba(29, 185, 84, 0.4);}
+
+        /* --- VISUALISEUR --- */
+        .pitch-container { position: relative; width: 100%; height: 160px; background: var(--canvas-bg); border-radius: 8px; border: 1px solid var(--border); overflow: hidden; margin-top: 15px;}
+        canvas { width: 100%; height: 100%; }
+        .note-badge { position: absolute; top: 10px; left: 10px; background: var(--bg-panel); border: 1px solid var(--border); color: var(--primary); padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 18px; box-shadow: var(--shadow); }
+
+        /* --- MODE DÉVELOPPEUR (ÉDITEUR PIANO-ROLL) --- */
+        .dev-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(6px);
+            display: none;
+            padding: 20px;
+        }
+        .dev-overlay.open { display: block; }
+        .dev-shell {
+            max-width: 1200px;
+            margin: 0 auto;
+            height: calc(100dvh - 40px);
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            box-shadow: var(--shadow);
+            display: grid;
+            grid-template-columns: 360px 1fr;
+            overflow: hidden;
+        }
+        @media (max-width: 980px) { .dev-shell { grid-template-columns: 1fr; grid-template-rows: auto 1fr; height: calc(100dvh - 40px); } }
+        .dev-sidebar {
+            padding: 18px;
+            border-right: 1px solid var(--border);
+            background: linear-gradient(180deg, var(--bg-panel), var(--bg-base));
+            overflow: auto;
+        }
+        .dev-main {
+            padding: 14px;
+            overflow: hidden;
+            display: grid;
+            grid-template-rows: auto 1fr;
+            gap: 12px;
+        }
+        .dev-topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .dev-title { font-weight: 800; letter-spacing: 0.2px; }
+        .dev-subtitle { font-size: 12px; color: var(--text-muted); }
+        .dev-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .dev-row label { font-size: 12px; color: var(--text-muted); font-weight: 700; }
+        .dev-row input[type="number"], .dev-row input[type="text"], .dev-row select {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--bg-base);
+            color: var(--text-main);
+            outline: none;
+            margin: 0;
+        }
+        .dev-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .dev-card {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+            margin-top: 12px;
+        }
+        .dev-help {
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.35;
+            margin-top: 10px;
+        }
+        .dev-canvas-wrap {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: var(--canvas-bg);
+            overflow: hidden;
+        }
+        #editor-canvas { width: 100%; height: 100%; display: block; }
+        .dev-hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 6px 10px;
+            font-size: 12px;
+            color: var(--text-muted);
+            box-shadow: var(--shadow);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .dev-pill { font-weight: 800; color: var(--text-main); }
+        .dev-note-list { margin-top: 10px; display: grid; gap: 8px; }
+        .dev-note-item {
+            padding: 10px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: var(--bg-panel);
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 10px;
+            cursor: pointer;
+        }
+        .dev-note-item:hover { border-color: var(--primary); }
+        .dev-note-item.active { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(29,185,84,0.15); }
+        .dev-note-meta { font-size: 11px; color: var(--text-muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
+
+    </style>
+</head>
+<body>
+
+    <nav class="top-nav">
+        <div class="logo">🎧 StudioMusic</div>
+        <button class="theme-toggle" id="btn-theme">
+            <span id="theme-icon">☀️</span> <span id="theme-text">Mode Clair</span>
+        </button>
+    </nav>
+
+    <main class="main-content">
+        
+        <section class="panel">
+            <div class="panel-title">🎵 Ma Bibliothèque</div>
+            
+            <div class="album-art-placeholder" id="album-container">
+                <span id="album-fallback">🎶</span>
+                <img id="album-img" src="" alt="Pochette Album">
+            </div>
+            
+            <label style="font-size: 14px; color: var(--text-muted); margin-bottom: 5px; display: block;">Sélectionne ton titre :</label>
+            <select id="song-select"></select>
+
+            <div class="player-box">
+                <div class="progress-wrapper">
+                    <span id="time-current">0:00</span>
+                    <input type="range" id="seek-bar" class="seek-bar" value="0" step="0.1" min="0" max="100">
+                    <span id="time-duration">0:00</span>
+                </div>
+
+                <div class="controls-row">
+                    <div class="main-playback">
+                        <button id="btn-stop" class="btn-circle" title="Stop">⏮</button>
+                        <button id="btn-play" class="btn-circle btn-play-main" title="Lecture / Pause">▶</button>
+                    </div>
+
+                    <div class="mixer-controls">
+                        <button id="btn-isolate" class="btn-isolate" title="Nécessite un serveur local">🪄 Isoler Voix</button>
+                        🗣️ Vol. Voix :
+                        <input type="range" id="vocal-volume" min="0" max="1" step="0.01" value="0.5">
+                        <span id="vol-value" style="width: 35px; text-align: right;">50%</span>
+                    </div>
+                </div>
+            </div>
+
+            <div style="padding: 15px; background: var(--bg-base); border-radius: 8px; border: 1px solid var(--border);">
+                <div class="panel-title" style="font-size: 15px; margin-bottom: 10px;">✨ Harmonie IA</div>
+                
+                <label style="font-size: 12px; font-weight: bold;">Choisir la voix à harmoniser :</label>
+                <select id="harmony-source" style="margin-bottom: 10px; font-weight: bold; font-size: 14px; padding: 8px;">
+                    <option value="original">🎵 Voix de l'artiste</option>
+                    <option value="record">🎙️ Mon Enregistrement</option>
+                </select>
+
+                <select id="harmony-select" style="margin-bottom: 10px; font-size: 14px; padding: 8px;">
+                    <option value="3">Tierce Mineure (+3)</option>
+                    <option value="4" selected>Tierce Majeure (+4)</option>
+                    <option value="7">Quinte Juste (+7)</option>
+                    <option value="12">Octave Sup. (+12)</option>
+                    <option value="-5">Quarte Inf. (-5)</option>
+                    <option value="-12">Octave Inf. (-12)</option>
+                </select>
+                <div style="display: flex; gap: 10px;">
+                    <button id="btn-play-auto-harmony" class="btn btn-primary">▶️ Harmoniser</button>
+                    <button id="btn-stop-auto-harmony" class="btn" disabled>⏹️</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-title">🎙️ Espace d'Enregistrement</div>
+            
+            <button id="btn-start-mic" class="btn btn-primary">🎤 Activer le Micro</button>
+            <div style="display: flex; gap: 10px;">
+                <button id="btn-record" class="btn btn-danger" disabled>🔴 Enregistrer</button>
+                <button id="btn-stop-rec" class="btn" disabled>⏹️ Fin</button>
+            </div>
+
+            <div class="pitch-container">
+                <div id="note-display" class="note-badge">--</div>
+                <canvas id="pitch-canvas"></canvas>
+            </div>
+            <p style="font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 10px;">Chante dans le micro pour voir ta justesse en temps réel.</p>
+        </section>
+
+    </main>
+
+    <audio id="player-instru" preload="metadata"></audio>
+    <audio id="player-orig" preload="metadata"></audio>
+
+    <!-- MODE DÉVELOPPEUR (accès caché par PIN 1702) -->
+    <div class="dev-overlay" id="dev-overlay" aria-hidden="true">
+        <div class="dev-shell" role="dialog" aria-modal="true" aria-label="Mode Développeur">
+            <aside class="dev-sidebar">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                    <div>
+                        <div class="dev-title">🛠️ Éditeur SingStar</div>
+                        <div class="dev-subtitle">Blocs = notes cibles (MIDI) + 1 syllabe</div>
+                    </div>
+                    <button class="btn" id="btn-dev-close" style="width:auto; margin:0;">✕ Fermer</button>
+                </div>
+
+                <div class="dev-card">
+                    <div class="panel-title" style="font-size: 14px; margin-bottom: 10px;">🎵 Chanson</div>
+                    <div>
+                        <label>Éditer la musique</label>
+                        <select id="dev-song-select"></select>
+                    </div>
+                    <div class="dev-help" style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
+                        <span id="dev-save-status">Sauvegarde: —</span>
+                        <button class="btn" id="btn-dev-save-now" style="width:auto; margin:0; padding:6px 10px; font-size:12px;">💾 Sauver</button>
+                    </div>
+                </div>
+
+                <div class="dev-card">
+                    <div class="panel-title" style="font-size: 14px; margin-bottom: 10px;">⏱️ Tempo & Grille</div>
+                    <div class="dev-grid-2">
+                        <div>
+                            <label>BPM</label>
+                            <input id="dev-bpm" type="number" min="30" max="260" step="1" value="120">
+                        </div>
+                        <div>
+                            <label>Steps / Beat</label>
+                            <select id="dev-steps">
+                                <option value="1">1 (noires)</option>
+                                <option value="2">2 (croches)</option>
+                                <option value="4" selected>4 (double-croches)</option>
+                                <option value="8">8</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="margin-top:10px;">
+                        <label>Offset début (sec)</label>
+                        <input id="dev-offset" type="number" step="0.01" value="0">
+                    </div>
+                </div>
+
+                <div class="dev-card">
+                    <div class="panel-title" style="font-size: 14px; margin-bottom: 10px;">🧱 Outils</div>
+                    <div class="dev-row" style="gap:8px;">
+                        <button class="btn btn-primary" id="dev-tool-draw" style="width:auto; margin:0;">✏️ Dessiner</button>
+                        <button class="btn" id="dev-tool-select" style="width:auto; margin:0;">🖱️ Sélection</button>
+                        <button class="btn" id="dev-tool-pan" style="width:auto; margin:0;">🧭 Pan</button>
+                    </div>
+                    <div class="dev-help">
+                        - **Dessiner**: clic-glisser pour créer un bloc (snap sur la grille)<br>
+                        - **Sélection**: déplacer / redimensionner (bords) / double-clic = syllabe<br>
+                        - **Suppr**: supprimer le bloc sélectionné
+                    </div>
+                </div>
+
+                <div class="dev-card">
+                    <div class="panel-title" style="font-size: 14px; margin-bottom: 10px;">🤖 Auto (écoute)</div>
+                    <div class="dev-grid-2">
+                        <div>
+                            <label>Source</label>
+                            <select id="dev-auto-source">
+                                <option value="orig" selected>🗣️ Voix (Parole)</option>
+                                <option value="instru">🎵 Instrumental (Karaoke)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Min dur (ms)</label>
+                            <input id="dev-auto-minms" type="number" min="60" max="800" step="10" value="140">
+                        </div>
+                    </div>
+                    <div class="dev-row" style="margin-top:10px;">
+                        <button class="btn btn-primary" id="btn-dev-auto" style="width:auto; margin:0;">▶️ Auto</button>
+                        <button class="btn" id="btn-dev-auto-stop" style="width:auto; margin:0;" disabled>⏹️ Stop</button>
+                        <button class="btn" id="btn-dev-clear-notes" style="width:auto; margin:0;">🧹 Effacer notes</button>
+                    </div>
+                    <div class="dev-help" id="dev-auto-status">Auto: prêt</div>
+                </div>
+
+                <div class="dev-card">
+                    <div class="panel-title" style="font-size: 14px; margin-bottom: 10px;">📝 Paroles (syllabes)</div>
+                    <label>Colle tes syllabes (séparées par espaces / tirets / retours à la ligne)</label>
+                    <textarea id="dev-lyrics-input" rows="5" style="width:100%; margin-top:8px; padding:10px 12px; border-radius:12px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); resize:vertical; outline:none;"></textarea>
+                    <div class="dev-row" style="margin-top:10px; align-items:center; justify-content:space-between;">
+                        <label style="display:flex; gap:8px; align-items:center; color: var(--text-muted); font-weight:800;">
+                            <input id="dev-lyrics-autoassign" type="checkbox" checked>
+                            Auto-affecter aux nouveaux blocs
+                        </label>
+                        <button class="btn btn-primary" id="btn-dev-lyrics-apply" style="width:auto; margin:0;">✅ Appliquer aux notes</button>
+                    </div>
+                    <div class="dev-help" id="dev-lyrics-status">Paroles: —</div>
+                </div>
+
+                <div class="dev-card">
+                    <div class="panel-title" style="font-size: 14px; margin-bottom: 10px;">⬇️ Export (optionnel)</div>
+                    <div class="dev-row">
+                        <button class="btn btn-primary" id="btn-dev-export" style="margin:0;">Télécharger le JSON</button>
+                    </div>
+                    <div class="dev-help">Utile si tu veux partager / archiver hors du navigateur.</div>
+                </div>
+
+                <div class="dev-card">
+                    <div class="panel-title" style="font-size: 14px; margin-bottom: 10px;">🧾 Notes</div>
+                    <div class="dev-note-list" id="dev-note-list"></div>
+                </div>
+            </aside>
+
+            <section class="dev-main">
+                <div class="dev-topbar">
+                    <div>
+                        <div style="font-weight:800;">Canvas (Piano Roll)</div>
+                        <div class="dev-subtitle" id="dev-song-hint">Titre: —</div>
+                    </div>
+                    <div class="dev-row">
+                        <label style="min-width:110px;">Zoom (px/sec)</label>
+                        <input id="dev-zoom" type="number" min="40" max="400" step="10" value="140" style="width:120px;">
+                        <label style="min-width:90px;">Scroll (sec)</label>
+                        <input id="dev-scroll" type="number" min="0" step="0.1" value="0" style="width:120px;">
+                    </div>
+                </div>
+
+                <div class="dev-canvas-wrap" id="dev-canvas-wrap">
+                    <canvas id="editor-canvas"></canvas>
+                    <div class="dev-hud">
+                        <span>Outil: <span class="dev-pill" id="dev-hud-tool">Dessiner</span></span>
+                        <span>Sélection: <span class="dev-pill" id="dev-hud-sel">—</span></span>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        // --- 0. THÈME ---
+        const btnTheme = document.getElementById('btn-theme');
+        const htmlDoc = document.documentElement;
+        btnTheme.addEventListener('click', () => {
+            if (htmlDoc.getAttribute('data-theme') === 'dark') {
+                htmlDoc.setAttribute('data-theme', 'light');
+                document.getElementById('theme-icon').innerText = '🌙'; document.getElementById('theme-text').innerText = 'Mode Sombre';
+            } else {
+                htmlDoc.setAttribute('data-theme', 'dark');
+                document.getElementById('theme-icon').innerText = '☀️'; document.getElementById('theme-text').innerText = 'Mode Clair';
+            }
+        });
+
+        // ==========================================
+        // 🛠️ TON CATALOGUE DE CHANSONS
+        // ==========================================
+        const catalogue = [
+            "Weyes Blood - Andromeda.mp3",
+        ];
+
+        // --- 1. LECTEUR AUDIO CLASSIQUE ---
+        const selectMenu = document.getElementById('song-select');
+        const playerInstru = document.getElementById('player-instru');
+        const playerOrig = document.getElementById('player-orig');
+        const seekBar = document.getElementById('seek-bar');
+        const timeCurrentDisplay = document.getElementById('time-current');
+        const timeDurationDisplay = document.getElementById('time-duration');
+        const btnPlay = document.getElementById('btn-play');
+        const volSlider = document.getElementById('vocal-volume');
+        const volValueText = document.getElementById('vol-value');
+        const btnIsolate = document.getElementById('btn-isolate');
+        const albumImg = document.getElementById('album-img');
+        const albumFallback = document.getElementById('album-fallback');
+
+        let isPlaying = false;
+        let isDraggingSeekbar = false;
+        let tryingPng = false; 
+
+        // Variables pour le moteur audio avancé (s'il est activé)
+        let routingInitialized = false;
+        let gainOrig, gainInstru;
+        let isIsolated = false;
+        let recordedAudioUrl = null;
+
+        catalogue.forEach((fichier, index) => {
+            let option = document.createElement('option');
+            option.value = index; option.text = fichier.replace('.mp3', ''); selectMenu.appendChild(option);
+        });
+
+        function chargerChanson() {
+            const nomFichier = catalogue[selectMenu.value];
+            playerInstru.src = "Karaoke/" + nomFichier;
+            playerOrig.src = "Parole/" + nomFichier;
+
+            const nomBase = nomFichier.replace('.mp3', '');
+            tryingPng = false;
+            albumImg.src = "Affiche/" + nomBase + ".jpg"; 
+            
+            albumImg.onload = () => { albumImg.style.display = 'block'; albumFallback.style.display = 'none'; };
+            albumImg.onerror = () => {
+                if (!tryingPng) { tryingPng = true; albumImg.src = "Affiche/" + nomBase + ".png"; } 
+                else { albumImg.style.display = 'none'; albumFallback.style.display = 'block'; }
+            };
+
+            resetPlayerUI();
+            
+            // Si le moteur audio avancé a été allumé, il faut recharger la page pour changer de musique en toute sécurité (limitation navigateur local)
+            if(routingInitialized) { window.location.reload(); }
+        }
+
+        function resetPlayerUI() {
+            btnPlay.innerText = "▶"; isPlaying = false; seekBar.value = 0; timeCurrentDisplay.innerText = "0:00";
+        }
+
+        chargerChanson();
+
+        playerInstru.addEventListener('loadedmetadata', () => {
+            seekBar.max = playerInstru.duration; timeDurationDisplay.innerText = formatTime(playerInstru.duration);
+        });
+
+        function formatTime(seconds) {
+            if (isNaN(seconds)) return "0:00";
+            const m = Math.floor(seconds / 60); const s = Math.floor(seconds % 60); return `${m}:${s < 10 ? '0' : ''}${s}`;
+        }
+
+        playerInstru.addEventListener('timeupdate', () => {
+            if (!isDraggingSeekbar) { seekBar.value = playerInstru.currentTime; timeCurrentDisplay.innerText = formatTime(playerInstru.currentTime); }
+        });
+
+        seekBar.addEventListener('input', () => { isDraggingSeekbar = true; timeCurrentDisplay.innerText = formatTime(seekBar.value); });
+        seekBar.addEventListener('change', () => { playerInstru.currentTime = seekBar.value; playerOrig.currentTime = seekBar.value; isDraggingSeekbar = false; });
+        selectMenu.addEventListener('change', () => { chargerChanson(); playerInstru.pause(); playerOrig.pause(); });
+
+        volSlider.addEventListener('input', (e) => {
+            volValueText.innerText = Math.round(e.target.value * 100) + '%';
+            if (gainOrig) { gainOrig.gain.value = e.target.value; }
+            playerOrig.volume = e.target.value;
+        });
+
+        btnPlay.addEventListener('click', async () => {
+            if (isPlaying) {
+                playerInstru.pause(); playerOrig.pause(); btnPlay.innerText = "▶";
+            } else {
+                playerInstru.play().catch(e=>console.log(e)); playerOrig.play().catch(e=>console.log(e)); btnPlay.innerText = "⏸";
+            }
+            isPlaying = !isPlaying;
+        });
+
+        document.getElementById('btn-stop').addEventListener('click', () => {
+            playerInstru.pause(); playerOrig.pause(); playerInstru.currentTime = 0; playerOrig.currentTime = 0; resetPlayerUI();
+        });
+        playerInstru.addEventListener('ended', resetPlayerUI);
+
+
+        // --- 1.5 MOTEUR D'ISOLATION (Avancé) ---
+        let sourceInstruNode, sourceOrigNode;
+        async function initAudioRouting() {
+            if (routingInitialized) return;
+            await Tone.start(); 
+            const ctx = Tone.context.rawContext;
+            sourceInstruNode = ctx.createMediaElementSource(playerInstru);
+            sourceOrigNode = ctx.createMediaElementSource(playerOrig);
+            gainInstru = ctx.createGain(); gainOrig = ctx.createGain();
+            sourceInstruNode.connect(gainInstru).connect(ctx.destination);
+            sourceOrigNode.connect(gainOrig).connect(ctx.destination);
+            gainInstru.gain.value = 1; gainOrig.gain.value = volSlider.value;
+            routingInitialized = true;
+        }
+
+        function applyIsolationState() {
+            // "Isoler Voix" = solo voix (mute instrumental)
+            if (gainInstru && gainOrig) {
+                gainInstru.gain.value = isIsolated ? 0 : 1;
+                gainOrig.gain.value = volSlider.value;
+            } else {
+                playerInstru.volume = isIsolated ? 0 : 1;
+                playerOrig.volume = volSlider.value;
+            }
+            btnIsolate.classList.toggle('active', isIsolated);
+        }
+
+        btnIsolate.addEventListener('click', async () => {
+            try {
+                if (!routingInitialized) await initAudioRouting();
+                
+                isIsolated = !isIsolated;
+                applyIsolationState();
+            } catch (err) {
+                // Fallback qui marche même en file:// : on fait un solo voix via volumes HTMLMediaElement
+                isIsolated = !isIsolated;
+                applyIsolationState();
+                if (location.protocol === 'file:') {
+                    alert("Mode fichier détecté: le routage WebAudio est bloqué, mais j'ai activé un mode 'solo voix' simple via volumes (ça fonctionne offline).");
+                }
+            }
+        });
+
+        // --- 2. MICRO & ENREGISTREMENT ---
+        let audioContext, analyser, microphone, mediaRecorder;
+        let audioChunks = [];
+        let tonePlayer, pitchShift; 
+        const canvas = document.getElementById('pitch-canvas'); const ctx = canvas.getContext('2d');
+        const noteDisplay = document.getElementById('note-display');
+        canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
+        let pitchData = []; const noteStrings = ["Do", "Do#", "Ré", "Ré#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si"];
+
+        document.getElementById('btn-start-mic').addEventListener('click', async () => {
+            if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioContext.state === 'suspended') await audioContext.resume();
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                analyser = audioContext.createAnalyser(); analyser.fftSize = 2048;
+                microphone = audioContext.createMediaStreamSource(stream); microphone.connect(analyser);
+
+                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    recordedAudioUrl = URL.createObjectURL(audioBlob); 
+                    audioChunks = [];
+                };
+
+                document.getElementById('btn-record').disabled = false;
+                const micBtn = document.getElementById('btn-start-mic'); micBtn.innerText = "✅ Micro Activé"; micBtn.style.background = "var(--success)";
+                updatePitch();
+            } catch (err) { alert("Erreur micro : " + err.message); }
+        });
+
+        document.getElementById('btn-record').addEventListener('click', async () => {
+            mediaRecorder.start();
+            document.getElementById('btn-record').disabled = true; document.getElementById('btn-stop-rec').disabled = false;
+            playerInstru.currentTime = 0; playerOrig.currentTime = 0;
+            playerInstru.play().catch(e=>console.log(e)); playerOrig.play().catch(e=>console.log(e));
+            isPlaying = true; btnPlay.innerText = "⏸";
+        });
+
+        document.getElementById('btn-stop-rec').addEventListener('click', () => {
+            mediaRecorder.stop();
+            document.getElementById('btn-record').disabled = false; document.getElementById('btn-stop-rec').disabled = true;
+            playerInstru.pause(); playerOrig.pause(); isPlaying = false; btnPlay.innerText = "▶";
+        });
+
+        // --- 3. HARMONIE TONE.JS ---
+        document.getElementById('btn-play-auto-harmony').addEventListener('click', async () => {
+            await Tone.start();
+            const sourceMode = document.getElementById('harmony-source').value;
+            let urlToHarmonize;
+
+            if (sourceMode === 'record') {
+                if (!recordedAudioUrl) { alert("Tu n'as pas encore fait d'enregistrement !"); return; }
+                urlToHarmonize = recordedAudioUrl;
+            } else { urlToHarmonize = playerOrig.src; }
+
+            if (tonePlayer) tonePlayer.dispose(); if (pitchShift) pitchShift.dispose();
+            tonePlayer = new Tone.Player(urlToHarmonize).toDestination();
+            pitchShift = new Tone.PitchShift({ pitch: parseInt(document.getElementById('harmony-select').value) }).toDestination();
+            tonePlayer.connect(pitchShift);
+
+            await Tone.loaded(); tonePlayer.start();
+            document.getElementById('btn-stop-auto-harmony').disabled = false;
+        });
+
+        document.getElementById('btn-stop-auto-harmony').addEventListener('click', () => {
+            if (tonePlayer) tonePlayer.stop(); document.getElementById('btn-stop-auto-harmony').disabled = true;
+        });
+
+        // --- 4. VISUALISEUR ---
+        function autoCorrelate(buf, sampleRate) {
+            let SIZE = buf.length; let rms = 0;
+            for (let i = 0; i < SIZE; i++) rms += buf[i] * buf[i];
+            rms = Math.sqrt(rms / SIZE); if (rms < 0.01) return -1; 
+            let r1 = 0, r2 = SIZE - 1, thres = 0.2;
+            for (let i = 0; i < SIZE / 2; i++) if (Math.abs(buf[i]) < thres) { r1 = i; break; }
+            for (let i = 1; i < SIZE / 2; i++) if (Math.abs(buf[SIZE - i]) < thres) { r2 = SIZE - i; break; }
+            buf = buf.slice(r1, r2); SIZE = buf.length;
+            let c = new Array(SIZE).fill(0);
+            for (let i = 0; i < SIZE; i++) for (let j = 0; j < SIZE - i; j++) c[i] = c[i] + buf[j] * buf[j + i];
+            let d = 0; while (c[d] > c[d + 1]) d++;
+            let maxval = -1, maxpos = -1;
+            for (let i = d; i < SIZE; i++) { if (c[i] > maxval) { maxval = c[i]; maxpos = i; } }
+            return sampleRate / maxpos;
+        }
+
+        function updatePitch() {
+            requestAnimationFrame(updatePitch); if (!analyser) return;
+            let buffer = new Float32Array(analyser.fftSize); analyser.getFloatTimeDomainData(buffer);
+            let pitch = autoCorrelate(buffer, audioContext.sampleRate);
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (pitch !== -1) {
+                let noteNum = 12 * (Math.log(pitch / 440) / Math.log(2)); let note = Math.round(noteNum) + 69;
+                noteDisplay.innerText = noteStrings[note % 12]; pitchData.push(canvas.height - ((note - 40) * 5)); 
+            } else { noteDisplay.innerText = "--"; pitchData.push(null); }
+
+            if (pitchData.length > canvas.width / 2) pitchData.shift(); 
+            const rootStyles = getComputedStyle(document.documentElement); const primaryColor = rootStyles.getPropertyValue('--primary').trim();
+            ctx.beginPath(); ctx.strokeStyle = primaryColor; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+            for (let i = 0; i < pitchData.length; i++) { if (pitchData[i] !== null) { ctx.lineTo(i * 2, pitchData[i]); } else { ctx.stroke(); ctx.beginPath(); } }
+            ctx.stroke();
+        }
+
+        // ==========================================
+        // 🛠️ MODE DÉVELOPPEUR (PIN 1702) — ÉDITEUR JSON
+        // ==========================================
+        const devOverlay = document.getElementById('dev-overlay');
+        const btnDevClose = document.getElementById('btn-dev-close');
+        const devSongHint = document.getElementById('dev-song-hint');
+        const devSongSelect = document.getElementById('dev-song-select');
+        const devSaveStatus = document.getElementById('dev-save-status');
+        const btnDevSaveNow = document.getElementById('btn-dev-save-now');
+        const devBpmEl = document.getElementById('dev-bpm');
+        const devStepsEl = document.getElementById('dev-steps');
+        const devOffsetEl = document.getElementById('dev-offset');
+        const devZoomEl = document.getElementById('dev-zoom');
+        const devScrollEl = document.getElementById('dev-scroll');
+        const devHudTool = document.getElementById('dev-hud-tool');
+        const devHudSel = document.getElementById('dev-hud-sel');
+        const devNoteList = document.getElementById('dev-note-list');
+
+        const editorCanvas = document.getElementById('editor-canvas');
+        const editorWrap = document.getElementById('dev-canvas-wrap');
+        const ectx = editorCanvas.getContext('2d');
+
+        const devAutoSourceEl = document.getElementById('dev-auto-source');
+        const devAutoMinMsEl = document.getElementById('dev-auto-minms');
+        const btnDevAuto = document.getElementById('btn-dev-auto');
+        const btnDevAutoStop = document.getElementById('btn-dev-auto-stop');
+        const btnDevClearNotes = document.getElementById('btn-dev-clear-notes');
+        const devAutoStatus = document.getElementById('dev-auto-status');
+
+        const devLyricsInput = document.getElementById('dev-lyrics-input');
+        const devLyricsAutoAssign = document.getElementById('dev-lyrics-autoassign');
+        const btnDevLyricsApply = document.getElementById('btn-dev-lyrics-apply');
+        const devLyricsStatus = document.getElementById('dev-lyrics-status');
+
+        let devUnlocked = false;
+        let devOpen = false;
+
+        const DEV_PIN = "1702";
+
+        const devState = {
+            tool: 'draw', // draw | select | pan
+            selectedId: null,
+            isPointerDown: false,
+            drag: null,
+            view: {
+                pxPerSec: 140,
+                scrollSec: 0,
+                midiMin: 40,
+                midiMax: 84
+            },
+            song: null
+        };
+
+        const DEV_STORAGE_PREFIX = "studioMusic:notes:";
+        const DEV_LYRICS_PREFIX = "studioMusic:lyricsDraft:";
+        let devAutosaveTimer = null;
+        let devWarnedRoutingReload = false;
+
+        const devAuto = {
+            running: false,
+            intervalId: null,
+            analyser: null,
+            buffer: null,
+            lastMidi: null,
+            stableMidi: null,
+            stableCount: 0,
+            segment: null,
+            notesAdded: 0
+        };
+
+        function filenameForIndex(index) {
+            const i = Number(index);
+            if (!Number.isFinite(i) || i < 0 || i >= catalogue.length) return "chant.mp3";
+            return catalogue[i];
+        }
+
+        function baseNameFromFilename(nomFichier) {
+            return String(nomFichier || "chant.mp3").replace(/\.mp3$/i, '');
+        }
+
+        function songIdFromFilename(nomFichier) {
+            const base = baseNameFromFilename(nomFichier);
+            return base.toLowerCase().replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '');
+        }
+
+        function storageKeyForFilename(nomFichier) {
+            return DEV_STORAGE_PREFIX + songIdFromFilename(nomFichier);
+        }
+
+        function lyricsKeyForFilename(nomFichier) {
+            return DEV_LYRICS_PREFIX + songIdFromFilename(nomFichier);
+        }
+
+        function setLyricsStatus(text) {
+            if (!devLyricsStatus) return;
+            devLyricsStatus.innerText = text;
+        }
+
+        function parseSyllables(text) {
+            const raw = String(text || '')
+                .replace(/[，,;:]/g, ' ')
+                .replace(/\r/g, '\n')
+                .replace(/-/g, ' ')
+                .replace(/\t/g, ' ')
+                .split(/\s+/g)
+                .map(s => s.trim())
+                .filter(Boolean);
+            return raw;
+        }
+
+        function loadLyricsDraft(index) {
+            const nomFichier = filenameForIndex(index);
+            const key = lyricsKeyForFilename(nomFichier);
+            try {
+                const raw = localStorage.getItem(key);
+                return raw || '';
+            } catch { return ''; }
+        }
+
+        function saveLyricsDraft(index, text) {
+            const nomFichier = filenameForIndex(index);
+            const key = lyricsKeyForFilename(nomFichier);
+            try { localStorage.setItem(key, String(text || '')); } catch {}
+        }
+
+        function nextSyllableFromDraft() {
+            if (!devLyricsAutoAssign?.checked) return '';
+            const draft = devLyricsInput?.value || '';
+            const sylls = parseSyllables(draft);
+            if (sylls.length === 0) return '';
+
+            // consume first syllable
+            const next = sylls.shift();
+            if (devLyricsInput) {
+                devLyricsInput.value = sylls.join(' ');
+                saveLyricsDraft(selectMenu.value, devLyricsInput.value);
+                setLyricsStatus(`Paroles: ${sylls.length} syllabes restantes`);
+            }
+            return next;
+        }
+
+        function setSaveStatus(text) {
+            if (!devSaveStatus) return;
+            devSaveStatus.innerText = text;
+        }
+
+        function scheduleAutosave(reason = '') {
+            clearTimeout(devAutosaveTimer);
+            setSaveStatus("Sauvegarde: en attente…");
+            devAutosaveTimer = setTimeout(() => {
+                saveSongToLocalStorage({ silent: true, reason });
+            }, 450);
+        }
+
+        function saveSongToLocalStorage({ silent = false, reason = '' } = {}) {
+            ensureDevSong();
+            try {
+                const nomFichier = filenameForIndex(selectMenu.value);
+                const key = storageKeyForFilename(nomFichier);
+                const payload = JSON.stringify(devState.song);
+                localStorage.setItem(key, payload);
+                const t = new Date();
+                const hh = String(t.getHours()).padStart(2, '0');
+                const mm = String(t.getMinutes()).padStart(2, '0');
+                const ss = String(t.getSeconds()).padStart(2, '0');
+                setSaveStatus(`Sauvegarde: ok (${hh}:${mm}:${ss})`);
+                return true;
+            } catch (err) {
+                if (!silent) alert("Impossible de sauvegarder (localStorage): " + (err?.message || err));
+                setSaveStatus("Sauvegarde: erreur");
+                return false;
+            }
+        }
+
+        function loadSongFromLocalStorageOrDefault(index) {
+            const nomFichier = filenameForIndex(index);
+            const key = storageKeyForFilename(nomFichier);
+            try {
+                const raw = localStorage.getItem(key);
+                if (raw) {
+                    const obj = JSON.parse(raw);
+                    return obj;
+                }
+            } catch (err) {
+                // ignore parse errors
+            }
+
+            // Default for this specific song
+            const base = baseNameFromFilename(nomFichier);
+            return {
+                schemaVersion: "1.0",
+                songId: songIdFromFilename(nomFichier),
+                title: base,
+                audio: {
+                    instrumentalFileHint: "Karaoke/" + nomFichier,
+                    vocalFileHint: "Parole/" + nomFichier
+                },
+                timing: {
+                    bpm: 120,
+                    timeSignature: "4/4",
+                    grid: { stepsPerBeat: 4 },
+                    startOffsetSec: 0.0
+                },
+                lanes: [
+                    { id: "lead", name: "Voix principale", color: "#4aa3ff", notes: [] }
+                ],
+                lyrics: { lines: [] },
+                markers: []
+            };
+        }
+
+        function defaultSongData() {
+            const nomFichier = catalogue?.[selectMenu.value] || "chant.mp3";
+            const base = nomFichier.replace('.mp3', '');
+            return {
+                schemaVersion: "1.0",
+                songId: base.toLowerCase().replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, ''),
+                title: base,
+                audio: {
+                    instrumentalFileHint: "Karaoke/" + nomFichier,
+                    vocalFileHint: "Parole/" + nomFichier
+                },
+                timing: {
+                    bpm: 120,
+                    timeSignature: "4/4",
+                    grid: { stepsPerBeat: 4 },
+                    startOffsetSec: 0.0
+                },
+                lanes: [
+                    { id: "lead", name: "Voix principale", color: "#4aa3ff", notes: [] }
+                ],
+                lyrics: { lines: [] },
+                markers: []
+            };
+        }
+
+        function ensureDevSong() {
+            if (!devState.song) devState.song = defaultSongData();
+            const lane = devState.song.lanes?.[0];
+            if (!lane) devState.song.lanes = [{ id: "lead", name: "Voix principale", color: "#4aa3ff", notes: [] }];
+            if (!devState.song.timing) devState.song.timing = { bpm: 120, timeSignature: "4/4", grid: { stepsPerBeat: 4 }, startOffsetSec: 0.0 };
+            if (!devState.song.timing.grid) devState.song.timing.grid = { stepsPerBeat: 4 };
+        }
+
+        function populateDevSongSelect() {
+            if (!devSongSelect) return;
+            devSongSelect.innerHTML = '';
+            catalogue.forEach((fichier, index) => {
+                const opt = document.createElement('option');
+                opt.value = String(index);
+                opt.textContent = baseNameFromFilename(fichier);
+                devSongSelect.appendChild(opt);
+            });
+            devSongSelect.value = String(selectMenu.value || 0);
+        }
+
+        function switchEditorToSongIndex(index) {
+            // Save current first
+            saveSongToLocalStorage({ silent: true, reason: 'switch-song' });
+            saveLyricsDraft(selectMenu.value, devLyricsInput?.value || '');
+
+            // Update main selection (so l'utilisateur sait quel titre est concerné)
+            selectMenu.value = String(index);
+            if (!routingInitialized) {
+                chargerChanson();
+            } else if (!devWarnedRoutingReload) {
+                devWarnedRoutingReload = true;
+                alert("Note: le moteur audio avancé est actif. Changer de chanson peut nécessiter un rafraîchissement de la page pour re-router l'audio. L'éditeur, lui, peut quand même éditer/sauver le JSON.");
+            }
+
+            devState.song = loadSongFromLocalStorageOrDefault(index);
+            devState.selectedId = null;
+            ensureDevSong();
+            setSaveStatus("Sauvegarde: chargée");
+            devSongHint.innerText = `Titre: ${devState.song.title || '—'} (songId: ${devState.song.songId || '—'})`;
+            if (devLyricsInput) {
+                devLyricsInput.value = loadLyricsDraft(index);
+                const remaining = parseSyllables(devLyricsInput.value).length;
+                setLyricsStatus(`Paroles: ${remaining} syllabes restantes`);
+            }
+            renderEditor();
+        }
+
+        function openDev() {
+            populateDevSongSelect();
+            devState.song = loadSongFromLocalStorageOrDefault(selectMenu.value);
+            ensureDevSong();
+            devOpen = true;
+            devOverlay.classList.add('open');
+            devOverlay.setAttribute('aria-hidden', 'false');
+
+            // Sync UI <- song
+            devBpmEl.value = String(devState.song.timing.bpm ?? 120);
+            devStepsEl.value = String(devState.song.timing.grid.stepsPerBeat ?? 4);
+            devOffsetEl.value = String(devState.song.timing.startOffsetSec ?? 0);
+            devSongHint.innerText = `Titre: ${devState.song.title || '—'} (songId: ${devState.song.songId || '—'})`;
+            setSaveStatus("Sauvegarde: chargée");
+            if (devLyricsInput) {
+                devLyricsInput.value = loadLyricsDraft(selectMenu.value);
+                const remaining = parseSyllables(devLyricsInput.value).length;
+                setLyricsStatus(`Paroles: ${remaining} syllabes restantes`);
+                devLyricsInput.addEventListener('input', () => {
+                    saveLyricsDraft(selectMenu.value, devLyricsInput.value);
+                    const n = parseSyllables(devLyricsInput.value).length;
+                    setLyricsStatus(`Paroles: ${n} syllabes restantes`);
+                });
+            }
+
+            resizeEditorCanvas();
+            renderEditor();
+        }
+
+        function closeDev() {
+            stopAutoListen();
+            saveSongToLocalStorage({ silent: true, reason: 'close' });
+            saveLyricsDraft(selectMenu.value, devLyricsInput?.value || '');
+            devOpen = false;
+            devOverlay.classList.remove('open');
+            devOverlay.setAttribute('aria-hidden', 'true');
+        }
+
+        function promptPinAndOpen() {
+            const pin = prompt("Mode Développeur — entre le code PIN :");
+            if (pin === null) return;
+            if (String(pin).trim() === DEV_PIN) {
+                devUnlocked = true;
+                openDev();
+            } else {
+                alert("Code incorrect.");
+            }
+        }
+
+        // Accès caché: double-clic logo
+        const logoEl = document.querySelector('.logo');
+        if (logoEl) {
+            logoEl.style.cursor = 'pointer';
+            logoEl.title = "Double-clic: Mode Dev";
+            logoEl.addEventListener('dblclick', () => {
+                if (!devUnlocked) promptPinAndOpen();
+                else openDev();
+            });
+        }
+
+        btnDevClose.addEventListener('click', closeDev);
+        btnDevSaveNow.addEventListener('click', () => saveSongToLocalStorage({ silent: false, reason: 'manual' }));
+        devSongSelect.addEventListener('change', () => {
+            const idx = Number(devSongSelect.value);
+            switchEditorToSongIndex(idx);
+        });
+        devOverlay.addEventListener('click', (e) => {
+            if (e.target === devOverlay) closeDev();
+        });
+        window.addEventListener('keydown', (e) => {
+            if (!devOpen && e.shiftKey && (e.key === 'D' || e.key === 'd')) {
+                if (!devUnlocked) promptPinAndOpen();
+                else openDev();
+            }
+            if (devOpen && e.key === 'Escape') closeDev();
+        });
+
+        function resizeEditorCanvas() {
+            const rect = editorWrap.getBoundingClientRect();
+            const dpr = Math.max(1, window.devicePixelRatio || 1);
+            editorCanvas.width = Math.floor(rect.width * dpr);
+            editorCanvas.height = Math.floor(rect.height * dpr);
+            ectx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+        window.addEventListener('resize', () => {
+            if (devOpen) { resizeEditorCanvas(); renderEditor(); }
+        });
+
+        function setTool(tool) {
+            devState.tool = tool;
+            devHudTool.innerText = tool === 'draw' ? 'Dessiner' : tool === 'select' ? 'Sélection' : 'Pan';
+            document.getElementById('dev-tool-draw').classList.toggle('btn-primary', tool === 'draw');
+            document.getElementById('dev-tool-select').classList.toggle('btn-primary', tool === 'select');
+            document.getElementById('dev-tool-pan').classList.toggle('btn-primary', tool === 'pan');
+            renderEditor();
+        }
+        document.getElementById('dev-tool-draw').addEventListener('click', () => setTool('draw'));
+        document.getElementById('dev-tool-select').addEventListener('click', () => setTool('select'));
+        document.getElementById('dev-tool-pan').addEventListener('click', () => setTool('pan'));
+
+        function stepSec() {
+            const bpm = Math.max(30, Math.min(260, Number(devBpmEl.value) || 120));
+            const steps = Math.max(1, Number(devStepsEl.value) || 4);
+            return (60 / bpm) / steps;
+        }
+
+        function snapTimeSec(t) {
+            const s = stepSec();
+            return Math.round(t / s) * s;
+        }
+
+        function clamp(v, min, max) { return Math.min(max, Math.max(min, v)); }
+
+        function midiToY(midi, heightPx) {
+            const { midiMin, midiMax } = devState.view;
+            const t = (midi - midiMin) / Math.max(1, (midiMax - midiMin));
+            return heightPx - t * heightPx;
+        }
+        function yToMidi(y, heightPx) {
+            const { midiMin, midiMax } = devState.view;
+            const t = clamp(1 - (y / heightPx), 0, 1);
+            return Math.round(midiMin + t * (midiMax - midiMin));
+        }
+
+        function timeToX(tSec) {
+            const pxPerSec = devState.view.pxPerSec;
+            const scroll = devState.view.scrollSec;
+            return (tSec - scroll) * pxPerSec;
+        }
+        function xToTime(xPx) {
+            const pxPerSec = devState.view.pxPerSec;
+            const scroll = devState.view.scrollSec;
+            return (xPx / pxPerSec) + scroll;
+        }
+
+        function laneNotes() {
+            ensureDevSong();
+            return devState.song.lanes[0].notes;
+        }
+
+        function sortNotes() {
+            laneNotes().sort((a, b) => (a.t0 - b.t0) || (a.midi - b.midi));
+        }
+
+        function genId(prefix='n') {
+            return `${prefix}_${Math.random().toString(16).slice(2)}_${Date.now().toString(16)}`;
+        }
+
+        function renderGrid(width, height) {
+            const rootStyles = getComputedStyle(document.documentElement);
+            const border = rootStyles.getPropertyValue('--border').trim();
+            const textMuted = rootStyles.getPropertyValue('--text-muted').trim();
+            const primary = rootStyles.getPropertyValue('--primary').trim();
+
+            ectx.clearRect(0, 0, width, height);
+
+            // Horizontal (MIDI)
+            ectx.lineWidth = 1;
+            for (let m = devState.view.midiMin; m <= devState.view.midiMax; m++) {
+                const y = Math.round(midiToY(m, height)) + 0.5;
+                ectx.strokeStyle = (m % 12 === 0) ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.04)";
+                ectx.beginPath();
+                ectx.moveTo(0, y);
+                ectx.lineTo(width, y);
+                ectx.stroke();
+            }
+
+            // Vertical (time grid)
+            const s = stepSec();
+            const scroll = devState.view.scrollSec;
+            const leftT = scroll;
+            const rightT = scroll + (width / devState.view.pxPerSec);
+            const start = Math.floor(leftT / s) * s;
+
+            for (let t = start; t <= rightT + s; t += s) {
+                const x = Math.round(timeToX(t)) + 0.5;
+                const stepIndex = Math.round(t / s);
+                const isBeat = (stepIndex % (Number(devStepsEl.value) || 4)) === 0;
+                ectx.strokeStyle = isBeat ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.05)";
+                ectx.beginPath();
+                ectx.moveTo(x, 0);
+                ectx.lineTo(x, height);
+                ectx.stroke();
+            }
+
+            // Axis labels (minimal)
+            ectx.fillStyle = "rgba(0,0,0,0)";
+            ectx.font = "12px system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
+            ectx.fillStyle = textMuted;
+            ectx.fillText(`BPM ${devBpmEl.value} — snap ${devStepsEl.value}/beat — zoom ${devState.view.pxPerSec}px/s`, 12, 18);
+            ectx.fillStyle = primary;
+            ectx.fillText(`Outil: ${devState.tool}`, 12, 36);
+        }
+
+        function renderNotes(width, height) {
+            const rootStyles = getComputedStyle(document.documentElement);
+            const bgPanel = rootStyles.getPropertyValue('--bg-panel').trim();
+            const border = rootStyles.getPropertyValue('--border').trim();
+            const primary = rootStyles.getPropertyValue('--primary').trim();
+
+            const notes = laneNotes();
+            const laneColor = devState.song.lanes[0].color || "#4aa3ff";
+
+            for (const n of notes) {
+                const x = timeToX(n.t0);
+                const w = Math.max(2, n.d * devState.view.pxPerSec);
+                const yTop = midiToY(n.midi + 1, height);
+                const yBot = midiToY(n.midi, height);
+                const y = Math.min(yTop, yBot);
+                const h = Math.max(10, Math.abs(yBot - yTop));
+
+                // Only draw if on screen
+                if (x + w < -50 || x > width + 50) continue;
+
+                const isSelected = devState.selectedId === n.id;
+                ectx.fillStyle = isSelected ? "rgba(29,185,84,0.35)" : "rgba(74,163,255,0.25)";
+                ectx.strokeStyle = isSelected ? primary : "rgba(255,255,255,0.18)";
+                ectx.lineWidth = isSelected ? 2 : 1;
+
+                roundRect(ectx, x, y, w, h, 8);
+                ectx.fill();
+                ectx.stroke();
+
+                // Text (syllabe)
+                const syll = (n.lyric && n.lyric.text) ? String(n.lyric.text) : "";
+                if (syll) {
+                    ectx.fillStyle = bgPanel;
+                    ectx.globalAlpha = 0.0;
+                    ectx.globalAlpha = 1.0;
+                    ectx.fillStyle = "rgba(255,255,255,0.90)";
+                    ectx.font = "12px system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
+                    ectx.fillText(syll, x + 8, y + 16);
+                }
+
+                // Resize handles (only selected)
+                if (isSelected) {
+                    ectx.fillStyle = "rgba(255,255,255,0.85)";
+                    ectx.fillRect(x - 3, y + 3, 6, h - 6);
+                    ectx.fillRect(x + w - 3, y + 3, 6, h - 6);
+                }
+            }
+        }
+
+        function roundRect(ctx2d, x, y, w, h, r) {
+            const rr = Math.min(r, w / 2, h / 2);
+            ctx2d.beginPath();
+            ctx2d.moveTo(x + rr, y);
+            ctx2d.arcTo(x + w, y, x + w, y + h, rr);
+            ctx2d.arcTo(x + w, y + h, x, y + h, rr);
+            ctx2d.arcTo(x, y + h, x, y, rr);
+            ctx2d.arcTo(x, y, x + w, y, rr);
+            ctx2d.closePath();
+        }
+
+        function renderEditor() {
+            if (!devOpen) return;
+            ensureDevSong();
+
+            // Sync state from UI
+            devState.song.timing.bpm = Math.max(30, Math.min(260, Number(devBpmEl.value) || 120));
+            devState.song.timing.grid.stepsPerBeat = Math.max(1, Number(devStepsEl.value) || 4);
+            devState.song.timing.startOffsetSec = Number(devOffsetEl.value) || 0;
+            devState.view.pxPerSec = Math.max(40, Math.min(400, Number(devZoomEl.value) || 140));
+            devState.view.scrollSec = Math.max(0, Number(devScrollEl.value) || 0);
+
+            const w = editorWrap.clientWidth;
+            const h = editorWrap.clientHeight;
+            renderGrid(w, h);
+            renderNotes(w, h);
+
+            // HUD + list
+            const sel = laneNotes().find(n => n.id === devState.selectedId);
+            devHudSel.innerText = sel ? `${sel.lyric?.text || '…'} @ ${sel.t0.toFixed(2)}s MIDI ${sel.midi}` : '—';
+            renderNoteList();
+        }
+
+        function renderNoteList() {
+            const notes = laneNotes().slice().sort((a, b) => (a.t0 - b.t0));
+            devNoteList.innerHTML = '';
+            for (const n of notes) {
+                const item = document.createElement('div');
+                item.className = 'dev-note-item' + (n.id === devState.selectedId ? ' active' : '');
+                const syll = n.lyric?.text ? String(n.lyric.text) : '—';
+                const left = document.createElement('div');
+                left.innerHTML = `<div style="font-weight:800;">${escapeHtml(syll)}</div><div class="dev-note-meta">t0 ${n.t0.toFixed(2)}s · d ${n.d.toFixed(2)}s · MIDI ${n.midi}</div>`;
+                const right = document.createElement('div');
+                right.innerHTML = `<div style="font-size:12px; color: var(--text-muted); font-weight:800;">↩</div>`;
+                item.appendChild(left);
+                item.appendChild(right);
+                item.addEventListener('click', () => {
+                    devState.selectedId = n.id;
+                    renderEditor();
+                });
+                item.addEventListener('dblclick', () => {
+                    devState.selectedId = n.id;
+                    editSelectedLyric();
+                });
+                devNoteList.appendChild(item);
+            }
+        }
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+
+        function pointerPos(e) {
+            const rect = editorWrap.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            return { x, y };
+        }
+
+        function hitTestNote(x, y) {
+            const w = editorWrap.clientWidth;
+            const h = editorWrap.clientHeight;
+            const notes = laneNotes();
+            for (let i = notes.length - 1; i >= 0; i--) {
+                const n = notes[i];
+                const rx = timeToX(n.t0);
+                const rw = Math.max(2, n.d * devState.view.pxPerSec);
+                const yTop = midiToY(n.midi + 1, h);
+                const yBot = midiToY(n.midi, h);
+                const ry = Math.min(yTop, yBot);
+                const rh = Math.max(10, Math.abs(yBot - yTop));
+                if (x >= rx && x <= rx + rw && y >= ry && y <= ry + rh) {
+                    const edge = 6;
+                    const nearLeft = Math.abs(x - rx) <= edge;
+                    const nearRight = Math.abs(x - (rx + rw)) <= edge;
+                    return { note: n, nearLeft, nearRight, rect: { x: rx, y: ry, w: rw, h: rh } };
+                }
+            }
+            return null;
+        }
+
+        function editSelectedLyric() {
+            const n = laneNotes().find(nn => nn.id === devState.selectedId);
+            if (!n) return;
+            const current = n.lyric?.text ? String(n.lyric.text) : '';
+            const next = prompt("Syllabe (1 bloc = 1 syllabe):", current);
+            if (next === null) return;
+            n.lyric = { ...(n.lyric || {}), text: String(next).trim() };
+            scheduleAutosave('lyric');
+            renderEditor();
+        }
+
+        editorWrap.addEventListener('pointerdown', (e) => {
+            if (!devOpen) return;
+            editorWrap.setPointerCapture(e.pointerId);
+            devState.isPointerDown = true;
+
+            const { x, y } = pointerPos(e);
+            const w = editorWrap.clientWidth;
+            const h = editorWrap.clientHeight;
+
+            if (devState.tool === 'draw') {
+                const t0 = snapTimeSec(xToTime(x));
+                const midi = yToMidi(y, h);
+                devState.drag = { kind: 'draw', t0, midi, x0: x, y0: y, previewT1: t0 };
+                devState.selectedId = null;
+                renderEditor();
+                return;
+            }
+
+            if (devState.tool === 'pan') {
+                devState.drag = { kind: 'pan', startX: x, startScroll: devState.view.scrollSec };
+                return;
+            }
+
+            // select
+            const hit = hitTestNote(x, y);
+            if (hit) {
+                devState.selectedId = hit.note.id;
+                const tAt = xToTime(x);
+                let kind = 'move';
+                if (hit.nearLeft) kind = 'resizeL';
+                else if (hit.nearRight) kind = 'resizeR';
+                devState.drag = { kind, noteId: hit.note.id, startX: x, startY: y, startT0: hit.note.t0, startD: hit.note.d, startMidi: hit.note.midi, grabT: tAt };
+                renderEditor();
+            } else {
+                devState.selectedId = null;
+                devState.drag = null;
+                renderEditor();
+            }
+        });
+
+        editorWrap.addEventListener('pointermove', (e) => {
+            if (!devOpen || !devState.isPointerDown || !devState.drag) return;
+            const { x, y } = pointerPos(e);
+            const h = editorWrap.clientHeight;
+
+            const d = devState.drag;
+            if (d.kind === 'draw') {
+                const t1 = snapTimeSec(xToTime(x));
+                d.previewT1 = t1;
+                renderEditor();
+                // draw preview on top
+                const w = editorWrap.clientWidth;
+                const t0 = Math.min(d.t0, d.previewT1);
+                const tEnd = Math.max(d.t0, d.previewT1);
+                const dur = Math.max(stepSec(), tEnd - t0);
+                const rx = timeToX(t0);
+                const rw = dur * devState.view.pxPerSec;
+                const yTop = midiToY(d.midi + 1, h);
+                const yBot = midiToY(d.midi, h);
+                const ry = Math.min(yTop, yBot);
+                const rh = Math.max(10, Math.abs(yBot - yTop));
+                ectx.fillStyle = "rgba(29,185,84,0.18)";
+                ectx.strokeStyle = "rgba(29,185,84,0.65)";
+                ectx.lineWidth = 2;
+                roundRect(ectx, rx, ry, rw, rh, 8);
+                ectx.fill();
+                ectx.stroke();
+                return;
+            }
+
+            if (d.kind === 'pan') {
+                const dx = x - d.startX;
+                const dt = dx / devState.view.pxPerSec;
+                devState.view.scrollSec = Math.max(0, d.startScroll - dt);
+                devScrollEl.value = String(devState.view.scrollSec.toFixed(2));
+                renderEditor();
+                return;
+            }
+
+            const note = laneNotes().find(n => n.id === d.noteId);
+            if (!note) return;
+
+            if (d.kind === 'move') {
+                const dt = snapTimeSec(xToTime(x)) - snapTimeSec(xToTime(d.startX));
+                const newT0 = snapTimeSec(d.startT0 + dt);
+                const newMidi = yToMidi(y, h);
+                note.t0 = Math.max(0, newT0);
+                note.midi = newMidi;
+                sortNotes();
+                touchDuringDrag();
+                renderEditor();
+                return;
+            }
+
+            if (d.kind === 'resizeL') {
+                const t = snapTimeSec(xToTime(x));
+                const right = d.startT0 + d.startD;
+                const newT0 = Math.min(right - stepSec(), t);
+                note.t0 = Math.max(0, newT0);
+                note.d = Math.max(stepSec(), right - note.t0);
+                sortNotes();
+                touchDuringDrag();
+                renderEditor();
+                return;
+            }
+
+            if (d.kind === 'resizeR') {
+                const t = snapTimeSec(xToTime(x));
+                const newEnd = Math.max(d.startT0 + stepSec(), t);
+                note.d = Math.max(stepSec(), newEnd - d.startT0);
+                touchDuringDrag();
+                renderEditor();
+                return;
+            }
+        });
+
+        editorWrap.addEventListener('pointerup', (e) => {
+            if (!devOpen) return;
+            devState.isPointerDown = false;
+            const d = devState.drag;
+            devState.drag = null;
+            if (!d) return;
+
+            if (d.kind === 'draw') {
+                const t0 = Math.min(d.t0, d.previewT1);
+                const tEnd = Math.max(d.t0, d.previewT1);
+                const dur = Math.max(stepSec(), tEnd - t0);
+                const note = {
+                    id: genId('n'),
+                    t0: Math.max(0, t0),
+                    d: dur,
+                    midi: d.midi,
+                    lyric: { text: nextSyllableFromDraft() }
+                };
+                laneNotes().push(note);
+                sortNotes();
+                devState.selectedId = note.id;
+                scheduleAutosave('draw');
+                renderEditor();
+            }
+        });
+
+        editorWrap.addEventListener('dblclick', (e) => {
+            if (!devOpen || devState.tool !== 'select') return;
+            const { x, y } = pointerPos(e);
+            const hit = hitTestNote(x, y);
+            if (hit) {
+                devState.selectedId = hit.note.id;
+                editSelectedLyric();
+            }
+        });
+
+        window.addEventListener('keydown', (e) => {
+            if (!devOpen) return;
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+                const idx = laneNotes().findIndex(n => n.id === devState.selectedId);
+                if (idx >= 0) {
+                    laneNotes().splice(idx, 1);
+                    devState.selectedId = null;
+                    scheduleAutosave('delete');
+                    renderEditor();
+                }
+            }
+            if (e.key === 'Enter' && devOpen && devState.selectedId) {
+                editSelectedLyric();
+            }
+        });
+
+        // UI change -> render
+        [devBpmEl, devStepsEl, devOffsetEl, devZoomEl, devScrollEl].forEach(el => {
+            el.addEventListener('input', () => { scheduleAutosave('ui'); renderEditor(); });
+            el.addEventListener('change', () => { scheduleAutosave('ui'); renderEditor(); });
+        });
+
+        // Mutations during drag -> autosave (debounced)
+        function touchDuringDrag() {
+            scheduleAutosave('drag');
+        }
+
+        // Export JSON
+        document.getElementById('btn-dev-export').addEventListener('click', () => {
+            ensureDevSong();
+            const nomFichier = catalogue?.[selectMenu.value] || "";
+            const base = nomFichier ? nomFichier.replace('.mp3', '') : (devState.song.title || 'song');
+            devState.song.title = base;
+            if (!devState.song.songId) devState.song.songId = base.toLowerCase().replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '');
+            devState.song.audio = devState.song.audio || {};
+            if (nomFichier) {
+                devState.song.audio.instrumentalFileHint = "Karaoke/" + nomFichier;
+                devState.song.audio.vocalFileHint = "Parole/" + nomFichier;
+            }
+
+            const json = JSON.stringify(devState.song, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${devState.song.songId || 'song'}.notes.json`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        });
+
+        // Appliquer paroles -> notes (ordre temporel)
+        btnDevLyricsApply.addEventListener('click', () => {
+            ensureDevSong();
+            const notes = laneNotes().slice().sort((a, b) => a.t0 - b.t0);
+            const sylls = parseSyllables(devLyricsInput?.value || '');
+            if (notes.length === 0) { alert("Aucune note à remplir."); return; }
+            if (sylls.length === 0) { alert("Colle d'abord tes syllabes."); return; }
+
+            let applied = 0;
+            for (const n of notes) {
+                if (sylls.length === 0) break;
+                const has = (n.lyric?.text || '').trim().length > 0;
+                if (has) continue; // n'écrase pas
+                n.lyric = { ...(n.lyric || {}), text: sylls.shift() };
+                applied += 1;
+            }
+            if (devLyricsInput) {
+                devLyricsInput.value = sylls.join(' ');
+                saveLyricsDraft(selectMenu.value, devLyricsInput.value);
+                setLyricsStatus(`Paroles: ${sylls.length} syllabes restantes`);
+            }
+            scheduleAutosave('lyrics-apply');
+            renderEditor();
+            alert(`Paroles appliquées: ${applied} blocs remplis.`);
+        });
+
+        // ==========================================
+        // 🤖 AUTO: écouter une piste et créer des blocs
+        // ==========================================
+        function setAutoStatus(text) {
+            if (!devAutoStatus) return;
+            devAutoStatus.innerText = text;
+        }
+
+        function median(values) {
+            const arr = values.slice().sort((a, b) => a - b);
+            const mid = Math.floor(arr.length / 2);
+            return arr.length % 2 ? arr[mid] : Math.round((arr[mid - 1] + arr[mid]) / 2);
+        }
+
+        function commitAutoSegment(seg, endSec) {
+            const minMs = Math.max(60, Number(devAutoMinMsEl.value) || 140);
+            const minDur = minMs / 1000;
+            const t0 = snapTimeSec(seg.t0);
+            const t1 = snapTimeSec(endSec);
+            const d = Math.max(stepSec(), (t1 - t0));
+            if (d < minDur) return;
+
+            laneNotes().push({
+                id: genId('n'),
+                t0: Math.max(0, t0),
+                d,
+                midi: seg.midi,
+                lyric: { text: "" }
+            });
+            devAuto.notesAdded += 1;
+        }
+
+        async function startAutoListen() {
+            if (devAuto.running) return;
+            ensureDevSong();
+            setTool('select');
+
+            // Important: en mode fichier (file://), router un <audio> dans WebAudio peut rendre la sortie silencieuse (CORS/opaque origin).
+            // On évite donc de démarrer l'auto-live si on est en file://.
+            if (location.protocol === 'file:') {
+                setAutoStatus("Auto: indisponible en mode fichier. Ouvre la page via Live Server (http://localhost) pour activer l'écoute.");
+                alert("Le mode Auto (écoute) ne peut pas analyser la musique en mode fichier local (file://). Lance la page via un serveur local (Live Server) puis réessaie.");
+                return;
+            }
+
+            try {
+                await initAudioRouting(); // accès aux sources via WebAudio (nécessite http(s))
+            } catch (err) {
+                setAutoStatus("Auto: erreur d'initialisation audio.");
+                alert("Auto: impossible d'initialiser l'audio. Astuce: ouvre la page via Live Server (http://localhost).");
+                return;
+            }
+
+            const ctxRaw = Tone.context.rawContext;
+            const src = (devAutoSourceEl.value === 'instru') ? sourceInstruNode : sourceOrigNode;
+            if (!src) {
+                alert("Auto: source audio introuvable.");
+                return;
+            }
+
+            // branch analyser
+            const a = ctxRaw.createAnalyser();
+            a.fftSize = 2048;
+            src.connect(a);
+            devAuto.analyser = a;
+            devAuto.buffer = new Float32Array(a.fftSize);
+            devAuto.segment = null;
+            devAuto.notesAdded = 0;
+            devAuto.lastMidi = null;
+            devAuto.stableMidi = null;
+            devAuto.stableCount = 0;
+
+            // ensure playback
+            if (playerInstru.paused) {
+                playerInstru.play().catch(()=>{});
+                playerOrig.play().catch(()=>{});
+                isPlaying = true;
+                btnPlay.innerText = "⏸";
+            }
+
+            devAuto.running = true;
+            btnDevAuto.disabled = true;
+            btnDevAutoStop.disabled = false;
+            setAutoStatus("Auto: écoute en cours…");
+
+            const gapStop = 0.18; // sec without voice to close segment
+            const windowMidis = [];
+            const tickMs = 70;
+
+            devAuto.intervalId = setInterval(() => {
+                if (!devAuto.running) return;
+                if (!devAuto.analyser) return;
+                if (playerInstru.paused) return;
+
+                devAuto.analyser.getFloatTimeDomainData(devAuto.buffer);
+                const pitch = autoCorrelate(devAuto.buffer, ctxRaw.sampleRate);
+                const nowSec = playerInstru.currentTime;
+                if (!Number.isFinite(nowSec)) return;
+
+                if (pitch !== -1) {
+                    const noteNum = 12 * (Math.log(pitch / 440) / Math.log(2));
+                    const midi = Math.round(noteNum) + 69;
+
+                    // small smoothing
+                    windowMidis.push(midi);
+                    if (windowMidis.length > 7) windowMidis.shift();
+                    const smoothed = median(windowMidis);
+
+                    if (!devAuto.segment) {
+                        devAuto.segment = { t0: nowSec, last: nowSec, midi: smoothed, midis: [smoothed] };
+                    } else {
+                        const seg = devAuto.segment;
+                        const diff = Math.abs(smoothed - seg.midi);
+                        if (diff <= 1) {
+                            seg.last = nowSec;
+                            seg.midis.push(smoothed);
+                            if (seg.midis.length > 9) seg.midis.shift();
+                            seg.midi = median(seg.midis);
+                        } else {
+                            // commit previous, start new
+                            commitAutoSegment(seg, seg.last);
+                            devAuto.segment = { t0: nowSec, last: nowSec, midi: smoothed, midis: [smoothed] };
+                            sortNotes();
+                            scheduleAutosave('auto');
+                            renderEditor();
+                        }
+                    }
+                } else {
+                    windowMidis.length = 0;
+                    if (devAuto.segment) {
+                        if ((nowSec - devAuto.segment.last) >= gapStop) {
+                            commitAutoSegment(devAuto.segment, devAuto.segment.last);
+                            devAuto.segment = null;
+                            sortNotes();
+                            scheduleAutosave('auto');
+                            renderEditor();
+                        }
+                    }
+                }
+
+                setAutoStatus(`Auto: écoute… (+${devAuto.notesAdded} notes)`);
+            }, tickMs);
+        }
+
+        function stopAutoListen() {
+            if (!devAuto.running) return;
+            devAuto.running = false;
+            if (devAuto.intervalId) clearInterval(devAuto.intervalId);
+            devAuto.intervalId = null;
+
+            // commit last segment if any
+            if (devAuto.segment) {
+                commitAutoSegment(devAuto.segment, devAuto.segment.last);
+                devAuto.segment = null;
+                sortNotes();
+                scheduleAutosave('auto-stop');
+                renderEditor();
+            }
+
+            btnDevAuto.disabled = false;
+            btnDevAutoStop.disabled = true;
+            setAutoStatus(`Auto: arrêté (+${devAuto.notesAdded} notes)`);
+        }
+
+        btnDevAuto.addEventListener('click', startAutoListen);
+        btnDevAutoStop.addEventListener('click', stopAutoListen);
+        btnDevClearNotes.addEventListener('click', () => {
+            ensureDevSong();
+            devState.song.lanes[0].notes = [];
+            devState.selectedId = null;
+            scheduleAutosave('clear');
+            renderEditor();
+        });
+    </script>
+</body>
+</html>

@@ -463,12 +463,22 @@
 
         if (btnBackHub) {
             btnBackHub.addEventListener('click', () => {
-                // Si le hub d'origine est connu (depuis GitHub Pages ou autre), on y retourne
+                // 1) Si on a une URL de hub explicite → on y retourne
                 if (hubFromParam) {
                     window.location.href = hubFromParam;
                     return;
                 }
-                // Sinon, on vise le hub local "Jeux maths lycée"
+                // 2) Sinon, si on vient clairement d'un index (hub) → on y retourne
+                if (document.referrer && document.referrer.includes('index.html')) {
+                    window.location.href = document.referrer;
+                    return;
+                }
+                // 3) Sinon, on utilise l'historique du navigateur si possible
+                if (window.history.length > 1) {
+                    window.history.back();
+                    return;
+                }
+                // 4) Dernière chance: hub local "Jeux maths lycée"
                 window.location.href = "../Jeux maths lycée/index.html?hub=secret";
             });
         }

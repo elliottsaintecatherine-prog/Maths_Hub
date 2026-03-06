@@ -211,6 +211,8 @@
             user-select: none;
             box-shadow: 0 6px 20px rgba(0,0,0,0.35);
             transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
         }
         .music-logo:hover { transform: translateY(-1px); background: rgba(255, 255, 255, 0.09); border-color: rgba(0, 243, 255, 0.35); }
         .music-logo span { font-size: 22px; filter: drop-shadow(0 0 10px rgba(0,243,255,0.25)); }
@@ -439,9 +441,15 @@
                 carte.style.setProperty('--theme-color', jeu.couleur);
                 carte.style.setProperty('--theme-color-glow', jeu.couleur + '66');
 
-                let bouttonHTML = jeu.disponible
-                    ? `<a href="${jeu.fichier}" class="play-btn">LANCER</a>`
-                    : `<span class="play-btn">EN DÉVELOPPEMENT</span>`;
+                let bouttonHTML;
+                if (jeu.disponible) {
+                    let href = jeu.fichier;
+                    const sep = href.includes('?') ? '&' : '?';
+                    href = `${href}${sep}hub=secret`;
+                    bouttonHTML = `<a href="${href}" class="play-btn">LANCER</a>`;
+                } else {
+                    bouttonHTML = `<span class="play-btn">EN DÉVELOPPEMENT</span>`;
+                }
 
                 carte.innerHTML = `
                     <div class="game-icon">${jeu.icon}</div>
@@ -479,14 +487,17 @@
             return false;
         }
 
+        function triggerSecretHub() {
+            if (!secretUnlocked) {
+                const ok = promptSecretPin();
+                if (!ok) return;
+            }
+            openSecretHub();
+        }
+
         if (musicLogo) {
-            musicLogo.addEventListener('dblclick', () => {
-                if (!secretUnlocked) {
-                    const ok = promptSecretPin();
-                    if (!ok) return;
-                }
-                openSecretHub();
-            });
+            // Un simple tap/click suffit (plus compatible mobile)
+            musicLogo.addEventListener('click', triggerSecretHub);
         }
         secretClose.addEventListener('click', closeSecretHub);
         secretOverlay.addEventListener('click', (e) => {
@@ -497,6 +508,13 @@
         });
 
         afficherJeux("Tous");
+
+        // Auto-ouverture du hub secret si on arrive avec ?hub=secret
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('hub') === 'secret') {
+            secretUnlocked = true;
+            openSecretHub();
+        }
     </script>
 </body>
 </html>

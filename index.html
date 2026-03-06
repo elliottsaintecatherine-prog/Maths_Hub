@@ -194,9 +194,99 @@
             background: rgba(255, 157, 0, 0.1);
             box-shadow: 0 0 10px rgba(255, 157, 0, 0.2);
         }
+
+        /* --- HUB SECRET (PIN 1702) --- */
+        .music-logo {
+            position: fixed;
+            right: 16px;
+            top: 16px;
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            display: grid;
+            place-items: center;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            cursor: pointer;
+            user-select: none;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+            transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+        }
+        .music-logo:hover { transform: translateY(-1px); background: rgba(255, 255, 255, 0.09); border-color: rgba(0, 243, 255, 0.35); }
+        .music-logo span { font-size: 22px; filter: drop-shadow(0 0 10px rgba(0,243,255,0.25)); }
+
+        .secret-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.72);
+            backdrop-filter: blur(8px);
+            display: none;
+            z-index: 9999;
+            padding: 18px;
+        }
+        .secret-overlay.open { display: block; }
+        .secret-shell {
+            max-width: 1100px;
+            margin: 0 auto;
+            height: calc(100dvh - 36px);
+            background: #070707;
+            border: 1px solid #222;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+            display: grid;
+            grid-template-rows: auto 1fr;
+        }
+        .secret-topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 14px 16px;
+            border-bottom: 1px solid #222;
+            background: linear-gradient(180deg, rgba(0,243,255,0.08), rgba(255,255,255,0.00));
+        }
+        .secret-title {
+            display: grid;
+            gap: 2px;
+        }
+        .secret-title strong {
+            color: #fff;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .secret-title small {
+            color: #9aa0a6;
+        }
+        .secret-close {
+            background: #111;
+            border: 1px solid #333;
+            color: #ddd;
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .secret-close:hover { border-color: #00f3ff; color: #00f3ff; background: rgba(0, 243, 255, 0.08); }
+        .secret-body {
+            padding: 16px;
+            overflow: auto;
+        }
+        .secret-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            width: 100%;
+        }
     </style>
 </head>
 <body>
+
+    <div class="music-logo" id="music-logo" title="Double-clic">
+        <span>🎵</span>
+    </div>
 
     <h1>DASHBOARD SCOLARIS</h1>
     <h2>Missions d'entraînement Mathématiques</h2>
@@ -209,10 +299,27 @@
         <button class="filter-btn" onclick="filtrerJeux('Seconde')">Seconde</button>
         <button class="filter-btn" onclick="filtrerJeux('Première')">Première</button>
         <button class="filter-btn" onclick="filtrerJeux('Terminale')">Terminale</button>
+        <button class="filter-btn" onclick="filtrerJeux('Bonus')">Bonus</button>
     </div>
 
     <div class="games-grid" id="games-container">
         </div>
+
+    <!-- HUB SECRET (double-clic 🎵 + PIN 1702) -->
+    <div class="secret-overlay" id="secret-overlay" aria-hidden="true">
+        <div class="secret-shell" role="dialog" aria-modal="true" aria-label="Hub secret">
+            <div class="secret-topbar">
+                <div class="secret-title">
+                    <strong>Hub Secret</strong>
+                    <small>Tous les jeux (y compris bonus / dev)</small>
+                </div>
+                <button class="secret-close" id="secret-close">Fermer</button>
+            </div>
+            <div class="secret-body">
+                <div class="secret-grid" id="secret-container"></div>
+            </div>
+        </div>
+    </div>
 
     <div class="footer">
         <a href="VOTRE_LIEN_PAYPAL_ICI" target="_blank" class="donate-btn">
@@ -234,8 +341,19 @@
                 disponible: true
             },
             {
+                id: "studiomusic",
+                titre: "StudioMusic (Karaoké)",
+                icon: "🎤",
+                couleur: "#1db954",
+                niveau: "Bonus",
+                chapitre: "Coaching vocal / SingStar",
+                description: "Détection de justesse + harmonies + éditeur de notes (PIN 1702 dans le jeu).",
+                fichier: "Jeu%20perso/chant.html",
+                disponible: true
+            },
+            {
                 id: "enigma",
-                titre: "Projet Enigomommoamama",
+                titre: "Projet Enigma",
                 icon: "🎲",
                 couleur: "#ff00ff",          
                 niveau: "Terminale",
@@ -258,6 +376,13 @@
         ];
 
         const conteneur = document.getElementById('games-container');
+        const secretOverlay = document.getElementById('secret-overlay');
+        const secretClose = document.getElementById('secret-close');
+        const secretContainer = document.getElementById('secret-container');
+        const musicLogo = document.getElementById('music-logo');
+
+        const SECRET_PIN = "1702";
+        let secretUnlocked = false;
 
         function afficherJeux(filtreNiveau) {
             conteneur.innerHTML = ""; 
@@ -300,6 +425,75 @@
             });
             afficherJeux(niveau);
         }
+
+        function renderSecretHub() {
+            secretContainer.innerHTML = '';
+
+            // Ici: "tous les jeux" = on affiche tout, même en développement
+            const all = listeJeux.slice();
+
+            all.forEach(jeu => {
+                const carte = document.createElement('div');
+                carte.className = `game-card ${jeu.disponible ? '' : 'disabled'}`;
+                carte.style.setProperty('--theme-color', jeu.couleur);
+                carte.style.setProperty('--theme-color-glow', jeu.couleur + '66');
+
+                let bouttonHTML = jeu.disponible
+                    ? `<a href="${jeu.fichier}" class="play-btn">LANCER</a>`
+                    : `<span class="play-btn">EN DÉVELOPPEMENT</span>`;
+
+                carte.innerHTML = `
+                    <div class="game-icon">${jeu.icon}</div>
+                    <h2 class="game-title">${jeu.titre}</h2>
+                    <div class="game-tags">
+                        <span class="tag level">${jeu.niveau}</span>
+                        <span class="tag chapter">${jeu.chapitre}</span>
+                    </div>
+                    <p class="game-desc">${jeu.description}</p>
+                    ${bouttonHTML}
+                `;
+                secretContainer.appendChild(carte);
+            });
+        }
+
+        function openSecretHub() {
+            renderSecretHub();
+            secretOverlay.classList.add('open');
+            secretOverlay.setAttribute('aria-hidden', 'false');
+        }
+
+        function closeSecretHub() {
+            secretOverlay.classList.remove('open');
+            secretOverlay.setAttribute('aria-hidden', 'true');
+        }
+
+        function promptSecretPin() {
+            const pin = prompt("Hub secret — entre le code PIN :");
+            if (pin === null) return false;
+            if (String(pin).trim() === SECRET_PIN) {
+                secretUnlocked = true;
+                return true;
+            }
+            alert("Code incorrect.");
+            return false;
+        }
+
+        if (musicLogo) {
+            musicLogo.addEventListener('dblclick', () => {
+                if (!secretUnlocked) {
+                    const ok = promptSecretPin();
+                    if (!ok) return;
+                }
+                openSecretHub();
+            });
+        }
+        secretClose.addEventListener('click', closeSecretHub);
+        secretOverlay.addEventListener('click', (e) => {
+            if (e.target === secretOverlay) closeSecretHub();
+        });
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeSecretHub();
+        });
 
         afficherJeux("Tous");
     </script>

@@ -245,15 +245,7 @@
                     </div>
 
                     <div class="mixer-controls">
-                        <button id="btn-isolate" class="btn-isolate" title="Solo voix (offline). Mode avancé via serveur local.">🪄 Isoler Voix</button>
-                        <select id="isolate-mode" style="width:auto; margin:0; padding:6px 10px; font-size:12px; border-radius:999px;">
-                            <option value="solo" selected>Solo</option>
-                            <option value="subtract">Anti-instru</option>
-                        </select>
-                        <span style="font-size:12px; color: var(--text-muted); font-weight:800;">Intensité</span>
-                        <input type="range" id="isolate-amount" min="0" max="1" step="0.01" value="1" style="width:80px;">
-                        <span style="font-size:12px; color: var(--text-muted); font-weight:800;">Décalage (ms)</span>
-                        <input type="number" id="isolate-delay" min="-200" max="200" step="5" value="0" style="width:72px; padding:4px 6px; border-radius:8px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);">
+                        <button id="btn-isolate" class="btn-isolate" title="Couper les instruments, garder uniquement la voix">🪄 Isoler Voix</button>
                         🗣️ Vol. Voix :
                         <input type="range" id="vocal-volume" min="0" max="1" step="0.01" value="0.5">
                         <span id="vol-value" style="width: 35px; text-align: right;">50%</span>
@@ -607,12 +599,8 @@
         playerInstru.addEventListener('ended', resetPlayerUI);
 
 
-        // --- 1.5 MOTEUR D'ISOLATION (Avancé) ---
+        // --- 1.5 ISOLER VOIX (solo voix = couper les instruments) ---
         let sourceInstruNode, sourceOrigNode;
-        let mixBus, cancelInstruGain, vocalFilterHP, vocalFilterLP, vocalComp, origDelayNode, cancelDelayNode;
-        const isolateModeEl = document.getElementById('isolate-mode');
-        const isolateAmountEl = document.getElementById('isolate-amount');
-        const isolateDelayEl = document.getElementById('isolate-delay');
 
         async function initAudioRouting() {
             if (routingInitialized) return;
@@ -621,79 +609,16 @@
             sourceInstruNode = ctx.createMediaElementSource(playerInstru);
             sourceOrigNode = ctx.createMediaElementSource(playerOrig);
             gainInstru = ctx.createGain(); gainOrig = ctx.createGain();
-
-            // Mix bus to destination (keeps routing centralized)
-            mixBus = ctx.createGain();
-            mixBus.gain.value = 1;
-            mixBus.connect(ctx.destination);
-
-            // Normal paths
-            sourceInstruNode.connect(gainInstru).connect(mixBus);
-
-            // Vocal focus chain (light, keeps voice forward)
-            vocalFilterHP = ctx.createBiquadFilter();
-            vocalFilterHP.type = 'highpass';
-            vocalFilterHP.frequency.value = 110;
-            vocalFilterHP.Q.value = 0.707;
-
-            vocalFilterLP = ctx.createBiquadFilter();
-            vocalFilterLP.type = 'lowpass';
-            vocalFilterLP.frequency.value = 8500;
-            vocalFilterLP.Q.value = 0.707;
-
-            vocalComp = ctx.createDynamicsCompressor();
-            vocalComp.threshold.value = -26;
-            vocalComp.knee.value = 18;
-            vocalComp.ratio.value = 4;
-            vocalComp.attack.value = 0.01;
-            vocalComp.release.value = 0.18;
-
-            // Delays for fine alignment between Parole et Karaoke
-            origDelayNode = ctx.createDelay(0.25);
-            cancelDelayNode = ctx.createDelay(0.25);
-
-            sourceOrigNode.connect(gainOrig);
-            gainOrig.connect(vocalFilterHP).connect(vocalFilterLP).connect(vocalComp).connect(origDelayNode).connect(mixBus);
-
-            // Cancellation path: instru -> negative gain -> mixBus (enabled only in "Anti-instru")
-            cancelInstruGain = ctx.createGain();
-            cancelInstruGain.gain.value = 0;
-            sourceInstruNode.connect(cancelDelayNode).connect(cancelInstruGain).connect(mixBus);
-
-            gainInstru.gain.value = 1;
-            gainOrig.gain.value = volSlider.value;
+            sourceInstruNode.connect(gainInstru).connect(ctx.destination);
+            sourceOrigNode.connect(gainOrig).connect(ctx.destination);
+            gainInstru.gain.value = 1; gainOrig.gain.value = volSlider.value;
             routingInitialized = true;
         }
 
-        function applyIsolateDelay() {
-            if (!origDelayNode || !cancelDelayNode || !isolateDelayEl) return;
-            let ms = Number(isolateDelayEl.value) || 0;
-            ms = Math.max(-200, Math.min(200, ms));
-            const sec = Math.abs(ms) / 1000;
-
-            if (ms >= 0) {
-                // Instruments légèrement retardés par rapport à la voix
-                cancelDelayNode.delayTime.value = sec;
-                origDelayNode.delayTime.value = 0;
-            } else {
-                // Voix légèrement retardée par rapport aux instruments
-                cancelDelayNode.delayTime.value = 0;
-                origDelayNode.delayTime.value = sec;
-            }
-        }
-
         function applyIsolationState() {
-            const mode = isolateModeEl?.value || 'solo';
-            const amount = Math.max(0, Math.min(1, Number(isolateAmountEl?.value) || 1));
-
-            // Toujours appliquer le décalage si dispo
-            applyIsolateDelay();
-
-            // OFF
             if (!isIsolated) {
                 if (gainInstru && gainOrig) {
                     gainInstru.gain.value = 1;
-                    if (cancelInstruGain) cancelInstruGain.gain.value = 0;
                     gainOrig.gain.value = volSlider.value;
                 }
                 playerInstru.volume = 1;
@@ -701,21 +626,10 @@
                 btnIsolate.classList.remove('active');
                 return;
             }
-
-            // ON (solo or subtract)
-            if (gainInstru && gainOrig && cancelInstruGain) {
-                // With WebAudio available
+            if (gainInstru && gainOrig) {
+                gainInstru.gain.value = 0;
                 gainOrig.gain.value = volSlider.value;
-                gainInstru.gain.value = 0; // we never want the normal instru when isolating
-                if (mode === 'subtract') {
-                    // orig - k * instru
-                    cancelInstruGain.gain.value = -amount;
-                } else {
-                    // Solo voice
-                    cancelInstruGain.gain.value = 0;
-                }
             } else {
-                // Offline fallback: only Solo is possible
                 playerInstru.volume = 0;
                 playerOrig.volume = volSlider.value;
             }
@@ -724,32 +638,17 @@
 
         btnIsolate.addEventListener('click', async () => {
             try {
-                // In file:// mode, WebAudio routing is often blocked -> fallback only
                 if (location.protocol !== 'file:' && !routingInitialized) await initAudioRouting();
-
-                // If user asks for subtract in file://, explain and fallback to solo
-                if (location.protocol === 'file:' && isolateModeEl?.value === 'subtract') {
-                    alert("Le mode Anti-instru nécessite un serveur local (Live Server). En mode fichier, je bascule en Solo.");
-                    if (isolateModeEl) isolateModeEl.value = 'solo';
-                }
-
                 isIsolated = !isIsolated;
                 applyIsolationState();
             } catch (err) {
-                // Fallback qui marche même en file:// : on fait un solo voix via volumes HTMLMediaElement
                 isIsolated = !isIsolated;
-                if (isolateModeEl) isolateModeEl.value = 'solo';
                 applyIsolationState();
                 if (location.protocol === 'file:') {
-                    alert("Mode fichier détecté: le routage WebAudio est bloqué, mais j'ai activé un mode 'solo voix' simple via volumes (ça fonctionne offline).");
+                    alert("Mode fichier: routage WebAudio bloqué. J'utilise le fallback (volumes) — ça marche offline.");
                 }
             }
         });
-
-        // Live updates
-        if (isolateModeEl) isolateModeEl.addEventListener('change', () => { if (isIsolated) applyIsolationState(); });
-        if (isolateAmountEl) isolateAmountEl.addEventListener('input', () => { if (isIsolated) applyIsolationState(); });
-        if (isolateDelayEl) isolateDelayEl.addEventListener('input', () => { if (routingInitialized) applyIsolateDelay(); });
 
         // --- 2. MICRO & ENREGISTREMENT ---
         let audioContext, analyser, microphone, mediaRecorder, micStream;
@@ -886,9 +785,6 @@
             setHarmonyUiPlaying(true);
         }
 
-        let recordAudioEl = null;
-        let recordSourceNode = null;
-
         async function playRecordHarmony(semitones) {
             if (!recordedAudioUrl) {
                 alert("Tu n'as pas encore fait d'enregistrement !");
@@ -898,51 +794,29 @@
             await Tone.start();
             ensurePitchShift(semitones);
 
-            const ctx = Tone.context.rawContext;
+            if (tonePlayer) { try { tonePlayer.stop(); tonePlayer.dispose(); } catch {} tonePlayer = null; }
 
-            // Nettoyage précédent
-            if (recordAudioEl) {
-                try { recordAudioEl.pause(); } catch {}
-                recordAudioEl = null;
-            }
-            if (recordSourceNode) {
-                try { recordSourceNode.disconnect(); } catch {}
-                recordSourceNode = null;
-            }
+            tonePlayer = new Tone.Player({
+                url: recordedAudioUrl,
+                autostart: false,
+                onload: () => {
+                    harmonyModeActive = 'record';
+                    setHarmonyUiPlaying(true);
+                    tonePlayer.start();
+                },
+                onerror: () => {
+                    alert("Impossible de charger l'enregistrement. Essaie via un serveur local (Live Server).");
+                    harmonyModeActive = null;
+                    setHarmonyUiPlaying(false);
+                    tonePlayer = null;
+                }
+            });
+            tonePlayer.connect(pitchShift);
 
-            // Nouveau lecteur HTMLAudioElement sur le blob local
-            recordAudioEl = new Audio(recordedAudioUrl);
-            recordAudioEl.crossOrigin = "anonymous";
-
-            try {
-                recordSourceNode = ctx.createMediaElementSource(recordAudioEl);
-            } catch (err) {
-                alert("Erreur audio (record): " + (err?.message || err));
-                recordAudioEl = null;
-                return;
-            }
-
-            // Connexion au PitchShift
-            const pitchInput = pitchShift.input || pitchShift;
-            recordSourceNode.connect(pitchInput);
-
-            harmonyModeActive = 'record';
-            setHarmonyUiPlaying(true);
-
-            recordAudioEl.onended = () => {
+            tonePlayer.onstop = () => {
                 harmonyModeActive = null;
                 setHarmonyUiPlaying(false);
-                try { recordSourceNode.disconnect(); } catch {}
-                recordSourceNode = null;
             };
-
-            try {
-                await recordAudioEl.play();
-            } catch (err) {
-                alert("Impossible de lire l'enregistrement harmonisé: " + (err?.message || err));
-                harmonyModeActive = null;
-                setHarmonyUiPlaying(false);
-            }
         }
 
         document.getElementById('btn-play-auto-harmony').addEventListener('click', async () => {
@@ -968,10 +842,7 @@
 
         document.getElementById('btn-stop-auto-harmony').addEventListener('click', () => {
             if (harmonyModeActive === 'record') {
-                if (recordAudioEl) { try { recordAudioEl.pause(); } catch {} }
-                if (recordSourceNode) { try { recordSourceNode.disconnect(); } catch {} }
-                recordAudioEl = null;
-                recordSourceNode = null;
+                if (tonePlayer) { try { tonePlayer.stop(); tonePlayer.dispose(); } catch {} tonePlayer = null; }
             }
             if (harmonyModeActive === 'original') {
                 bypassOriginalHarmony();

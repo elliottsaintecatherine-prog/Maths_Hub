@@ -734,7 +734,7 @@
         if (isolateDelayEl) isolateDelayEl.addEventListener('input', () => { if (routingInitialized) applyIsolateDelay(); });
 
         // --- 2. MICRO & ENREGISTREMENT ---
-        let audioContext, analyser, microphone, mediaRecorder;
+        let audioContext, analyser, microphone, mediaRecorder, micStream;
         let audioChunks = [];
         let tonePlayer, pitchShift; 
         const canvas = document.getElementById('pitch-canvas'); const ctx = canvas.getContext('2d');
@@ -742,11 +742,45 @@
         canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
         let pitchData = []; const noteStrings = ["Do", "Do#", "Ré", "Ré#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si"];
 
+        let micActive = false;
+
         document.getElementById('btn-start-mic').addEventListener('click', async () => {
+            const micBtn = document.getElementById('btn-start-mic');
+
+            // Si le micro est déjà actif: on le désactive
+            if (micActive) {
+                if (mediaRecorder && mediaRecorder.state === 'recording') {
+                    alert("Arrête d'abord l'enregistrement avant de couper le micro.");
+                    return;
+                }
+                if (micStream) {
+                    micStream.getTracks().forEach(t => t.stop());
+                    micStream = null;
+                }
+                analyser = null;
+                microphone = null;
+
+                document.getElementById('btn-record').disabled = true;
+                document.getElementById('btn-stop-rec').disabled = true;
+
+                micBtn.innerText = "🎤 Activer le Micro";
+                micBtn.style.background = "";
+                micBtn.style.color = "";
+
+                noteDisplay.innerText = "--";
+                pitchData = [];
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                micActive = false;
+                return;
+            }
+
+            // Activation du micro
             if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
             if (audioContext.state === 'suspended') await audioContext.resume();
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                micStream = stream;
                 analyser = audioContext.createAnalyser(); analyser.fftSize = 2048;
                 microphone = audioContext.createMediaStreamSource(stream); microphone.connect(analyser);
 
@@ -759,7 +793,10 @@
                 };
 
                 document.getElementById('btn-record').disabled = false;
-                const micBtn = document.getElementById('btn-start-mic'); micBtn.innerText = "✅ Micro Activé"; micBtn.style.background = "var(--success)";
+                micBtn.innerText = "🛑 Désactiver le Micro";
+                micBtn.style.background = "var(--success)";
+                micBtn.style.color = "#000";
+                micActive = true;
                 updatePitch();
             } catch (err) { alert("Erreur micro : " + err.message); }
         });
@@ -831,28 +868,63 @@
             setHarmonyUiPlaying(true);
         }
 
-        async function playRecordHarmony(semitones) {
-            await Tone.start();
-            ensurePitchShift(semitones);
+        let recordAudioEl = null;
+        let recordSourceNode = null;
 
+        async function playRecordHarmony(semitones) {
             if (!recordedAudioUrl) {
                 alert("Tu n'as pas encore fait d'enregistrement !");
                 return;
             }
 
-            if (tonePlayer) { try { tonePlayer.stop(); } catch {} tonePlayer.dispose(); }
-            tonePlayer = new Tone.Player({ url: recordedAudioUrl, autostart: false });
-            tonePlayer.connect(pitchShift);
+            await Tone.start();
+            ensurePitchShift(semitones);
+
+            const ctx = Tone.context.rawContext;
+
+            // Nettoyage précédent
+            if (recordAudioEl) {
+                try { recordAudioEl.pause(); } catch {}
+                recordAudioEl = null;
+            }
+            if (recordSourceNode) {
+                try { recordSourceNode.disconnect(); } catch {}
+                recordSourceNode = null;
+            }
+
+            // Nouveau lecteur HTMLAudioElement sur le blob local
+            recordAudioEl = new Audio(recordedAudioUrl);
+            recordAudioEl.crossOrigin = "anonymous";
+
             try {
-                await tonePlayer.load();
+                recordSourceNode = ctx.createMediaElementSource(recordAudioEl);
             } catch (err) {
-                alert("Impossible de charger l'enregistrement pour l'harmoniser.");
+                alert("Erreur audio (record): " + (err?.message || err));
+                recordAudioEl = null;
                 return;
             }
 
+            // Connexion au PitchShift
+            const pitchInput = pitchShift.input || pitchShift;
+            recordSourceNode.connect(pitchInput);
+
             harmonyModeActive = 'record';
-            tonePlayer.start();
             setHarmonyUiPlaying(true);
+
+            recordAudioEl.onended = () => {
+                harmonyModeActive = null;
+                setHarmonyUiPlaying(false);
+                try { recordSourceNode.disconnect(); } catch {}
+                recordSourceNode = null;
+            };
+
+            try {
+                await recordAudioEl.play();
+            } catch (err) {
+                alert("Impossible de lire l'enregistrement harmonisé: " + (err?.message || err));
+                harmonyModeActive = null;
+                setHarmonyUiPlaying(false);
+            }
         }
 
         document.getElementById('btn-play-auto-harmony').addEventListener('click', async () => {
@@ -878,7 +950,10 @@
 
         document.getElementById('btn-stop-auto-harmony').addEventListener('click', () => {
             if (harmonyModeActive === 'record') {
-                if (tonePlayer) { try { tonePlayer.stop(); } catch {} tonePlayer.dispose(); tonePlayer = null; }
+                if (recordAudioEl) { try { recordAudioEl.pause(); } catch {} }
+                if (recordSourceNode) { try { recordSourceNode.disconnect(); } catch {} }
+                recordAudioEl = null;
+                recordSourceNode = null;
             }
             if (harmonyModeActive === 'original') {
                 bypassOriginalHarmony();

@@ -458,9 +458,17 @@
             }
         });
 
+        const urlParams = new URLSearchParams(window.location.search);
+        const hubFromParam = urlParams.get('from');
+
         if (btnBackHub) {
             btnBackHub.addEventListener('click', () => {
-                // Retour direct vers le hub secret du dossier "Jeux maths lycée"
+                // Si le hub d'origine est connu (depuis GitHub Pages ou autre), on y retourne
+                if (hubFromParam) {
+                    window.location.href = hubFromParam;
+                    return;
+                }
+                // Sinon, on vise le hub local "Jeux maths lycée"
                 window.location.href = "../Jeux maths lycée/index.html?hub=secret";
             });
         }

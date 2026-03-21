@@ -3,24 +3,24 @@
  * Aucun neon, aucun cyber. Brun, or vieilli, vert fantôme, violet sombre.
  */
 
-const CELL = 28
-
 export class CanvasRenderer {
   constructor(canvas, W, H) {
     this.canvas = canvas
     this.ctx = canvas.getContext('2d')
     this.W = W
     this.H = H
+    // CELL adaptatif : plus petit sur mobile, plus grand sur desktop
+    this.CELL = Math.max(14, Math.min(28, Math.min(W, H) / 18))
     this.offsetY = H * 0.05
     this._bgPattern = null
   }
 
   // --- Projection isométrique ---
   isoX(wx, wy) {
-    return (wx - wy) * CELL * 0.866 + this.W / 2
+    return (wx - wy) * this.this.CELL * 0.866 + this.W / 2
   }
   isoY(wx, wy) {
-    return (wx + wy) * CELL * 0.5 + this.H / 2 - this.offsetY
+    return (wx + wy) * this.this.CELL * 0.5 + this.H / 2 - this.offsetY
   }
 
   // --- Rendu complet d'une frame ---
@@ -203,7 +203,7 @@ export class CanvasRenderer {
       // Gradient radial de profondeur
       const screenCx = this.isoX(cx, cy)
       const screenCy = this.isoY(cx, cy)
-      const rad = (w + h) * CELL * 0.35
+      const rad = (w + h) * this.this.CELL * 0.35
 
       const grad = ctx.createRadialGradient(screenCx, screenCy, 2, screenCx, screenCy, rad)
       grad.addColorStop(0, 'rgba(0,0,0,0.0)')
@@ -257,7 +257,7 @@ export class CanvasRenderer {
   // --- Obstacles 3D isométriques ---
   drawObstacles(map) {
     const ctx = this.ctx
-    const H_BOX = CELL * 1.2 // hauteur de la boîte en pixels
+    const H_BOX = this.this.CELL * 1.2 // hauteur de la boîte en pixels
 
     for (const obs of map.obstacles) {
       const x1 = obs.x1, y1 = obs.y1, x2 = obs.x2, y2 = obs.y2
@@ -465,7 +465,7 @@ export class CanvasRenderer {
     ctx.save()
     ctx.translate(sx, sy)
 
-    const s = CELL * 0.55 // échelle
+    const s = this.this.CELL * 0.55 // échelle
 
     // Ombre portée au sol
     ctx.fillStyle = 'rgba(0,0,0,0.3)'
@@ -553,7 +553,7 @@ export class CanvasRenderer {
     ctx.save()
     ctx.translate(sx + sway * 0.5, sy - bounce)
 
-    const s = CELL * 0.65
+    const s = this.this.CELL * 0.65
 
     // Ombre
     ctx.fillStyle = 'rgba(0,0,0,0.4)'

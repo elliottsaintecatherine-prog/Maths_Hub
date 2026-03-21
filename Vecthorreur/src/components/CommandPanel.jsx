@@ -1,461 +1,402 @@
 import React, { useState, useRef, useEffect } from 'react'
 
-const S = {
-  overlay: {
-    position: 'fixed',
-    inset: 0,
-    background: 'rgba(0,0,0,0.85)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 10,
-    fontFamily: "'Special Elite', serif",
-    padding: '16px',
-    overflow: 'auto',
-  },
-  panel: {
-    background: 'linear-gradient(160deg, #2a1e0e 0%, #1e150a 60%, #261a0c 100%)',
-    border: '2px solid #6b4a22',
-    borderRadius: '4px',
-    padding: '24px 28px',
-    width: '100%',
-    maxWidth: '420px',
-    boxShadow: '0 0 40px rgba(0,0,0,0.8), inset 0 0 30px rgba(0,0,0,0.4)',
-    position: 'relative',
-  },
-  bookTitle: {
-    fontFamily: "'Creepster', cursive",
-    fontSize: '22px',
-    color: '#c8a050',
-    textAlign: 'center',
-    marginBottom: '4px',
-    textShadow: '1px 2px 0 #3d2010',
-    letterSpacing: '1px',
-  },
-  bookSubtitle: {
-    fontFamily: "'IM Fell English', serif",
-    fontStyle: 'italic',
-    color: '#887040',
-    fontSize: '12px',
-    textAlign: 'center',
-    marginBottom: '18px',
-  },
-  separator: {
-    color: '#6b4a22',
-    fontSize: '12px',
-    textAlign: 'center',
-    margin: '14px 0',
-    letterSpacing: '3px',
-  },
-  chapter: {
-    background: 'rgba(0,0,0,0.2)',
-    border: '1px solid #3d2010',
+/* ── Composant stepper tactile ────────────────────────────────────────────── */
+function StepInput({ value, onChange, color = '#c8a050', min = -5, max = 5 }) {
+  const dec = () => onChange(Math.max(min, value - 1))
+  const inc = () => onChange(Math.min(max, value + 1))
+
+  const btnStyle = {
+    width: 'clamp(36px, 9vw, 44px)',
+    height: 'clamp(36px, 9vw, 44px)',
+    background: 'rgba(0,0,0,0.35)',
+    border: `1.5px solid ${color}44`,
     borderRadius: '3px',
-    padding: '12px 16px',
-    marginBottom: '10px',
-  },
-  chapterTitle: {
-    fontFamily: "'Creepster', cursive",
-    color: '#a08040',
-    fontSize: '14px',
-    letterSpacing: '1.5px',
-    marginBottom: '10px',
-    textTransform: 'uppercase',
-  },
-  row: {
-    display: 'flex',
-    gap: '10px',
-    alignItems: 'center',
-    marginBottom: '8px',
-    flexWrap: 'wrap',
-  },
-  label: {
-    color: '#a08040',
-    fontSize: '13px',
-    minWidth: '110px',
-    fontFamily: "'Special Elite', serif",
-  },
-  input: {
-    width: '60px',
-    background: 'transparent',
-    border: 'none',
-    borderBottom: '1.5px solid #c8a050',
-    color: '#e8c878',
-    fontFamily: "'Special Elite', serif",
-    fontSize: '15px',
-    padding: '3px 4px',
-    outline: 'none',
-    textAlign: 'center',
-  },
-  smallInput: {
-    width: '50px',
-    background: 'transparent',
-    border: 'none',
-    borderBottom: '1.5px solid #7755aa',
-    color: '#c8a0e0',
-    fontFamily: "'Special Elite', serif",
-    fontSize: '14px',
-    padding: '3px 4px',
-    outline: 'none',
-    textAlign: 'center',
-  },
-  btn: {
-    display: 'block',
-    width: '100%',
-    padding: '10px',
-    background: 'linear-gradient(180deg, #3d2010 0%, #2a1508 100%)',
-    border: '1.5px solid #c8a050',
-    borderRadius: '2px',
-    color: '#e8c878',
-    fontFamily: "'Creepster', cursive",
-    fontSize: '15px',
-    letterSpacing: '1px',
+    color,
+    fontSize: 'clamp(18px, 4vw, 22px)',
     cursor: 'pointer',
-    marginTop: '8px',
-    transition: 'all 0.15s',
-  },
-  btnSecondary: {
-    borderColor: '#7755aa',
-    color: '#c8a0e0',
-  },
-  previewWrap: {
-    display: 'flex',
-    justifyContent: 'center',
-    marginTop: '8px',
-  },
-  backBtn: {
-    display: 'block',
-    width: '100%',
-    padding: '8px',
-    background: 'transparent',
-    border: '1px solid #4a3520',
-    borderRadius: '2px',
-    color: '#887040',
-    fontFamily: "'Creepster', cursive",
-    fontSize: '13px',
-    cursor: 'pointer',
-    marginTop: '8px',
-    letterSpacing: '1px',
-  },
-  turnInfo: {
-    textAlign: 'center',
-    color: '#887040',
-    fontSize: '12px',
-    marginBottom: '12px',
-    fontStyle: 'italic',
-  },
-  posInfo: {
-    textAlign: 'center',
-    color: '#a08040',
-    fontSize: '12px',
-    marginBottom: '6px',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0,
+    touchAction: 'manipulation',
+    userSelect: 'none',
+    WebkitTapHighlightColor: 'transparent',
   }
+
+  const valStyle = {
+    width: 'clamp(44px, 11vw, 56px)',
+    textAlign: 'center',
+    color: '#e8c878',
+    fontFamily: "'Special Elite', serif",
+    fontSize: 'clamp(18px, 4.5vw, 22px)',
+    fontWeight: 'bold',
+    background: 'transparent',
+    border: 'none',
+    borderBottom: `2px solid ${color}`,
+    outline: 'none',
+    padding: '2px 0',
+    touchAction: 'manipulation',
+  }
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+      <button style={btnStyle} onClick={dec} aria-label="diminuer">−</button>
+      <input
+        type="number"
+        inputMode="numeric"
+        style={valStyle}
+        value={value}
+        min={min} max={max}
+        onChange={e => {
+          const v = parseInt(e.target.value, 10)
+          if (!isNaN(v)) onChange(Math.max(min, Math.min(max, v)))
+        }}
+      />
+      <button style={btnStyle} onClick={inc} aria-label="augmenter">+</button>
+    </div>
+  )
 }
 
-// Mini canvas d'aperçu du vecteur
-function VectorPreview({ playerPos, vec }) {
+/* ── Mini-canvas d'aperçu ─────────────────────────────────────────────────── */
+function Preview({ pos, vec }) {
   const canvasRef = useRef(null)
 
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
-    const W = 150, H = 150
-
-    ctx.fillStyle = '#1a1208'
+    const W = canvas.width, H = canvas.height
+    ctx.clearRect(0, 0, W, H)
+    ctx.fillStyle = '#120d06'
     ctx.fillRect(0, 0, W, H)
 
-    // Grille
-    const cellPx = 12
-    const cx = W / 2, cy = H / 2
+    const cx = W / 2 - pos.x * 5, cy = H / 2 - pos.y * 5
+    const scale = 5
 
-    ctx.strokeStyle = 'rgba(100,80,40,0.3)'
+    // Grille légère
+    ctx.strokeStyle = '#3d2010'
     ctx.lineWidth = 0.5
-    for (let i = -6; i <= 6; i++) {
-      ctx.beginPath()
-      ctx.moveTo(cx + i * cellPx, 0)
-      ctx.lineTo(cx + i * cellPx, H)
-      ctx.stroke()
-      ctx.beginPath()
-      ctx.moveTo(0, cy + i * cellPx)
-      ctx.lineTo(W, cy + i * cellPx)
-      ctx.stroke()
+    for (let i = -10; i <= 10; i++) {
+      ctx.beginPath(); ctx.moveTo(cx + i * scale, 0); ctx.lineTo(cx + i * scale, H); ctx.stroke()
+      ctx.beginPath(); ctx.moveTo(0, cy + i * scale); ctx.lineTo(W, cy + i * scale); ctx.stroke()
     }
-
-    // Axes
-    ctx.strokeStyle = 'rgba(160,120,60,0.6)'
-    ctx.lineWidth = 1
-    ctx.beginPath()
-    ctx.moveTo(0, cy)
-    ctx.lineTo(W, cy)
-    ctx.stroke()
-    ctx.beginPath()
-    ctx.moveTo(cx, 0)
-    ctx.lineTo(cx, H)
-    ctx.stroke()
-
-    // Labels axes
-    ctx.font = '9px Special Elite, serif'
-    ctx.fillStyle = 'rgba(160,120,60,0.8)'
-    ctx.textAlign = 'center'
-    ctx.fillText('x →', W - 10, cy - 4)
-    ctx.textAlign = 'left'
-    ctx.fillText('↑ y', cx + 4, 10)
 
     // Position joueur
-    ctx.beginPath()
-    ctx.arc(cx, cy, 5, 0, Math.PI * 2)
+    const px = cx + pos.x * scale, py = cy + pos.y * scale
     ctx.fillStyle = '#c8a050'
-    ctx.fill()
+    ctx.beginPath(); ctx.arc(px, py, 5, 0, Math.PI * 2); ctx.fill()
 
-    // Vecteur
-    if (vec && (vec.x !== 0 || vec.y !== 0)) {
-      const tx = cx + vec.x * cellPx
-      const ty = cy - vec.y * cellPx  // y inversé pour affichage
-
-      ctx.strokeStyle = '#d4a050'
-      ctx.lineWidth = 2
+    // Flèche vecteur
+    if (vec.x !== 0 || vec.y !== 0) {
+      const ex = px + vec.x * scale, ey = py + vec.y * scale
+      ctx.strokeStyle = '#c8a050'
+      ctx.lineWidth = 1.5
       ctx.setLineDash([4, 3])
-      ctx.beginPath()
-      ctx.moveTo(cx, cy)
-      ctx.lineTo(tx, ty)
-      ctx.stroke()
+      ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(ex, ey); ctx.stroke()
       ctx.setLineDash([])
 
-      // Pointe
-      const angle = Math.atan2(ty - cy, tx - cx)
-      ctx.beginPath()
-      ctx.moveTo(tx, ty)
-      ctx.lineTo(tx - 8 * Math.cos(angle - 0.4), ty - 8 * Math.sin(angle - 0.4))
-      ctx.lineTo(tx - 8 * Math.cos(angle + 0.4), ty - 8 * Math.sin(angle + 0.4))
-      ctx.closePath()
-      ctx.fillStyle = '#d4a050'
-      ctx.fill()
+      const dx = ex - px, dy = ey - py, len = Math.hypot(dx, dy)
+      if (len > 0) {
+        const ux = dx / len, uy = dy / len, h = 8
+        ctx.fillStyle = '#c8a050'
+        ctx.beginPath()
+        ctx.moveTo(ex, ey)
+        ctx.lineTo(ex - ux * h + uy * h * 0.4, ey - uy * h - ux * h * 0.4)
+        ctx.lineTo(ex - ux * h - uy * h * 0.4, ey - uy * h + ux * h * 0.4)
+        ctx.closePath(); ctx.fill()
+      }
 
-      // Point d'arrivée
-      ctx.beginPath()
-      ctx.arc(tx, ty, 3, 0, Math.PI * 2)
-      ctx.fillStyle = '#ffd878'
-      ctx.fill()
-
-      // Texte vecteur
-      ctx.font = 'bold 10px Special Elite, serif'
-      ctx.fillStyle = '#c8a050'
-      ctx.textAlign = 'center'
-      ctx.fillText(`(${vec.x}, ${vec.y})`, cx, H - 6)
+      // Destination
+      ctx.fillStyle = '#88cc6688'
+      ctx.beginPath(); ctx.arc(ex, ey, 4, 0, Math.PI * 2); ctx.fill()
     }
-  }, [vec])
+  }, [pos, vec])
 
-  return <canvas ref={canvasRef} width={150} height={150} style={{ border: '1px solid #3d2010', borderRadius: '2px' }} />
-}
-
-function NumInput({ value, onChange, color = '#c8a050', min = -5, max = 5 }) {
-  const [focused, setFocused] = useState(false)
   return (
-    <input
-      type="number"
-      value={value}
-      min={min}
-      max={max}
-      onChange={e => {
-        const v = parseInt(e.target.value) || 0
-        onChange(Math.max(min, Math.min(max, v)))
-      }}
-      onFocus={() => setFocused(true)}
-      onBlur={() => setFocused(false)}
+    <canvas
+      ref={canvasRef}
+      width={140} height={140}
       style={{
-        ...S.input,
-        borderBottomColor: focused ? '#ffd878' : color,
-        boxShadow: focused ? `0 2px 8px rgba(200,160,80,0.2)` : 'none',
+        display: 'block',
+        margin: '0 auto',
+        border: '1px solid #3d2010',
+        borderRadius: '2px',
+        background: '#120d06',
+        width: 'clamp(100px, 30vw, 140px)',
+        height: 'clamp(100px, 30vw, 140px)',
       }}
     />
   )
 }
 
-export default function CommandPanel({ playerPos, turn, myTurn, role, map, onVectorSubmit, onBack }) {
-  const isHunter = role === 'hunter'
-  // Chapitre I — vecteur simple
-  const [vx, setVx] = useState(0)
-  const [vy, setVy] = useState(0)
+/* ── Bouton principal ─────────────────────────────────────────────────────── */
+function CastBtn({ onClick, disabled, children, color = '#c8a050' }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        width: '100%',
+        padding: 'clamp(10px, 2.5vw, 14px)',
+        marginTop: '8px',
+        background: disabled ? '#1a1208' : 'linear-gradient(180deg,#3d2010,#2a1508)',
+        border: `2px solid ${disabled ? '#3d2010' : color}`,
+        borderRadius: '3px',
+        color: disabled ? '#5a4030' : '#e8c878',
+        fontFamily: "'Creepster', cursive",
+        fontSize: 'clamp(14px, 3.5vw, 18px)',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        letterSpacing: '1px',
+        touchAction: 'manipulation',
+        WebkitTapHighlightColor: 'transparent',
+        minHeight: '44px',
+      }}
+    >
+      {children}
+    </button>
+  )
+}
 
-  // Chapitre II — combinaison u + v
-  const [ux, setUx] = useState(0)
+/* ── Panneau principal ────────────────────────────────────────────────────── */
+export default function CommandPanel({ playerPos, turn, myTurn, role, onVectorSubmit, onBack }) {
+  const [x, setX] = useState(0)
+  const [y, setY] = useState(0)
+  const [ux, setUx] = useState(1)
   const [uy, setUy] = useState(0)
-  const [vx2, setVx2] = useState(0)
-  const [vy2, setVy2] = useState(0)
+  const [vx, setVx] = useState(0)
+  const [vy, setVy] = useState(1)
+  const [k, setK] = useState(2)
+  const [kx, setKx] = useState(1)
+  const [ky, setKy] = useState(0)
 
-  // Chapitre III — amplification k * u
-  const [k, setK] = useState(1)
-  const [kux, setKux] = useState(1)
-  const [kuy, setKuy] = useState(0)
+  const isHunter = role === 'hunter'
+  const canPlay = myTurn !== false
 
-  const [activeChapter, setActiveChapter] = useState(1)
-
-  const computedVec = (() => {
-    if (activeChapter === 1) return { x: vx, y: vy }
-    if (activeChapter === 2) return { x: ux + vx2, y: uy + vy2 }
-    if (activeChapter === 3) return { x: Math.round(k * kux), y: Math.round(k * kuy) }
-    return { x: 0, y: 0 }
-  })()
-
-  const handleSubmit = () => {
-    if (!myTurn) return
-    onVectorSubmit(computedVec)
+  const labelStyle = {
+    color: '#a08040',
+    fontSize: 'clamp(12px, 3vw, 13px)',
+    fontFamily: "'Special Elite', serif",
+    minWidth: 'clamp(70px, 18vw, 110px)',
+    flexShrink: 0,
   }
 
-  if (!myTurn) {
-    return (
-      <div style={S.overlay}>
-        <div style={S.panel}>
-          <div style={S.bookTitle}>📖 Livre des Déplacements</div>
-          <div style={{ textAlign: 'center', padding: '40px 0', color: '#887040', fontStyle: 'italic' }}>
-            L'adversaire médite sur son prochain sortilège...<br />
-            <span style={{ fontSize: '28px', display: 'block', marginTop: '16px' }}>⏳</span>
-          </div>
-        </div>
-      </div>
-    )
+  const chapterStyle = {
+    background: 'rgba(0,0,0,0.2)',
+    border: '1px solid #3d2010',
+    borderRadius: '3px',
+    padding: 'clamp(8px, 2vw, 12px) clamp(10px, 2.5vw, 16px)',
+    marginBottom: '8px',
+  }
+
+  const chTitleStyle = {
+    fontFamily: "'Creepster', cursive",
+    color: '#a08040',
+    fontSize: 'clamp(12px, 3vw, 14px)',
+    letterSpacing: '1px',
+    marginBottom: '8px',
+    textTransform: 'uppercase',
+  }
+
+  const rowStyle = {
+    display: 'flex',
+    gap: '8px',
+    alignItems: 'center',
+    marginBottom: '8px',
+    flexWrap: 'wrap',
   }
 
   return (
-    <div style={S.overlay}>
-      <div style={S.panel}>
-        <div style={S.bookTitle}>📖 Livre des Déplacements</div>
-        <div style={S.bookSubtitle}>Invocations & Sortilèges de Mouvement</div>
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      background: 'rgba(0,0,0,0.88)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 10,
+      fontFamily: "'Special Elite', serif",
+      padding: 'clamp(8px, 2vw, 16px)',
+      overflowY: 'auto',
+      WebkitOverflowScrolling: 'touch',
+    }}>
+      <div style={{
+        background: 'linear-gradient(160deg,#2a1e0e,#1e150a 60%,#261a0c)',
+        border: '2px solid #6b4a22',
+        borderRadius: '4px',
+        padding: 'clamp(16px, 4vw, 24px) clamp(14px, 3.5vw, 28px)',
+        width: '100%',
+        maxWidth: '440px',
+        boxShadow: '0 0 40px rgba(0,0,0,0.8)',
+        position: 'relative',
+        maxHeight: '95dvh',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+      }}>
 
-        {/* Badge de rôle */}
+        {/* Titre */}
+        <div style={{
+          fontFamily: "'Creepster', cursive",
+          fontSize: 'clamp(18px, 5vw, 24px)',
+          color: '#c8a050',
+          textAlign: 'center',
+          marginBottom: '2px',
+          letterSpacing: '1px',
+        }}>
+          📖 Livre des Déplacements
+        </div>
+        <div style={{
+          fontFamily: "'IM Fell English', serif",
+          fontStyle: 'italic',
+          color: '#887040',
+          fontSize: 'clamp(11px, 2.5vw, 13px)',
+          textAlign: 'center',
+          marginBottom: '12px',
+        }}>
+          Tour {turn} — pos. ({playerPos?.x ?? 0}, {playerPos?.y ?? 0})
+        </div>
+
+        {/* Badge rôle */}
         {role && (
           <div style={{
-            display: 'inline-block',
-            background: isHunter ? 'rgba(120,0,0,0.35)' : 'rgba(0,60,0,0.35)',
-            border: `1px solid ${isHunter ? '#882200' : '#226622'}`,
-            borderRadius: '3px',
-            padding: '4px 14px',
-            color: isHunter ? '#ff6644' : '#66cc66',
-            fontSize: '13px',
-            fontFamily: "'Creepster', cursive",
-            letterSpacing: '1.5px',
+            textAlign: 'center',
             marginBottom: '10px',
           }}>
-            {isHunter ? '🗡 CHASSEUR' : '🏃 FUGITIF'}
+            <span style={{
+              display: 'inline-block',
+              padding: '4px 14px',
+              borderRadius: '3px',
+              fontFamily: "'Creepster', cursive",
+              fontSize: 'clamp(13px, 3.5vw, 15px)',
+              letterSpacing: '1px',
+              background: isHunter ? 'rgba(120,0,0,0.35)' : 'rgba(0,60,0,0.35)',
+              border: `1px solid ${isHunter ? '#882200' : '#226622'}`,
+              color: isHunter ? '#ff6644' : '#66cc66',
+            }}>
+              {isHunter ? '🗡 CHASSEUR' : '🏃 FUGITIF'}
+            </span>
           </div>
         )}
 
-        <div style={S.turnInfo}>Tour {turn} — Choisissez votre sort</div>
-        <div style={S.posInfo}>Position actuelle : ({playerPos.x}, {playerPos.y})</div>
-
-        {/* Indice de sortie pour le fugitif uniquement */}
-        {!isHunter && map && map.exit && (
-          <div style={{ color: '#c8a050', fontSize: '11px', textAlign: 'center', marginBottom: '8px', fontStyle: 'italic' }}>
-            ✦ Sortie vers ({Math.round((map.exit.x1 + map.exit.x2) / 2)}, {Math.round((map.exit.y1 + map.exit.y2) / 2)})
+        {!canPlay && (
+          <div style={{
+            textAlign: 'center',
+            color: '#887040',
+            fontStyle: 'italic',
+            fontSize: 'clamp(12px, 3vw, 14px)',
+            marginBottom: '10px',
+          }}>
+            ⌛ En attente de l'adversaire...
           </div>
         )}
 
-        {/* Sélecteur de chapitre */}
-        <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
-          {[1, 2, 3].map(ch => (
-            <button
-              key={ch}
-              onClick={() => setActiveChapter(ch)}
-              style={{
-                flex: 1,
-                padding: '6px 4px',
-                background: activeChapter === ch ? '#3d2010' : 'transparent',
-                border: `1.5px solid ${activeChapter === ch ? '#c8a050' : '#3d2010'}`,
-                borderRadius: '2px',
-                color: activeChapter === ch ? '#e8c878' : '#6b4a22',
-                fontFamily: "'Creepster', cursive",
-                fontSize: '12px',
-                cursor: 'pointer',
-                letterSpacing: '0.5px',
-              }}
-            >
-              Chap. {ch}
-            </button>
-          ))}
+        {/* Aperçu */}
+        <Preview pos={playerPos ?? { x: 0, y: 0 }} vec={{ x, y }} />
+
+        <div style={{ color: '#6b4a22', fontSize: '12px', textAlign: 'center', margin: '10px 0', letterSpacing: '3px' }}>
+          ─── ✦ ───
         </div>
 
-        {/* Chapitre I — Déplacement simple */}
-        {activeChapter === 1 && (
-          <div style={S.chapter}>
-            <div style={S.chapterTitle}>⚗ Chapitre I — Déplacement Simple</div>
-            <div style={S.row}>
-              <span style={S.label}>Composante X :</span>
-              <NumInput value={vx} onChange={setVx} />
-            </div>
-            <div style={S.row}>
-              <span style={S.label}>Composante Y :</span>
-              <NumInput value={vy} onChange={setVy} />
-            </div>
-            <div style={{ color: '#887040', fontSize: '11px', marginTop: '4px' }}>
-              Vecteur résultant : ({vx}, {vy})
-            </div>
+        {/* Chapitre I — déplacement simple */}
+        <div style={chapterStyle}>
+          <div style={chTitleStyle}>I — Invoquer le Vecteur</div>
+          <div style={rowStyle}>
+            <span style={labelStyle}>Composante X :</span>
+            <StepInput value={x} onChange={setX} />
           </div>
-        )}
-
-        {/* Chapitre II — Combinaison u + v */}
-        {activeChapter === 2 && (
-          <div style={S.chapter}>
-            <div style={S.chapterTitle}>🔮 Chapitre II — Combiner (u⃗ + v⃗)</div>
-            <div style={S.row}>
-              <span style={{ ...S.label, minWidth: '60px' }}>u⃗ = (</span>
-              <NumInput value={ux} onChange={setUx} color='#7755aa' />
-              <span style={{ color: '#887040' }}>,</span>
-              <NumInput value={uy} onChange={setUy} color='#7755aa' />
-              <span style={{ color: '#887040' }}>)</span>
-            </div>
-            <div style={S.row}>
-              <span style={{ ...S.label, minWidth: '60px' }}>v⃗ = (</span>
-              <NumInput value={vx2} onChange={setVx2} color='#7755aa' />
-              <span style={{ color: '#887040' }}>,</span>
-              <NumInput value={vy2} onChange={setVy2} color='#7755aa' />
-              <span style={{ color: '#887040' }}>)</span>
-            </div>
-            <div style={{ color: '#887040', fontSize: '11px', marginTop: '4px' }}>
-              u⃗ + v⃗ = ({ux + vx2}, {uy + vy2})
-            </div>
+          <div style={rowStyle}>
+            <span style={labelStyle}>Composante Y :</span>
+            <StepInput value={y} onChange={setY} />
           </div>
-        )}
-
-        {/* Chapitre III — Amplification k × u */}
-        {activeChapter === 3 && (
-          <div style={S.chapter}>
-            <div style={S.chapterTitle}>⚡ Chapitre III — Amplifier (k × u⃗)</div>
-            <div style={S.row}>
-              <span style={{ ...S.label, minWidth: '60px' }}>k =</span>
-              <NumInput value={k} onChange={setK} min={-5} max={5} color='#cc8822' />
-            </div>
-            <div style={S.row}>
-              <span style={{ ...S.label, minWidth: '60px' }}>u⃗ = (</span>
-              <NumInput value={kux} onChange={setKux} color='#cc8822' />
-              <span style={{ color: '#887040' }}>,</span>
-              <NumInput value={kuy} onChange={setKuy} color='#cc8822' />
-              <span style={{ color: '#887040' }}>)</span>
-            </div>
-            <div style={{ color: '#887040', fontSize: '11px', marginTop: '4px' }}>
-              k × u⃗ = ({Math.round(k * kux)}, {Math.round(k * kuy)})
-            </div>
-          </div>
-        )}
-
-        {/* Aperçu du vecteur */}
-        <div style={S.separator}>─── ✦ ───</div>
-        <div style={S.previewWrap}>
-          <VectorPreview playerPos={playerPos} vec={computedVec} />
+          <CastBtn
+            disabled={!canPlay || (x === 0 && y === 0)}
+            onClick={() => onVectorSubmit({ x, y })}
+          >
+            ✨ Invoquer le Vecteur ({x} ; {y})
+          </CastBtn>
         </div>
 
-        {/* Bouton invoquer */}
+        {/* Chapitre II — combinaison u+v */}
+        <div style={chapterStyle}>
+          <div style={chTitleStyle}>II — Combiner (u⃗ + v⃗)</div>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ ...labelStyle, marginBottom: '4px' }}>u⃗</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ ...labelStyle, minWidth: '20px' }}>x</span>
+                  <StepInput value={ux} onChange={setUx} color="#aa88cc" />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ ...labelStyle, minWidth: '20px' }}>y</span>
+                  <StepInput value={uy} onChange={setUy} color="#aa88cc" />
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', color: '#6b4a22', fontSize: '22px', paddingTop: '16px' }}>+</div>
+            <div>
+              <div style={{ ...labelStyle, marginBottom: '4px' }}>v⃗</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ ...labelStyle, minWidth: '20px' }}>x</span>
+                  <StepInput value={vx} onChange={setVx} color="#aa88cc" />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ ...labelStyle, minWidth: '20px' }}>y</span>
+                  <StepInput value={vy} onChange={setVy} color="#aa88cc" />
+                </div>
+              </div>
+            </div>
+          </div>
+          <CastBtn
+            disabled={!canPlay || (ux + vx === 0 && uy + vy === 0)}
+            onClick={() => onVectorSubmit({ x: ux + vx, y: uy + vy })}
+            color="#aa88cc"
+          >
+            🔮 Fusionner ({ux + vx} ; {uy + vy})
+          </CastBtn>
+        </div>
+
+        {/* Chapitre III — amplification */}
+        <div style={chapterStyle}>
+          <div style={chTitleStyle}>III — Amplifier (k × u⃗)</div>
+          <div style={rowStyle}>
+            <span style={labelStyle}>Scalaire k :</span>
+            <StepInput value={k} onChange={setK} min={-5} max={5} color="#cc8844" />
+          </div>
+          <div style={rowStyle}>
+            <span style={labelStyle}>u⃗ x :</span>
+            <StepInput value={kx} onChange={setKx} color="#cc8844" />
+          </div>
+          <div style={rowStyle}>
+            <span style={labelStyle}>u⃗ y :</span>
+            <StepInput value={ky} onChange={setKy} color="#cc8844" />
+          </div>
+          <CastBtn
+            disabled={!canPlay || (k * kx === 0 && k * ky === 0)}
+            onClick={() => onVectorSubmit({ x: k * kx, y: k * ky })}
+            color="#cc8844"
+          >
+            ⚡ Amplifier ({k * kx} ; {k * ky})
+          </CastBtn>
+        </div>
+
+        {/* Retour */}
         <button
-          style={S.btn}
-          onClick={handleSubmit}
-          onMouseEnter={e => { e.target.style.background = 'linear-gradient(180deg,#5a3018,#3d2010)'; e.target.style.boxShadow = '0 0 14px rgba(200,160,80,0.3)' }}
-          onMouseLeave={e => { e.target.style.background = 'linear-gradient(180deg,#3d2010,#2a1508)'; e.target.style.boxShadow = 'none' }}
+          onClick={onBack}
+          style={{
+            width: '100%',
+            marginTop: '6px',
+            padding: 'clamp(8px, 2vw, 11px)',
+            background: 'transparent',
+            border: '1px solid #3d2010',
+            borderRadius: '3px',
+            color: '#6b4a22',
+            fontFamily: "'Special Elite', serif",
+            fontSize: 'clamp(12px, 3vw, 13px)',
+            cursor: 'pointer',
+            touchAction: 'manipulation',
+            WebkitTapHighlightColor: 'transparent',
+            minHeight: '44px',
+          }}
         >
-          ✨ Invoquer le Vecteur
-        </button>
-
-        {/* Bouton retour */}
-        <button style={S.backBtn} onClick={onBack}>
           👁 Observer la scène
         </button>
       </div>

@@ -2,257 +2,187 @@ import React, { useRef, useEffect, useCallback } from 'react'
 import { CanvasRenderer } from '../engine/CanvasRenderer.js'
 import { MAPS } from '../data/maps.js'
 
-const OVERLAY_STYLES = {
+/* ── Styles responsifs ────────────────────────────────────────────────────── */
+const OV = {
   base: {
-    position: 'absolute',
-    inset: 0,
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
+    position: 'absolute', inset: 0,
+    display: 'flex', flexDirection: 'column',
+    alignItems: 'center', justifyContent: 'center',
     fontFamily: "'Creepster', cursive",
-    pointerEvents: 'none',
-    zIndex: 5,
+    pointerEvents: 'none', zIndex: 5,
+    padding: '16px', textAlign: 'center',
   },
   title: {
-    fontSize: '64px',
+    fontSize: 'clamp(28px, 8vw, 64px)',
     textShadow: '3px 4px 0 #2a0000',
-    marginBottom: '16px',
+    marginBottom: '12px', lineHeight: 1.1,
   },
   subtitle: {
     fontFamily: "'IM Fell English', serif",
     fontStyle: 'italic',
-    fontSize: '20px',
-    marginBottom: '32px',
+    fontSize: 'clamp(14px, 3.5vw, 20px)',
+    marginBottom: '24px',
   },
   btn: {
     pointerEvents: 'all',
-    padding: '14px 32px',
+    padding: 'clamp(10px, 2.5vw, 14px) clamp(20px, 5vw, 32px)',
     background: 'linear-gradient(180deg,#3d2010,#2a1508)',
-    border: '2px solid #c8a050',
-    borderRadius: '3px',
-    color: '#e8c878',
-    fontFamily: "'Creepster', cursive",
-    fontSize: '20px',
-    cursor: 'pointer',
-    letterSpacing: '1.5px',
+    border: '2px solid #c8a050', borderRadius: '3px',
+    color: '#e8c878', fontFamily: "'Creepster', cursive",
+    fontSize: 'clamp(16px, 4vw, 20px)',
+    cursor: 'pointer', letterSpacing: '1.5px',
+    minHeight: '48px', minWidth: '140px',
+    touchAction: 'manipulation',
+    WebkitTapHighlightColor: 'transparent',
   }
 }
 
-function GameOverOverlay({ onRestart }) {
+function Overlay({ bg, title, titleColor, subtitle, btnLabel, onRestart }) {
   return (
-    <div style={{ ...OVERLAY_STYLES.base, background: 'rgba(0,0,0,0.8)' }}>
-      <div style={{ ...OVERLAY_STYLES.title, color: '#cc2200' }}>☠ GAME OVER ☠</div>
-      <div style={{ ...OVERLAY_STYLES.subtitle, color: '#884422' }}>Slappy vous a rattrapé...</div>
-      <button style={OVERLAY_STYLES.btn} onClick={onRestart}>
-        🕯 Réessayer
-      </button>
+    <div style={{ ...OV.base, background: bg }}>
+      <div style={{ ...OV.title, color: titleColor }}>{title}</div>
+      <div style={{ ...OV.subtitle, color: '#a08040' }}>{subtitle}</div>
+      <button style={OV.btn} onClick={onRestart}>{btnLabel}</button>
     </div>
   )
 }
 
-function WinOverlay({ onRestart }) {
-  return (
-    <div style={{ ...OVERLAY_STYLES.base, background: 'rgba(0,0,0,0.75)' }}>
-      <div style={{ ...OVERLAY_STYLES.title, color: '#c8a050' }}>✦ VICTOIRE ✦</div>
-      <div style={{ ...OVERLAY_STYLES.subtitle, color: '#a08040' }}>Vous avez fui le manoir !</div>
-      <button style={OVERLAY_STYLES.btn} onClick={onRestart}>
-        🏚 Rejouer
-      </button>
-    </div>
-  )
-}
-
-function DeathZoneOverlay({ onRestart }) {
-  return (
-    <div style={{ ...OVERLAY_STYLES.base, background: 'rgba(0,0,0,0.8)' }}>
-      <div style={{ ...OVERLAY_STYLES.title, color: '#cc2200' }}>💀 VOUS AVEZ CHUTÉ</div>
-      <div style={{ ...OVERLAY_STYLES.subtitle, color: '#884422' }}>Le gouffre vous a englouti...</div>
-      <button style={OVERLAY_STYLES.btn} onClick={onRestart}>
-        🕯 Réessayer
-      </button>
-    </div>
-  )
-}
-
-function MultiWinOverlay({ winner, winReason, playerRole, onRestart }) {
+function MultiWinOverlay({ winner, winReason, onRestart }) {
   const iWon = winner === 'me'
-  let titleText, subText
-
-  if (iWon) {
-    if (winReason === 'exit') {
-      titleText = '✦ FUGITIF VICTORIEUX ✦'
-      subText = 'Vous avez fui le manoir !'
-    } else if (winReason === 'caught') {
-      titleText = '🗡 CHASSEUR VICTORIEUX'
-      subText = 'Vous avez attrapé le fugitif !'
-    } else if (winReason === 'opponent_death') {
-      titleText = '✦ VICTOIRE ✦'
-      subText = 'Votre adversaire a chuté dans le gouffre !'
-    } else {
-      titleText = '✦ VICTOIRE ✦'
-      subText = 'Vous avez gagné !'
-    }
-  } else {
-    if (winReason === 'exit') {
-      titleText = '☠ FUGITIF ÉCHAPPÉ'
-      subText = 'L\'adversaire a atteint la sortie...'
-    } else if (winReason === 'caught') {
-      titleText = '☠ VOUS AVEZ ÉTÉ ATTRAPÉ'
-      subText = 'Le chasseur vous a eu...'
-    } else if (winReason === 'opponent_death') {
-      titleText = '☠ DÉFAITE ☠'
-      subText = 'Votre adversaire a triomphé...'
-    } else {
-      titleText = '☠ DÉFAITE ☠'
-      subText = "L'adversaire a gagné !"
-    }
+  const texts = {
+    exit:           iWon ? ['✦ FUGITIF VICTORIEUX ✦', 'Vous avez fui le manoir !']
+                         : ['☠ FUGITIF ÉCHAPPÉ',      "L'adversaire a atteint la sortie..."],
+    caught:         iWon ? ['🗡 CHASSEUR VICTORIEUX', 'Vous avez attrapé le fugitif !']
+                         : ['☠ VOUS AVEZ ÉTÉ ATTRAPÉ', 'Le chasseur vous a eu...'],
+    opponent_death: iWon ? ['✦ VICTOIRE ✦', 'Votre adversaire a chuté !']
+                         : ['☠ DÉFAITE ☠',  'Votre adversaire a triomphé...'],
   }
-
+  const [title, sub] = texts[winReason] || (iWon ? ['✦ VICTOIRE ✦', 'Gagné !'] : ['☠ DÉFAITE ☠', 'Perdu...'])
   return (
-    <div style={{ ...OVERLAY_STYLES.base, background: 'rgba(0,0,0,0.8)' }}>
-      <div style={{ ...OVERLAY_STYLES.title, color: iWon ? '#c8a050' : '#cc2200' }}>
-        {titleText}
-      </div>
-      <div style={{ ...OVERLAY_STYLES.subtitle, color: '#a08040' }}>
-        {subText}
-      </div>
-      <button style={OVERLAY_STYLES.btn} onClick={onRestart}>
-        🏚 Menu principal
-      </button>
+    <div style={{ ...OV.base, background: 'rgba(0,0,0,0.82)' }}>
+      <div style={{ ...OV.title, color: iWon ? '#c8a050' : '#cc2200' }}>{title}</div>
+      <div style={{ ...OV.subtitle, color: '#a08040' }}>{sub}</div>
+      <button style={OV.btn} onClick={onRestart}>🏚 Menu principal</button>
     </div>
   )
 }
 
-export default function GameCanvas({
-  gameState,
-  currentMap,
-  onCanvasReady,
-  phase,
-  onRestart,
-  onOpenCommand,
-  roles,
-}) {
-  const canvasRef = useRef(null)
-  const rendererRef = useRef(null)
-  const rafRef = useRef(null)
-  const stateRef = useRef(gameState)
+/* ── Bouton principal du canvas ───────────────────────────────────────────── */
+function OpenBookBtn({ onClick }) {
+  return (
+    <button
+      style={{
+        position: 'absolute',
+        bottom: 'clamp(12px, 3vh, 24px)',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        padding: 'clamp(10px, 2.5vh, 14px) clamp(18px, 5vw, 28px)',
+        background: 'linear-gradient(180deg,#3d2010,#2a1508)',
+        border: '2px solid #c8a050', borderRadius: '3px',
+        color: '#e8c878', fontFamily: "'Creepster', cursive",
+        fontSize: 'clamp(14px, 3.5vw, 18px)',
+        cursor: 'pointer', letterSpacing: '1px',
+        boxShadow: '0 0 20px rgba(200,160,80,0.2)',
+        zIndex: 4, minHeight: '48px',
+        touchAction: 'manipulation',
+        WebkitTapHighlightColor: 'transparent',
+        whiteSpace: 'nowrap',
+      }}
+      onClick={onClick}
+    >
+      📖 Ouvrir le Livre des Sorts
+    </button>
+  )
+}
 
-  // Sync state ref pour la boucle RAF
-  useEffect(() => {
-    stateRef.current = gameState
-  }, [gameState])
+/* ── Canvas principal ─────────────────────────────────────────────────────── */
+export default function GameCanvas({
+  gameState, currentMap, onCanvasReady, phase, onRestart, onOpenCommand, roles,
+}) {
+  const canvasRef    = useRef(null)
+  const rendererRef  = useRef(null)
+  const rafRef       = useRef(null)
+  const stateRef     = useRef(gameState)
+  const rolesRef     = useRef(roles)
+
+  useEffect(() => { stateRef.current  = gameState }, [gameState])
+  useEffect(() => { rolesRef.current  = roles      }, [roles])
 
   const map = MAPS[currentMap] || MAPS[0]
 
-  const rolesRef = useRef(roles)
-  useEffect(() => { rolesRef.current = roles }, [roles])
-
   const startLoop = useCallback(() => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
-
     const loop = (ts) => {
       const renderer = rendererRef.current
-      const state = stateRef.current
-      if (!renderer || !state) {
-        rafRef.current = requestAnimationFrame(loop)
-        return
+      const state    = stateRef.current
+      if (renderer && state) {
+        renderer.render(
+          { ...state, timestamp: ts },
+          map,
+          map.palette.player1,
+          state.gameMode === 'multi' ? map.palette.player2 : null,
+          rolesRef.current
+        )
       }
-
-      const skin1 = map.palette.player1
-      const skin2 = map.palette.player2
-
-      renderer.render(
-        { ...state, timestamp: ts },
-        map,
-        skin1,
-        state.gameMode === 'multi' ? skin2 : null,
-        rolesRef.current
-      )
-
       rafRef.current = requestAnimationFrame(loop)
     }
-
     rafRef.current = requestAnimationFrame(loop)
   }, [map])
 
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-
     const resize = () => {
       const W = canvas.offsetWidth
       const H = canvas.offsetHeight
-      canvas.width = W
+      if (W === 0 || H === 0) return
+      canvas.width  = W
       canvas.height = H
       rendererRef.current = new CanvasRenderer(canvas, W, H)
     }
-
     resize()
     onCanvasReady?.()
     startLoop()
-
     const observer = new ResizeObserver(resize)
     observer.observe(canvas)
-
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current)
-      observer.disconnect()
-    }
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); observer.disconnect() }
   }, [startLoop, onCanvasReady])
 
-  const containerStyle = {
-    position: 'relative',
-    width: '100%',
-    height: '100%',
-    cursor: phase === 'execute' ? 'default' : 'pointer',
+  /* Swipe vers le haut → ouvre le livre (mobile) */
+  const touchStartY = useRef(null)
+  const handleTouchStart = (e) => { touchStartY.current = e.touches[0].clientY }
+  const handleTouchEnd = (e) => {
+    if (touchStartY.current === null) return
+    const dy = touchStartY.current - e.changedTouches[0].clientY
+    if (dy > 40 && phase === 'execute') onOpenCommand?.()
+    touchStartY.current = null
   }
 
   return (
-    <div style={containerStyle}>
+    <div style={{ position: 'relative', width: '100%', height: '100%', touchAction: 'none' }}>
       <canvas
         ref={canvasRef}
         style={{ display: 'block', width: '100%', height: '100%' }}
-        onClick={phase === 'execute' ? onOpenCommand : undefined}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
       />
 
-      {/* Bouton ouvrir le livre (phase execute/command) */}
-      {phase === 'execute' && (
-        <button
-          style={{
-            position: 'absolute',
-            bottom: '24px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            padding: '12px 28px',
-            background: 'linear-gradient(180deg,#3d2010,#2a1508)',
-            border: '2px solid #c8a050',
-            borderRadius: '3px',
-            color: '#e8c878',
-            fontFamily: "'Creepster', cursive",
-            fontSize: '17px',
-            cursor: 'pointer',
-            letterSpacing: '1px',
-            boxShadow: '0 0 20px rgba(200,160,80,0.2)',
-            zIndex: 4,
-          }}
-          onClick={onOpenCommand}
-        >
-          📖 Ouvrir le Livre des Sorts
-        </button>
-      )}
+      {phase === 'execute' && <OpenBookBtn onClick={onOpenCommand} />}
 
-      {/* Overlays de fin */}
-      {phase === 'gameover' && <GameOverOverlay onRestart={onRestart} />}
-      {phase === 'death' && <DeathZoneOverlay onRestart={onRestart} />}
-      {phase === 'win' && <WinOverlay onRestart={onRestart} />}
-      {phase === 'multiwin' && (
-        <MultiWinOverlay
-          winner={gameState.multiWinner}
-          winReason={gameState.multiWinReason}
-          playerRole={gameState.role}
-          onRestart={onRestart}
-        />
+      {phase === 'gameover' && (
+        <Overlay bg="rgba(0,0,0,0.82)" title="☠ GAME OVER ☠" titleColor="#cc2200"
+          subtitle="Slappy vous a rattrapé..." btnLabel="🕯 Réessayer" onRestart={onRestart} />
+      )}
+      {phase === 'death' && (
+        <Overlay bg="rgba(0,0,0,0.82)" title="💀 VOUS AVEZ CHUTÉ" titleColor="#cc2200"
+          subtitle="Le gouffre vous a englouti..." btnLabel="🕯 Réessayer" onRestart={onRestart} />
+      )}
+      {phase === 'win' && (
+        <Overlay bg="rgba(0,0,0,0.78)" title="✦ VICTOIRE ✦" titleColor="#c8a050"
+          subtitle="Vous avez fui le manoir !" btnLabel="🏚 Rejouer" onRestart={onRestart} />
+      )}
+      {phase === 'multiwin' && gameState && (
+        <MultiWinOverlay winner={gameState.multiWinner} winReason={gameState.multiWinReason} onRestart={onRestart} />
       )}
     </div>
   )

@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Hub - Comparaison des styles</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Rajdhani:wght@500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        /* ── Sélecteur d'option en haut ── */
+        #selector {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+            background: #1a1a1a; padding: 12px 20px;
+            display: flex; align-items: center; gap: 12px;
+            font-family: system-ui, sans-serif; font-size: 14px; color: #aaa;
+            border-bottom: 1px solid #333;
+        }
+        #selector strong { color: #fff; margin-right: 8px; }
+        .opt-btn {
+            padding: 6px 16px; border-radius: 6px; cursor: pointer; font-weight: 600;
+            border: 1px solid #444; background: transparent; color: #aaa; font-size: 13px;
+            transition: all 0.2s;
+        }
+        .opt-btn:hover { border-color: #888; color: #fff; }
+        .opt-btn.active { background: #fff; color: #000; border-color: #fff; }
+
+        .preview { display: none; padding-top: 60px; min-height: 100vh; }
+        .preview.active { display: block; }
+
+
+        /* ════════════════════════════════
+           OPTION A — CLARITY (Linear/Notion)
+        ════════════════════════════════ */
+        #optA { font-family: 'Inter', system-ui, sans-serif; }
+
+        #optA.dark  { background: #0a0a0a; color: #f5f5f5; }
+        #optA.light { background: #f5f5f5; color: #111; }
+
+        #optA .navbar {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 18px 40px; border-bottom: 1px solid;
+        }
+        #optA.dark  .navbar { border-color: #222; background: #0a0a0a; }
+        #optA.light .navbar { border-color: #e5e5e5; background: #fff; }
+
+        #optA .nav-title { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+        #optA .toggle-btn {
+            border: 1px solid; border-radius: 20px; padding: 6px 14px;
+            cursor: pointer; font-size: 13px; font-weight: 500; background: transparent;
+            transition: all 0.2s;
+        }
+        #optA.dark  .toggle-btn { border-color: #333; color: #aaa; }
+        #optA.dark  .toggle-btn:hover { border-color: #666; color: #fff; }
+        #optA.light .toggle-btn { border-color: #ddd; color: #555; }
+        #optA.light .toggle-btn:hover { border-color: #999; color: #111; }
+
+        #optA .content { max-width: 900px; margin: 50px auto; padding: 0 24px; }
+        #optA .page-title { font-size: 32px; font-weight: 800; margin-bottom: 6px; letter-spacing: -1px; }
+        #optA .page-sub { font-size: 15px; margin-bottom: 36px; }
+        #optA.dark  .page-sub { color: #666; }
+        #optA.light .page-sub { color: #888; }
+
+        #optA .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+        #optA .card {
+            border-radius: 12px; padding: 24px; border: 1px solid; transition: all 0.2s;
+        }
+        #optA.dark  .card { background: #111; border-color: #222; }
+        #optA.light .card { background: #fff; border-color: #e5e5e5; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+        #optA .card:hover { transform: translateY(-2px); }
+        #optA.dark  .card:hover { border-color: #444; }
+        #optA.light .card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+
+        #optA .card-icon { font-size: 28px; margin-bottom: 12px; }
+        #optA .card-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+        #optA .card-meta { font-size: 12px; margin-bottom: 10px; }
+        #optA.dark  .card-meta { color: #555; }
+        #optA.light .card-meta { color: #999; }
+        #optA .card-desc { font-size: 13px; line-height: 1.5; margin-bottom: 20px; }
+        #optA.dark  .card-desc { color: #888; }
+        #optA.light .card-desc { color: #666; }
+        #optA .card-btn {
+            display: block; text-align: center; padding: 10px; border-radius: 8px;
+            font-size: 13px; font-weight: 600; cursor: pointer; border: none; width: 100%;
+            transition: filter 0.2s;
+        }
+        #optA .card-btn:hover { filter: brightness(1.1); }
+
+
+        /* ════════════════════════════════
+           OPTION B — SLATE (Vercel/GitHub)
+        ════════════════════════════════ */
+        #optB { font-family: 'Inter', system-ui, sans-serif; }
+        #optB.dark  { background: #09090b; color: #fafafa; }
+        #optB.light { background: #fafafa; color: #09090b; }
+
+        #optB .navbar {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px 40px; border-bottom: 1px solid;
+            position: sticky; top: 60px;
+        }
+        #optB.dark  .navbar { border-color: #27272a; background: rgba(9,9,11,0.85); backdrop-filter: blur(8px); }
+        #optB.light .navbar { border-color: #e4e4e7; background: rgba(250,250,250,0.85); backdrop-filter: blur(8px); }
+
+        #optB .nav-left { display: flex; align-items: center; gap: 10px; }
+        #optB .nav-dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; }
+        #optB .nav-title { font-size: 15px; font-weight: 700; }
+        #optB .nav-sub { font-size: 12px; }
+        #optB.dark  .nav-sub { color: #71717a; }
+        #optB.light .nav-sub { color: #a1a1aa; }
+
+        #optB .toggle-btn {
+            border: 1px solid; border-radius: 8px; padding: 7px 14px;
+            cursor: pointer; font-size: 13px; font-weight: 500; background: transparent;
+            display: flex; align-items: center; gap: 6px;
+        }
+        #optB.dark  .toggle-btn { border-color: #27272a; color: #a1a1aa; }
+        #optB.light .toggle-btn { border-color: #e4e4e7; color: #71717a; }
+
+        #optB .content { max-width: 920px; margin: 40px auto; padding: 0 24px; }
+
+        #optB .section-label {
+            font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;
+            margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid;
+        }
+        #optB.dark  .section-label { color: #52525b; border-color: #27272a; }
+        #optB.light .section-label { color: #a1a1aa; border-color: #e4e4e7; }
+
+        #optB .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 1px; margin-bottom: 40px; }
+        #optB.dark  .grid { background: #27272a; border: 1px solid #27272a; border-radius: 12px; overflow: hidden; }
+        #optB.light .grid { background: #e4e4e7; border: 1px solid #e4e4e7; border-radius: 12px; overflow: hidden; }
+
+        #optB .card {
+            padding: 24px; position: relative; transition: all 0.15s;
+            border-left: 3px solid transparent;
+        }
+        #optB.dark  .card { background: #09090b; }
+        #optB.light .card { background: #fff; }
+        #optB .card:hover { border-left-color: var(--c); }
+        #optB.dark  .card:hover { background: #111; }
+        #optB.light .card:hover { background: #fafafa; }
+
+        #optB .card-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        #optB .card-icon { font-size: 20px; }
+        #optB .card-title { font-size: 15px; font-weight: 700; }
+        #optB .badge {
+            display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 8px;
+            border-radius: 20px; border: 1px solid; margin-right: 4px; margin-bottom: 10px;
+        }
+        #optB.dark  .badge { background: #18181b; border-color: #3f3f46; color: #a1a1aa; }
+        #optB.light .badge { background: #f4f4f5; border-color: #e4e4e7; color: #71717a; }
+        #optB .card-desc { font-size: 13px; line-height: 1.55; margin-bottom: 16px; }
+        #optB.dark  .card-desc { color: #71717a; }
+        #optB.light .card-desc { color: #a1a1aa; }
+        #optB .card-btn {
+            font-size: 12px; font-weight: 600; padding: 7px 14px;
+            border-radius: 6px; border: 1px solid transparent;
+            cursor: pointer; transition: all 0.15s;
+            background: var(--c); color: #000;
+        }
+        #optB .card-btn:hover { filter: brightness(1.15); }
+
+
+        /* ════════════════════════════════
+           OPTION C — NEON / PAPER
+        ════════════════════════════════ */
+        #optC.dark {
+            background: #0b0f19;
+            background-image:
+                radial-gradient(circle at 60% 0%, rgba(59,130,246,0.12) 0%, transparent 45%),
+                linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+            background-size: 100% 100%, 40px 40px, 40px 40px;
+            color: #e2e8f0;
+            font-family: 'Rajdhani', sans-serif;
+        }
+        #optC.light {
+            background: #fffdf7;
+            color: #1a1a1a;
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+
+        #optC .navbar {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px 40px; border-bottom: 1px solid;
+        }
+        #optC.dark  .navbar { border-color: rgba(255,255,255,0.08); background: rgba(11,15,25,0.7); backdrop-filter: blur(10px); }
+        #optC.light .navbar { border-color: #e8e0d0; background: #fffdf7; }
+
+        #optC.dark  .nav-title { font-size: 20px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #00f3ff; text-shadow: 0 0 20px rgba(0,243,255,0.4); font-family: 'Share Tech Mono'; }
+        #optC.light .nav-title { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; color: #1a1a1a; }
+
+        #optC .toggle-btn {
+            border: 1px solid; border-radius: 6px; padding: 7px 14px;
+            cursor: pointer; font-weight: 600; font-size: 13px; background: transparent;
+        }
+        #optC.dark  .toggle-btn { border-color: rgba(0,243,255,0.3); color: #00f3ff; font-family: 'Share Tech Mono'; }
+        #optC.dark  .toggle-btn:hover { background: rgba(0,243,255,0.08); }
+        #optC.light .toggle-btn { border-color: #c8bfa0; color: #555; }
+        #optC.light .toggle-btn:hover { background: #f0ece0; }
+
+        #optC .content { max-width: 900px; margin: 50px auto; padding: 0 24px; }
+
+        #optC.dark  .page-title { font-size: 14px; letter-spacing: 3px; color: #94a3b8; font-family: 'Share Tech Mono'; margin-bottom: 6px; }
+        #optC.light .page-title { font-size: 13px; letter-spacing: 2px; color: #a89060; text-transform: uppercase; font-weight: 600; margin-bottom: 6px; }
+
+        #optC.dark  .page-heading { font-size: 36px; font-weight: 700; color: #fff; margin-bottom: 36px; }
+        #optC.light .page-heading { font-size: 36px; font-weight: 800; color: #1a1a1a; margin-bottom: 36px; letter-spacing: -1px; }
+
+        #optC .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+
+        /* Dark card : glassmorphism + glow */
+        #optC.dark .card {
+            background: rgba(16,22,35,0.6); border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px; padding: 24px; backdrop-filter: blur(8px);
+            transition: all 0.25s; position: relative; overflow: hidden;
+        }
+        #optC.dark .card::before {
+            content: ''; position: absolute; inset: 0;
+            background: radial-gradient(circle at 50% 0%, var(--c-glow, transparent) 0%, transparent 60%);
+            opacity: 0; transition: opacity 0.3s; pointer-events: none;
+        }
+        #optC.dark .card:hover { border-color: var(--c, #fff); box-shadow: 0 0 20px var(--c-glow, transparent); }
+        #optC.dark .card:hover::before { opacity: 1; }
+
+        /* Light card : editorial, bordure épaisse */
+        #optC.light .card {
+            background: #fff; border: 2px solid #e8e0d0;
+            border-radius: 4px; padding: 24px;
+            border-top: 4px solid var(--c, #999);
+            transition: all 0.2s;
+        }
+        #optC.light .card:hover { transform: translateY(-3px); box-shadow: 6px 6px 0 #e8e0d0; }
+
+        #optC.dark  .card-icon { font-size: 28px; margin-bottom: 14px; }
+        #optC.light .card-icon { font-size: 24px; margin-bottom: 14px; }
+
+        #optC.dark  .card-title { font-size: 18px; font-weight: 700; color: var(--c); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
+        #optC.light .card-title { font-size: 16px; font-weight: 800; color: #1a1a1a; margin-bottom: 6px; }
+
+        #optC .badge {
+            display: inline-block; font-size: 11px; font-weight: 600;
+            padding: 2px 8px; border-radius: 3px; margin-right: 4px; margin-bottom: 12px;
+        }
+        #optC.dark  .badge { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; }
+        #optC.light .badge { background: #f5f0e8; border: 1px solid #e8e0d0; color: #a89060; }
+
+        #optC .card-desc { font-size: 13px; line-height: 1.55; margin-bottom: 20px; }
+        #optC.dark  .card-desc { color: #94a3b8; }
+        #optC.light .card-desc { color: #666; }
+
+        #optC.dark  .card-btn {
+            display: block; text-align: center; width: 100%; padding: 10px;
+            background: transparent; border: 1px solid var(--c); color: var(--c);
+            font-family: 'Rajdhani'; font-size: 14px; font-weight: 700;
+            letter-spacing: 1px; text-transform: uppercase; border-radius: 6px;
+            cursor: pointer; transition: all 0.2s;
+        }
+        #optC.dark  .card-btn:hover { background: var(--c); color: #000; box-shadow: 0 0 15px var(--c-glow); }
+        #optC.light .card-btn {
+            display: block; text-align: center; width: 100%; padding: 10px;
+            background: #1a1a1a; border: none; color: #fff;
+            font-size: 13px; font-weight: 700; border-radius: 3px;
+            cursor: pointer; transition: all 0.2s;
+        }
+        #optC.light .card-btn:hover { background: var(--c); }
+    </style>
+</head>
+<body>
+
+<!-- ── Sélecteur ── -->
+<div id="selector">
+    <strong>Aperçu :</strong>
+    <button class="opt-btn active" onclick="showOpt('A')">A — Clarity</button>
+    <button class="opt-btn"        onclick="showOpt('B')">B — Slate</button>
+    <button class="opt-btn"        onclick="showOpt('C')">C — Neon/Paper</button>
+    <span style="margin-left:auto; font-size:12px; color:#666;">Chaque option a son propre toggle clair/sombre →</span>
+</div>
+
+
+<!-- ════ OPTION A ════ -->
+<div id="optA" class="preview active dark">
+    <div class="navbar">
+        <div class="nav-title">SCOLARIS</div>
+        <button class="toggle-btn" onclick="toggleTheme('optA')">☀️ Mode clair</button>
+    </div>
+    <div class="content">
+        <div class="page-title">Dashboard — Mathématiques</div>
+        <div class="page-sub">Missions d'entraînement · Lycée</div>
+        <div class="grid">
+            <div class="card">
+                <div class="card-icon">🕵️‍♂️</div>
+                <div class="card-title">Le Voleur de Copies</div>
+                <div class="card-meta">Seconde · Fonctions &amp; Graphiques</div>
+                <div class="card-desc">Infiltrez le système du lycée. Résolvez des calculs d'images et interceptez le voleur.</div>
+                <button class="card-btn" style="background:#00f3ff;color:#000;">Jouer</button>
+            </div>
+            <div class="card">
+                <div class="card-icon">🎲</div>
+                <div class="card-title">Projet Enigma</div>
+                <div class="card-meta">Terminale · Probabilités</div>
+                <div class="card-desc">Déchiffrez des communications secrètes en utilisant les probabilités conditionnelles.</div>
+                <button class="card-btn" style="background:#333;color:#666;cursor:not-allowed;">En développement</button>
+            </div>
+            <div class="card">
+                <div class="card-icon">📊</div>
+                <div class="card-title">La Matrice</div>
+                <div class="card-meta">Terminale · Vecteurs &amp; Espace</div>
+                <div class="card-desc">Naviguez en 3D en utilisant les équations paramétriques pour trouver la sortie.</div>
+                <button class="card-btn" style="background:#333;color:#666;cursor:not-allowed;">En développement</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ════ OPTION B ════ -->
+<div id="optB" class="preview dark">
+    <div class="navbar">
+        <div class="nav-left">
+            <div class="nav-dot"></div>
+            <div>
+                <div class="nav-title">SCOLARIS</div>
+                <div class="nav-sub">Missions Mathématiques</div>
+            </div>
+        </div>
+        <button class="toggle-btn" onclick="toggleTheme('optB')">☀️ Mode clair</button>
+    </div>
+    <div class="content">
+        <div class="section-label">Disponibles</div>
+        <div class="grid">
+            <div class="card" style="--c:#00f3ff;">
+                <div class="card-top">
+                    <span class="card-icon">🕵️‍♂️</span>
+                    <span class="card-title">Le Voleur de Copies</span>
+                </div>
+                <span class="badge">Seconde</span><span class="badge">Fonctions</span>
+                <div class="card-desc">Infiltrez le système du lycée. Résolvez des calculs d'images et interceptez le voleur.</div>
+                <button class="card-btn" style="--c:#00f3ff;">► Jouer</button>
+            </div>
+        </div>
+        <div class="section-label" style="margin-top:32px;">En développement</div>
+        <div class="grid">
+            <div class="card" style="--c:#ff00ff; opacity:0.5;">
+                <div class="card-top">
+                    <span class="card-icon">🎲</span>
+                    <span class="card-title">Projet Enigma</span>
+                </div>
+                <span class="badge">Terminale</span><span class="badge">Probabilités</span>
+                <div class="card-desc">Déchiffrez des communications secrètes en utilisant les probabilités conditionnelles.</div>
+                <button class="card-btn" style="--c:#555;background:#555;cursor:not-allowed;">Bientôt</button>
+            </div>
+            <div class="card" style="--c:#ffea00; opacity:0.5;">
+                <div class="card-top">
+                    <span class="card-icon">📊</span>
+                    <span class="card-title">La Matrice</span>
+                </div>
+                <span class="badge">Terminale</span><span class="badge">Vecteurs</span>
+                <div class="card-desc">Naviguez en 3D avec les équations paramétriques pour trouver la sortie.</div>
+                <button class="card-btn" style="--c:#555;background:#555;cursor:not-allowed;">Bientôt</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ════ OPTION C ════ -->
+<div id="optC" class="preview dark">
+    <div class="navbar">
+        <div class="nav-title">SCOLARIS</div>
+        <button class="toggle-btn" onclick="toggleTheme('optC')">☀️ Mode papier</button>
+    </div>
+    <div class="content">
+        <div class="page-title">// MISSIONS DISPONIBLES</div>
+        <div class="page-heading">Mathématiques Lycée</div>
+        <div class="grid">
+            <div class="card" style="--c:#00f3ff; --c-glow:rgba(0,243,255,0.2);">
+                <div class="card-icon">🕵️‍♂️</div>
+                <div class="card-title">Le Voleur de Copies</div>
+                <span class="badge">Seconde</span><span class="badge">Fonctions</span>
+                <div class="card-desc">Infiltrez le système du lycée. Résolvez des calculs d'images et interceptez le voleur.</div>
+                <button class="card-btn">LANCER LA MISSION</button>
+            </div>
+            <div class="card" style="--c:#ff00ff; --c-glow:rgba(255,0,255,0.15); opacity:0.5;">
+                <div class="card-icon">🎲</div>
+                <div class="card-title">Projet Enigma</div>
+                <span class="badge">Terminale</span><span class="badge">Probabilités</span>
+                <div class="card-desc">Déchiffrez des communications secrètes avec les probabilités conditionnelles.</div>
+                <button class="card-btn" style="cursor:not-allowed;opacity:0.4;">EN DÉVELOPPEMENT</button>
+            </div>
+            <div class="card" style="--c:#ffea00; --c-glow:rgba(255,234,0,0.15); opacity:0.5;">
+                <div class="card-icon">📊</div>
+                <div class="card-title">La Matrice</div>
+                <span class="badge">Terminale</span><span class="badge">Vecteurs</span>
+                <div class="card-desc">Naviguez en 3D avec les équations paramétriques pour trouver la sortie.</div>
+                <button class="card-btn" style="cursor:not-allowed;opacity:0.4;">EN DÉVELOPPEMENT</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    function showOpt(id) {
+        document.querySelectorAll('.preview').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.opt-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('opt' + id).classList.add('active');
+        document.querySelectorAll('.opt-btn')[['A','B','C'].indexOf(id)].classList.add('active');
+    }
+
+    function toggleTheme(id) {
+        const el = document.getElementById(id);
+        const isDark = el.classList.contains('dark');
+        el.classList.toggle('dark', !isDark);
+        el.classList.toggle('light', isDark);
+        el.querySelector('.toggle-btn').textContent = isDark ? '🌙 Mode sombre' : '☀️ Mode clair';
+        if (id === 'optC') {
+            el.querySelector('.toggle-btn').textContent = isDark ? '🌙 Mode neon' : '☀️ Mode papier';
+        }
+    }
+</script>
+</body>
+</html>

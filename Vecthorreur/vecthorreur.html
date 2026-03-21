@@ -1,0 +1,2015 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>VectHorreur</title>
+  <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Special+Elite&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100%; overflow: hidden;
+      background: #0a0a0f;
+      font-family: 'Courier New', monospace;
+    }
+
+
+
+    /* Engrenage — visible pendant le jeu */
+    #btn-gear {
+      position: fixed; top: 8px; right: 8px; z-index: 1000;
+      width: 36px; height: 36px;
+      background: #0a0a0fcc; color: #00ffff;
+      border: 1px solid #00ffff44;
+      font-size: 18px; cursor: pointer; display: none;
+      align-items: center; justify-content: center;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    #btn-gear:hover { border-color: #00ffff; box-shadow: 0 0 10px #00ffff44; }
+    #btn-gear.visible { display: flex; }
+
+    /* Panneau de réglages */
+    #settings-panel {
+      position: fixed; top: 0; right: 0; z-index: 999;
+      width: 280px; height: 100vh;
+      background: #0a0a0f; border-left: 1px solid #00ffff33;
+      font-family: 'Courier New', monospace; color: #00ffff;
+      padding: 20px 20px 20px;
+      display: flex; flex-direction: column; gap: 18px;
+      transform: translateX(100%);
+      transition: transform 300ms ease-in-out;
+      box-shadow: -10px 0 30px rgba(0,0,0,0.6);
+    }
+    #settings-panel.open { transform: translateX(0); }
+    #settings-panel::before {
+      content: ''; position: absolute; inset: 0; pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg, transparent 0px, transparent 2px,
+        rgba(0,255,255,0.01) 2px, rgba(0,255,255,0.01) 4px
+      );
+    }
+    .settings-title {
+      font-size: 13px; letter-spacing: 2px; color: #00ffff;
+      border-bottom: 1px solid #00ffff22; padding-bottom: 10px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .settings-close {
+      background: transparent; border: none; color: #00ffff88;
+      font-size: 18px; cursor: pointer; padding: 0 4px; line-height: 1;
+    }
+    .settings-close:hover { color: #00ffff; }
+    .settings-section { font-size: 10px; letter-spacing: 2px; color: #00ffff44; margin-bottom: -8px; }
+    .settings-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    }
+    .settings-label { font-size: 12px; color: #00ffff88; }
+    .settings-divider { border: none; border-top: 1px solid #00ffff11; margin: 0; }
+    /* Toggle switch */
+    .toggle-switch {
+      position: relative; width: 40px; height: 22px; cursor: pointer;
+    }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-track {
+      position: absolute; inset: 0; border-radius: 11px;
+      background: #222; border: 1px solid #00ffff33;
+      transition: background 0.2s;
+    }
+    .toggle-thumb {
+      position: absolute; top: 3px; left: 3px;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #00ffff44;
+      transition: transform 0.2s, background 0.2s;
+    }
+    .toggle-switch input:checked + .toggle-track { background: #003333; border-color: #00ffff; }
+    .toggle-switch input:checked + .toggle-track + .toggle-thumb,
+    .toggle-switch input:checked ~ .toggle-thumb { background: #00ffff; transform: translateX(18px); }
+    /* Volume slider */
+    .vol-slider {
+      -webkit-appearance: none; appearance: none;
+      width: 120px; height: 4px; border-radius: 2px;
+      background: #00ffff22; outline: none; cursor: pointer;
+    }
+    .vol-slider::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 14px; height: 14px;
+      border-radius: 50%; background: #00ffff; cursor: pointer;
+      box-shadow: 0 0 6px #00ffff66;
+    }
+    .vol-slider::-moz-range-thumb {
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #00ffff; cursor: pointer; border: none;
+    }
+    .vol-value { font-size: 11px; color: #00ffff66; width: 28px; text-align: right; }
+    /* Boutons dans le panneau */
+    .btn-settings-action {
+      background: #111; color: #00ffff; border: 1px solid #00ffff33;
+      font-family: 'Courier New', monospace; padding: 9px 14px;
+      cursor: pointer; font-size: 12px; text-align: left;
+      transition: background 0.15s, border-color 0.15s; width: 100%;
+    }
+    .btn-settings-action:hover { background: #002222; border-color: #00ffff; }
+    .btn-settings-action.danger { border-color: #ff444433; color: #ff6666; }
+    .btn-settings-action.danger:hover { background: #220000; border-color: #ff4444; }
+
+    #mode-indicator {
+      position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+      z-index: 200; display: flex; gap: 12px; align-items: center;
+      background: #0a0a0fcc; padding: 4px 14px; border: 1px solid #00ffff33;
+      font-family: 'Courier New', monospace; font-size: 12px; color: #00ffff88;
+    }
+    .mode-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .mode-dot.active { background: #00ffff; box-shadow: 0 0 6px #00ffff; }
+    .mode-dot.inactive { background: #00ffff33; }
+
+    #slide-wrapper {
+      display: flex; width: 200vw; height: 100vh;
+      transition: transform 500ms ease-in-out;
+    }
+    #view-command, #view-execute {
+      width: 100vw; height: 100vh; flex-shrink: 0; position: relative;
+      overflow: hidden;
+    }
+
+    #view-command {
+      background: #0a0a0f; color: #00ffff;
+      overflow-y: auto; overflow-x: hidden;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: flex-start;
+      padding: 60px 20px 20px;
+    }
+    #view-command::after {
+      content: '';
+      position: absolute; inset: 0; pointer-events: none; z-index: 10;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent 0px, transparent 2px,
+        rgba(0,255,255,0.015) 2px, rgba(0,255,255,0.015) 4px
+      );
+    }
+    .cmd-panel {
+      width: 100%; max-width: 500px;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .cmd-title { font-size: 1.1rem; color: #00ffff; border-bottom: 1px solid #00ffff44; padding-bottom: 6px; }
+    .cmd-info { font-size: 12px; color: #00ffff88; line-height: 1.7; }
+    .cmd-section { font-size: 11px; color: #00ffff66; margin-bottom: 4px; letter-spacing: 1px; }
+
+    .vec-inputs { display: flex; gap: 12px; align-items: center; }
+    .vec-input-group { display: flex; flex-direction: column; gap: 4px; }
+    .vec-input-group label { font-size: 11px; color: #00ffff88; }
+    .vec-input-group input {
+      width: 80px; background: #111; border: 1px solid #00ffff44;
+      color: #00ffff; font-family: 'Courier New', monospace; font-size: 16px;
+      padding: 6px 8px; text-align: center;
+      -moz-appearance: textfield;
+    }
+    .vec-input-group input::-webkit-outer-spin-button,
+    .vec-input-group input::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .vec-input-group input:focus { outline: none; border-color: #00ffff; box-shadow: 0 0 8px #00ffff44; }
+
+    #preview-canvas {
+      border: 1px solid #00ffff33; display: block;
+      background: #0d0d1a; margin: 0 auto;
+    }
+
+    .btn-hacker {
+      background: #111; color: #00ffff; border: 1px solid #00ffff;
+      font-family: 'Courier New', monospace; padding: 8px 16px;
+      cursor: pointer; transition: background 0.2s, box-shadow 0.2s;
+      font-size: 13px;
+    }
+    .btn-hacker:hover:not(:disabled) { background: #002222; box-shadow: 0 0 10px #00ffff66; }
+    .btn-hacker:disabled { opacity: 0.3; cursor: not-allowed; }
+    .btn-hacker:active:not(:disabled) { background: #003333; }
+
+    .btn-execute {
+      background: #110011; color: #ff00ff; border: 1px solid #ff00ff;
+      font-family: 'Courier New', monospace; padding: 12px 24px;
+      cursor: pointer; font-size: 15px; font-weight: bold; width: 100%;
+      transition: background 0.2s, box-shadow 0.2s;
+    }
+    .btn-execute:hover:not(:disabled) { background: #220022; box-shadow: 0 0 15px #ff00ff66; }
+    .btn-execute:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    #message-zone { font-size: 12px; color: #ff4444; min-height: 16px; }
+
+    .deck-area { display: flex; flex-wrap: wrap; gap: 6px; }
+    .btn-deck {
+      background: #110011; color: #ff00ff; border: 1px solid #ff00ff44;
+      font-family: 'Courier New', monospace; padding: 5px 10px;
+      cursor: pointer; font-size: 12px; transition: all 0.15s;
+    }
+    .btn-deck:hover { border-color: #ff00ff; box-shadow: 0 0 6px #ff00ff44; }
+    .btn-deck.selected { background: #220022; border-color: #ff00ff; box-shadow: 0 0 8px #ff00ff66; }
+
+    .math-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .scalar-input {
+      width: 60px; background: #111; border: 1px solid #00ffff44;
+      color: #00ffff; font-family: 'Courier New', monospace; font-size: 14px;
+      padding: 5px 8px; text-align: center;
+      -moz-appearance: textfield;
+    }
+    .scalar-input::-webkit-outer-spin-button,
+    .scalar-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+    .health-dots { display: flex; gap: 4px; }
+    .health-dot { font-size: 14px; }
+
+    #game-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+    #hud-bottom {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      background: #0a0a0fdd; padding: 10px 20px;
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 12px; color: #00ffff88; z-index: 10;
+      border-top: 1px solid #00ffff22;
+    }
+    #hud-pos { color: #00ffff88; }
+    #hud-health { display: flex; gap: 4px; }
+    #btn-back-cmd {
+      background: #111; color: #00ffff; border: 1px solid #00ffff44;
+      font-family: 'Courier New', monospace; padding: 6px 14px;
+      cursor: pointer; font-size: 12px;
+    }
+    #btn-back-cmd:hover:not(:disabled) { border-color: #00ffff; background: #002222; }
+    #btn-back-cmd:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    #vec-overlay {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      font-size: 3rem; color: #ff00ff; font-family: 'Courier New', monospace;
+      text-shadow: 0 0 20px #00ffff; pointer-events: none;
+      opacity: 0; transition: opacity 150ms; z-index: 20;
+    }
+
+    .screen {
+      position: fixed; inset: 0; z-index: 500;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; padding: 20px; gap: 16px;
+      font-family: 'Courier New', monospace;
+    }
+
+    /* ═══════════════════════════════════
+       MENU — HORROR VINTAGE
+    ═══════════════════════════════════ */
+    #screen-menu {
+      background: #0a0805;
+      overflow: hidden;
+    }
+    /* Image de fond */
+    #menu-bg-img {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      object-fit: cover; z-index: 0; opacity: 0.22;
+      filter: sepia(60%) contrast(1.1);
+    }
+    /* Grain filmique (SVG inline encodé) */
+    #screen-menu::before {
+      content: '';
+      position: absolute; inset: 0; z-index: 1; pointer-events: none;
+      opacity: 0.55;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+      background-size: 180px 180px;
+      mix-blend-mode: multiply;
+    }
+    /* Vignette + dégradé bas */
+    #menu-gradient {
+      position: absolute; inset: 0; z-index: 2; pointer-events: none;
+      background:
+        radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.82) 100%),
+        linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, transparent 30%, transparent 60%, rgba(0,0,0,0.9) 100%);
+    }
+    /* Ligne de scan VHS horizontale animée */
+    #screen-menu::after {
+      content: '';
+      position: absolute; left: 0; right: 0; z-index: 3; pointer-events: none;
+      height: 3px;
+      background: rgba(180,120,80,0.08);
+      animation: vhs-scan 6s linear infinite;
+    }
+    @keyframes vhs-scan {
+      0%   { top: -3px; }
+      100% { top: 100%; }
+    }
+
+    .menu-content {
+      position: relative; z-index: 4;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 18px;
+      max-width: 560px; width: 100%;
+    }
+
+    /* Titre principal — police horror */
+    .game-title {
+      font-family: 'Creepster', cursive;
+      font-size: clamp(3rem, 10vw, 6rem);
+      color: #4ab80a;
+      letter-spacing: 6px;
+      line-height: 1;
+      text-shadow:
+        0 0 8px rgba(74,184,10,0.9),
+        0 0 30px rgba(50,160,0,0.5),
+        2px 3px 0 #001a00,
+        4px 6px 0 rgba(0,0,0,0.4);
+      animation: horror-flicker 8s infinite;
+      cursor: default; user-select: none;
+    }
+    /* Enlever le curseur clignotant sur le titre horror */
+    .game-title.cursor::after { display: none; }
+
+    @keyframes horror-flicker {
+      0%, 88%, 92%, 96%, 100% {
+        opacity: 1;
+        text-shadow: 0 0 8px rgba(74,184,10,0.9), 0 0 30px rgba(50,160,0,0.5), 2px 3px 0 #001a00;
+      }
+      89% { opacity: 0.3; text-shadow: none; }
+      90% { opacity: 1; text-shadow: 0 0 20px #22ff00; }
+      91% { opacity: 0.6; }
+      93% { opacity: 0.85; text-shadow: -2px 0 #22ff00, 2px 0 #116600; }
+      95% { opacity: 1; }
+      97% { opacity: 0.4; text-shadow: none; }
+      98% { opacity: 1; text-shadow: 0 0 40px #22ff00; }
+    }
+
+    /* Sous-titre */
+    .game-subtitle {
+      font-family: 'Special Elite', cursive;
+      color: #9a7a5a;
+      font-size: 1rem;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-top: -10px;
+      text-shadow: 1px 1px 3px #000;
+      opacity: 0.85;
+    }
+
+    /* Séparateur vintage */
+    .menu-divider {
+      width: 80%; height: 1px;
+      background: linear-gradient(90deg, transparent, #1a3810, #4ab80a55, #1a3810, transparent);
+      margin: 2px 0;
+    }
+
+    /* Sélecteur de map */
+    .map-selector {
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; width: 100%;
+    }
+    .btn-map {
+      font-family: 'Special Elite', cursive;
+      background: rgba(10,5,2,0.75);
+      color: #7a5a3a;
+      border: 1px solid #3a2010;
+      padding: 7px 4px; cursor: pointer; font-size: 10px;
+      transition: all 0.2s; line-height: 1.3; text-align: center;
+    }
+    .btn-map:hover:not(.locked) {
+      background: rgba(10,60,5,0.6);
+      border-color: #4ab80a;
+      color: #b0e890;
+      text-shadow: 0 0 6px #4ab80a66;
+    }
+    .btn-map.active {
+      background: rgba(10,70,5,0.7);
+      border-color: #4ab80a;
+      color: #c0ff80;
+      box-shadow: 0 0 8px rgba(74,184,10,0.3), inset 0 0 6px rgba(74,184,10,0.1);
+    }
+    .btn-map.locked { opacity: 0.25; cursor: not-allowed; }
+
+    /* Bouton JOUER */
+    .btn-menu-play {
+      font-family: 'Special Elite', cursive;
+      background: rgba(10,60,5,0.8);
+      color: #b8e890;
+      border: 1px solid #1a6008;
+      padding: 14px 40px; cursor: pointer; font-size: 16px;
+      letter-spacing: 4px; text-transform: uppercase;
+      transition: all 0.2s; max-width: 300px; width: 100%;
+      text-shadow: 0 0 10px rgba(74,184,10,0.4);
+      box-shadow: 0 0 15px rgba(20,110,5,0.2), inset 0 1px 0 rgba(150,255,100,0.06);
+      position: relative; overflow: hidden;
+    }
+    .btn-menu-play::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(to bottom, rgba(150,255,100,0.05) 0%, transparent 100%);
+      pointer-events: none;
+    }
+    .btn-menu-play:hover {
+      background: rgba(15,90,5,0.9);
+      border-color: #4ab80a;
+      color: #d0ffa0;
+      box-shadow: 0 0 25px rgba(74,184,10,0.35);
+      text-shadow: 0 0 12px rgba(100,255,50,0.7);
+    }
+    .btn-menu-play:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    /* Bouton SON (menu) */
+    .btn-menu-son {
+      font-family: 'Special Elite', cursive;
+      background: transparent;
+      color: #5a4030;
+      border: 1px solid #3a2010;
+      padding: 7px 18px; cursor: pointer; font-size: 12px;
+      letter-spacing: 2px; transition: all 0.2s;
+    }
+    .btn-menu-son:hover { border-color: #7a5030; color: #9a7050; }
+
+    /* Bouton HUB (menu) */
+    #btn-hub {
+      font-family: 'Special Elite', cursive;
+      background: transparent;
+      color: #4a3020;
+      border: 1px solid #2a1508;
+      padding: 6px 16px; cursor: pointer; font-size: 11px;
+      letter-spacing: 1px; transition: all 0.2s;
+    }
+    #btn-hub:hover { border-color: #5a3020; color: #7a5030; }
+
+    #screen-gameover {
+      background: radial-gradient(ellipse at center, #330000 0%, #0a0000 70%);
+      display: none;
+    }
+    .go-title { font-size: 2.5rem; color: #ff2222; animation: shake 0.5s ease; }
+    .go-info { color: #ff666688; font-size: 14px; line-height: 1.8; }
+
+    #screen-win {
+      background: radial-gradient(ellipse at center, #003300 0%, #0a0f0a 70%);
+      display: none;
+    }
+    .win-title { font-size: 2.5rem; color: #00ff44; animation: pulse-win 1.5s infinite; }
+    .win-info { color: #00ff4488; font-size: 14px; line-height: 1.8; }
+
+    @keyframes glitch {
+      0%, 90%, 100% {
+        text-shadow: 0 0 30px #00ffff, 0 0 60px #ff00ff;
+        transform: none;
+      }
+      92% { text-shadow: -3px 0 #ff00ff, 3px 0 #00ffff; transform: skewX(2deg); }
+      94% { text-shadow: 3px 0 #ff00ff, -3px 0 #00ffff; transform: skewX(-1deg); }
+      96% { text-shadow: 0 0 30px #00ffff; transform: none; }
+    }
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20% { transform: translateX(-8px); }
+      40% { transform: translateX(8px); }
+      60% { transform: translateX(-4px); }
+      80% { transform: translateX(4px); }
+    }
+    @keyframes pulse-win {
+      0%,100% { text-shadow: 0 0 20px #00ff00; }
+      50% { text-shadow: 0 0 50px #00ff00, 0 0 80px #00ff00; }
+    }
+    @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0; } }
+    .cursor::after { content: '█'; animation: blink 1s infinite; color: #00ffff; }
+  </style>
+</head>
+<body>
+
+  <!-- Engrenage (jeu uniquement) -->
+  <button id="btn-gear" aria-label="Réglages">⚙</button>
+
+  <!-- Panneau de réglages -->
+  <div id="settings-panel" aria-hidden="true">
+    <div class="settings-title">
+      ⚙ RÉGLAGES
+      <button class="settings-close" id="settings-close" aria-label="Fermer">✕</button>
+    </div>
+
+    <div class="settings-section">AUDIO</div>
+    <div class="settings-row">
+      <span class="settings-label">Effets sonores</span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="toggle-sfx" checked>
+        <div class="toggle-track"></div>
+        <div class="toggle-thumb"></div>
+      </label>
+    </div>
+    <div class="settings-row">
+      <span class="settings-label">Musique</span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="toggle-music" checked>
+        <div class="toggle-track"></div>
+        <div class="toggle-thumb"></div>
+      </label>
+    </div>
+    <div class="settings-row">
+      <span class="settings-label">Volume musique</span>
+      <input type="range" class="vol-slider" id="slider-music" min="0" max="100" value="30">
+      <span class="vol-value" id="vol-display">30</span>
+    </div>
+
+    <hr class="settings-divider">
+    <div class="settings-section">NAVIGATION</div>
+    <button class="btn-settings-action" id="settings-to-menu">↩ Retour à l'accueil du jeu</button>
+    <button class="btn-settings-action danger" id="settings-to-hub">⬅ Quitter vers le Hub</button>
+  </div>
+
+  <div id="mode-indicator">
+    <span class="mode-dot active" id="dot-cmd"></span> COMMANDE
+    <span style="color:#00ffff33">|</span>
+    <span class="mode-dot inactive" id="dot-exe"></span> EXÉCUTION
+  </div>
+
+  <!-- MENU -->
+  <div class="screen" id="screen-menu">
+    <img src="assets/img/garde.png" id="menu-bg-img" alt="" onerror="this.style.display='none'">
+    <div id="menu-gradient"></div>
+    <div class="menu-content">
+      <div class="game-title">VectHorreur</div>
+      <div class="game-subtitle">Maîtrise les vecteurs. Survive.</div>
+      <div class="menu-divider"></div>
+      <div class="map-selector" id="map-selector"></div>
+      <button class="btn-menu-play" id="btn-play">▶ JOUER</button>
+      <button class="btn-menu-son" id="btn-menu-mute">♪ SON : ON</button>
+      <button id="btn-hub">← Retour au Hub</button>
+    </div>
+  </div>
+
+  <!-- SLIDE WRAPPER -->
+  <div id="slide-wrapper">
+    <!-- VIEW A: COMMAND -->
+    <div id="view-command">
+      <div class="cmd-panel">
+        <div class="cmd-title">VectHorreur : Interface de Script — <span id="cmd-map-num">J1</span></div>
+        <div class="cmd-info">
+          MAP : <span id="cmd-map-name">—</span><br>
+          POSITION : <span id="cmd-pos">(0, -18)</span><br>
+          SANTÉ : <span id="cmd-health">●●●●●</span>
+        </div>
+
+        <div>
+          <div class="cmd-section">VECTEUR DÉPLACEMENT</div>
+          <div class="vec-inputs">
+            <div class="vec-input-group">
+              <label>X</label>
+              <input type="number" id="inp-x" value="0" min="-20" max="20" step="1">
+            </div>
+            <div class="vec-input-group">
+              <label>Y</label>
+              <input type="number" id="inp-y" value="0" min="-20" max="20" step="1">
+            </div>
+          </div>
+        </div>
+
+        <canvas id="preview-canvas" width="200" height="200"></canvas>
+
+        <button class="btn-execute" id="btn-execute">▶ EXÉCUTER &amp; VOIR L'ACTION</button>
+        <div id="message-zone"></div>
+
+        <div>
+          <div class="cmd-section">── VECTOR DECK (max 8) ──</div>
+          <div class="deck-area" id="deck-area"><span style="color:#00ffff33;font-size:12px;">Vide</span></div>
+        </div>
+
+        <div>
+          <div class="cmd-section">── ACTIONS MATHÉMATIQUES ──</div>
+          <div class="math-actions">
+            <button class="btn-hacker" id="btn-combo">COMBO u+v</button>
+            <button class="btn-hacker" id="btn-scalar">× SCALAIRE</button>
+            <input type="number" class="scalar-input" id="scalar-input" value="2" step="0.5" placeholder="coeff">
+          </div>
+          <div style="font-size:11px;color:#00ffff44;margin-top:4px;">
+            Sélectionne 2 cartes → COMBO · Sélectionne 1 carte + coeff → SCALAIRE
+          </div>
+        </div>
+
+        <button class="btn-hacker" id="btn-mute">♪ SON : ON</button>
+      </div>
+    </div>
+
+    <!-- VIEW B: EXECUTE -->
+    <div id="view-execute">
+      <canvas id="game-canvas"></canvas>
+      <div id="vec-overlay"></div>
+      <div id="hud-bottom">
+        <div id="hud-pos">POS: (0.0, -18.0)  Vecteur: (0, 1)</div>
+        <div id="hud-health-dots">●●●●●</div>
+        <button id="btn-back-cmd" disabled>← RETOUR COMMANDE</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- GAME OVER -->
+  <div class="screen" id="screen-gameover" style="display:none;">
+    <div class="go-title">⚠ SIGNAL PERDU</div>
+    <div class="go-info" id="go-pos">Position finale : —</div>
+    <div class="go-info" id="go-moves">Déplacements : —</div>
+    <button class="btn-execute" id="btn-retry" style="max-width:260px;">RÉESSAYER</button>
+    <button class="btn-hacker" id="btn-go-menu">MENU</button>
+  </div>
+
+  <!-- WIN -->
+  <div class="screen" id="screen-win" style="display:none;">
+    <div class="win-title">✓ VECTEUR VALIDÉ</div>
+    <div class="win-info" id="win-moves">Déplacements : —</div>
+    <div class="win-info" id="win-deck" style="font-size:11px;max-width:400px;word-break:break-all;"></div>
+    <button class="btn-execute" id="btn-next-map" style="max-width:260px;">MAP SUIVANTE →</button>
+    <button class="btn-hacker" id="btn-replay">REJOUER CETTE MAP</button>
+    <button class="btn-hacker" id="btn-win-menu">MENU</button>
+  </div>
+
+  <script>
+    // ===================== AUDIO =====================
+    function loadSound(src) {
+      const a = new Audio(src);
+      a.onerror = () => {};
+      return a;
+    }
+    const SFX = {
+      ambiance:   loadSound('assets/audio/ambiance.mp3'),
+      move:       loadSound('assets/audio/move.mp3'),
+      monster:    loadSound('assets/audio/monster.mp3'),
+      execute:    loadSound('assets/audio/execute.mp3'),
+      error:      loadSound('assets/audio/error.mp3'),
+      death:      loadSound('assets/audio/death.mp3'),
+      win:        loadSound('assets/audio/win.mp3'),
+      transition: loadSound('assets/audio/transition.mp3')
+    };
+    SFX.ambiance.loop = true;
+    SFX.ambiance.volume = 0.3;
+    let audioUnlocked = false;
+    document.addEventListener('click', () => {
+      if (!audioUnlocked) { audioUnlocked = true; SFX.ambiance.play().catch(() => {}); }
+    }, { once: true });
+    function playSound(key) {
+      const s = SFX[key]; if (!s) return;
+      s.currentTime = 0; s.play().catch(() => {});
+    }
+    let globalMute = false;
+    let musicMute  = false;
+
+    function toggleMute() {
+      globalMute = !globalMute;
+      // Mute tous les SFX sauf ambiance
+      ['move','monster','execute','error','death','win','transition'].forEach(k => {
+        SFX[k].muted = globalMute;
+      });
+      const label = globalMute ? '♪ SON : OFF' : '♪ SON : ON';
+      const sfxEl = document.getElementById('btn-mute');
+      const menuEl = document.getElementById('btn-menu-mute');
+      if (sfxEl) sfxEl.textContent = label;
+      if (menuEl) menuEl.textContent = label;
+      const toggle = document.getElementById('toggle-sfx');
+      if (toggle) toggle.checked = !globalMute;
+    }
+
+    function setMusicMute(muted) {
+      musicMute = muted;
+      SFX.ambiance.muted = muted;
+      const toggle = document.getElementById('toggle-music');
+      if (toggle) toggle.checked = !muted;
+    }
+
+    function setMusicVolume(v) {
+      SFX.ambiance.volume = v / 100;
+      const disp = document.getElementById('vol-display');
+      if (disp) disp.textContent = v;
+    }
+
+    // Engrenage : afficher/masquer selon l'état du jeu
+    function showGear(visible) {
+      const gear = document.getElementById('btn-gear');
+      gear.classList.toggle('visible', visible);
+    }
+
+    function openSettings() {
+      const panel = document.getElementById('settings-panel');
+      panel.classList.add('open');
+      panel.setAttribute('aria-hidden', 'false');
+    }
+    function closeSettings() {
+      const panel = document.getElementById('settings-panel');
+      panel.classList.remove('open');
+      panel.setAttribute('aria-hidden', 'true');
+    }
+
+    // ===================== MAPS DATA =====================
+    // palette : couleurs du canvas (joueur, monstre, trail, axes, halo)
+    // Inspirées des thèmes Chair de Poule de chaque map
+    const MAPS = [
+      {
+        // Chair de Poule : Le Manoir de la Terreur — manoir hanté, fantôme, bougies
+        name: "Le Manoir de la Terreur", theme: "Manoir Hanté",
+        bgColor: "#060809", gridColor: "#5a503815", accentColor: "#c8a050",
+        monsterSpeed: 0.50,
+        palette: {
+          player:       '#f5d070', playerDark: '#8a6820', playerHead: '#f0c840',
+          trailRGB:     '245,208,112',
+          monster:      '#c0ccd8', monsterGlow: '#7088a0', monsterEye: '#e8f4ff',
+          axisX:        '#f5d07022', axisY:  '#8090a822',
+          haloRGB:      '245,208,112', vecOverlay: '#f5d070'
+        },
+        exit: { x1:-4, y1:17, x2:4, y2:20 },
+        obstacles: [
+          { x1:-18, y1: 2, x2:-10, y2: 8,  color:"#2a2520", label:"MUR OUEST" },
+          { x1: 10, y1:-8, x2: 18, y2:-2,  color:"#2a2520", label:"MUR EST"   },
+          { x1: -4, y1: 3, x2:  4, y2: 9,  color:"#3a3530", label:"ESCALIER"  },
+          { x1: -8, y1:12, x2: -6, y2:16,  color:"#2a2520", label:"COLONNE"   },
+          { x1:  6, y1:12, x2:  8, y2:16,  color:"#2a2520", label:"COLONNE"   },
+          { x1: -2, y1:-9, x2:  2, y2:-5,  color:"#3a2010", label:"CHEMINÉE"  }
+        ],
+        deathZones: [
+          { x1:-10, y1:-4, x2:10, y2:-1, color:"#1a080555", label:"TRAPPE CAVE" },
+          { x1: 12, y1: 9, x2:18, y2:14, color:"#44150055", label:"BRASIER"     }
+        ],
+        safeZones: [], invertLogic: false
+      },
+      {
+        // Chair de Poule : Deep Trouble — abysses, créatures bioluminescentes
+        name: "Le Complexe Sous-Marin", theme: "Thalassophobie",
+        bgColor: "#000818", gridColor: "#0033aa18", accentColor: "#00ccff",
+        monsterSpeed: 0.55,
+        palette: {
+          player:       '#00aaee', playerDark: '#004d77', playerHead: '#0088cc',
+          trailRGB:     '0,170,238',
+          monster:      '#0a2a6a', monsterGlow: '#0044aa', monsterEye: '#00ffaa',
+          axisX:        '#00aaee25', axisY: '#0055bb25',
+          haloRGB:      '0,170,238', vecOverlay: '#00aaee'
+        },
+        exit: { x1:-4, y1:17, x2:4, y2:20 },
+        obstacles: [
+          { x1:-10, y1:-5, x2:-5, y2:15, color:"#1144aa", label:"PILIER" },
+          { x1:5, y1:-15, x2:10, y2:5, color:"#1144aa", label:"PILIER" }
+        ],
+        deathZones: [{ x1:-4, y1:-2, x2:4, y2:2, color:"#ffffff22", label:"GEYSER" }],
+        safeZones: [], invertLogic: false
+      },
+      {
+        // Chair de Poule : Le Masque Hanté — église gothique, chandelles, statues
+        name: "Le Sanctuaire Brisé", theme: "Gothic",
+        bgColor: "#060405", gridColor: "#44001118", accentColor: "#cc0000",
+        monsterSpeed: 0.60,
+        palette: {
+          player:       '#ee9933', playerDark: '#7a4411', playerHead: '#ddaa44',
+          trailRGB:     '238,153,51',
+          monster:      '#770000', monsterGlow: '#cc1100', monsterEye: '#ff8800',
+          axisX:        '#ee993328', axisY: '#88000028',
+          haloRGB:      '238,153,51', vecOverlay: '#ee9933'
+        },
+        exit: { x1:-4, y1:17, x2:4, y2:20 },
+        obstacles: [
+          { x1:-18, y1:10, x2:-10, y2:15, color:"#3a3030", label:"STATUE" },
+          { x1:10, y1:-15, x2:18, y2:-10, color:"#3a3030", label:"STATUE" }
+        ],
+        deathZones: [{ x1:-8, y1:-8, x2:8, y2:8, color:"#66000088", label:"GOUFFRE" }],
+        safeZones: [], invertLogic: false
+      },
+      {
+        // Chair de Poule : Prisonnier du Miroir — vide spatial, fantômes cosmiques
+        name: "La Station Orbitale Morte", theme: "Sci-Fi",
+        bgColor: "#000003", gridColor: "#ffffff0e", accentColor: "#aaaaff",
+        monsterSpeed: 0.65,
+        palette: {
+          player:       '#aabbff', playerDark: '#3344aa', playerHead: '#8899dd',
+          trailRGB:     '170,187,255',
+          monster:      '#dde8ff', monsterGlow: '#4466bb', monsterEye: '#ff3333',
+          axisX:        '#aabbff1a', axisY: '#ffffff1a',
+          haloRGB:      '170,187,255', vecOverlay: '#aabbff'
+        },
+        exit: { x1:-4, y1:17, x2:4, y2:20 },
+        obstacles: [
+          { x1:-20, y1:0, x2:-3, y2:2, color:"#445566", label:"AIRLOCK" },
+          { x1:3, y1:0, x2:20, y2:2, color:"#445566", label:"AIRLOCK" }
+        ],
+        deathZones: [], safeZones: [], invertLogic: false
+      },
+      {
+        // Chair de Poule : L'École Hantée — lumières fluorescentes, salle vide
+        name: "Le Serveur Corrompu", theme: "Liminal",
+        bgColor: "#eeeee8", gridColor: "#00000010", accentColor: "#ff0000",
+        monsterSpeed: 0.65,
+        palette: {
+          player:       '#999900', playerDark: '#555500', playerHead: '#888800',
+          trailRGB:     '153,153,0',
+          monster:      '#666600', monsterGlow: '#aaaa00', monsterEye: '#ff2200',
+          axisX:        '#99990022', axisY: '#66660022',
+          haloRGB:      '153,153,0', vecOverlay: '#aaaa00'
+        },
+        exit: { x1:-4, y1:17, x2:4, y2:20 },
+        obstacles: [{ x1:-15, y1:10, x2:15, y2:11, color:"#cccccc00", label:"MUR INVISIBLE", flashOnContact: true }],
+        deathZones: [
+          { x1:-10, y1:5, x2:-8, y2:7, color:"#ff000077", label:"DEAD PIXEL" },
+          { x1:5, y1:-12, x2:7, y2:-10, color:"#ff000077", label:"DEAD PIXEL" }
+        ],
+        safeZones: [], invertLogic: false
+      },
+      {
+        // Chair de Poule : L'Épouvantail Se Promène — végétation toxique, pourriture
+        name: "La Serre Oubliée", theme: "Bio-Horror",
+        bgColor: "#020d02", gridColor: "#00440010", accentColor: "#44ff44",
+        monsterSpeed: 0.70,
+        palette: {
+          player:       '#44dd44', playerDark: '#1a5a1a', playerHead: '#33cc33',
+          trailRGB:     '68,221,68',
+          monster:      '#1a3a1a', monsterGlow: '#009900', monsterEye: '#ccff00',
+          axisX:        '#44dd4420', axisY: '#00cc0020',
+          haloRGB:      '68,221,68', vecOverlay: '#44dd44'
+        },
+        exit: { x1:-4, y1:17, x2:4, y2:20 },
+        obstacles: [
+          { x1:-15, y1:-8, x2:5, y2:-6, color:"#1a4a1a", label:"RONCES" },
+          { x1:-5, y1:6, x2:15, y2:8, color:"#1a4a1a", label:"RONCES" }
+        ],
+        deathZones: [{ x1:-12, y1:12, x2:-6, y2:18, color:"#88ff0044", label:"ACIDE" }],
+        safeZones: [], invertLogic: false
+      },
+      {
+        // Chair de Poule : La Nuit des Pantins — métro abandonné, marionnettes
+        name: "Le Terminus Zéro", theme: "Métro",
+        bgColor: "#040306", gridColor: "#6600ff18", accentColor: "#9900ff",
+        monsterSpeed: 0.70,
+        palette: {
+          player:       '#bb44ff', playerDark: '#550088', playerHead: '#aa33ee',
+          trailRGB:     '187,68,255',
+          monster:      '#330066', monsterGlow: '#8800cc', monsterEye: '#ff44cc',
+          axisX:        '#bb44ff22', axisY: '#8800cc22',
+          haloRGB:      '187,68,255', vecOverlay: '#bb44ff'
+        },
+        exit: { x1:-4, y1:17, x2:4, y2:20 },
+        obstacles: [
+          { x1:-20, y1:5, x2:-10, y2:10, color:"#444466", label:"RAME" },
+          { x1:-10, y1:0, x2:0, y2:5, color:"#444466", label:"RAME" },
+          { x1:5, y1:-5, x2:20, y2:0, color:"#444466", label:"RAME" }
+        ],
+        deathZones: [], safeZones: [], invertLogic: false
+      },
+      {
+        // Chair de Poule : L'Abominable Bonhomme de Neige — blizzard, créature arctique
+        name: "L'Avant-Poste Glaciaire", theme: "Blizzard",
+        bgColor: "#e0eeff", gridColor: "#0055cc15", accentColor: "#00aaff",
+        monsterSpeed: 0.75,
+        palette: {
+          player:       '#4499cc', playerDark: '#225588', playerHead: '#3388bb',
+          trailRGB:     '68,153,204',
+          monster:      '#cce8ff', monsterGlow: '#3388aa', monsterEye: '#ff2200',
+          axisX:        '#4499cc25', axisY: '#2255aa25',
+          haloRGB:      '68,153,204', vecOverlay: '#4499cc'
+        },
+        exit: { x1:-4, y1:17, x2:4, y2:20 },
+        obstacles: [{ x1:-6, y1:-15, x2:6, y2:-10, color:"#aaccee", label:"GLACE" }],
+        deathZones: [
+          { x1:-15, y1:-5, x2:0, y2:-3, color:"#88bbdd77", label:"CREVASSE" },
+          { x1:0, y1:5, x2:15, y2:7, color:"#88bbdd77", label:"CREVASSE" }
+        ],
+        safeZones: [], invertLogic: false
+      },
+      {
+        // Chair de Poule : Bienvenue Chez les Morts — couloirs d'hôpital, sang, folie
+        name: "L'Hôpital Brutaliste", theme: "Psychologique",
+        bgColor: "#181816", gridColor: "#ffffff07", accentColor: "#ffeecc",
+        monsterSpeed: 0.80,
+        palette: {
+          player:       '#ffcc77', playerDark: '#886633', playerHead: '#ddaa55',
+          trailRGB:     '255,204,119',
+          monster:      '#bb1111', monsterGlow: '#990000', monsterEye: '#ffff00',
+          axisX:        '#ffcc7720', axisY: '#bb111120',
+          haloRGB:      '255,204,119', vecOverlay: '#ffcc77'
+        },
+        exit: { x1:-4, y1:17, x2:4, y2:20 },
+        obstacles: [
+          { x1:-10, y1:-20, x2:-8, y2:10, color:"#555544", label:"MUR" },
+          { x1:8, y1:-10, x2:10, y2:20, color:"#555544", label:"MUR" },
+          { x1:-8, y1:10, x2:0, y2:12, color:"#555544", label:"MUR" }
+        ],
+        deathZones: [{ x1:-4, y1:-2, x2:4, y2:4, color:"#33333388", label:"FOSSE ASCENSEUR" }],
+        safeZones: [], invertLogic: false
+      },
+      {
+        // Chair de Poule : Une Nuit au Château de la Terreur — enfer, lave, démons
+        name: "La Fonderie Infernale", theme: "Lave",
+        bgColor: "#1a0400", gridColor: "#ff440018", accentColor: "#ffaa00",
+        monsterSpeed: 0.90,
+        palette: {
+          player:       '#ff6600', playerDark: '#881100', playerHead: '#ff8833',
+          trailRGB:     '255,102,0',
+          monster:      '#ffaa00', monsterGlow: '#ff3300', monsterEye: '#ffffff',
+          axisX:        '#ff660025', axisY: '#ffaa0025',
+          haloRGB:      '255,102,0', vecOverlay: '#ff6600'
+        },
+        exit: { x1:-5, y1:15, x2:5, y2:20 },
+        obstacles: [], deathZones: [],
+        invertLogic: true,
+        safeZones: [
+          { x1:-5, y1:-20, x2:5, y2:-15, label:"SPAWN" },
+          { x1:-2, y1:-15, x2:2, y2:15, label:"PONT" },
+          { x1:2, y1:0, x2:15, y2:5, label:"PLATEFORME" },
+          { x1:-5, y1:15, x2:5, y2:20, label:"SORTIE" }
+        ]
+      }
+    ];
+
+    // ===================== GAME STATE =====================
+    const gameState = {
+      mode: 'menu',
+      view: 'command',
+      playerPos: { x: 0, y: -18 },
+      monsterPos: { x: 0, y: 18 },
+      pendingVector: { x: 0, y: 0 },
+      lastVector: { x: 0, y: 1 },
+      deck: [],
+      selectedDeck: [],
+      health: 5, maxHealth: 5,
+      currentMap: 0,
+      trail: [],
+      particles: [],
+      moveCount: 0,
+      timestamp: 0,
+      flashObstacle: null,
+      flashTimer: 0,
+      selectedMenuMap: 0,
+      animRunning: false
+    };
+
+    // ===================== CANVAS & RESIZE =====================
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+    let W, H, SCALE, ISO_CY;
+
+    function resizeCanvas() {
+      W = canvas.width = canvas.offsetWidth;
+      H = canvas.height = canvas.offsetHeight;
+      // Isometric: fit world ±20 on screen with margins
+      // Horizontal span = 80 * IX = 80 * SCALE * 0.866
+      // Vertical span   = 80 * IY + WALL_H = 42.2 * SCALE
+      SCALE   = Math.min(W * 0.90 / (80 * 0.866), H * 0.90 / 42.2);
+      ISO_CY  = H - 21.1 * SCALE; // vertical centre: balances grid + wall height
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    // Isometric projection: x-right goes right+up, y-north goes left+up
+    function worldToIso(wx, wy, wz = 0) {
+      const IX = SCALE * 0.866, IY = SCALE * 0.5;
+      return { cx: W / 2 + (wx - wy) * IX, cy: ISO_CY - (wx + wy) * IY - wz * SCALE };
+    }
+    // Legacy alias (used by a few helpers)
+    function worldToCanvas(wx, wy) { return worldToIso(wx, wy); }
+
+    // Darken / lighten a 6-digit hex colour by factor f
+    function darkenColor(hex, f) {
+      const m = hex.match(/^#([0-9a-f]{6})/i);
+      if (!m) return hex;
+      return '#' + [0, 2, 4].map(i =>
+        Math.min(255, Math.round(parseInt(m[1].substr(i, 2), 16) * f))
+          .toString(16).padStart(2, '0')
+      ).join('');
+    }
+
+    // Draw an isometric 3D box.
+    // Visible faces: top + south (y=y1) + west (x=x1) — camera looks from south-west.
+    function drawIsoBox(x1, y1, x2, y2, wallH, topC, southC, westC, strokeC) {
+      const gSW = worldToIso(x1, y1); // closest corner
+      const gSE = worldToIso(x2, y1);
+      const gNE = worldToIso(x2, y2); // farthest corner
+      const gNW = worldToIso(x1, y2);
+      const raise = c => ({ cx: c.cx, cy: c.cy - wallH });
+      const [tSW, tSE, tNE, tNW] = [gSW, gSE, gNE, gNW].map(raise);
+      // West face  (x = x1 side)
+      ctx.beginPath();
+      ctx.moveTo(gNW.cx, gNW.cy); ctx.lineTo(gSW.cx, gSW.cy);
+      ctx.lineTo(tSW.cx, tSW.cy); ctx.lineTo(tNW.cx, tNW.cy);
+      ctx.closePath(); ctx.fillStyle = westC; ctx.fill();
+      // South face (y = y1 side)
+      ctx.beginPath();
+      ctx.moveTo(gSW.cx, gSW.cy); ctx.lineTo(gSE.cx, gSE.cy);
+      ctx.lineTo(tSE.cx, tSE.cy); ctx.lineTo(tSW.cx, tSW.cy);
+      ctx.closePath(); ctx.fillStyle = southC; ctx.fill();
+      // Top face
+      ctx.beginPath();
+      ctx.moveTo(tSW.cx, tSW.cy); ctx.lineTo(tSE.cx, tSE.cy);
+      ctx.lineTo(tNE.cx, tNE.cy); ctx.lineTo(tNW.cx, tNW.cy);
+      ctx.closePath(); ctx.fillStyle = topC; ctx.fill();
+      if (strokeC) { ctx.strokeStyle = strokeC; ctx.lineWidth = 1; ctx.stroke(); }
+    }
+
+    // ===================== 3D CAMERA & PROJECTION =====================
+    const cam = {
+      x: 0, y: -22, z: 2.8,
+      fx: 0, fy: 1, fz: 0,
+      rx: 1, ry: 0,
+      ux: 0, uy: 0, uz: 1,
+      angle: Math.PI / 2,
+      targetAngle: Math.PI / 2,
+      pitch: -0.31,
+      targetPitch: -0.31
+    };
+    let camDragEnd = 0; // timestamp of last manual drag
+
+    function updateCamera(pp, lv) {
+      // Auto-follow player direction only when not recently dragged manually
+      const isManual = performance.now() < camDragEnd + 1800;
+      if (!isManual && (lv.x !== 0 || lv.y !== 0)) cam.targetAngle = Math.atan2(lv.y, lv.x);
+      let diff = cam.targetAngle - cam.angle;
+      while (diff >  Math.PI) diff -= 2 * Math.PI;
+      while (diff < -Math.PI) diff += 2 * Math.PI;
+      cam.angle += diff * 0.07;
+      cam.pitch += (cam.targetPitch - cam.pitch) * 0.1;
+      const ca = Math.cos(cam.angle), sa = Math.sin(cam.angle);
+      cam.x = pp.x - ca * 4.5;
+      cam.y = pp.y - sa * 4.5;
+      cam.z = 2.8;
+      // Forward axis from yaw + pitch (Euler angles)
+      const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
+      cam.fx = ca * cp; cam.fy = sa * cp; cam.fz = sp;
+      // Right axis: perpendicular to yaw in horizontal plane
+      cam.rx = sa; cam.ry = -ca;
+      // Up axis: right × forward
+      cam.ux = -ca * sp;
+      cam.uy = -sa * sp;
+      cam.uz = cp;
+    }
+
+    // Project a world point to screen. Returns {sx, sy, depth} or null if behind camera.
+    function project(wx, wy, wz) {
+      const dx = wx - cam.x, dy = wy - cam.y, dz = wz - cam.z;
+      const cx = dx * cam.rx + dy * cam.ry;
+      const cy = dx * cam.ux + dy * cam.uy + dz * cam.uz;
+      const cz = dx * cam.fx + dy * cam.fy + dz * cam.fz;
+      if (cz < 0.25) return null;
+      const s = (W / 2) / (Math.tan(0.55) * cz);   // FOV ≈ 63°
+      return { sx: W / 2 + cx * s, sy: H / 2 - cy * s, depth: cz };
+    }
+
+    // Draw a projected polygon; skips silently if any vertex is null (behind camera).
+    function drawFace3D(pts, color, strokeC) {
+      if (pts.some(p => !p)) return;
+      ctx.beginPath();
+      ctx.moveTo(pts[0].sx, pts[0].sy);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].sx, pts[i].sy);
+      ctx.closePath();
+      ctx.fillStyle = color; ctx.fill();
+      if (strokeC) { ctx.strokeStyle = strokeC; ctx.lineWidth = 0.8; ctx.stroke(); }
+    }
+
+    // Draw an axis-aligned 3D box with visible-face culling.
+    function renderBox3D(x1, y1, x2, y2, wallH, baseColor, flashColor) {
+      const bc = (flashColor || baseColor).slice(0, 7);
+      const p = [
+        project(x1,y1,0),     project(x2,y1,0),     project(x2,y2,0),     project(x1,y2,0),
+        project(x1,y1,wallH), project(x2,y1,wallH), project(x2,y2,wallH), project(x1,y2,wallH)
+      ];
+      if (flashColor) { ctx.shadowBlur = 12; ctx.shadowColor = flashColor; }
+      // South face (y=y1, normal −y): visible when cam is south of box
+      if (cam.y < y1) drawFace3D([p[0],p[1],p[5],p[4]], bc);
+      // North face (y=y2, normal +y)
+      if (cam.y > y2) drawFace3D([p[3],p[2],p[6],p[7]], darkenColor(bc, 0.80));
+      // West face (x=x1, normal −x)
+      if (cam.x < x1) drawFace3D([p[3],p[0],p[4],p[7]], darkenColor(bc, 0.70));
+      // East face (x=x2, normal +x)
+      if (cam.x > x2) drawFace3D([p[1],p[2],p[6],p[5]], darkenColor(bc, 0.75));
+      // Top face (always visible)
+      drawFace3D([p[4],p[5],p[6],p[7]], darkenColor(bc, 1.28), flashColor || null);
+      if (flashColor) ctx.shadowBlur = 0;
+    }
+
+    // Render monster as a floating billboard sprite.
+    function drawMonster3D(mp, ts, pal) {
+      const monPt = project(mp.x, mp.y, 1.4 + 0.18 * Math.sin(ts * 0.002));
+      if (!monPt) return;
+      const sz = Math.min(H * 0.22, W * 1.6 / monPt.depth);
+      // Ground shadow
+      const flPt = project(mp.x, mp.y, 0);
+      if (flPt) {
+        ctx.save(); ctx.globalAlpha = 0.28;
+        ctx.beginPath(); ctx.ellipse(flPt.sx, flPt.sy, sz * 0.65, sz * 0.2, 0, 0, Math.PI * 2);
+        ctx.fillStyle = '#000'; ctx.fill(); ctx.restore();
+      }
+      // Spiky body billboard
+      ctx.save();
+      ctx.translate(monPt.sx, monPt.sy);
+      ctx.rotate(ts * 0.0008);
+      const mpulse = 1 + 0.07 * Math.sin(ts * 0.005);
+      ctx.scale(mpulse, mpulse * 0.88);
+      ctx.beginPath();
+      for (let i = 0; i < 12; i++) {
+        const r = i % 2 === 0 ? sz : sz * 0.42;
+        const a = (i / 12) * Math.PI * 2 - Math.PI / 2;
+        i === 0 ? ctx.moveTo(Math.cos(a)*r, Math.sin(a)*r)
+                : ctx.lineTo(Math.cos(a)*r, Math.sin(a)*r);
+      }
+      ctx.closePath();
+      ctx.fillStyle = pal.monster; ctx.shadowBlur = 22; ctx.shadowColor = pal.monsterGlow; ctx.fill();
+      ctx.beginPath(); ctx.arc(0, 0, sz * 0.17, 0, Math.PI * 2);
+      ctx.fillStyle = pal.monsterEye; ctx.shadowBlur = 12; ctx.shadowColor = pal.monsterGlow; ctx.fill();
+      ctx.restore();
+    }
+
+    // Draw player character anchored in world space (perspective-correct).
+    function drawPlayer3D(pp, pal) {
+      const gp = project(pp.x, pp.y, 0);
+      if (!gp) return;
+
+      // pixels per world-unit at this depth → character scale
+      const sp = (W / 2) / (Math.tan(0.55) * gp.depth);
+      const s  = sp * 0.40;   // 1.5 world units ≈ full character height
+      const cx = gp.sx;
+      const cy = gp.sy;       // feet on the ground
+
+      ctx.save();
+      ctx.shadowBlur = 18; ctx.shadowColor = pal.player;
+
+      // ── Torso ────────────────────────────────────────────
+      const bw = s * 1.55, bh = s * 2.2;
+      const bx = cx - bw / 2, by = cy - bh;
+      ctx.globalAlpha = 0.7; ctx.fillStyle = pal.playerDark;
+      ctx.beginPath(); ctx.rect(bx - s*0.13, by + s*0.12, s*0.13, bh - s*0.12); ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = pal.player;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(bx, by, bw, bh, [s*0.12, s*0.12, 0, 0]);
+      else ctx.rect(bx, by, bw, bh);
+      ctx.fill();
+      ctx.save(); ctx.globalAlpha = 0.15; ctx.strokeStyle = '#000'; ctx.lineWidth = s * 0.07;
+      ctx.beginPath(); ctx.moveTo(cx, by + s*0.25); ctx.lineTo(cx, by + bh * 0.92); ctx.stroke();
+      ctx.restore();
+
+      // ── Bras ─────────────────────────────────────────────
+      const aw = s * 0.58, ah = s * 2.0;
+      ctx.fillStyle = pal.playerDark;
+      ctx.save(); ctx.translate(bx - aw * 0.55, by + s * 0.12); ctx.rotate(-0.1);
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(0, 0, aw, ah, s*0.14); else ctx.rect(0, 0, aw, ah);
+      ctx.fill(); ctx.restore();
+      ctx.save(); ctx.translate(bx + bw - aw * 0.45, by + s * 0.12); ctx.rotate(0.1);
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(0, 0, aw, ah, s*0.14); else ctx.rect(0, 0, aw, ah);
+      ctx.fill(); ctx.restore();
+
+      // ── Cou ──────────────────────────────────────────────
+      const nw = s * 0.45, nh = s * 0.25;
+      ctx.fillStyle = pal.playerHead;
+      ctx.beginPath(); ctx.rect(cx - nw/2, by - nh, nw, nh); ctx.fill();
+
+      // ── Tête ─────────────────────────────────────────────
+      const hw = s * 1.12, hh = s * 1.12;
+      const hx = cx - hw / 2, hy = by - nh - hh;
+      ctx.save(); ctx.globalAlpha = 0.38; ctx.fillStyle = pal.playerDark;
+      ctx.beginPath(); ctx.rect(hx - s*0.1, hy + s*0.1, s*0.1, hh * 0.8); ctx.fill();
+      ctx.restore();
+      ctx.fillStyle = pal.playerHead;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(hx, hy, hw, hh, s*0.12); else ctx.rect(hx, hy, hw, hh);
+      ctx.fill();
+      ctx.beginPath(); ctx.rect(hx - s*0.11, hy + hh*0.28, s*0.11, hh*0.3); ctx.fill();
+      ctx.beginPath(); ctx.rect(hx + hw,      hy + hh*0.28, s*0.11, hh*0.3); ctx.fill();
+
+      // ── Cheveux (style Roblox carré) ──────────────────────
+      ctx.fillStyle = pal.playerDark;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(hx - s*0.05, hy - s*0.07, hw + s*0.1, hh*0.48, [s*0.14, s*0.14, 0, 0]);
+      else ctx.rect(hx, hy, hw, hh * 0.45);
+      ctx.fill();
+      ctx.beginPath(); ctx.rect(hx - s*0.05, hy + hh*0.42, hw + s*0.1, hh*0.12); ctx.fill();
+
+      ctx.shadowBlur = 0; ctx.restore();
+    }
+
+    // Draw last vector as a 3D dashed arrow on the ground.
+    function drawVectorArrow3D(pp, lv, pal) {
+      if (lv.x === 0 && lv.y === 0) return;
+      const s0 = project(pp.x, pp.y, 0.15);
+      const s1 = project(pp.x + lv.x, pp.y + lv.y, 0.15);
+      if (!s0 || !s1) return;
+      ctx.save();
+      ctx.globalAlpha = 0.88;
+      ctx.shadowBlur = 7; ctx.shadowColor = pal.vecOverlay;
+      // Dashed shaft
+      ctx.setLineDash([8, 5]);
+      ctx.strokeStyle = pal.vecOverlay;
+      ctx.lineWidth = 2.2;
+      ctx.beginPath(); ctx.moveTo(s0.sx, s0.sy); ctx.lineTo(s1.sx, s1.sy); ctx.stroke();
+      ctx.setLineDash([]);
+      // Arrowhead
+      const dx = s1.sx - s0.sx, dy = s1.sy - s0.sy;
+      const len = Math.hypot(dx, dy);
+      if (len > 6) {
+        const ux = dx / len, uy = dy / len, h = Math.min(15, len * 0.35);
+        ctx.beginPath();
+        ctx.moveTo(s1.sx, s1.sy);
+        ctx.lineTo(s1.sx - ux*h + uy*h*0.45, s1.sy - uy*h - ux*h*0.45);
+        ctx.lineTo(s1.sx - ux*h - uy*h*0.45, s1.sy - uy*h + ux*h*0.45);
+        ctx.closePath(); ctx.fillStyle = pal.vecOverlay; ctx.fill();
+      }
+      // Coordinate label at tip
+      ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+      ctx.fillStyle = pal.vecOverlay;
+      ctx.font = 'bold 13px Courier New'; ctx.textAlign = 'center';
+      ctx.fillText(`(${lv.x} ; ${lv.y})`, s1.sx, s1.sy - 14);
+      ctx.restore();
+    }
+
+    // ===================== PARTICLES =====================
+    function initParticles() {
+      gameState.particles = [];
+      for (let i = 0; i < 30; i++) {
+        gameState.particles.push(makeParticle());
+      }
+    }
+    function makeParticle() {
+      const map = MAPS[gameState.currentMap];
+      const isLava = map.invertLogic;
+      let color = map.accentColor;
+      if (map.theme === 'Thalassophobie') color = '#aaddff';
+      if (map.theme === 'Gothic') color = '#888888';
+      if (isLava) color = '#ff6600';
+
+      const vy_up = (map.theme === 'Thalassophobie');
+      const slow = (map.theme === 'Gothic');
+
+      const maxLife = 60 + Math.random() * 80;
+      return {
+        wx: (Math.random() - 0.5) * 38,
+        wy: vy_up ? (-18 + Math.random() * 5) : (14 + Math.random() * 6),
+        vx: (Math.random() - 0.5) * 0.08,
+        vy: vy_up ? (0.05 + Math.random() * 0.1) : -(slow ? 0.02 + Math.random() * 0.03 : 0.08 + Math.random() * 0.12),
+        life: Math.random() * maxLife,
+        maxLife,
+        color,
+        size: 1 + Math.random() * 2
+      };
+    }
+    function updateParticle(p) {
+      const map = MAPS[gameState.currentMap];
+      const vy_up = (map.theme === 'Thalassophobie');
+      p.wx += p.vx;
+      if (vy_up) {
+        p.wy += p.vy;
+        if (p.wy > 20) Object.assign(p, makeParticle());
+      } else {
+        p.wy += p.vy; // vy is already negative (upward), actually spec says -p.vy but vy is already negative
+        if (p.wy < -20) Object.assign(p, makeParticle());
+      }
+      p.life++;
+      if (p.life >= p.maxLife) Object.assign(p, makeParticle());
+    }
+
+    // ===================== DRAW ARROW =====================
+    function drawArrow(actx, x1, y1, x2, y2, color) {
+      const dx = x2 - x1, dy = y2 - y1;
+      const len = Math.sqrt(dx*dx + dy*dy);
+      if (len < 1) return;
+      const ux = dx/len, uy = dy/len;
+      const hSize = Math.min(12, len*0.4);
+      actx.beginPath();
+      actx.moveTo(x1, y1);
+      actx.lineTo(x2, y2);
+      actx.strokeStyle = color;
+      actx.lineWidth = 2;
+      actx.shadowBlur = 8; actx.shadowColor = color;
+      actx.stroke();
+      actx.beginPath();
+      actx.moveTo(x2, y2);
+      actx.lineTo(x2 - ux*hSize + uy*hSize*0.5, y2 - uy*hSize - ux*hSize*0.5);
+      actx.lineTo(x2 - ux*hSize - uy*hSize*0.5, y2 - uy*hSize + ux*hSize*0.5);
+      actx.closePath();
+      actx.fillStyle = color;
+      actx.shadowBlur = 8; actx.shadowColor = color;
+      actx.fill();
+      actx.shadowBlur = 0;
+    }
+
+    // ===================== PREVIEW CANVAS =====================
+    function drawPreview() {
+      const pc = document.getElementById('preview-canvas');
+      const pctx = pc.getContext('2d');
+      const PW = pc.width, PH = pc.height;
+      const PS = PW / 20;
+      const pal = MAPS[gameState.currentMap].palette;
+      pctx.clearRect(0, 0, PW, PH);
+      pctx.fillStyle = '#0d0d1a';
+      pctx.fillRect(0, 0, PW, PH);
+      // Grid
+      pctx.strokeStyle = `rgba(${pal.trailRGB},0.13)`;
+      pctx.lineWidth = 0.5;
+      for (let u = -10; u <= 10; u++) {
+        const cx = PW/2 + u*PS, cy = PH/2 + u*PS;
+        pctx.beginPath(); pctx.moveTo(cx, 0); pctx.lineTo(cx, PH); pctx.stroke();
+        pctx.beginPath(); pctx.moveTo(0, cy); pctx.lineTo(PW, cy); pctx.stroke();
+      }
+      // Axes
+      pctx.strokeStyle = pal.axisX; pctx.lineWidth = 1;
+      pctx.beginPath(); pctx.moveTo(PW/2, 0); pctx.lineTo(PW/2, PH); pctx.stroke();
+      pctx.strokeStyle = pal.axisY;
+      pctx.beginPath(); pctx.moveTo(0, PH/2); pctx.lineTo(PW, PH/2); pctx.stroke();
+      // Player dot
+      pctx.beginPath(); pctx.arc(PW/2, PH/2, 5, 0, Math.PI*2);
+      pctx.fillStyle = pal.player; pctx.shadowBlur = 10; pctx.shadowColor = pal.player;
+      pctx.fill(); pctx.shadowBlur = 0;
+      // Vector arrow
+      const dx = parseFloat(document.getElementById('inp-x').value) || 0;
+      const dy = parseFloat(document.getElementById('inp-y').value) || 0;
+      const ex = PW/2 + dx*PS, ey = PH/2 - dy*PS;
+      const clamped = ex < 2 || ex > PW-2 || ey < 2 || ey > PH-2;
+      const msgZone = document.getElementById('message-zone');
+      if (clamped && (dx !== 0 || dy !== 0)) {
+        msgZone.textContent = '⚠ Hors limites de la prévisualisation';
+      } else {
+        if (msgZone.textContent === '⚠ Hors limites de la prévisualisation') msgZone.textContent = '';
+      }
+      const fex = Math.max(2, Math.min(PW-2, ex));
+      const fey = Math.max(2, Math.min(PH-2, ey));
+      if (dx !== 0 || dy !== 0) drawArrow(pctx, PW/2, PH/2, fex, fey, pal.vecOverlay);
+    }
+
+    // ===================== COLLISION DETECTION =====================
+    function checkPath(start, vec) {
+      const N = Math.max(8, Math.ceil(Math.sqrt(vec.x**2 + vec.y**2) * 6));
+      const map = MAPS[gameState.currentMap];
+      for (let i = 1; i <= N; i++) {
+        const t = i / N;
+        const pt = { x: start.x + vec.x * t, y: start.y + vec.y * t };
+        if (pt.x < -20 || pt.x > 20 || pt.y < -20 || pt.y > 20) return 'BLOCKED';
+        for (const obs of map.obstacles) {
+          if (pt.x >= obs.x1 && pt.x <= obs.x2 && pt.y >= obs.y1 && pt.y <= obs.y2) {
+            if (obs.flashOnContact) gameState.flashObstacle = obs;
+            return 'BLOCKED';
+          }
+        }
+        for (const dz of map.deathZones) {
+          if (pt.x >= dz.x1 && pt.x <= dz.x2 && pt.y >= dz.y1 && pt.y <= dz.y2) return 'DEAD';
+        }
+        if (map.invertLogic) {
+          const inSafe = map.safeZones.some(sz => pt.x >= sz.x1 && pt.x <= sz.x2 && pt.y >= sz.y1 && pt.y <= sz.y2);
+          if (!inSafe) return 'DEAD';
+        }
+        if (i === N) {
+          const exit = map.exit;
+          if (pt.x >= exit.x1 && pt.x <= exit.x2 && pt.y >= exit.y1 && pt.y <= exit.y2) return 'WIN';
+        }
+      }
+      return 'OK';
+    }
+
+    // ===================== MONSTER AI =====================
+    function monsterMove() {
+      const gs = gameState;
+      const dx = gs.playerPos.x - gs.monsterPos.x;
+      const dy = gs.playerPos.y - gs.monsterPos.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < 0.1) return;
+      const speed = Math.min(dist * MAPS[gs.currentMap].monsterSpeed, 5);
+      const nx = (dx/dist)*speed, ny = (dy/dist)*speed;
+      const savedMx = gs.monsterPos.x, savedMy = gs.monsterPos.y;
+      if (checkPath(gs.monsterPos, {x:nx, y:ny}) === 'OK') {
+        gs.monsterPos.x += nx; gs.monsterPos.y += ny; return;
+      }
+      gs.monsterPos = {x: savedMx, y: savedMy};
+      if (checkPath(gs.monsterPos, {x:nx, y:0}) === 'OK') { gs.monsterPos.x += nx; return; }
+      if (checkPath(gs.monsterPos, {x:0, y:ny}) === 'OK') { gs.monsterPos.y += ny; }
+    }
+
+    // ===================== ANIMATION HELPERS =====================
+    function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    function animateMove(start, end, duration, showOverlay) {
+      return new Promise(resolve => {
+        const startTime = performance.now();
+        const overlay = document.getElementById('vec-overlay');
+        const vec = gameState.pendingVector;
+        if (showOverlay) {
+          overlay.textContent = `→ (${vec.x}, ${vec.y})`;
+          overlay.style.opacity = '1';
+        }
+        let lastTrailTime = 0;
+        function frame(ts) {
+          const elapsed = ts - startTime;
+          const t = Math.min(elapsed / duration, 1);
+          const e = t < 0.5 ? 2*t*t : -1+(4-2*t)*t;
+          const curX = start.x + (end.x - start.x) * e;
+          const curY = start.y + (end.y - start.y) * e;
+          gameState.playerPos = {x: curX, y: curY};
+          if (ts - lastTrailTime > 80) {
+            gameState.trail.unshift({x: curX, y: curY});
+            if (gameState.trail.length > 6) gameState.trail.pop();
+            lastTrailTime = ts;
+          }
+          if (showOverlay && elapsed > duration - 200) overlay.style.opacity = '0';
+          if (t < 1) requestAnimationFrame(frame);
+          else { overlay.style.opacity = '0'; resolve(); }
+        }
+        requestAnimationFrame(frame);
+      });
+    }
+
+    function animateMonster(start, end, duration) {
+      return new Promise(resolve => {
+        const startTime = performance.now();
+        function frame(ts) {
+          const t = Math.min((ts - startTime) / duration, 1);
+          const e = t < 0.5 ? 2*t*t : -1+(4-2*t)*t;
+          gameState.monsterPos = {
+            x: start.x + (end.x - start.x) * e,
+            y: start.y + (end.y - start.y) * e
+          };
+          if (t < 1) requestAnimationFrame(frame); else resolve();
+        }
+        requestAnimationFrame(frame);
+      });
+    }
+
+    // ===================== GAME OVER / WIN =====================
+    function gameOver() {
+      playSound('death');
+      gameState.mode = 'gameover';
+      document.getElementById('go-pos').textContent = `Position finale : (${gameState.playerPos.x.toFixed(1)}, ${gameState.playerPos.y.toFixed(1)})`;
+      document.getElementById('go-moves').textContent = `Déplacements : ${gameState.moveCount}`;
+      document.getElementById('screen-gameover').style.display = 'flex';
+    }
+
+    function levelComplete() {
+      playSound('win');
+      const highest = parseInt(localStorage.getItem('vhHighest') || '0');
+      if (gameState.currentMap + 1 > highest) localStorage.setItem('vhHighest', gameState.currentMap + 1);
+      document.getElementById('win-moves').textContent = `Déplacements : ${gameState.moveCount}`;
+      document.getElementById('win-deck').textContent = `Vecteurs utilisés : ${gameState.deck.map(v => `(${v.x},${v.y})`).join(' ')}`;
+      const hasNext = gameState.currentMap + 1 < MAPS.length;
+      document.getElementById('btn-next-map').style.display = hasNext ? '' : 'none';
+      document.getElementById('screen-win').style.display = 'flex';
+    }
+
+    // ===================== DECK MANAGEMENT =====================
+    function addToDeck(vec) {
+      gameState.deck.unshift({x: vec.x, y: vec.y});
+      if (gameState.deck.length > 8) gameState.deck.pop();
+      renderDeck();
+    }
+    function renderDeck() {
+      const area = document.getElementById('deck-area');
+      area.innerHTML = '';
+      if (gameState.deck.length === 0) {
+        area.innerHTML = '<span style="color:#00ffff33;font-size:12px;">Vide</span>';
+        return;
+      }
+      gameState.deck.forEach((v, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'btn-deck' + (gameState.selectedDeck.includes(i) ? ' selected' : '');
+        btn.textContent = `(${v.x},${v.y})`;
+        btn.onclick = () => toggleDeckSelect(i);
+        area.appendChild(btn);
+      });
+    }
+    function toggleDeckSelect(i) {
+      const idx = gameState.selectedDeck.indexOf(i);
+      if (idx >= 0) { gameState.selectedDeck.splice(idx, 1); }
+      else { gameState.selectedDeck.push(i); }
+      renderDeck();
+    }
+
+    // ===================== SLIDE =====================
+    function slideTo(view) {
+      playSound('transition');
+      const wrapper = document.getElementById('slide-wrapper');
+      wrapper.style.transform = view === 'command' ? 'translateX(0)' : 'translateX(-100vw)';
+      gameState.view = view;
+      updateModeIndicator();
+      setButtonsDisabled(true);
+      setTimeout(() => setButtonsDisabled(false), 500);
+    }
+    function updateModeIndicator() {
+      const isCmd = gameState.view === 'command';
+      document.getElementById('dot-cmd').className = 'mode-dot ' + (isCmd ? 'active' : 'inactive');
+      document.getElementById('dot-exe').className = 'mode-dot ' + (isCmd ? 'inactive' : 'active');
+    }
+    function setButtonsDisabled(disabled) {
+      ['btn-execute', 'btn-combo', 'btn-scalar', 'btn-mute'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.disabled = disabled;
+      });
+    }
+
+    // ===================== UI HELPERS =====================
+    function setMessage(msg) { document.getElementById('message-zone').textContent = msg; }
+
+    function setAllDisabled(disabled) {
+      ['btn-execute', 'btn-combo', 'btn-scalar', 'btn-back-cmd', 'btn-mute'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.disabled = disabled;
+      });
+      document.querySelectorAll('.btn-deck').forEach(b => b.disabled = disabled);
+    }
+
+    function updateCommandUI() {
+      const gs = gameState;
+      document.getElementById('cmd-map-name').textContent = MAPS[gs.currentMap].name;
+      document.getElementById('cmd-pos').textContent = `(${gs.playerPos.x.toFixed(1)}, ${gs.playerPos.y.toFixed(1)})`;
+      document.getElementById('cmd-map-num').textContent = `J${gs.currentMap + 1}`;
+      renderDeck();
+      updateHealthDisplay();
+      drawPreview();
+    }
+
+    function updateHealthDisplay() {
+      const hp = gameState.health, max = gameState.maxHealth;
+      const dots = Array.from({length: max}, (_, i) => i < hp ? '●' : '○').join('');
+      ['hud-health-dots', 'cmd-health'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.textContent = dots;
+      });
+    }
+
+    // ===================== EXECUTE VECTOR =====================
+    async function executeVector() {
+      if (gameState.mode !== 'command' && gameState.mode !== 'idle') return;
+      const dx = parseInt(document.getElementById('inp-x').value) || 0;
+      const dy = parseInt(document.getElementById('inp-y').value) || 0;
+      if (dx === 0 && dy === 0) {
+        setMessage('⚠ Vecteur nul — aucun déplacement.');
+        return;
+      }
+      const vec = {x: dx, y: dy};
+      playSound('execute');
+      gameState.flashObstacle = null;
+      const result = checkPath(gameState.playerPos, vec);
+      if (result === 'BLOCKED') {
+        if (gameState.flashObstacle) {
+          gameState.flashTimer = 18;
+        }
+        setMessage('⛔ Trajectoire bloquée — obstacle ou limite du monde.');
+        playSound('error');
+        return;
+      }
+      if (result === 'DEAD') { gameOver(); return; }
+      setMessage('');
+      addToDeck(vec);
+      gameState.moveCount++;
+      gameState.pendingVector = vec;
+      setAllDisabled(true);
+      gameState.mode = 'animating';
+      slideTo('execute');
+      await delay(520);
+      const startPos = {...gameState.playerPos};
+      const endPos = {x: startPos.x + dx, y: startPos.y + dy};
+      await animateMove(startPos, endPos, 600, true);
+      gameState.playerPos = {...endPos};
+      gameState.lastVector = vec;
+      if (result === 'WIN') { levelComplete(); return; }
+      const prevMonster = {...gameState.monsterPos};
+      playSound('monster');
+      monsterMove();
+      const newMonster = {...gameState.monsterPos};
+      gameState.monsterPos = {...prevMonster};
+      await animateMonster(prevMonster, newMonster, 300);
+      gameState.monsterPos = {...newMonster};
+      const mdx = gameState.playerPos.x - gameState.monsterPos.x;
+      const mdy = gameState.playerPos.y - gameState.monsterPos.y;
+      if (Math.sqrt(mdx*mdx + mdy*mdy) < 1.5) { gameOver(); return; }
+      gameState.mode = 'idle';
+      setAllDisabled(false);
+      document.getElementById('btn-back-cmd').disabled = false;
+      updateCommandUI();
+    }
+
+    // ===================== COMBO =====================
+    function executeCombo() {
+      if (gameState.selectedDeck.length !== 2) { setMessage('⚠ Sélectionne exactement 2 vecteurs du deck.'); return; }
+      const [i1, i2] = gameState.selectedDeck;
+      const v1 = gameState.deck[i1], v2 = gameState.deck[i2];
+      const r1 = checkPath(gameState.playerPos, v1);
+      if (r1 === 'BLOCKED') { setMessage('⛔ Premier vecteur bloqué.'); playSound('error'); return; }
+      if (r1 === 'DEAD') { gameOver(); return; }
+      const mid = {x: gameState.playerPos.x + v1.x, y: gameState.playerPos.y + v1.y};
+      const r2 = checkPath(mid, v2);
+      if (r2 === 'BLOCKED') { setMessage('⛔ Deuxième vecteur bloqué depuis la position intermédiaire.'); playSound('error'); return; }
+      gameState.selectedDeck = [];
+      gameState.pendingVector = v1;
+      playSound('execute'); setMessage('');
+      gameState.moveCount++;
+      setAllDisabled(true);
+      gameState.mode = 'animating';
+      slideTo('execute');
+      delay(520).then(async () => {
+        const startPos = {...gameState.playerPos};
+        await animateMove(startPos, mid, 600, true);
+        gameState.playerPos = {...mid};
+        gameState.lastVector = v1;
+        if (r1 === 'WIN') { levelComplete(); return; }
+        gameState.pendingVector = v2;
+        const end2 = {x: mid.x + v2.x, y: mid.y + v2.y};
+        await animateMove({...gameState.playerPos}, end2, 400, true);
+        gameState.playerPos = {...end2};
+        gameState.lastVector = v2;
+        if (r2 === 'WIN') { levelComplete(); return; }
+        const prevM = {...gameState.monsterPos};
+        playSound('monster');
+        monsterMove();
+        const newM = {...gameState.monsterPos};
+        gameState.monsterPos = {...prevM};
+        await animateMonster(prevM, newM, 300);
+        gameState.monsterPos = {...newM};
+        const md = Math.hypot(gameState.playerPos.x - gameState.monsterPos.x, gameState.playerPos.y - gameState.monsterPos.y);
+        if (md < 1.5) { gameOver(); return; }
+        gameState.mode = 'idle';
+        setAllDisabled(false);
+        document.getElementById('btn-back-cmd').disabled = false;
+        updateCommandUI();
+      });
+    }
+
+    // ===================== SCALAR =====================
+    function executeScalar() {
+      if (gameState.selectedDeck.length !== 1) { setMessage('⚠ Sélectionne exactement 1 vecteur du deck.'); return; }
+      const coeff = parseFloat(document.getElementById('scalar-input').value);
+      if (isNaN(coeff)) { setMessage('⚠ Entre un coefficient valide.'); return; }
+      const v = gameState.deck[gameState.selectedDeck[0]];
+      const scaled = {x: v.x * coeff, y: v.y * coeff};
+      if (scaled.x === 0 && scaled.y === 0) { setMessage('⚠ Vecteur résultant nul.'); return; }
+      document.getElementById('inp-x').value = Math.round(scaled.x * 10) / 10;
+      document.getElementById('inp-y').value = Math.round(scaled.y * 10) / 10;
+      gameState.selectedDeck = [];
+      renderDeck();
+      drawPreview();
+      setMessage(`× ${coeff} appliqué → (${scaled.x}, ${scaled.y}). Clique EXÉCUTER pour confirmer.`);
+    }
+
+    // ===================== MENU =====================
+    function renderMenu() {
+      const highest = parseInt(localStorage.getItem('vhHighest') || '0');
+      const sel = document.getElementById('map-selector');
+      sel.innerHTML = '';
+      MAPS.forEach((map, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'btn-map' + (i <= highest ? '' : ' locked') + (i === gameState.selectedMenuMap ? ' active' : '');
+        btn.textContent = `${i+1}. ${map.name}`;
+        btn.title = map.theme;
+        if (i <= highest) {
+          btn.onclick = () => { gameState.selectedMenuMap = i; renderMenu(); };
+        }
+        sel.appendChild(btn);
+      });
+    }
+
+    // ===================== START GAME =====================
+    function startGame(mapIndex) {
+      gameState.currentMap = mapIndex;
+      gameState.playerPos = { x: 0, y: -18 };
+      gameState.monsterPos = { x: 0, y: 18 };
+      gameState.deck = [];
+      gameState.selectedDeck = [];
+      gameState.health = 5;
+      gameState.moveCount = 0;
+      gameState.trail = [];
+      gameState.lastVector = { x: 0, y: 1 };
+      cam.angle = Math.PI / 2; cam.targetAngle = Math.PI / 2;
+      cam.pitch = -0.31; cam.targetPitch = -0.31;
+      gameState.mode = 'idle';
+      gameState.flashObstacle = null;
+      gameState.flashTimer = 0;
+      document.getElementById('screen-menu').style.display = 'none';
+      document.getElementById('screen-gameover').style.display = 'none';
+      document.getElementById('screen-win').style.display = 'none';
+      document.getElementById('btn-back-cmd').disabled = false;
+      closeSettings();
+      showGear(true);
+      initParticles();
+      resizeCanvas();
+      updateCommandUI();
+      slideTo('execute');
+      requestAnimationFrame(renderLoop);
+    }
+
+    // ===================== RENDER LOOP (3rd-person perspective) =====================
+    let renderLoopRunning = false;
+    function renderLoop(ts) {
+      gameState.timestamp = ts;
+      if (gameState.mode === 'menu') { renderLoopRunning = false; return; }
+      renderLoopRunning = true;
+      ctx.shadowBlur = 0;
+      ctx.clearRect(0, 0, W, H);
+
+      const map   = MAPS[gameState.currentMap];
+      const pal   = map.palette;
+      const pp    = gameState.playerPos;
+      const mp    = gameState.monsterPos;
+      const lv    = gameState.lastVector;
+      const exit  = map.exit;
+      const pulse = 0.5 + 0.5 * Math.sin(ts / 400);
+      const WALL_H = 3.5;   // world-unit height for obstacles
+      const DZ_H   = 0.22;  // death-zone slab
+      const EXIT_H = 0.15;  // exit platform
+
+      updateCamera(pp, lv);
+
+      // ── Ceiling / floor background ───────────────────────────────
+      const bg6    = map.bgColor.slice(0, 7);
+      const farPt  = project(cam.x + cam.fx * 500, cam.y + cam.fy * 500, 0);
+      const horizY = farPt ? Math.max(H * 0.12, Math.min(H * 0.72, farPt.sy)) : H * 0.42;
+
+      ctx.fillStyle = darkenColor(bg6, 0.35);
+      ctx.fillRect(0, 0, W, horizY);
+      const flGrad = ctx.createLinearGradient(0, horizY, 0, H);
+      flGrad.addColorStop(0, bg6);
+      flGrad.addColorStop(1, darkenColor(bg6, 0.48));
+      ctx.fillStyle = flGrad;
+      ctx.fillRect(0, horizY, W, H - horizY);
+
+      // ── Floor grid (perspective) ──────────────────────────────────
+      for (let u = -20; u <= 20; u++) {
+        const isA = u === 0;
+        ctx.lineWidth = isA ? 1 : 0.3;
+        const a = project(u, -20, 0), b = project(u, 20, 0);
+        if (a && b) {
+          ctx.strokeStyle = isA ? pal.axisY : map.gridColor;
+          ctx.beginPath(); ctx.moveTo(a.sx, a.sy); ctx.lineTo(b.sx, b.sy); ctx.stroke();
+        }
+        const c = project(-20, u, 0), d = project(20, u, 0);
+        if (c && d) {
+          ctx.strokeStyle = isA ? pal.axisX : map.gridColor;
+          ctx.beginPath(); ctx.moveTo(c.sx, c.sy); ctx.lineTo(d.sx, d.sy); ctx.stroke();
+        }
+      }
+      // Axis coord labels
+      ctx.fillStyle = '#ffffff22'; ctx.font = '9px Courier New'; ctx.textAlign = 'center';
+      for (let u = -20; u <= 20; u += 5) {
+        if (u === 0) continue;
+        const pa = project(u, 0, 0); if (pa && pa.depth < 35) ctx.fillText(u, pa.sx, pa.sy + 4);
+        const pb = project(0, u, 0); if (pb && pb.depth < 35) ctx.fillText(u, pb.sx, pb.sy + 4);
+      }
+
+      // ── Build depth-sorted render queue ──────────────────────────
+      function cDist(x1, y1, x2, y2) {
+        return Math.hypot(cam.x - (x1+x2)/2, cam.y - (y1+y2)/2, cam.z);
+      }
+      const Q = [];
+
+      // Safe zones (invertLogic maps)
+      if (map.invertLogic) {
+        map.safeZones.forEach(sz => Q.push({ d: cDist(sz.x1,sz.y1,sz.x2,sz.y2), fn: () =>
+          renderBox3D(sz.x1, sz.y1, sz.x2, sz.y2, DZ_H, '#003300', null)
+        }));
+      }
+
+      // Death zones
+      map.deathZones.forEach(dz => Q.push({ d: cDist(dz.x1,dz.y1,dz.x2,dz.y2), fn: () => {
+        renderBox3D(dz.x1, dz.y1, dz.x2, dz.y2, DZ_H, dz.color.slice(0,7), null);
+        const m = project((dz.x1+dz.x2)/2, (dz.y1+dz.y2)/2, DZ_H + 0.1);
+        if (m && m.depth < 28) {
+          ctx.fillStyle = '#ff777799';
+          ctx.font = `bold ${Math.min(13, 55/m.depth)}px Courier New`;
+          ctx.textAlign = 'center';
+          ctx.fillText('⚠ ' + dz.label, m.sx, m.sy);
+        }
+      }}));
+
+      // Exit platform
+      Q.push({ d: cDist(exit.x1,exit.y1,exit.x2,exit.y2), fn: () => {
+        ctx.shadowBlur = 10 + 8 * pulse; ctx.shadowColor = '#00ff00';
+        renderBox3D(exit.x1, exit.y1, exit.x2, exit.y2, EXIT_H, '#005500', null);
+        ctx.shadowBlur = 0;
+        const m = project((exit.x1+exit.x2)/2, (exit.y1+exit.y2)/2, EXIT_H + 0.2);
+        if (m) {
+          ctx.fillStyle = `rgba(0,255,0,${0.85 + 0.15*pulse})`;
+          ctx.font = `bold ${Math.min(16, 60/m.depth)}px Courier New`;
+          ctx.shadowBlur = 8; ctx.shadowColor = '#00ff00'; ctx.textAlign = 'center';
+          ctx.fillText('SORTIE', m.sx, m.sy); ctx.shadowBlur = 0;
+        }
+      }});
+
+      // Obstacles
+      map.obstacles.forEach(obs => {
+        const isFlash = gameState.flashObstacle === obs && gameState.flashTimer > 0;
+        Q.push({ d: cDist(obs.x1,obs.y1,obs.x2,obs.y2), fn: () => {
+          renderBox3D(obs.x1, obs.y1, obs.x2, obs.y2, WALL_H,
+            obs.color.slice(0,7), isFlash ? '#ff0000' : null);
+          const m = project((obs.x1+obs.x2)/2, (obs.y1+obs.y2)/2, WALL_H + 0.2);
+          if (m && m.depth < 24) {
+            ctx.fillStyle = '#ffffffbb';
+            ctx.font = `${Math.min(13, 48/m.depth)}px Courier New`;
+            ctx.textAlign = 'center';
+            ctx.fillText(obs.label, m.sx, m.sy);
+          }
+        }});
+      });
+      if (gameState.flashTimer > 0) gameState.flashTimer--;
+
+      // Trail dots on floor
+      gameState.trail.forEach((pos, i) => {
+        const t = (i + 1) / gameState.trail.length;
+        const pt = project(pos.x, pos.y, 0.06);
+        if (pt) Q.push({ d: pt.depth, fn: () => {
+          const r = Math.max(1.5, t * 7 * (1 - pt.depth / 40));
+          ctx.beginPath(); ctx.arc(pt.sx, pt.sy, r, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${pal.trailRGB},${t * 0.55})`; ctx.fill();
+        }});
+      });
+
+      // Player
+      const pPt = project(pp.x, pp.y, 1.0);
+      Q.push({ d: pPt ? pPt.depth : 0, fn: () => drawPlayer3D(pp, pal) });
+
+      // Monster
+      const mPt = project(mp.x, mp.y, 1.4);
+      Q.push({ d: mPt ? mPt.depth : 999, fn: () => drawMonster3D(mp, ts, pal) });
+
+      // Sort farthest first and render
+      Q.sort((a, b) => b.d - a.d);
+      Q.forEach(o => o.fn());
+
+      // Particles
+      gameState.particles.forEach(p => {
+        updateParticle(p);
+        const pt = project(p.wx, p.wy, 0.1);
+        if (!pt || pt.depth > 38) return;
+        const alpha = Math.max(0, 1 - p.life / p.maxLife);
+        const r = Math.max(1, p.size * alpha * (1 - pt.depth / 38));
+        ctx.beginPath(); ctx.arc(pt.sx, pt.sy, r, 0, Math.PI * 2);
+        ctx.fillStyle = p.color + Math.floor(alpha * 200).toString(16).padStart(2, '0');
+        ctx.fill();
+      });
+
+      // ── Vector arrow on ground ────────────────────────────────────
+      drawVectorArrow3D(pp, lv, pal);
+
+
+      // ── Canvas vector HUD (top-left) ──────────────────────────────
+      if (lv.x !== 0 || lv.y !== 0) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(0,0,0,0.52)';
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(12, 12, 170, 38, 6); else ctx.rect(12, 12, 170, 38);
+        ctx.fill();
+        ctx.fillStyle = pal.vecOverlay;
+        ctx.font = 'bold 15px Courier New'; ctx.textAlign = 'left';
+        ctx.shadowBlur = 5; ctx.shadowColor = pal.vecOverlay;
+        ctx.fillText(`u⃗  (${lv.x} ; ${lv.y})`, 22, 37);
+        ctx.shadowBlur = 0; ctx.restore();
+      }
+      // Camera hint (fades after first drag)
+      if (performance.now() - camDragEnd > 1800) {
+        ctx.save(); ctx.fillStyle = 'rgba(255,255,255,0.18)';
+        ctx.font = '11px Courier New'; ctx.textAlign = 'right';
+        ctx.fillText('⟵ glisser pour tourner ⟶', W - 12, H - 12);
+        ctx.restore();
+      }
+
+      // ── Vignette / depth fog ──────────────────────────────────────
+      const fog = ctx.createRadialGradient(W/2, H*0.42, H*0.1, W/2, H*0.42, H*0.8);
+      fog.addColorStop(0, 'rgba(0,0,0,0)');
+      fog.addColorStop(1, 'rgba(0,0,0,0.68)');
+      ctx.fillStyle = fog; ctx.fillRect(0, 0, W, H);
+
+      // ── HUD ───────────────────────────────────────────────────────
+      document.getElementById('hud-pos').textContent =
+        `POS: (${pp.x.toFixed(1)}, ${pp.y.toFixed(1)})  Vecteur: (${lv.x}, ${lv.y})`;
+      updateHealthDisplay();
+
+      if (gameState.mode !== 'menu') requestAnimationFrame(renderLoop);
+    }
+
+    // ===================== DOM READY =====================
+    document.addEventListener('DOMContentLoaded', () => {
+      resizeCanvas();
+      gameState.selectedMenuMap = 0;
+      renderMenu();
+      requestAnimationFrame(ts => { gameState.timestamp = ts; });
+
+      // ── Camera drag (mouse & touch) ────────────────────────────────
+      let _lastMX = 0, _lastMY = 0;
+      canvas.style.cursor = 'grab';
+      canvas.addEventListener('mousedown', e => {
+        if (gameState.mode === 'menu') return;
+        _lastMX = e.clientX; _lastMY = e.clientY;
+        canvas.style.cursor = 'grabbing';
+      });
+      canvas.addEventListener('mousemove', e => {
+        if (!(e.buttons & 1) || gameState.mode === 'menu') return;
+        const dx = e.clientX - _lastMX;
+        const dy = e.clientY - _lastMY;
+        cam.targetAngle += dx * 0.004;
+        cam.angle = cam.targetAngle;
+        cam.targetPitch += dy * 0.003;
+        cam.targetPitch = Math.max(-0.55, Math.min(1.1, cam.targetPitch));
+        cam.pitch = cam.targetPitch;
+        camDragEnd = performance.now();
+        _lastMX = e.clientX; _lastMY = e.clientY;
+      });
+      canvas.addEventListener('mouseup',    () => { canvas.style.cursor = 'grab'; });
+      canvas.addEventListener('mouseleave', () => { canvas.style.cursor = 'grab'; });
+      canvas.addEventListener('touchstart', e => {
+        if (gameState.mode === 'menu') return;
+        _lastMX = e.touches[0].clientX; _lastMY = e.touches[0].clientY;
+      }, { passive: true });
+      canvas.addEventListener('touchmove', e => {
+        if (gameState.mode === 'menu') return;
+        const dx = e.touches[0].clientX - _lastMX;
+        const dy = e.touches[0].clientY - _lastMY;
+        cam.targetAngle += dx * 0.004;
+        cam.angle = cam.targetAngle;
+        cam.targetPitch += dy * 0.003;
+        cam.targetPitch = Math.max(-0.55, Math.min(1.1, cam.targetPitch));
+        cam.pitch = cam.targetPitch;
+        camDragEnd = performance.now();
+        _lastMX = e.touches[0].clientX; _lastMY = e.touches[0].clientY;
+        e.preventDefault();
+      }, { passive: false });
+
+      // Mute toggle
+      document.getElementById('btn-mute').onclick = toggleMute;
+
+      // Inputs preview
+      document.getElementById('inp-x').addEventListener('input', drawPreview);
+      document.getElementById('inp-y').addEventListener('input', drawPreview);
+
+      // Execute
+      document.getElementById('btn-execute').onclick = executeVector;
+
+      // Back to command
+      document.getElementById('btn-back-cmd').onclick = () => {
+        if (gameState.mode !== 'idle') return;
+        gameState.mode = 'command';
+        slideTo('command');
+        updateCommandUI();
+      };
+
+      // Combo
+      document.getElementById('btn-combo').onclick = executeCombo;
+
+      // Scalar
+      document.getElementById('btn-scalar').onclick = executeScalar;
+
+      // Menu buttons
+      document.getElementById('btn-play').onclick = () => startGame(gameState.selectedMenuMap);
+      document.getElementById('btn-menu-mute').onclick = toggleMute;
+
+      // Gameover buttons
+      document.getElementById('btn-retry').onclick = () => {
+        document.getElementById('screen-gameover').style.display = 'none';
+        startGame(gameState.currentMap);
+      };
+      document.getElementById('btn-go-menu').onclick = () => {
+        document.getElementById('screen-gameover').style.display = 'none';
+        document.getElementById('screen-menu').style.display = 'flex';
+        gameState.mode = 'menu'; showGear(false); closeSettings(); renderMenu();
+      };
+
+      // Win buttons
+      document.getElementById('btn-next-map').onclick = () => {
+        document.getElementById('screen-win').style.display = 'none';
+        startGame(gameState.currentMap + 1);
+      };
+      document.getElementById('btn-replay').onclick = () => {
+        document.getElementById('screen-win').style.display = 'none';
+        startGame(gameState.currentMap);
+      };
+      document.getElementById('btn-win-menu').onclick = () => {
+        document.getElementById('screen-win').style.display = 'none';
+        document.getElementById('screen-menu').style.display = 'flex';
+        gameState.mode = 'menu'; showGear(false); closeSettings(); renderMenu();
+      };
+
+      // Engrenage : toggle ouverture/fermeture
+      document.getElementById('btn-gear').onclick = () => {
+        const panel = document.getElementById('settings-panel');
+        panel.classList.contains('open') ? closeSettings() : openSettings();
+      };
+      document.getElementById('settings-close').onclick = closeSettings;
+
+      // Panneau : fermer en cliquant à côté
+      document.addEventListener('click', e => {
+        const panel = document.getElementById('settings-panel');
+        const gear  = document.getElementById('btn-gear');
+        if (panel.classList.contains('open') && !panel.contains(e.target) && e.target !== gear) {
+          closeSettings();
+        }
+      });
+
+      // Réglages : SFX toggle
+      document.getElementById('toggle-sfx').onchange = function() {
+        globalMute = !this.checked;
+        ['move','monster','execute','error','death','win','transition'].forEach(k => {
+          SFX[k].muted = globalMute;
+        });
+      };
+
+      // Réglages : Musique toggle
+      document.getElementById('toggle-music').onchange = function() {
+        setMusicMute(!this.checked);
+      };
+
+      // Réglages : Volume musique
+      document.getElementById('slider-music').oninput = function() {
+        setMusicVolume(parseInt(this.value));
+      };
+
+      // Réglages : Retour accueil jeu
+      document.getElementById('settings-to-menu').onclick = () => {
+        closeSettings();
+        document.getElementById('screen-gameover').style.display = 'none';
+        document.getElementById('screen-win').style.display = 'none';
+        document.getElementById('screen-menu').style.display = 'flex';
+        gameState.mode = 'menu'; showGear(false); renderMenu();
+      };
+
+      // Réglages : Retour Hub
+      document.getElementById('settings-to-hub').onclick = () => {
+        if (document.referrer !== '') history.back();
+        else location.href = '../index.html';
+      };
+
+      // Hub button sur l'écran menu
+      document.getElementById('btn-hub').onclick = () => {
+        if (document.referrer !== '') history.back();
+        else location.href = '../index.html';
+      };
+
+      // Show menu
+      document.getElementById('screen-menu').style.display = 'flex';
+      gameState.mode = 'menu';
+    });
+  </script>
+</body>
+</html>

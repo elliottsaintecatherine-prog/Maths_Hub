@@ -1,519 +1,524 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HUB - Missions Mathématiques</title>
-
+    <title>Scolaris — Hub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
-        /* --- CSS THEME TERMINAL/HUB --- */
+        /* ── Variables ── */
+        :root {
+            --bg:        #111214;
+            --bg-card:   #18191f;
+            --bg-hero:   #111214;
+            --border:    #1e2026;
+            --border-2:  #2a2d35;
+            --text:      #e8e8e8;
+            --text-muted:#44484f;
+            --text-sub:  #555b66;
+            --badge-bg:  #222430;
+            --badge-txt: #555;
+            --nav-bg:    #111214;
+        }
+        [data-theme="light"] {
+            --bg:        #f4f4f6;
+            --bg-card:   #ffffff;
+            --bg-hero:   #ffffff;
+            --border:    #e4e4e8;
+            --border-2:  #d0d0d8;
+            --text:      #111;
+            --text-muted:#bbb;
+            --text-sub:  #aaa;
+            --badge-bg:  #f0f0f4;
+            --badge-txt: #999;
+            --nav-bg:    #ffffff;
+        }
+
+        /* ── Reset ── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            background-color: #050505;
-            color: #e0e0e0;
-            font-family: 'Courier New', Courier, monospace;
-            margin: 0; padding: 20px;
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
             min-height: 100vh;
+            transition: background 0.2s, color 0.2s;
+        }
+        a { text-decoration: none; color: inherit; }
+
+        /* ── Navbar ── */
+        .navbar {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 32px; height: 56px;
+            background: var(--nav-bg);
+            border-bottom: 1px solid var(--border);
+            position: sticky; top: 0; z-index: 200;
+            transition: background 0.2s, border-color 0.2s;
+        }
+        .nav-brand { display: flex; align-items: center; gap: 10px; }
+        .nav-logo {
+            width: 30px; height: 30px; border-radius: 8px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            display: grid; place-items: center;
+            font-size: 15px; flex-shrink: 0;
+        }
+        .nav-name { font-size: 16px; font-weight: 800; letter-spacing: -0.3px; color: var(--text); }
+        .nav-right { display: flex; align-items: center; gap: 8px; }
+
+        .btn-icon {
+            width: 34px; height: 34px; border-radius: 8px; cursor: pointer;
+            border: 1px solid var(--border); background: transparent;
+            display: grid; place-items: center; font-size: 15px;
+            color: var(--text-sub); transition: border-color 0.15s, color 0.15s;
+        }
+        .btn-icon:hover { border-color: var(--border-2); color: var(--text); }
+
+        .btn-toggle {
+            border: 1px solid var(--border); border-radius: 8px;
+            padding: 6px 14px; background: transparent; cursor: pointer;
+            font-size: 12px; font-weight: 600; color: var(--text-sub);
+            font-family: inherit; transition: all 0.15s;
+        }
+        .btn-toggle:hover { border-color: var(--border-2); color: var(--text); }
+
+        /* ── Hero ── */
+        .hero {
+            background: var(--bg-hero);
+            border-bottom: 1px solid var(--border);
+            padding: 28px 32px 0;
+            transition: background 0.2s, border-color 0.2s;
+        }
+        .hero-inner { max-width: 1280px; margin: 0 auto; }
+        .hero-top { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; gap: 16px; flex-wrap: wrap; }
+        .hero-title { font-size: 26px; font-weight: 900; letter-spacing: -0.5px; color: var(--text); }
+        .hero-sub   { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
+
+        /* Filtres */
+        .filters { display: flex; gap: 6px; flex-wrap: wrap; }
+        .filter {
+            padding: 7px 16px; border-radius: 20px; font-size: 12px; font-weight: 600;
+            cursor: pointer; border: 1px solid var(--border); background: transparent;
+            color: var(--text-sub); font-family: inherit; transition: all 0.15s;
+        }
+        .filter:hover { border-color: var(--border-2); color: var(--text); }
+        .filter.active {
+            background: var(--text); color: var(--bg);
+            border-color: var(--text);
+        }
+
+        /* ── Contenu principal ── */
+        .main { max-width: 1280px; margin: 0 auto; padding: 28px 32px 60px; }
+
+        .section { margin-bottom: 36px; }
+        .section-title {
+            font-size: 11px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 1.5px; color: var(--text-muted);
+            margin-bottom: 14px; padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        /* ── Grille ── */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 14px;
+        }
+
+        /* ── Card ── */
+        .card {
+            border-radius: 10px; overflow: hidden;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            cursor: pointer; transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
             display: flex; flex-direction: column;
-            align-items: center;
+        }
+        .card:hover {
+            transform: translateY(-3px) scale(1.01);
+            border-color: var(--border-2);
+        }
+        [data-theme="dark"]  .card:hover { box-shadow: 0 10px 30px rgba(0,0,0,0.45); }
+        [data-theme="light"] .card:hover { box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+
+        .card.locked {
+            opacity: 0.38; pointer-events: none;
         }
 
-        h1 {
-            color: #fff;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            text-align: center;
-            margin-bottom: 5px;
-            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+        /* Image */
+        .card-img-wrap { position: relative; overflow: hidden; }
+        .card-img {
+            width: 100%; aspect-ratio: 16 / 10;
+            object-fit: cover; display: block;
+            transition: transform 0.25s;
+        }
+        .card:hover .card-img { transform: scale(1.04); }
+        .card-img-ph {
+            width: 100%; aspect-ratio: 16 / 10;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 36px;
+        }
+        .card-overlay {
+            position: absolute; inset: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 55%);
+            pointer-events: none;
+        }
+        .card-badge {
+            position: absolute; top: 8px; right: 8px;
+            font-size: 10px; font-weight: 700; padding: 3px 8px;
+            border-radius: 4px; letter-spacing: 0.5px; text-transform: uppercase;
+        }
+        .card-badge.dispo { background: #10b981; color: #fff; }
+        .card-badge.secret { background: #6366f1; color: #fff; }
+        .card-badge.soon {
+            background: rgba(0,0,0,0.55); color: #777;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        [data-theme="light"] .card-badge.soon {
+            background: rgba(255,255,255,0.8); color: #aaa;
+            border: 1px solid rgba(0,0,0,0.1);
         }
 
-        h3 {
-            color: #888;
-            font-weight: normal;
-            margin-top: 0;
-            text-align: center;
-            margin-bottom: 30px;
+        /* Info */
+        .card-info { padding: 10px 12px 12px; flex: 1; display: flex; flex-direction: column; gap: 6px; }
+        .card-title { font-size: 13px; font-weight: 700; color: var(--text); line-height: 1.3; }
+        .card-meta  { display: flex; align-items: center; justify-content: space-between; }
+        .card-level {
+            font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px;
+            background: var(--badge-bg); color: var(--badge-txt);
+            text-transform: uppercase; letter-spacing: 0.5px;
         }
-        
-        f1 {
-            color: #555;
-            font-size: 0.9rem;
-            font-style: italic;
-        }
+        .card-chap { font-size: 11px; color: var(--text-muted); }
 
-        /* Système de Filtres */
-        .filters {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 30px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        
-        .filter-btn {
-            background: #111;
-            border: 1px solid #333;
-            color: #aaa;
-            padding: 8px 15px;
-            cursor: pointer;
-            font-family: inherit;
-            font-weight: bold;
-            text-transform: uppercase;
-            border-radius: 4px;
-            transition: all 0.3s ease;
-        }
-
-        .filter-btn:hover { background: #222; color: #fff; }
-        .filter-btn.active { border-color: #00f3ff; color: #00f3ff; background: rgba(0, 243, 255, 0.1); }
-
-        /* Grille des Jeux */
-        .games-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            width: 100%;
-            max-width: 1000px;
-        }
-
-        /* Carte de Jeu */
-        .game-card {
-            background: #0a0a0a;
-            border: 2px solid #333;
-            border-radius: 8px;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .game-card:hover {
-            transform: translateY(-5px);
-            border-color: var(--theme-color);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5), 0 0 15px var(--theme-color-glow);
-        }
-
-        .game-icon {
-            font-size: 3rem;
-            margin-bottom: 10px;
-            text-align: center;
-        }
-
-        .game-title {
-            color: var(--theme-color);
-            font-size: 1.4rem;
-            font-weight: bold;
-            text-transform: uppercase;
-            margin: 0 0 5px 0;
-            text-align: center;
-        }
-
-        .game-tags {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        .tag {
-            font-size: 0.7rem;
-            padding: 3px 8px;
-            border-radius: 10px;
-            background: #222;
-            color: #fff;
-            border: 1px solid #444;
-        }
-
-        .tag.level { border-color: #aaa; color: #aaa; }
-        .tag.chapter { border-color: var(--theme-color); color: var(--theme-color); }
-
-        .game-desc {
-            font-size: 0.9rem;
-            color: #aaa;
-            text-align: center;
-            margin-bottom: 20px;
-            flex-grow: 1;
-        }
-
-        .play-btn {
-            background: var(--theme-color);
-            color: #000;
-            border: none;
-            padding: 12px;
-            font-weight: bold;
-            font-size: 1.1rem;
-            cursor: pointer;
-            text-transform: uppercase;
-            border-radius: 4px;
-            text-decoration: none;
-            text-align: center;
-            display: block;
-        }
-
-        .play-btn:hover {
-            filter: brightness(1.2);
-        }
-
-        .game-card.disabled {
-            opacity: 0.5;
-            filter: grayscale(100%);
-            border-color: #333 !important;
-        }
-        .game-card.disabled:hover {
-            transform: none; box-shadow: none; cursor: not-allowed;
-        }
-        .game-card.disabled .play-btn {
-            background: #333; color: #666; cursor: not-allowed; pointer-events: none;
-        }
-
-        /* --- Bouton de Don --- */
-        .footer {
-            margin-top: 50px;
-            padding: 20px;
-            text-align: center;
-            width: 100%;
-        }
-
-        .donate-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: #111;
-            color: #777;
-            border: 1px solid #333;
-            padding: 8px 16px;
-            border-radius: 20px;
-            text-decoration: none;
-            font-size: 0.85rem;
-            transition: all 0.3s ease;
-        }
-
-        .donate-btn:hover {
-            color: #fff;
-            border-color: #ff9d00;
-            background: rgba(255, 157, 0, 0.1);
-            box-shadow: 0 0 10px rgba(255, 157, 0, 0.2);
-        }
-
-        /* --- HUB SECRET (PIN 1702) --- */
-        .music-logo {
-            position: fixed;
-            right: 16px;
-            top: 16px;
-            width: 44px;
-            height: 44px;
-            border-radius: 14px;
-            display: grid;
-            place-items: center;
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.14);
-            cursor: pointer;
-            user-select: none;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.35);
-            transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
-            touch-action: manipulation;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .music-logo:hover { transform: translateY(-1px); background: rgba(255, 255, 255, 0.09); border-color: rgba(0, 243, 255, 0.35); }
-        .music-logo span { font-size: 22px; filter: drop-shadow(0 0 10px rgba(0,243,255,0.25)); }
-
+        /* ── Hub secret overlay ── */
         .secret-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.72);
-            backdrop-filter: blur(8px);
-            display: none;
-            z-index: 9999;
-            padding: 18px;
+            position: fixed; inset: 0; z-index: 9999;
+            background: rgba(0,0,0,0.75); backdrop-filter: blur(10px);
+            display: none; padding: 20px;
         }
-        .secret-overlay.open { display: block; }
+        .secret-overlay.open { display: flex; align-items: flex-start; justify-content: center; }
+
         .secret-shell {
-            max-width: 1100px;
-            margin: 0 auto;
-            height: calc(100dvh - 36px);
-            background: #070707;
-            border: 1px solid #222;
-            border-radius: 14px;
-            overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
-            display: grid;
-            grid-template-rows: auto 1fr;
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 14px; overflow: hidden;
+            width: 100%; max-width: 1100px;
+            max-height: calc(100dvh - 40px);
+            display: grid; grid-template-rows: auto 1fr;
+            box-shadow: 0 24px 64px rgba(0,0,0,0.6);
         }
         .secret-topbar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px 20px; border-bottom: 1px solid var(--border);
             gap: 12px;
-            padding: 14px 16px;
-            border-bottom: 1px solid #222;
-            background: linear-gradient(180deg, rgba(0,243,255,0.08), rgba(255,255,255,0.00));
         }
-        .secret-title {
-            display: grid;
-            gap: 2px;
-        }
-        .secret-title strong {
-            color: #fff;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-        }
-        .secret-title small {
-            color: #9aa0a6;
-        }
+        .secret-topbar-title { font-size: 14px; font-weight: 700; color: var(--text); }
+        .secret-topbar-sub   { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
         .secret-close {
-            background: #111;
-            border: 1px solid #333;
-            color: #ddd;
-            padding: 10px 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-family: inherit;
-            font-weight: bold;
-            text-transform: uppercase;
+            border: 1px solid var(--border); border-radius: 8px; background: transparent;
+            color: var(--text-sub); padding: 7px 14px; cursor: pointer;
+            font-size: 12px; font-weight: 600; font-family: inherit; transition: all 0.15s;
         }
-        .secret-close:hover { border-color: #00f3ff; color: #00f3ff; background: rgba(0, 243, 255, 0.08); }
-        .secret-body {
-            padding: 16px;
-            overflow: auto;
+        .secret-close:hover { border-color: var(--border-2); color: var(--text); }
+        .secret-body { padding: 20px; overflow-y: auto; }
+
+        /* Placeholders couleur */
+        .ph-voleur  { background: linear-gradient(150deg, #0b1a2e, #0d2d4a); }
+        .ph-enigma  { background: linear-gradient(150deg, #1a0b2e, #2d0d4a); }
+        .ph-matrice { background: linear-gradient(150deg, #1a2000, #2e3d00); }
+        .ph-vecth   { background: linear-gradient(150deg, #2e0a00, #4a1500); }
+        .ph-music   { background: linear-gradient(150deg, #001a12, #00341f); }
+
+        /* ── Footer ── */
+        .footer {
+            text-align: center; padding: 20px;
+            border-top: 1px solid var(--border);
         }
-        .secret-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            width: 100%;
+        .donate-btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-size: 12px; color: var(--text-muted);
+            border: 1px solid var(--border); border-radius: 20px;
+            padding: 6px 14px; transition: all 0.2s;
+        }
+        .donate-btn:hover { color: var(--text); border-color: var(--border-2); }
+
+        /* ── Responsive ── */
+        @media (max-width: 600px) {
+            .navbar  { padding: 0 16px; }
+            .hero    { padding: 20px 16px 0; }
+            .main    { padding: 20px 16px 40px; }
+            .hero-top { flex-direction: column; align-items: flex-start; }
+            .grid    { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
         }
     </style>
 </head>
 <body>
 
-    <div class="music-logo" id="music-logo" title="Double-clic">
-        <span>🎵</span>
-    </div>
-
-    <h1>DASHBOARD SCOLARIS</h1>
-    <h2>Missions d'entraînement Mathématiques</h2>
-    <br/>
-    <f1>Jeux élaborés par le seul et unique Elliott Sainte-Catherine</f1>
-    <br/>
-
-    <div class="filters">
-        <button class="filter-btn active" onclick="filtrerJeux('Tous')">Tous les niveaux</button>
-        <button class="filter-btn" onclick="filtrerJeux('Seconde')">Seconde</button>
-        <button class="filter-btn" onclick="filtrerJeux('Première')">Première</button>
-        <button class="filter-btn" onclick="filtrerJeux('Terminale')">Terminale</button>
-    </div>
-
-    <div class="games-grid" id="games-container">
+    <!-- ── Navbar ── -->
+    <nav class="navbar">
+        <div class="nav-brand">
+            <div class="nav-logo">📐</div>
+            <div class="nav-name">Scolaris</div>
         </div>
+        <div class="nav-right">
+            <button class="btn-icon" id="secret-btn" title="Hub secret" aria-label="Hub secret">🎵</button>
+            <button class="btn-toggle" id="theme-btn" onclick="toggleTheme()">☀ Mode clair</button>
+        </div>
+    </nav>
 
-    <!-- HUB SECRET (double-clic 🎵 + PIN 1702) -->
+    <!-- ── Hero ── -->
+    <div class="hero">
+        <div class="hero-inner">
+            <div class="hero-top">
+                <div>
+                    <div class="hero-title">Missions Mathématiques</div>
+                    <div class="hero-sub">Élaboré par Elliott Sainte-Catherine · Lycée</div>
+                </div>
+                <div class="filters" id="filters">
+                    <button class="filter active" onclick="filtrer('Tous')">Tous</button>
+                    <button class="filter" onclick="filtrer('Seconde')">Seconde</button>
+                    <button class="filter" onclick="filtrer('Première')">Première</button>
+                    <button class="filter" onclick="filtrer('Terminale')">Terminale</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Contenu ── -->
+    <main class="main">
+        <div class="section">
+            <div class="section-title">Disponibles</div>
+            <div class="grid" id="grid-dispo"></div>
+        </div>
+        <div class="section" id="section-dev">
+            <div class="section-title">En développement</div>
+            <div class="grid" id="grid-dev"></div>
+        </div>
+    </main>
+
+    <!-- ── Footer ── -->
+    <footer class="footer">
+        <a href="https://pay.lydia.me/l?t=elliotts4xau" target="_blank" class="donate-btn">
+            ☕ Soutenir le créateur
+        </a>
+    </footer>
+
+    <!-- ── Hub secret ── -->
     <div class="secret-overlay" id="secret-overlay" aria-hidden="true">
-        <div class="secret-shell" role="dialog" aria-modal="true" aria-label="Hub secret">
+        <div class="secret-shell" role="dialog" aria-modal="true">
             <div class="secret-topbar">
-                <div class="secret-title">
-                    <strong>Hub Secret</strong>
-                    <small>Tous les jeux (y compris bonus / dev)</small>
+                <div>
+                    <div class="secret-topbar-title">Hub Secret</div>
+                    <div class="secret-topbar-sub">Tous les jeux, y compris bonus et dev</div>
                 </div>
                 <button class="secret-close" id="secret-close">Fermer</button>
             </div>
             <div class="secret-body">
-                <div class="secret-grid" id="secret-container"></div>
+                <div class="grid" id="secret-grid"></div>
             </div>
         </div>
     </div>
 
-    <div class="footer">
-        <a href="https://pay.lydia.me/l?t=elliotts4xau" target="_blank" class="donate-btn">
-            ☕ Soutenir le créateur
-        </a>
-    </div>
-
     <script>
+        /* ── Données ── */
         const listeJeux = [
             {
                 id: "voleur",
                 titre: "Le Voleur de Copies",
-                icon: "🕵️‍♂️",
-                couleur: "#00f3ff",          
-                niveau: "Seconde",         
+                niveau: "Seconde",
                 chapitre: "Fonctions & Graphiques",
                 description: "Infiltrez le système du lycée. Résolvez des calculs d'images, lisez des graphiques et interceptez le voleur.",
-                fichier: "le_voleur.html?jeu=Voleur", // <-- LE PARAMÈTRE EST LÀ
+                image: "Le_Voleur/le_voleur.png",
+                couleur: "#00f3ff",
+                fichier: "Le_Voleur/le_voleur.html?jeu=Voleur",
                 disponible: true
             },
             {
                 id: "studiomusic",
                 titre: "StudioMusic (Karaoké)",
-                icon: "🎤",
-                couleur: "#1db954",
                 niveau: "Bonus",
-                chapitre: "Coaching vocal / SingStar",
-                description: "Détection de justesse + harmonies + éditeur de notes (PIN 1702 dans le jeu).",
-                fichier: "Jeu%20perso/chant.html",
+                chapitre: "Coaching vocal",
+                description: "Détection de justesse + harmonies + éditeur de notes.",
+                image: null, imageClass: "ph-music", icon: "🎤",
+                couleur: "#1db954",
+                fichier: "Karaoke/chant.html",
                 disponible: true,
                 secretOnly: true
             },
             {
                 id: "enigma",
                 titre: "Projet Enigma",
-                icon: "🎲",
-                couleur: "#ff00ff",          
                 niveau: "Terminale",
-                chapitre: "Probabilités Conditionnelles",
-                description: "Déchiffrez les communications secrètes en utilisant les lois de probabilités et les arbres pondérés.",
-                fichier: "#", 
-                disponible: false            
+                chapitre: "Probabilités",
+                description: "Déchiffrez les communications secrètes avec les probabilités conditionnelles.",
+                image: null, imageClass: "ph-enigma", icon: "🎲",
+                couleur: "#ff00ff",
+                fichier: "#",
+                disponible: false
             },
             {
                 id: "matrice",
                 titre: "La Matrice",
-                icon: "📊",
-                couleur: "#ffea00",          
                 niveau: "Terminale",
                 chapitre: "Vecteurs & Espace",
-                description: "Naviguez dans un espace en 3D en utilisant les équations paramétriques et cartésiennes pour trouver la sortie.",
-                fichier: "#", 
+                description: "Naviguez en 3D avec les équations paramétriques pour trouver la sortie.",
+                image: null, imageClass: "ph-matrice", icon: "📊",
+                couleur: "#ffea00",
+                fichier: "#",
                 disponible: false
+            },
+            {
+                id: "vecthorreur",
+                titre: "Vecthorreur",
+                niveau: "Seconde",
+                chapitre: "Vecteurs",
+                description: "Manipule des vecteurs pour survivre. Échappe au monstre en calculant ta trajectoire.",
+                image: null, imageClass: "ph-vecth", icon: "👾",
+                couleur: "#ff4444",
+                fichier: "Vecthorreur/vecthorreur.html",
+                disponible: true
             }
         ];
 
-        const conteneur = document.getElementById('games-container');
-        const secretOverlay = document.getElementById('secret-overlay');
-        const secretClose = document.getElementById('secret-close');
-        const secretContainer = document.getElementById('secret-container');
-        const musicLogo = document.getElementById('music-logo');
+        /* ── Rendu d'une carte ── */
+        function creerCarte(jeu, isSecret = false) {
+            const div = document.createElement('div');
+            div.className = 'card' + (jeu.disponible ? '' : ' locked');
 
+            let imgHTML;
+            if (jeu.image) {
+                imgHTML = `<img src="${jeu.image}" class="card-img" alt="${jeu.titre}" loading="lazy">`;
+            } else {
+                imgHTML = `<div class="card-img-ph ${jeu.imageClass || ''}">${jeu.icon || ''}</div>`;
+            }
+
+            let badge = '';
+            if (jeu.secretOnly)   badge = `<div class="card-badge secret">Secret</div>`;
+            else if (jeu.disponible) badge = `<div class="card-badge dispo">Disponible</div>`;
+            else                  badge = `<div class="card-badge soon">Bientôt</div>`;
+
+            let href = jeu.fichier;
+            if (isSecret && jeu.disponible) {
+                const sep  = href.includes('?') ? '&' : '?';
+                const from = encodeURIComponent(window.location.href);
+                href = `${href}${sep}hub=secret&from=${from}`;
+            }
+
+            const cible = jeu.disponible ? `href="${href}"` : '';
+
+            div.innerHTML = `
+                <a ${cible} style="display:contents;">
+                    <div class="card-img-wrap">
+                        ${imgHTML}
+                        <div class="card-overlay"></div>
+                        ${badge}
+                    </div>
+                    <div class="card-info">
+                        <div class="card-title">${jeu.titre}</div>
+                        <div class="card-meta">
+                            <span class="card-level">${jeu.niveau}</span>
+                            <span class="card-chap">${jeu.chapitre}</span>
+                        </div>
+                    </div>
+                </a>
+            `;
+            return div;
+        }
+
+        /* ── Affichage principal ── */
+        let filtreActif = 'Tous';
+
+        function afficher() {
+            const gridDispo = document.getElementById('grid-dispo');
+            const gridDev   = document.getElementById('grid-dev');
+            const sectionDev = document.getElementById('section-dev');
+
+            gridDispo.innerHTML = '';
+            gridDev.innerHTML   = '';
+
+            let countDev = 0;
+
+            listeJeux.forEach(jeu => {
+                if (jeu.secretOnly) return;
+                if (filtreActif !== 'Tous' && jeu.niveau !== filtreActif) return;
+
+                const carte = creerCarte(jeu);
+                if (jeu.disponible) {
+                    gridDispo.appendChild(carte);
+                } else {
+                    gridDev.appendChild(carte);
+                    countDev++;
+                }
+            });
+
+            sectionDev.style.display = countDev === 0 ? 'none' : '';
+        }
+
+        function filtrer(niveau) {
+            filtreActif = niveau;
+            document.querySelectorAll('.filter').forEach(btn => {
+                btn.classList.toggle('active', btn.textContent.trim() === niveau || (niveau === 'Tous' && btn.textContent.trim() === 'Tous'));
+            });
+            afficher();
+        }
+
+        /* ── Hub secret ── */
         const SECRET_PIN = "1702";
         let secretUnlocked = false;
 
-        function afficherJeux(filtreNiveau) {
-            conteneur.innerHTML = ""; 
-
-            listeJeux.forEach(jeu => {
-                if (jeu.secretOnly) return; // caché dans le hub normal
-                if (filtreNiveau === "Tous" || jeu.niveau === filtreNiveau) {
-                    
-                    const carte = document.createElement('div');
-                    carte.className = `game-card ${jeu.disponible ? '' : 'disabled'}`;
-                    carte.style.setProperty('--theme-color', jeu.couleur);
-                    carte.style.setProperty('--theme-color-glow', jeu.couleur + '66'); 
-
-                    let bouttonHTML = jeu.disponible 
-                        ? `<a href="${jeu.fichier}" class="play-btn">LANCER LA MISSION</a>`
-                        : `<span class="play-btn">EN DÉVELOPPEMENT</span>`;
-
-                    carte.innerHTML = `
-                        <div class="game-icon">${jeu.icon}</div>
-                        <h2 class="game-title">${jeu.titre}</h2>
-                        <div class="game-tags">
-                            <span class="tag level">${jeu.niveau}</span>
-                            <span class="tag chapter">${jeu.chapitre}</span>
-                        </div>
-                        <p class="game-desc">${jeu.description}</p>
-                        ${bouttonHTML}
-                    `;
-
-                    conteneur.appendChild(carte);
-                }
-            });
-        }
-
-        function filtrerJeux(niveau) {
-            const boutons = document.querySelectorAll('.filter-btn');
-            boutons.forEach(btn => {
-                btn.classList.remove('active');
-                if (btn.innerText.includes(niveau)) {
-                    btn.classList.add('active');
-                }
-            });
-            afficherJeux(niveau);
-        }
-
         function renderSecretHub() {
-            secretContainer.innerHTML = '';
-
-            // Ici: "tous les jeux" = on affiche tout, même en développement
-            const all = listeJeux.slice();
-
-            all.forEach(jeu => {
-                const carte = document.createElement('div');
-                carte.className = `game-card ${jeu.disponible ? '' : 'disabled'}`;
-                carte.style.setProperty('--theme-color', jeu.couleur);
-                carte.style.setProperty('--theme-color-glow', jeu.couleur + '66');
-
-                let bouttonHTML;
-                if (jeu.disponible) {
-                    let href = jeu.fichier;
-                    const sep = href.includes('?') ? '&' : '?';
-                    href = `${href}${sep}hub=secret`;
-                    bouttonHTML = `<a href="${href}" class="play-btn">LANCER</a>`;
-                } else {
-                    bouttonHTML = `<span class="play-btn">EN DÉVELOPPEMENT</span>`;
-                }
-
-                carte.innerHTML = `
-                    <div class="game-icon">${jeu.icon}</div>
-                    <h2 class="game-title">${jeu.titre}</h2>
-                    <div class="game-tags">
-                        <span class="tag level">${jeu.niveau}</span>
-                        <span class="tag chapter">${jeu.chapitre}</span>
-                    </div>
-                    <p class="game-desc">${jeu.description}</p>
-                    ${bouttonHTML}
-                `;
-                secretContainer.appendChild(carte);
-            });
+            const grid = document.getElementById('secret-grid');
+            grid.innerHTML = '';
+            listeJeux.forEach(jeu => grid.appendChild(creerCarte(jeu, true)));
         }
 
-        function openSecretHub() {
+        function openSecret() {
             renderSecretHub();
-            secretOverlay.classList.add('open');
-            secretOverlay.setAttribute('aria-hidden', 'false');
+            document.getElementById('secret-overlay').classList.add('open');
+            document.getElementById('secret-overlay').setAttribute('aria-hidden', 'false');
         }
 
-        function closeSecretHub() {
-            secretOverlay.classList.remove('open');
-            secretOverlay.setAttribute('aria-hidden', 'true');
+        function closeSecret() {
+            document.getElementById('secret-overlay').classList.remove('open');
+            document.getElementById('secret-overlay').setAttribute('aria-hidden', 'true');
         }
 
-        function promptSecretPin() {
-            const pin = prompt("Hub secret — entre le code PIN :");
-            if (pin === null) return false;
-            if (String(pin).trim() === SECRET_PIN) {
-                secretUnlocked = true;
-                return true;
-            }
-            alert("Code incorrect.");
-            return false;
-        }
-
-        function triggerSecretHub() {
+        document.getElementById('secret-btn').addEventListener('click', () => {
             if (!secretUnlocked) {
-                const ok = promptSecretPin();
-                if (!ok) return;
+                const pin = prompt("Hub secret — entre le code PIN :");
+                if (pin === null) return;
+                if (String(pin).trim() !== SECRET_PIN) { alert("Code incorrect."); return; }
+                secretUnlocked = true;
             }
-            openSecretHub();
-        }
-
-        if (musicLogo) {
-            // Un simple tap/click suffit (plus compatible mobile)
-            musicLogo.addEventListener('click', triggerSecretHub);
-        }
-        secretClose.addEventListener('click', closeSecretHub);
-        secretOverlay.addEventListener('click', (e) => {
-            if (e.target === secretOverlay) closeSecretHub();
-        });
-        window.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') closeSecretHub();
+            openSecret();
         });
 
-        afficherJeux("Tous");
+        document.getElementById('secret-close').addEventListener('click', closeSecret);
+        document.getElementById('secret-overlay').addEventListener('click', e => {
+            if (e.target === document.getElementById('secret-overlay')) closeSecret();
+        });
+        window.addEventListener('keydown', e => { if (e.key === 'Escape') closeSecret(); });
 
-        // Auto-ouverture du hub secret si on arrive avec ?hub=secret
-        const params = new URLSearchParams(window.location.search);
-        if (params.get('hub') === 'secret') {
+        /* ── Thème ── */
+        function toggleTheme() {
+            const html = document.documentElement;
+            const dark = html.getAttribute('data-theme') === 'dark';
+            html.setAttribute('data-theme', dark ? 'light' : 'dark');
+            document.getElementById('theme-btn').textContent = dark ? '🌙 Mode sombre' : '☀ Mode clair';
+            localStorage.setItem('theme', dark ? 'light' : 'dark');
+        }
+
+        // Restaurer le thème sauvegardé
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            document.getElementById('theme-btn').textContent =
+                savedTheme === 'light' ? '🌙 Mode sombre' : '☀ Mode clair';
+        }
+
+        /* ── Init ── */
+        afficher();
+
+        // Auto-ouverture hub secret via ?hub=secret
+        if (new URLSearchParams(window.location.search).get('hub') === 'secret') {
             secretUnlocked = true;
-            openSecretHub();
+            openSecret();
         }
     </script>
 </body>

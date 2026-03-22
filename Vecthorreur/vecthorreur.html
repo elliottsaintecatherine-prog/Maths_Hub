@@ -1411,13 +1411,6 @@
       const dx = parseFloat(document.getElementById('inp-x').value) || 0;
       const dy = parseFloat(document.getElementById('inp-y').value) || 0;
       const ex = PW/2 + dx*PS, ey = PH/2 - dy*PS;
-      const clamped = ex < 2 || ex > PW-2 || ey < 2 || ey > PH-2;
-      const msgZone = document.getElementById('message-zone');
-      if (clamped && (dx !== 0 || dy !== 0)) {
-        msgZone.textContent = '⚠ Hors limites de la prévisualisation';
-      } else {
-        if (msgZone.textContent === '⚠ Hors limites de la prévisualisation') msgZone.textContent = '';
-      }
       const fex = Math.max(2, Math.min(PW-2, ex));
       const fey = Math.max(2, Math.min(PH-2, ey));
       if (dx !== 0 || dy !== 0) drawArrow(pctx, PW/2, PH/2, fex, fey, pal.vecOverlay);
@@ -1646,15 +1639,7 @@
       playSound('execute');
       gameState.flashObstacle = null;
       const result = checkPath(gameState.playerPos, vec);
-      if (result === 'BLOCKED') {
-        if (gameState.flashObstacle) {
-          gameState.flashTimer = 18;
-        }
-        setMessage('⛔ Trajectoire bloquée — obstacle ou limite du monde.');
-        playSound('error');
-        return;
-      }
-      if (result === 'DEAD') { gameOver(); return; }
+      // Toujours animer le déplacement, quelle que soit l'issue
       setMessage('');
       addToDeck(vec);
       gameState.moveCount++;
@@ -1670,6 +1655,7 @@
       gameState.playerPos = {...endPos};
       gameState.lastVector = vec;
       if (result === 'WIN') { levelComplete(); return; }
+      if (result === 'BLOCKED' || result === 'DEAD') { gameOver(); return; }
       const prevMonster = {...gameState.monsterPos};
       playSound('monster');
       monsterMove();
@@ -1692,11 +1678,8 @@
       const [i1, i2] = gameState.selectedDeck;
       const v1 = gameState.deck[i1], v2 = gameState.deck[i2];
       const r1 = checkPath(gameState.playerPos, v1);
-      if (r1 === 'BLOCKED') { setMessage('⛔ Premier vecteur bloqué.'); playSound('error'); return; }
-      if (r1 === 'DEAD') { gameOver(); return; }
       const mid = {x: gameState.playerPos.x + v1.x, y: gameState.playerPos.y + v1.y};
-      const r2 = checkPath(mid, v2);
-      if (r2 === 'BLOCKED') { setMessage('⛔ Deuxième vecteur bloqué depuis la position intermédiaire.'); playSound('error'); return; }
+      const r2 = (r1 === 'OK' || r1 === 'WIN') ? checkPath(mid, v2) : 'OK';
       gameState.selectedDeck = [];
       gameState.pendingVector = v1;
       playSound('execute'); setMessage('');
@@ -1711,12 +1694,14 @@
         gameState.playerPos = {...mid};
         gameState.lastVector = v1;
         if (r1 === 'WIN') { levelComplete(); return; }
+        if (r1 === 'BLOCKED' || r1 === 'DEAD') { gameOver(); return; }
         gameState.pendingVector = v2;
         const end2 = {x: mid.x + v2.x, y: mid.y + v2.y};
         await animateMove({...gameState.playerPos}, end2, 400, true);
         gameState.playerPos = {...end2};
         gameState.lastVector = v2;
         if (r2 === 'WIN') { levelComplete(); return; }
+        if (r2 === 'BLOCKED' || r2 === 'DEAD') { gameOver(); return; }
         const prevM = {...gameState.monsterPos};
         playSound('monster');
         monsterMove();

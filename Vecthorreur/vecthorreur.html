@@ -2550,6 +2550,21 @@
       } // fin else devMode
       // ===== FIN DEV MODE =====
 
+      // ── Lueur rouge du monstre — toujours visible dans l'obscurité ──
+      const monPt = project(mp.x, mp.y, 1.0);
+      if (monPt) {
+        const mpulse = 0.75 + 0.25 * Math.sin(ts * 0.006);
+        const mHaloR = 110 * mpulse;
+        ctx.globalCompositeOperation = 'screen';
+        const mGrad = ctx.createRadialGradient(monPt.sx, monPt.sy, 0, monPt.sx, monPt.sy, mHaloR);
+        mGrad.addColorStop(0,    `rgba(255,30,0,${0.55 * mpulse})`);
+        mGrad.addColorStop(0.35, `rgba(180,0,0,${0.30 * mpulse})`);
+        mGrad.addColorStop(1,    'rgba(0,0,0,0)');
+        ctx.fillStyle = mGrad;
+        ctx.fillRect(monPt.sx - mHaloR, monPt.sy - mHaloR, mHaloR * 2, mHaloR * 2);
+        ctx.globalCompositeOperation = 'source-over';
+      }
+
       // ── HUD ───────────────────────────────────────────────────────
       const hudPosEl = document.getElementById('hud-pos');
       if (hudPosEl) hudPosEl.textContent =

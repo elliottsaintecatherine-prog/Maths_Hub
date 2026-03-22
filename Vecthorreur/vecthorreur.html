@@ -510,9 +510,14 @@
     .win-info { color: #00ff4488; font-size: 14px; line-height: 1.8; }
 
     /* Mode solo / 2 joueurs */
-    #mode-selector {
+    #mode-selector, #difficulty-selector {
       display: flex; gap: 10px; justify-content: center;
     }
+    #difficulty-selector { margin-top: -4px; }
+    .btn-diff { font-size: 12px; padding: 5px 14px; }
+    .btn-diff#btn-easy.active   { border-color: #44cc44; color: #88ff88; background: rgba(40,180,40,0.10); }
+    .btn-diff#btn-medium.active { border-color: #c8961e; color: #f5d070; background: rgba(200,150,30,0.12); }
+    .btn-diff#btn-hard.active   { border-color: #cc2222; color: #ff6666; background: rgba(200,30,30,0.12); }
     .btn-mode {
       background: transparent;
       border: 1px solid #3a3020;
@@ -664,6 +669,11 @@
       <div id="mode-selector">
         <button class="btn-mode active" id="btn-solo">⚔ Solo</button>
         <button class="btn-mode" id="btn-multi">👥 2 Joueurs</button>
+      </div>
+      <div id="difficulty-selector">
+        <button class="btn-mode btn-diff" id="btn-easy">☽ Facile</button>
+        <button class="btn-mode btn-diff active" id="btn-medium">⚡ Moyen</button>
+        <button class="btn-mode btn-diff" id="btn-hard">💀 Difficile</button>
       </div>
       <button class="btn-menu-play" id="btn-play">▶ JOUER</button>
       <button class="btn-menu-son" id="btn-menu-mute">♪ SON : ON</button>
@@ -1002,7 +1012,7 @@
         },
         exits: [
           { x1:-4, y1:17, x2:4, y2:20 },
-          { x1:5, y1:14, x2:13, y2:18 }
+          { x1:5, y1:16, x2:13, y2:20 }
         ],
         obstacles: [
           { x1:-15, y1:-8, x2:5, y2:-6, color:"#1a4a1a", label:"RONCES" },
@@ -1071,7 +1081,7 @@
         },
         exits: [
           { x1:-4, y1:17, x2:4, y2:20 },
-          { x1:1, y1:14, x2:7, y2:18 }
+          { x1:1, y1:16, x2:7, y2:20 }
         ],
         obstacles: [
           { x1:-10, y1:-20, x2:-8, y2:10, color:"#555544", label:"MUR" },
@@ -1131,7 +1141,8 @@
       // Multiplayer
       gameMode: 'solo',      // 'solo' | 'multi'
       playerTurn: 1,         // 1 or 2
-      playerResults: []      // [{player, won, moves, health}]
+      playerResults: [],     // [{player, won, moves, health}]
+      difficulty: 'medium'   // 'easy' | 'medium' | 'hard'
     };
 
     // ===================== CANVAS & RESIZE =====================
@@ -1640,45 +1651,93 @@
     // ===================== MONSTER AI =====================
     let monsterTimer = null;
 
+    // BFS pathfinding — retourne le premier pas vers le joueur
+    function getMonsterNextStep() {
+      const map = MAPS[gameState.currentMap];
+      const sx = Math.round(gameState.monsterPos.x);
+      const sy = Math.round(gameState.monsterPos.y);
+      const gx = Math.round(gameState.playerPos.x);
+      const gy = Math.round(gameState.playerPos.y);
+      if (sx === gx && sy === gy) return null;
+
+      function walkable(x, y) {
+        if (x < -19 || x > 19 || y < -19 || y > 19) return false;
+        for (const obs of map.obstacles) {
+          if (x > obs.x1 && x < obs.x2 && y > obs.y1 && y < obs.y2) return false;
+        }
+        if (map.invertLogic) {
+          return map.safeZones.some(sz => x >= sz.x1 && x <= sz.x2 && y >= sz.y1 && y <= sz.y2);
+        }
+        return true;
+      }
+
+      const key = (x, y) => (x + 20) * 41 + (y + 20); // entier unique
+      const parent = new Map();
+      const startKey = key(sx, sy);
+      const goalKey  = key(gx, gy);
+      parent.set(startKey, -1);
+      const queue = [[sx, sy]];
+      const DIRS = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+      let found = false;
+
+      outer: while (queue.length) {
+        const [cx, cy] = queue.shift();
+        for (const [ddx, ddy] of DIRS) {
+          const nx = cx+ddx, ny = cy+ddy;
+          const nk = key(nx, ny);
+          if (parent.has(nk)) continue;
+          if (!walkable(nx, ny) && nk !== goalKey) continue;
+          parent.set(nk, key(cx, cy));
+          if (nk === goalKey) { found = true; break outer; }
+          queue.push([nx, ny]);
+        }
+      }
+      if (!found) return null;
+
+      // Remonter jusqu'au premier pas
+      let cur = goalKey;
+      let prev = parent.get(cur);
+      while (prev !== startKey) { cur = prev; prev = parent.get(cur); }
+      const fx = Math.floor(cur / 41) - 20;
+      const fy = (cur % 41) - 20;
+      return {x: fx - sx, y: fy - sy};
+    }
+
     async function monsterAutoMove() {
       if (gameState.mode !== 'idle') return;
-      const dx = gameState.playerPos.x - gameState.monsterPos.x;
-      const dy = gameState.playerPos.y - gameState.monsterPos.y;
-      const angle = Math.atan2(dy, dx) + (Math.random() - 0.5) * 0.8;
-      const moveDistance = 1 + Math.random() * 3;
+      const step = getMonsterNextStep();
+      if (!step) return;
+      const len = Math.sqrt(step.x**2 + step.y**2);
+      const moveDistance = 2 + Math.random() * 2; // 2-4 cases
       const moveVec = {
-        x: Math.round(Math.cos(angle) * moveDistance),
-        y: Math.round(Math.sin(angle) * moveDistance)
+        x: Math.round((step.x / len) * moveDistance),
+        y: Math.round((step.y / len) * moveDistance)
       };
-      if (checkPath(gameState.monsterPos, moveVec) !== 'OK') return;
+      const candidate = checkPath(gameState.monsterPos, moveVec) === 'OK' ? moveVec : step;
+      if (checkPath(gameState.monsterPos, candidate) !== 'OK') return;
       const prevM = {...gameState.monsterPos};
-      gameState.monsterPos.x += moveVec.x;
-      gameState.monsterPos.y += moveVec.y;
+      gameState.monsterPos.x += candidate.x;
+      gameState.monsterPos.y += candidate.y;
       const newM = {...gameState.monsterPos};
       gameState.monsterPos = {...prevM};
       playSound('monster');
       await animateMonster(prevM, newM, 400);
       gameState.monsterPos = {...newM};
-      const distAfter = Math.hypot(
-        gameState.playerPos.x - gameState.monsterPos.x,
-        gameState.playerPos.y - gameState.monsterPos.y
-      );
-      if (distAfter < 1.5) gameOver(true);
+      if (Math.hypot(gameState.playerPos.x - gameState.monsterPos.x,
+                     gameState.playerPos.y - gameState.monsterPos.y) < 1.5) gameOver(true);
     }
 
     function monsterMove() {
       const gs = gameState;
-      const dx = gs.playerPos.x - gs.monsterPos.x;
-      const dy = gs.playerPos.y - gs.monsterPos.y;
-      const dist = Math.sqrt(dx*dx + dy*dy);
-      if (dist < 0.1) return;
+      const step = getMonsterNextStep();
+      if (!step) return;
+      const len = Math.sqrt(step.x**2 + step.y**2);
+      const dist = Math.hypot(gs.playerPos.x - gs.monsterPos.x, gs.playerPos.y - gs.monsterPos.y);
       const speed = Math.min(dist * MAPS[gs.currentMap].monsterSpeed, 5);
-      const nx = (dx/dist)*speed, ny = (dy/dist)*speed;
-      const savedMx = gs.monsterPos.x, savedMy = gs.monsterPos.y;
+      const nx = (step.x / len) * speed, ny = (step.y / len) * speed;
       if (checkPath(gs.monsterPos, {x:nx, y:ny}) === 'OK') {
         gs.monsterPos.x += nx; gs.monsterPos.y += ny; return;
       }
-      gs.monsterPos = {x: savedMx, y: savedMy};
       if (checkPath(gs.monsterPos, {x:nx, y:0}) === 'OK') { gs.monsterPos.x += nx; return; }
       if (checkPath(gs.monsterPos, {x:0, y:ny}) === 'OK') { gs.monsterPos.y += ny; }
     }
@@ -1980,7 +2039,7 @@
         gameState.mode = 'idle';
         setAllDisabled(false);
         document.getElementById('btn-back-cmd').disabled = false;
-        clearInterval(monsterTimer); monsterTimer = setInterval(monsterAutoMove, 10000);
+        clearInterval(monsterTimer); monsterTimer = setInterval(monsterAutoMove, {easy:20000,medium:10000,hard:4000}[gameState.difficulty]||10000);
         updateCommandUI(); openOverlay();
         return;
       }
@@ -2049,7 +2108,7 @@
         gameState.mode = 'idle';
         setAllDisabled(false);
         document.getElementById('btn-back-cmd').disabled = false;
-        clearInterval(monsterTimer); monsterTimer = setInterval(monsterAutoMove, 10000);
+        clearInterval(monsterTimer); monsterTimer = setInterval(monsterAutoMove, {easy:20000,medium:10000,hard:4000}[gameState.difficulty]||10000);
         updateCommandUI();
       });
     }
@@ -2105,7 +2164,9 @@
       gameState.flashObstacle = null;
       gameState.flashTimer = 0;
       setAllDisabled(false);
-      clearInterval(monsterTimer); monsterTimer = setInterval(monsterAutoMove, 10000);
+      const diffInterval = {easy: 20000, medium: 10000, hard: 4000};
+      clearInterval(monsterTimer);
+      monsterTimer = setInterval(monsterAutoMove, diffInterval[gameState.difficulty] || 10000);
       document.getElementById('screen-menu').style.display = 'none';
       document.getElementById('screen-gameover').style.display = 'none';
       document.getElementById('screen-win').style.display = 'none';
@@ -2678,6 +2739,16 @@
         document.getElementById('btn-multi').classList.add('active');
         document.getElementById('btn-solo').classList.remove('active');
       };
+
+      // Difficulté
+      ['easy','medium','hard'].forEach(d => {
+        document.getElementById('btn-'+d).onclick = () => {
+          gameState.difficulty = d;
+          ['easy','medium','hard'].forEach(x =>
+            document.getElementById('btn-'+x).classList.toggle('active', x === d)
+          );
+        };
+      });
 
       // Player-switch screen
       document.getElementById('btn-switch-play').onclick = () => {

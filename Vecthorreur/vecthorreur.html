@@ -246,6 +246,23 @@
       height: 160px !important;
       margin: 10px auto 4px;
       background: transparent;
+      cursor: pointer;
+    }
+    #map-fullscreen-overlay {
+      display: none;
+      position: fixed; inset: 0; z-index: 800;
+      background: rgba(4,3,2,0.96);
+      align-items: center; justify-content: center;
+      cursor: pointer;
+    }
+    #map-fullscreen-overlay.open { display: flex; }
+    #map-fs-canvas { display: block; cursor: pointer; }
+    #map-fs-hint {
+      position: fixed; bottom: 14px; left: 50%;
+      transform: translateX(-50%);
+      font-size: 11px; color: rgba(200,168,130,0.45);
+      font-family: 'Courier New', monospace; pointer-events: none;
+      letter-spacing: 1px;
     }
 
     .btn-hacker {
@@ -1568,8 +1585,8 @@
     }
 
     // ===================== PREVIEW CANVAS =====================
-    function drawPreview() {
-      const pc = document.getElementById('preview-canvas');
+    function drawPreview(canvasOverride) {
+      const pc = canvasOverride || document.getElementById('preview-canvas');
       if (!pc || pc.width === 0 || pc.height === 0) return;
       const pctx = pc.getContext('2d');
       const PW = pc.width, PH = pc.height;
@@ -1638,6 +1655,104 @@
         pctx.fillText(`(${ecx},${ecy})`, ex0, ey0 - 5);
         pctx.restore();
       });
+      // ── DEV MODE : overlay complet ────────────────────────────────
+      if (devMode) {
+        const DEV_TYPE_COLOR = {
+          mur:        { stroke:'#7a9fc8', fill:'rgba(122,159,200,0.18)' },
+          meuble:     { stroke:'#c8a050', fill:'rgba(200,160, 80,0.18)' },
+          decoration: { stroke:'#c87040', fill:'rgba(200,112, 64,0.18)' },
+          piege:      { stroke:'#ff8800', fill:'rgba(255,136,  0,0.22)' },
+          trou:       { stroke:'#cc2200', fill:'rgba(204, 34,  0,0.25)' },
+          sortie:     { stroke:'#55cc55', fill:'rgba( 85,204, 85,0.18)' },
+        };
+        // Contours de salles
+        if (map.rooms) {
+          map.rooms.forEach(rm => {
+            pctx.save();
+            pctx.strokeStyle = 'rgba(185,160,110,0.45)';
+            pctx.setLineDash([3,3]); pctx.lineWidth = 1;
+            pctx.strokeRect(wx(rm.x1), wy(rm.y2), (rm.x2-rm.x1)*PS, (rm.y2-rm.y1)*PS);
+            pctx.setLineDash([]);
+            // Nom de salle
+            const rcx = wx((rm.x1+rm.x2)/2), rcy = wy((rm.y1+rm.y2)/2);
+            pctx.font = 'bold 6px monospace'; pctx.textAlign = 'center';
+            pctx.fillStyle = 'rgba(200,175,130,0.55)';
+            pctx.fillText(rm.name, rcx, rcy);
+            pctx.restore();
+          });
+        }
+        // Obstacles — contour coloré + label + type
+        map.obstacles.forEach(obs => {
+          const t = obsType(obs.label);
+          const tc = DEV_TYPE_COLOR[t] || {stroke:'#aaa', fill:'rgba(120,120,120,0.18)'};
+          const rx = wx(obs.x1), ry = wy(obs.y2);
+          const rw = (obs.x2-obs.x1)*PS, rh = (obs.y2-obs.y1)*PS;
+          pctx.save();
+          pctx.strokeStyle = tc.stroke; pctx.lineWidth = 1.5;
+          pctx.strokeRect(rx, ry, rw, rh);
+          pctx.fillStyle = tc.fill;
+          pctx.fillRect(rx, ry, rw, rh);
+          // Label nom
+          pctx.font = '5.5px monospace'; pctx.textAlign = 'center';
+          pctx.fillStyle = tc.stroke;
+          const ocx = wx((obs.x1+obs.x2)/2), ocy = wy((obs.y1+obs.y2)/2);
+          pctx.fillText(obs.label, ocx, ocy - 2);
+          pctx.fillStyle = 'rgba(255,255,255,0.5)';
+          pctx.fillText('['+t.toUpperCase()+']', ocx, ocy + 5);
+          pctx.restore();
+        });
+        // Death zones — contour coloré + label
+        map.deathZones.forEach(dz => {
+          const t = dzType(dz.label);
+          const tc2 = DEV_TYPE_COLOR[t] || {stroke:'#f00', fill:'rgba(255,0,0,0.22)'};
+          const rx = wx(dz.x1), ry = wy(dz.y2);
+          const rw = (dz.x2-dz.x1)*PS, rh = (dz.y2-dz.y1)*PS;
+          pctx.save();
+          pctx.strokeStyle = tc2.stroke; pctx.lineWidth = 1.5;
+          pctx.fillStyle = tc2.fill; pctx.fillRect(rx, ry, rw, rh);
+          pctx.setLineDash([2,2]); pctx.strokeRect(rx, ry, rw, rh); pctx.setLineDash([]);
+          const dcx = wx((dz.x1+dz.x2)/2), dcy = wy((dz.y1+dz.y2)/2);
+          pctx.font = '5.5px monospace'; pctx.textAlign = 'center';
+          pctx.fillStyle = tc2.stroke;
+          pctx.fillText(dz.label, dcx, dcy - 2);
+          pctx.fillStyle = 'rgba(255,255,255,0.5)';
+          pctx.fillText('['+t.toUpperCase()+']', dcx, dcy + 5);
+          pctx.restore();
+        });
+        // Spawn marker
+        pctx.save();
+        pctx.strokeStyle = 'rgba(255,255,100,0.7)'; pctx.lineWidth = 1;
+        const spx = wx(0), spy = wy(-18);
+        pctx.beginPath();
+        pctx.moveTo(spx-5, spy); pctx.lineTo(spx+5, spy);
+        pctx.moveTo(spx, spy-5); pctx.lineTo(spx, spy+5);
+        pctx.stroke();
+        pctx.font = '6px monospace'; pctx.textAlign = 'center';
+        pctx.fillStyle = 'rgba(255,255,100,0.8)';
+        pctx.fillText('SPAWN', spx, spy - 7);
+        pctx.restore();
+        // Légende (coin bas-gauche)
+        pctx.save();
+        const legend = [
+          {col:'#7a9fc8', lbl:'MUR'},
+          {col:'#c8a050', lbl:'MEUBLE'},
+          {col:'#c87040', lbl:'DÉCOR'},
+          {col:'#ff8800', lbl:'PIÈGE'},
+          {col:'#cc2200', lbl:'TROU'},
+          {col:'#55cc55', lbl:'SORTIE'}
+        ];
+        pctx.font = '6px monospace';
+        legend.forEach((e, i) => {
+          const lx = 4, ly = PH - 6 - i * 9;
+          pctx.fillStyle = e.col;
+          pctx.fillRect(lx, ly - 5, 5, 5);
+          pctx.fillStyle = 'rgba(200,180,150,0.8)';
+          pctx.fillText(e.lbl, lx + 8, ly);
+        });
+        pctx.restore();
+      }
+      // ──────────────────────────────────────────────────────────────
+
       // Monstre — point rouge
       const mp0 = gameState.monsterPos;
       const mpx = wx(mp0.x), mpy = wy(mp0.y);
@@ -2857,6 +2972,26 @@
       };
       document.getElementById('settings-close').onclick = closeSettings;
 
+      // ── Carte plein écran ──────────────────────────────────────────
+      function openMapFullscreen() {
+        const overlay = document.getElementById('map-fullscreen-overlay');
+        const fsc = document.getElementById('map-fs-canvas');
+        fsc.width  = window.innerWidth;
+        fsc.height = window.innerHeight;
+        overlay.classList.add('open');
+        drawPreview(fsc);
+      }
+      function closeMapFullscreen() {
+        document.getElementById('map-fullscreen-overlay').classList.remove('open');
+      }
+      document.getElementById('preview-canvas').addEventListener('click', () => {
+        if (gameState.mode === 'game') openMapFullscreen();
+      });
+      document.getElementById('map-fullscreen-overlay').addEventListener('click', closeMapFullscreen);
+      document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') closeMapFullscreen();
+      });
+
       // Panneau : fermer en cliquant à côté
       document.addEventListener('click', e => {
         const panel = document.getElementById('settings-panel');
@@ -2922,5 +3057,11 @@
     font:11px 'Courier New',monospace; padding:4px 8px; opacity:0.7;
     cursor:pointer; border-radius:3px;">DEV MODE : OFF</button>
   <!-- ===== FIN DEV MODE ===== -->
+
+  <!-- Carte plein écran -->
+  <div id="map-fullscreen-overlay">
+    <canvas id="map-fs-canvas"></canvas>
+    <div id="map-fs-hint">[ clic ou Échap pour fermer ]</div>
+  </div>
 </body>
 </html>

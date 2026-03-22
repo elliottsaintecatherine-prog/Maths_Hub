@@ -14,66 +14,42 @@
       font-family: 'Courier New', monospace;
     }
 
-    /* ── Layout split-screen ── */
-    #game-layout {
-      display: flex;
-      width: 100%; height: 100%;
+    /* ── Overlay 2D — panneau de commandes par-dessus la 3D ── */
+    #overlay-2d {
+      position: fixed; inset: 0; z-index: 100;
+      display: none;
+      align-items: center; justify-content: center;
+      background: rgba(5,3,2,0.72);
+    }
+
+    #panel-command {
       position: relative;
-    }
-
-    /* ── Colonne gauche : vue 2D ── */
-    #col-left {
-      width: 50%; height: 100%;
-      position: relative;
-      background: #0a0806;
-      border-right: 1px solid #3d281033;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    /* ── Colonne droite : vue 3D ── */
-    #col-right {
-      width: 50%; height: 100%;
-      position: relative;
-      background: #0a0806;
-      overflow: hidden;
-    }
-
-    /* ── Légendes bas de colonne ── */
-    .col-label {
-      position: absolute;
-      bottom: 0; left: 0; right: 0;
-      height: 40px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 11px; letter-spacing: 2px;
-      border-top: 1px solid #3d281022;
-      background: #0a0806;
-      color: #a0785066;
-      text-transform: uppercase;
-      font-family: Georgia, serif; font-style: italic;
-      z-index: 5;
-    }
-
-    /* ── Panneau UI (colonne gauche, superposé) ── */
-    #ui-panel {
-      position: absolute;
-      top: 12px; left: 12px;
-      z-index: 20;
-      background: rgba(20,12,6,0.93);
+      background: rgba(12,7,4,0.97);
       border: 1px solid #5a3d1a;
-      padding: 10px 14px;
-      min-width: 200px;
-      box-shadow: 0 0 30px rgba(255,140,0,0.1), inset 0 0 30px rgba(0,0,0,0.4);
+      padding: 16px;
+      max-width: 420px; width: 90%;
+      max-height: 90vh; overflow-y: auto;
+      box-shadow: 0 0 40px rgba(0,0,0,0.8), 0 0 20px rgba(255,140,0,0.08);
     }
 
-    #ui-panel::before {
+    #panel-command::before {
       content: '';
       position: absolute; inset: 0; pointer-events: none;
       background: repeating-linear-gradient(
         0deg, transparent 0px, transparent 3px,
-        rgba(90,61,26,0.06) 3px, rgba(90,61,26,0.06) 4px
+        rgba(90,61,26,0.05) 3px, rgba(90,61,26,0.05) 4px
       );
+    }
+
+    /* ── Panneau UI (dans le panel-command) ── */
+    #ui-panel {
+      position: relative;
+      z-index: 1;
+      background: transparent;
+      border: none;
+      padding: 0;
+      min-width: 0;
+      box-shadow: none;
     }
 
     .ui-panel-title {
@@ -95,50 +71,44 @@
       white-space: nowrap;
     }
 
-    /* ── Labels 3D dans la vue droite ── */
+    /* ── Labels 3D (fixés sur la vue 3D plein écran) ── */
     .label-3d {
-      position: absolute;
+      position: fixed;
       font-size: 10px; letter-spacing: 1.5px; color: #c8a882;
       background: rgba(10,6,3,0.72);
       padding: 2px 6px; pointer-events: none;
       border-left: 2px solid #5a3d1a;
       font-family: Georgia, serif; font-style: italic;
+      z-index: 10;
     }
     #label-map    { top: 8px; right: 12px; color: #c8a882; border-color: #8a6a2a; font-size: 11px; }
-    #label-view   { bottom: 48px; right: 12px; color: #a0785055; border: none; font-size: 9px; font-style: italic; }
+    #label-view   { bottom: 12px; right: 12px; color: #a0785055; border: none; font-size: 9px; font-style: italic; }
     #label-trou   { top: 55%; right: 16px; color: #cc4400; border-color: #8a3000; }
     #label-carcasse { top: 18%; right: 12px; color: #c8a88266; border-color: #5a3d1a44; }
 
-    /* ── HUD bas droite minimal ── */
+    /* ── HUD bas gauche (fixé) ── */
     #hud-neo {
-      position: absolute;
-      bottom: 48px; left: 8px;
+      position: fixed;
+      bottom: 12px; left: 12px;
       display: flex; gap: 16px; align-items: center;
       font-size: 12px; color: #a0785066;
       z-index: 10; pointer-events: none;
       font-family: Georgia, serif;
     }
 
-    /* ── Zone deck + actions (bas colonne gauche) ── */
+    /* ── Zone deck + actions (dans le panel-command) ── */
     #bottom-left {
-      position: absolute;
-      bottom: 40px; left: 0; right: 0;
+      position: relative;
       max-height: 35%;
       overflow-y: auto;
-      background: rgba(14,8,4,0.94);
+      background: transparent;
       border-top: 1px solid #3d281022;
-      padding: 8px 12px;
-      z-index: 15;
+      padding: 8px 0;
+      z-index: 1;
       display: none;
+      margin-top: 8px;
     }
     #bottom-left.has-content { display: block; }
-
-    /* ── Responsive mobile ── */
-    @media (max-width: 640px) {
-      #game-layout { flex-direction: column; }
-      #col-left, #col-right { width: 100%; height: 50%; }
-      #col-left { border-right: none; border-bottom: 1px solid #00ffff33; }
-    }
 
 
 
@@ -275,11 +245,10 @@
     .btn-execute-neo:disabled { opacity: 0.3; cursor: not-allowed; }
 
     #preview-canvas {
-      position: absolute;
-      inset: 0;
-      width: 100% !important;
-      height: calc(100% - 40px) !important;
       display: block;
+      width: 160px !important;
+      height: 160px !important;
+      margin: 10px auto 4px;
       background: transparent;
     }
 
@@ -327,11 +296,11 @@
     .health-dot { font-size: 14px; }
 
     #game-canvas {
-      position: absolute;
+      position: fixed;
       inset: 0;
       width: 100% !important;
-      height: calc(100% - 40px) !important;
-      display: block;
+      height: 100% !important;
+      display: none;
     }
 
     #hud-bottom { display: none !important; }
@@ -340,7 +309,7 @@
     #btn-back-cmd { display: none !important; }
 
     #vec-overlay {
-      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
       font-size: 2.5rem; color: #ff8c00; font-family: Georgia, serif;
       text-shadow: 0 0 20px rgba(255,140,0,0.6); pointer-events: none;
       opacity: 0; transition: opacity 150ms; z-index: 20;
@@ -630,16 +599,37 @@
     </div>
   </div>
 
-  <!-- slide-wrapper conservé vide pour compat JS (slideTo cible ce noeud) -->
+  <!-- slide-wrapper conservé vide pour compat JS -->
   <div id="slide-wrapper" style="display:none;"></div>
 
-  <!-- LAYOUT SPLIT-SCREEN -->
-  <div id="game-layout" style="display:none;">
+  <!-- CANVAS 3D PLEIN ÉCRAN -->
+  <canvas id="game-canvas"></canvas>
+  <div id="vec-overlay"></div>
 
-    <!-- COLONNE GAUCHE : vue 2D -->
-    <div id="col-left">
+  <!-- Labels 3D (fixés sur le canvas) -->
+  <div class="label-3d" id="label-map">Acte <span id="cmd-map-name-label">1</span></div>
+  <div class="label-3d" id="label-carcasse">Armoire<br>Ancienne</div>
+  <div class="label-3d" id="label-trou">⚠ Trappe</div>
+  <div class="label-3d" id="label-view">Perspective 3ème Personne</div>
 
-      <!-- Panneau UI superposé -->
+  <!-- HUD santé (fixé) -->
+  <div id="hud-neo">
+    <div id="hud-health-dots"></div>
+  </div>
+
+  <!-- hud-bottom masqué, conservé pour compat JS -->
+  <div id="hud-bottom" style="display:none!important;">
+    <div id="hud-health"></div>
+    <button id="btn-back-cmd" disabled style="display:none!important;">&#8592; RETOUR</button>
+  </div>
+
+  <!-- Infos compat JS (masquées) -->
+  <span id="cmd-map-name" style="display:none;"></span>
+  <span id="cmd-pos" style="display:none;"></span>
+
+  <!-- OVERLAY 2D — panneau de commandes -->
+  <div id="overlay-2d">
+    <div id="panel-command">
       <div id="ui-panel">
         <div class="ui-panel-title">✦ Grimoire de Script — Acte <span id="cmd-map-num">1</span></div>
         <div class="ui-row">
@@ -667,10 +657,10 @@
         <div id="message-zone" style="min-height:14px;margin-top:4px;"></div>
       </div>
 
-      <!-- Canvas 2D aperçu (pleine colonne) -->
+      <!-- Canvas 2D aperçu -->
       <canvas id="preview-canvas"></canvas>
 
-      <!-- Zone deck + actions (bas colonne gauche) -->
+      <!-- Zone deck + actions -->
       <div id="bottom-left">
         <div style="font-size:10px;color:#a0785066;letter-spacing:2px;margin-bottom:6px;font-family:Georgia,serif;font-style:italic;">─── Parchemins de Vecteurs ───</div>
         <div class="deck-area" id="deck-area"><span style="color:#a0785033;font-size:12px;font-style:italic;">Vide</span></div>
@@ -681,41 +671,7 @@
           <button class="btn-hacker" id="btn-mute" style="margin-left:auto;">🕯 SON : ON</button>
         </div>
       </div>
-
-      <div class="col-label">Grimoire · Saisie du vecteur</div>
     </div>
-
-    <!-- COLONNE DROITE : vue 3D -->
-    <div id="col-right">
-
-      <!-- Canvas 3D -->
-      <canvas id="game-canvas"></canvas>
-      <div id="vec-overlay"></div>
-
-      <!-- Labels 3D superposés -->
-      <div class="label-3d" id="label-map">Acte <span id="cmd-map-name-label">1</span></div>
-      <div class="label-3d" id="label-carcasse">Armoire<br>Ancienne</div>
-      <div class="label-3d" id="label-trou">⚠ Trappe</div>
-      <div class="label-3d" id="label-view">Perspective 3ème Personne</div>
-
-      <!-- HUD santé + position -->
-      <div id="hud-neo">
-        <div id="hud-health-dots"></div>
-      </div>
-
-      <!-- hud-bottom masqué, conservé pour compat JS -->
-      <div id="hud-bottom" style="display:none!important;">
-        <div id="hud-health"></div>
-        <button id="btn-back-cmd" disabled style="display:none!important;">&#8592; RETOUR</button>
-      </div>
-
-      <!-- Infos compat JS (masquées) -->
-      <span id="cmd-map-name" style="display:none;"></span>
-      <span id="cmd-pos" style="display:none;"></span>
-
-      <div class="col-label">Manoir · Vue en perspective</div>
-    </div>
-
   </div>
 
   <!-- GAME OVER -->
@@ -1053,29 +1009,23 @@
     const canvas = document.getElementById('game-canvas');
     const ctx = canvas.getContext('2d');
     let W, H, SCALE, ISO_CY;
+    let darkCanvas = null, darkCtx = null;
 
     function resizeCanvas() {
-      // Split-screen : le canvas 3D occupe col-right (50% de la largeur)
-      const colRight = document.getElementById('col-right');
-      if (colRight) {
-        canvas.width  = colRight.offsetWidth;
-        canvas.height = colRight.offsetHeight - 40; // -40px pour .col-label
-      } else {
-        canvas.width  = canvas.offsetWidth;
-        canvas.height = canvas.offsetHeight;
-      }
+      // Canvas 3D plein écran
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
       W = canvas.width;
       H = canvas.height;
       SCALE   = Math.min(W * 0.90 / (80 * 0.866), H * 0.90 / 42.2);
       ISO_CY  = H - 21.1 * SCALE;
 
-      // Synchroniser aussi le preview-canvas
+      // Preview canvas — taille fixe 160×160
       const pc = document.getElementById('preview-canvas');
-      const colLeft = document.getElementById('col-left');
-      if (pc && colLeft) {
-        pc.width  = colLeft.offsetWidth;
-        pc.height = colLeft.offsetHeight - 40;
-      }
+      if (pc) { pc.width = 160; pc.height = 160; }
+
+      // Synchroniser le darkCanvas si existant
+      if (darkCanvas) { darkCanvas.width = W; darkCanvas.height = H; }
     }
     window.addEventListener('resize', resizeCanvas);
 
@@ -1612,11 +1562,23 @@
       renderDeck();
     }
 
-    // ===================== SLIDE (no-op — split-screen permanent) =====================
+    // ===================== SLIDE (no-op) =====================
     function slideTo(view) {
-      // Les deux vues sont toujours visibles simultanement — pas de slide
-      gameState.view = view;
+      gameState.view = view; // neutralisé — overlay gère l'état visuel
       updateModeIndicator();
+    }
+
+    // ===================== OVERLAY 2D =====================
+    let overlayOpen = false;
+    function openOverlay() {
+      overlayOpen = true;
+      document.getElementById('overlay-2d').style.display = 'flex';
+      updateCommandUI();
+      drawPreview();
+    }
+    function closeOverlay() {
+      overlayOpen = false;
+      document.getElementById('overlay-2d').style.display = 'none';
     }
     function updateModeIndicator() {
       // indicateur masqué — rien à faire
@@ -1694,6 +1656,7 @@
       gameState.pendingVector = vec;
       setAllDisabled(true);
       gameState.mode = 'animating';
+      closeOverlay();
       slideTo('execute');
       await delay(520);
       const startPos = {...gameState.playerPos};
@@ -1735,6 +1698,7 @@
       gameState.moveCount++;
       setAllDisabled(true);
       gameState.mode = 'animating';
+      closeOverlay();
       slideTo('execute');
       delay(520).then(async () => {
         const startPos = {...gameState.playerPos};
@@ -1818,14 +1782,13 @@
       document.getElementById('screen-win').style.display = 'none';
       const btnBack = document.getElementById('btn-back-cmd');
       if (btnBack) btnBack.disabled = false;
-      // Afficher le layout split-screen
-      const layout = document.getElementById('game-layout');
-      if (layout) layout.style.display = 'flex';
+      // Afficher le canvas 3D plein écran + l'overlay 2D
+      canvas.style.display = 'block';
       closeSettings();
       showGear(true);
       initParticles();
       resizeCanvas();
-      updateCommandUI();
+      openOverlay();
       slideTo('execute');
       requestAnimationFrame(renderLoop);
     }
@@ -2272,6 +2235,49 @@
       ctx.fillRect(W * 0.82, 0, W * 0.18, H);
       ctx.restore();
 
+      // ── Obscurité globale + lumière bougie autour du joueur ───────
+      if (!darkCanvas) { darkCanvas = document.createElement('canvas'); darkCtx = darkCanvas.getContext('2d'); }
+      if (darkCanvas.width !== W || darkCanvas.height !== H) { darkCanvas.width = W; darkCanvas.height = H; }
+      const handPt = project(pp.x + 0.4, pp.y, 1.0);
+      if (handPt) {
+        const cx = handPt.sx, cy = handPt.sy;
+        const haloR = 160 * (0.88 + 0.12 * Math.sin(ts * 0.009));
+        darkCtx.clearRect(0, 0, W, H);
+        darkCtx.fillStyle = 'rgba(0,0,0,0.80)';
+        darkCtx.fillRect(0, 0, W, H);
+        darkCtx.globalCompositeOperation = 'destination-out';
+        torchPositions.forEach(({ sx: tx, sy: ty, idx }) => {
+          const tr = 110 + 20 * Math.sin(ts * 0.005 + idx * 1.3);
+          const tg = darkCtx.createRadialGradient(tx, ty, 0, tx, ty, tr);
+          tg.addColorStop(0, 'rgba(0,0,0,0.75)');
+          tg.addColorStop(1, 'rgba(0,0,0,0)');
+          darkCtx.fillStyle = tg;
+          darkCtx.beginPath(); darkCtx.arc(tx, ty, tr, 0, Math.PI * 2); darkCtx.fill();
+        });
+        const cg = darkCtx.createRadialGradient(cx, cy, 0, cx, cy, haloR);
+        cg.addColorStop(0, 'rgba(0,0,0,0.95)');
+        cg.addColorStop(0.45, 'rgba(0,0,0,0.60)');
+        cg.addColorStop(1, 'rgba(0,0,0,0)');
+        darkCtx.fillStyle = cg;
+        darkCtx.beginPath(); darkCtx.arc(cx, cy, haloR, 0, Math.PI * 2); darkCtx.fill();
+        darkCtx.globalCompositeOperation = 'source-over';
+        const wg = darkCtx.createRadialGradient(cx, cy, 0, cx, cy, haloR * 0.7);
+        wg.addColorStop(0, 'rgba(255,120,20,0.09)');
+        wg.addColorStop(1, 'rgba(255,120,20,0)');
+        darkCtx.fillStyle = wg;
+        darkCtx.beginPath(); darkCtx.arc(cx, cy, haloR * 0.7, 0, Math.PI * 2); darkCtx.fill();
+        ctx.drawImage(darkCanvas, 0, 0);
+        const flH = 7 + 2 * Math.sin(ts * 0.011);
+        const flOff = 1.2 * Math.sin(ts * 0.008);
+        ctx.save();
+        ctx.shadowBlur = 10; ctx.shadowColor = '#ff6600';
+        ctx.fillStyle = '#ff9900';
+        ctx.beginPath(); ctx.ellipse(cx + flOff, cy - flH * 0.5, 2.5, flH * 0.6, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#ffcc44'; ctx.shadowColor = '#ffdd66';
+        ctx.beginPath(); ctx.ellipse(cx + flOff * 0.5, cy - flH * 0.35, 1.4, flH * 0.35, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0; ctx.restore();
+      }
+
       // ── HUD ───────────────────────────────────────────────────────
       const hudPosEl = document.getElementById('hud-pos');
       if (hudPosEl) hudPosEl.textContent =
@@ -2328,6 +2334,20 @@
         e.preventDefault();
       }, { passive: false });
 
+      // Clic sur le canvas 3D → ouvrir l'overlay 2D (sauf si drag caméra)
+      let _wasDrag = false;
+      canvas.addEventListener('mousedown', () => { _wasDrag = false; });
+      canvas.addEventListener('mousemove', e => { if (e.buttons & 1) _wasDrag = true; });
+      canvas.addEventListener('click', () => {
+        if (gameState.mode === 'menu' || gameState.mode === 'animating') return;
+        if (_wasDrag) return;
+        if (!overlayOpen) openOverlay();
+      });
+      // Clic sur le fond de l'overlay (hors panel) → fermer l'overlay
+      document.getElementById('overlay-2d').addEventListener('click', e => {
+        if (e.target === document.getElementById('overlay-2d')) closeOverlay();
+      });
+
       // Mute toggle
       document.getElementById('btn-mute').onclick = toggleMute;
 
@@ -2364,8 +2384,7 @@
       document.getElementById('btn-go-menu').onclick = () => {
         document.getElementById('screen-gameover').style.display = 'none';
         document.getElementById('screen-menu').style.display = 'flex';
-        const layout = document.getElementById('game-layout');
-        if (layout) layout.style.display = 'none';
+        canvas.style.display = 'none'; closeOverlay();
         gameState.mode = 'menu'; showGear(false); closeSettings(); renderMenu();
       };
 
@@ -2381,8 +2400,7 @@
       document.getElementById('btn-win-menu').onclick = () => {
         document.getElementById('screen-win').style.display = 'none';
         document.getElementById('screen-menu').style.display = 'flex';
-        const layout = document.getElementById('game-layout');
-        if (layout) layout.style.display = 'none';
+        canvas.style.display = 'none'; closeOverlay();
         gameState.mode = 'menu'; showGear(false); closeSettings(); renderMenu();
       };
 
@@ -2426,8 +2444,7 @@
         document.getElementById('screen-gameover').style.display = 'none';
         document.getElementById('screen-win').style.display = 'none';
         document.getElementById('screen-menu').style.display = 'flex';
-        const layout = document.getElementById('game-layout');
-        if (layout) layout.style.display = 'none';
+        canvas.style.display = 'none'; closeOverlay();
         gameState.mode = 'menu'; showGear(false); renderMenu();
       };
 

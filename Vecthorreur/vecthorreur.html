@@ -10,8 +10,131 @@
 
     html, body {
       width: 100%; height: 100%; overflow: hidden;
-      background: #0a0a0f;
+      background: #04050a;
       font-family: 'Courier New', monospace;
+    }
+
+    /* ── Layout split-screen ── */
+    #game-layout {
+      display: flex;
+      width: 100%; height: 100%;
+      position: relative;
+    }
+
+    /* ── Colonne gauche : vue 2D ── */
+    #col-left {
+      width: 50%; height: 100%;
+      position: relative;
+      background: #04050a;
+      border-right: 1px solid #00ffff33;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Colonne droite : vue 3D ── */
+    #col-right {
+      width: 50%; height: 100%;
+      position: relative;
+      background: #060810;
+      overflow: hidden;
+    }
+
+    /* ── Légendes bas de colonne ── */
+    .col-label {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 40px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; letter-spacing: 2px;
+      border-top: 1px solid #00ffff22;
+      background: #04050a;
+      color: #00ffff66;
+      text-transform: uppercase;
+      z-index: 5;
+    }
+
+    /* ── Panneau UI (colonne gauche, superposé) ── */
+    #ui-panel {
+      position: absolute;
+      top: 12px; left: 12px;
+      z-index: 20;
+      background: rgba(4,5,10,0.88);
+      border: 1px solid #00ffff44;
+      padding: 10px 14px;
+      min-width: 200px;
+      box-shadow: 0 0 20px rgba(0,255,255,0.08);
+    }
+
+    #ui-panel::before {
+      content: '';
+      position: absolute; inset: 0; pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg, transparent 0px, transparent 3px,
+        rgba(0,255,255,0.013) 3px, rgba(0,255,255,0.013) 4px
+      );
+    }
+
+    .ui-panel-title {
+      font-size: 10px; letter-spacing: 1.5px;
+      color: #00ffff; margin-bottom: 8px;
+      border-bottom: 1px solid #00ffff22; padding-bottom: 6px;
+      white-space: nowrap;
+    }
+
+    .ui-row {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 7px; flex-wrap: wrap;
+    }
+
+    .ui-label {
+      font-size: 10px; color: #00ffff88; letter-spacing: 1px;
+      white-space: nowrap;
+    }
+
+    /* ── Labels 3D dans la vue droite ── */
+    .label-3d {
+      position: absolute;
+      font-size: 10px; letter-spacing: 1.5px; color: #00ffff;
+      background: rgba(0,0,0,0.5);
+      padding: 2px 6px; pointer-events: none;
+      border-left: 2px solid #00ffff;
+      font-family: 'Courier New', monospace;
+    }
+    #label-map    { top: 8px; right: 12px; color: #ff00ff; border-color: #ff00ff; font-size: 11px; }
+    #label-view   { bottom: 48px; right: 12px; color: #00ffff88; border: none; font-size: 9px; }
+    #label-trou   { top: 55%; right: 16px; }
+    #label-carcasse { top: 18%; right: 12px; color: #ff00ff66; border-color: #ff00ff44; }
+
+    /* ── HUD bas droite minimal ── */
+    #hud-neo {
+      position: absolute;
+      bottom: 48px; left: 8px;
+      display: flex; gap: 16px; align-items: center;
+      font-size: 11px; color: #00ffff66;
+      z-index: 10; pointer-events: none;
+      font-family: 'Courier New', monospace;
+    }
+
+    /* ── Zone deck + actions (bas colonne gauche) ── */
+    #bottom-left {
+      position: absolute;
+      bottom: 40px; left: 0; right: 0;
+      max-height: 35%;
+      overflow-y: auto;
+      background: rgba(4,5,10,0.92);
+      border-top: 1px solid #00ffff22;
+      padding: 8px 12px;
+      z-index: 15;
+      display: none;
+    }
+    #bottom-left.has-content { display: block; }
+
+    /* ── Responsive mobile ── */
+    @media (max-width: 640px) {
+      #game-layout { flex-direction: column; }
+      #col-left, #col-right { width: 100%; height: 50%; }
+      #col-left { border-right: none; border-bottom: 1px solid #00ffff33; }
     }
 
 
@@ -111,65 +234,48 @@
     .btn-settings-action.danger { border-color: #ff444433; color: #ff6666; }
     .btn-settings-action.danger:hover { background: #220000; border-color: #ff4444; }
 
-    #mode-indicator {
-      position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
-      z-index: 200; display: flex; gap: 12px; align-items: center;
-      background: #0a0a0fcc; padding: 4px 14px; border: 1px solid #00ffff33;
-      font-family: 'Courier New', monospace; font-size: 12px; color: #00ffff88;
-    }
-    .mode-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-    .mode-dot.active { background: #00ffff; box-shadow: 0 0 6px #00ffff; }
-    .mode-dot.inactive { background: #00ffff33; }
+    #mode-indicator { display: none !important; }
 
-    #slide-wrapper {
-      display: flex; width: 200vw; height: 100vh;
-      transition: transform 500ms ease-in-out;
-    }
-    #view-command, #view-execute {
-      width: 100vw; height: 100vh; flex-shrink: 0; position: relative;
-      overflow: hidden;
-    }
-
-    #view-command {
-      background: #0a0a0f; color: #00ffff;
-      overflow-y: auto; overflow-x: hidden;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: flex-start;
-      padding: 60px 20px 20px;
-    }
-    #view-command::after {
-      content: '';
-      position: absolute; inset: 0; pointer-events: none; z-index: 10;
-      background: repeating-linear-gradient(
-        0deg,
-        transparent 0px, transparent 2px,
-        rgba(0,255,255,0.015) 2px, rgba(0,255,255,0.015) 4px
-      );
-    }
-    .cmd-panel {
-      width: 100%; max-width: 500px;
-      display: flex; flex-direction: column; gap: 14px;
-    }
-    .cmd-title { font-size: 1.1rem; color: #00ffff; border-bottom: 1px solid #00ffff44; padding-bottom: 6px; }
-    .cmd-info { font-size: 12px; color: #00ffff88; line-height: 1.7; }
+    .cmd-panel { display: none; }
+    .cmd-title { display: none; }
+    .cmd-info { display: none; }
     .cmd-section { font-size: 11px; color: #00ffff66; margin-bottom: 4px; letter-spacing: 1px; }
 
     .vec-inputs { display: flex; gap: 12px; align-items: center; }
     .vec-input-group { display: flex; flex-direction: column; gap: 4px; }
-    .vec-input-group label { font-size: 11px; color: #00ffff88; }
+    .vec-input-group label { font-size: 10px; color: #00ffff88; letter-spacing: 1px; }
     .vec-input-group input {
-      width: 80px; background: #111; border: 1px solid #00ffff44;
-      color: #00ffff; font-family: 'Courier New', monospace; font-size: 16px;
-      padding: 6px 8px; text-align: center;
+      width: 52px; background: #0a0a1a; border: 1px solid #00ffff44;
+      color: #00ffff; font-family: 'Courier New', monospace; font-size: 15px;
+      padding: 4px 6px; text-align: center;
       -moz-appearance: textfield;
     }
     .vec-input-group input::-webkit-outer-spin-button,
     .vec-input-group input::-webkit-inner-spin-button { -webkit-appearance: none; }
     .vec-input-group input:focus { outline: none; border-color: #00ffff; box-shadow: 0 0 8px #00ffff44; }
 
+    /* Bouton EXÉCUTER néon */
+    .btn-execute-neo {
+      background: linear-gradient(135deg, #001a1a, #003333);
+      color: #00ffff; border: 1px solid #00ffff;
+      font-family: 'Courier New', monospace; padding: 6px 14px;
+      cursor: pointer; font-size: 12px; font-weight: bold;
+      letter-spacing: 2px;
+      transition: background 0.2s, box-shadow 0.2s;
+      white-space: nowrap;
+    }
+    .btn-execute-neo:hover:not(:disabled) {
+      background: #003333; box-shadow: 0 0 14px #00ffff88;
+    }
+    .btn-execute-neo:disabled { opacity: 0.3; cursor: not-allowed; }
+
     #preview-canvas {
-      border: 1px solid #00ffff33; display: block;
-      background: #0d0d1a; margin: 0 auto;
+      position: absolute;
+      inset: 0;
+      width: 100% !important;
+      height: calc(100% - 40px) !important;
+      display: block;
+      background: transparent;
     }
 
     .btn-hacker {
@@ -215,24 +321,18 @@
     .health-dots { display: flex; gap: 4px; }
     .health-dot { font-size: 14px; }
 
-    #game-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+    #game-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100% !important;
+      height: calc(100% - 40px) !important;
+      display: block;
+    }
 
-    #hud-bottom {
-      position: absolute; bottom: 0; left: 0; right: 0;
-      background: #0a0a0fdd; padding: 10px 20px;
-      display: flex; justify-content: space-between; align-items: center;
-      font-size: 12px; color: #00ffff88; z-index: 10;
-      border-top: 1px solid #00ffff22;
-    }
-    #hud-pos { color: #00ffff88; }
+    #hud-bottom { display: none !important; }
+    #hud-pos { color: #00ffff; font-size: 13px; font-weight: bold; }
     #hud-health { display: flex; gap: 4px; }
-    #btn-back-cmd {
-      background: #111; color: #00ffff; border: 1px solid #00ffff44;
-      font-family: 'Courier New', monospace; padding: 6px 14px;
-      cursor: pointer; font-size: 12px;
-    }
-    #btn-back-cmd:hover:not(:disabled) { border-color: #00ffff; background: #002222; }
-    #btn-back-cmd:disabled { opacity: 0.3; cursor: not-allowed; }
+    #btn-back-cmd { display: none !important; }
 
     #vec-overlay {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -503,10 +603,10 @@
     <button class="btn-settings-action danger" id="settings-to-hub">⬅ Quitter vers le Hub</button>
   </div>
 
-  <div id="mode-indicator">
-    <span class="mode-dot active" id="dot-cmd"></span> COMMANDE
-    <span style="color:#00ffff33">|</span>
-    <span class="mode-dot inactive" id="dot-exe"></span> EXÉCUTION
+  <!-- mode-indicator masqué, conservé pour compat JS -->
+  <div id="mode-indicator" aria-hidden="true" style="display:none!important">
+    <span class="mode-dot active" id="dot-cmd"></span>
+    <span class="mode-dot inactive" id="dot-exe"></span>
   </div>
 
   <!-- MENU -->
@@ -524,68 +624,92 @@
     </div>
   </div>
 
-  <!-- SLIDE WRAPPER -->
-  <div id="slide-wrapper">
-    <!-- VIEW A: COMMAND -->
-    <div id="view-command">
-      <div class="cmd-panel">
-        <div class="cmd-title">VectHorreur : Interface de Script — <span id="cmd-map-num">J1</span></div>
-        <div class="cmd-info">
-          MAP : <span id="cmd-map-name">—</span><br>
-          POSITION : <span id="cmd-pos">(0, -18)</span><br>
-          SANTÉ : <span id="cmd-health">●●●●●</span>
-        </div>
+  <!-- slide-wrapper conservé vide pour compat JS (slideTo cible ce noeud) -->
+  <div id="slide-wrapper" style="display:none;"></div>
 
-        <div>
-          <div class="cmd-section">VECTEUR DÉPLACEMENT</div>
-          <div class="vec-inputs">
-            <div class="vec-input-group">
-              <label>X</label>
-              <input type="number" id="inp-x" value="0" min="-20" max="20" step="1">
-            </div>
-            <div class="vec-input-group">
-              <label>Y</label>
-              <input type="number" id="inp-y" value="0" min="-20" max="20" step="1">
-            </div>
+  <!-- LAYOUT SPLIT-SCREEN -->
+  <div id="game-layout" style="display:none;">
+
+    <!-- COLONNE GAUCHE : vue 2D -->
+    <div id="col-left">
+
+      <!-- Panneau UI superposé -->
+      <div id="ui-panel">
+        <div class="ui-panel-title">VECTHORREUR: INTERFACE DE SCRIPT — J<span id="cmd-map-num">1</span>.</div>
+        <div class="ui-row">
+          <span class="ui-label">POSITION ACTUELLE:</span>
+          <span id="hud-pos" style="color:#00ffff;font-size:13px;font-weight:bold;">(0, -18)</span>
+        </div>
+        <div class="ui-row">
+          <span class="ui-label">SANTÉ:</span>
+          <span id="cmd-health" style="color:#00ffff88;font-size:12px;">●●●●●</span>
+        </div>
+        <div class="ui-row">
+          <span class="ui-label">VECTEUR DÉPLACEMENT:</span>
+        </div>
+        <div class="ui-row" style="align-items:flex-end;gap:6px;">
+          <div class="vec-input-group">
+            <label>X</label><br>
+            <input type="number" id="inp-x" value="0" min="-20" max="20" step="1">
           </div>
-        </div>
-
-        <canvas id="preview-canvas" width="200" height="200"></canvas>
-
-        <button class="btn-execute" id="btn-execute">▶ EXÉCUTER &amp; VOIR L'ACTION</button>
-        <div id="message-zone"></div>
-
-        <div>
-          <div class="cmd-section">── VECTOR DECK (max 8) ──</div>
-          <div class="deck-area" id="deck-area"><span style="color:#00ffff33;font-size:12px;">Vide</span></div>
-        </div>
-
-        <div>
-          <div class="cmd-section">── ACTIONS MATHÉMATIQUES ──</div>
-          <div class="math-actions">
-            <button class="btn-hacker" id="btn-combo">COMBO u+v</button>
-            <button class="btn-hacker" id="btn-scalar">× SCALAIRE</button>
-            <input type="number" class="scalar-input" id="scalar-input" value="2" step="0.5" placeholder="coeff">
+          <div class="vec-input-group">
+            <label>Y</label><br>
+            <input type="number" id="inp-y" value="0" min="-20" max="20" step="1">
           </div>
-          <div style="font-size:11px;color:#00ffff44;margin-top:4px;">
-            Sélectionne 2 cartes → COMBO · Sélectionne 1 carte + coeff → SCALAIRE
-          </div>
+          <button class="btn-execute-neo" id="btn-execute">EXÉCUTER</button>
         </div>
-
-        <button class="btn-hacker" id="btn-mute">♪ SON : ON</button>
+        <div id="message-zone" style="font-size:10px;color:#ff4444;min-height:14px;margin-top:4px;"></div>
       </div>
+
+      <!-- Canvas 2D aperçu (pleine colonne) -->
+      <canvas id="preview-canvas"></canvas>
+
+      <!-- Zone deck + actions (bas colonne gauche) -->
+      <div id="bottom-left">
+        <div style="font-size:10px;color:#ff00ff88;letter-spacing:2px;margin-bottom:6px;">VECTOR DECK</div>
+        <div class="deck-area" id="deck-area"><span style="color:#00ffff33;font-size:12px;">Vide</span></div>
+        <div class="math-actions" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <button class="btn-hacker" id="btn-combo">u&#x20D7;+v&#x20D7;</button>
+          <input type="number" class="scalar-input" id="scalar-input" value="2" step="0.5" placeholder="coeff">
+          <button class="btn-hacker" id="btn-scalar">k&#xD7;u&#x20D7;</button>
+          <button class="btn-hacker" id="btn-mute" style="margin-left:auto;">&#9834; SON : ON</button>
+        </div>
+      </div>
+
+      <div class="col-label">VUE 2D : SAISIE DU VECTEUR</div>
     </div>
 
-    <!-- VIEW B: EXECUTE -->
-    <div id="view-execute">
+    <!-- COLONNE DROITE : vue 3D -->
+    <div id="col-right">
+
+      <!-- Canvas 3D -->
       <canvas id="game-canvas"></canvas>
       <div id="vec-overlay"></div>
-      <div id="hud-bottom">
-        <div id="hud-pos">POS: (0.0, -18.0)  Vecteur: (0, 1)</div>
-        <div id="hud-health-dots">●●●●●</div>
-        <button id="btn-back-cmd" disabled>← RETOUR COMMANDE</button>
+
+      <!-- Labels 3D superposés -->
+      <div class="label-3d" id="label-map">MAP <span id="cmd-map-name-label">1</span> 'NEON ABYSS'</div>
+      <div class="label-3d" id="label-carcasse">CARCASSE<br>de Hover-Car</div>
+      <div class="label-3d" id="label-trou">TROU</div>
+      <div class="label-3d" id="label-view">Vue 3&#232;me Personne (Over-the-shoulder)</div>
+
+      <!-- HUD santé + position -->
+      <div id="hud-neo">
+        <div id="hud-health-dots"></div>
       </div>
+
+      <!-- hud-bottom masqué, conservé pour compat JS -->
+      <div id="hud-bottom" style="display:none!important;">
+        <div id="hud-health"></div>
+        <button id="btn-back-cmd" disabled style="display:none!important;">&#8592; RETOUR</button>
+      </div>
+
+      <!-- Infos compat JS (masquées) -->
+      <span id="cmd-map-name" style="display:none;"></span>
+      <span id="cmd-pos" style="display:none;"></span>
+
+      <div class="col-label">VUE 3D : EXÉCUTION DU MOUVEMENT</div>
     </div>
+
   </div>
 
   <!-- GAME OVER -->
@@ -925,13 +1049,27 @@
     let W, H, SCALE, ISO_CY;
 
     function resizeCanvas() {
-      W = canvas.width = canvas.offsetWidth;
-      H = canvas.height = canvas.offsetHeight;
-      // Isometric: fit world ±20 on screen with margins
-      // Horizontal span = 80 * IX = 80 * SCALE * 0.866
-      // Vertical span   = 80 * IY + WALL_H = 42.2 * SCALE
+      // Split-screen : le canvas 3D occupe col-right (50% de la largeur)
+      const colRight = document.getElementById('col-right');
+      if (colRight) {
+        canvas.width  = colRight.offsetWidth;
+        canvas.height = colRight.offsetHeight - 40; // -40px pour .col-label
+      } else {
+        canvas.width  = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+      }
+      W = canvas.width;
+      H = canvas.height;
       SCALE   = Math.min(W * 0.90 / (80 * 0.866), H * 0.90 / 42.2);
-      ISO_CY  = H - 21.1 * SCALE; // vertical centre: balances grid + wall height
+      ISO_CY  = H - 21.1 * SCALE;
+
+      // Synchroniser aussi le preview-canvas
+      const pc = document.getElementById('preview-canvas');
+      const colLeft = document.getElementById('col-left');
+      if (pc && colLeft) {
+        pc.width  = colLeft.offsetWidth;
+        pc.height = colLeft.offsetHeight - 40;
+      }
     }
     window.addEventListener('resize', resizeCanvas);
 
@@ -1269,27 +1407,58 @@
     // ===================== PREVIEW CANVAS =====================
     function drawPreview() {
       const pc = document.getElementById('preview-canvas');
+      if (!pc || pc.width === 0 || pc.height === 0) return;
       const pctx = pc.getContext('2d');
       const PW = pc.width, PH = pc.height;
-      const PS = PW / 20;
+      // Echelle : afficher ±10 unites sur l'axe le plus court
+      const PS = Math.min(PW, PH) / 20;
       const pal = MAPS[gameState.currentMap].palette;
       pctx.clearRect(0, 0, PW, PH);
-      pctx.fillStyle = '#0d0d1a';
+      // Fond néon-tech
+      pctx.fillStyle = '#04050a';
       pctx.fillRect(0, 0, PW, PH);
-      // Grid
-      pctx.strokeStyle = `rgba(${pal.trailRGB},0.13)`;
+      // Lignes de grille normales
       pctx.lineWidth = 0.5;
       for (let u = -10; u <= 10; u++) {
-        const cx = PW/2 + u*PS, cy = PH/2 + u*PS;
+        if (u === 0) continue;
+        pctx.strokeStyle = 'rgba(0,255,255,0.08)';
+        const cx = PW/2 + u*PS;
         pctx.beginPath(); pctx.moveTo(cx, 0); pctx.lineTo(cx, PH); pctx.stroke();
+        const cy = PH/2 - u*PS;
         pctx.beginPath(); pctx.moveTo(0, cy); pctx.lineTo(PW, cy); pctx.stroke();
       }
-      // Axes
-      pctx.strokeStyle = pal.axisX; pctx.lineWidth = 1;
+      // Points aux intersections tous les 5 cases
+      pctx.fillStyle = 'rgba(0,255,255,0.25)';
+      for (let ux = -10; ux <= 10; ux += 5) {
+        for (let uy = -10; uy <= 10; uy += 5) {
+          if (ux === 0 && uy === 0) continue;
+          const px = PW/2 + ux*PS, py = PH/2 - uy*PS;
+          pctx.beginPath(); pctx.arc(px, py, 1.5, 0, Math.PI*2); pctx.fill();
+        }
+      }
+      // Axes X et Y néon
+      pctx.lineWidth = 1.2;
+      pctx.strokeStyle = 'rgba(0,255,255,0.5)';
       pctx.beginPath(); pctx.moveTo(PW/2, 0); pctx.lineTo(PW/2, PH); pctx.stroke();
-      pctx.strokeStyle = pal.axisY;
+      pctx.strokeStyle = 'rgba(255,0,255,0.5)';
       pctx.beginPath(); pctx.moveTo(0, PH/2); pctx.lineTo(PW, PH/2); pctx.stroke();
-      // Player dot
+      // Numéros de grille
+      const fontSize = Math.max(8, Math.min(11, PS * 0.65));
+      pctx.font = `${fontSize}px Courier New`;
+      pctx.textAlign = 'center';
+      pctx.textBaseline = 'top';
+      pctx.fillStyle = '#00ffff66';
+      for (let u = -10; u <= 10; u += 5) {
+        if (u === 0) continue;
+        // Labels axe X (en bas de l'axe X)
+        pctx.fillText(u, PW/2 + u*PS, PH/2 + 3);
+        // Labels axe Y (à droite de l'axe Y)
+        pctx.textAlign = 'left';
+        pctx.fillText(u, PW/2 + 3, PH/2 - u*PS - fontSize/2);
+        pctx.textAlign = 'center';
+      }
+      pctx.textBaseline = 'alphabetic';
+      // Player dot (centré = position relative 0,0 dans la vue)
       pctx.beginPath(); pctx.arc(PW/2, PH/2, 5, 0, Math.PI*2);
       pctx.fillStyle = pal.player; pctx.shadowBlur = 10; pctx.shadowColor = pal.player;
       pctx.fill(); pctx.shadowBlur = 0;
@@ -1453,20 +1622,14 @@
       renderDeck();
     }
 
-    // ===================== SLIDE =====================
+    // ===================== SLIDE (no-op — split-screen permanent) =====================
     function slideTo(view) {
-      playSound('transition');
-      const wrapper = document.getElementById('slide-wrapper');
-      wrapper.style.transform = view === 'command' ? 'translateX(0)' : 'translateX(-100vw)';
+      // Les deux vues sont toujours visibles simultanement — pas de slide
       gameState.view = view;
       updateModeIndicator();
-      setButtonsDisabled(true);
-      setTimeout(() => setButtonsDisabled(false), 500);
     }
     function updateModeIndicator() {
-      const isCmd = gameState.view === 'command';
-      document.getElementById('dot-cmd').className = 'mode-dot ' + (isCmd ? 'active' : 'inactive');
-      document.getElementById('dot-exe').className = 'mode-dot ' + (isCmd ? 'inactive' : 'active');
+      // indicateur masqué — rien à faire
     }
     function setButtonsDisabled(disabled) {
       ['btn-execute', 'btn-combo', 'btn-scalar', 'btn-mute'].forEach(id => {
@@ -1486,18 +1649,29 @@
 
     function updateCommandUI() {
       const gs = gameState;
-      document.getElementById('cmd-map-name').textContent = MAPS[gs.currentMap].name;
-      document.getElementById('cmd-pos').textContent = `(${gs.playerPos.x.toFixed(1)}, ${gs.playerPos.y.toFixed(1)})`;
-      document.getElementById('cmd-map-num').textContent = `J${gs.currentMap + 1}`;
+      const mapNameEl = document.getElementById('cmd-map-name');
+      if (mapNameEl) mapNameEl.textContent = MAPS[gs.currentMap].name;
+      const mapLabelEl = document.getElementById('cmd-map-name-label');
+      if (mapLabelEl) mapLabelEl.textContent = gs.currentMap + 1;
+      const cmdPosEl = document.getElementById('cmd-pos');
+      if (cmdPosEl) cmdPosEl.textContent = `(${gs.playerPos.x.toFixed(1)}, ${gs.playerPos.y.toFixed(1)})`;
+      const cmdMapNumEl = document.getElementById('cmd-map-num');
+      if (cmdMapNumEl) cmdMapNumEl.textContent = gs.currentMap + 1;
+      // Mise a jour du hud-pos dans le panneau gauche
+      const hudPosEl = document.getElementById('hud-pos');
+      if (hudPosEl) hudPosEl.textContent = `(${gs.playerPos.x.toFixed(1)}, ${gs.playerPos.y.toFixed(1)})`;
       renderDeck();
       updateHealthDisplay();
+      // Afficher bottom-left si deck non vide
+      const bottomLeft = document.getElementById('bottom-left');
+      if (bottomLeft) bottomLeft.classList.toggle('has-content', gs.deck.length > 0);
       drawPreview();
     }
 
     function updateHealthDisplay() {
       const hp = gameState.health, max = gameState.maxHealth;
       const dots = Array.from({length: max}, (_, i) => i < hp ? '●' : '○').join('');
-      ['hud-health-dots', 'cmd-health'].forEach(id => {
+      ['hud-health-dots', 'cmd-health', 'hud-health'].forEach(id => {
         const el = document.getElementById(id); if (el) el.textContent = dots;
       });
     }
@@ -1652,7 +1826,11 @@
       document.getElementById('screen-menu').style.display = 'none';
       document.getElementById('screen-gameover').style.display = 'none';
       document.getElementById('screen-win').style.display = 'none';
-      document.getElementById('btn-back-cmd').disabled = false;
+      const btnBack = document.getElementById('btn-back-cmd');
+      if (btnBack) btnBack.disabled = false;
+      // Afficher le layout split-screen
+      const layout = document.getElementById('game-layout');
+      if (layout) layout.style.display = 'flex';
       closeSettings();
       showGear(true);
       initParticles();
@@ -1843,8 +2021,9 @@
       ctx.fillStyle = fog; ctx.fillRect(0, 0, W, H);
 
       // ── HUD ───────────────────────────────────────────────────────
-      document.getElementById('hud-pos').textContent =
-        `POS: (${pp.x.toFixed(1)}, ${pp.y.toFixed(1)})  Vecteur: (${lv.x}, ${lv.y})`;
+      const hudPosEl = document.getElementById('hud-pos');
+      if (hudPosEl) hudPosEl.textContent =
+        `(${pp.x.toFixed(1)}, ${pp.y.toFixed(1)})`;
       updateHealthDisplay();
 
       if (gameState.mode !== 'menu') requestAnimationFrame(renderLoop);
@@ -1933,6 +2112,8 @@
       document.getElementById('btn-go-menu').onclick = () => {
         document.getElementById('screen-gameover').style.display = 'none';
         document.getElementById('screen-menu').style.display = 'flex';
+        const layout = document.getElementById('game-layout');
+        if (layout) layout.style.display = 'none';
         gameState.mode = 'menu'; showGear(false); closeSettings(); renderMenu();
       };
 
@@ -1948,6 +2129,8 @@
       document.getElementById('btn-win-menu').onclick = () => {
         document.getElementById('screen-win').style.display = 'none';
         document.getElementById('screen-menu').style.display = 'flex';
+        const layout = document.getElementById('game-layout');
+        if (layout) layout.style.display = 'none';
         gameState.mode = 'menu'; showGear(false); closeSettings(); renderMenu();
       };
 
@@ -1991,6 +2174,8 @@
         document.getElementById('screen-gameover').style.display = 'none';
         document.getElementById('screen-win').style.display = 'none';
         document.getElementById('screen-menu').style.display = 'flex';
+        const layout = document.getElementById('game-layout');
+        if (layout) layout.style.display = 'none';
         gameState.mode = 'menu'; showGear(false); renderMenu();
       };
 

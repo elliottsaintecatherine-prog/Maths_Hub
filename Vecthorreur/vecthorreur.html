@@ -113,10 +113,9 @@
       border-top: 1px solid #3d281022;
       padding: 8px 0;
       z-index: 1;
-      display: none;
+      display: block;
       margin-top: 8px;
     }
-    #bottom-left.has-content { display: block; }
 
 
 
@@ -538,6 +537,50 @@
     .result-card .rc-badge { color: #00ff44; font-size: 1.4rem; margin-bottom: 6px; }
     .result-card .rc-badge.lose { color: #ff4444; }
 
+    /* Screamer monstre */
+    #screamer {
+      display: none;
+      position: fixed; inset: 0; z-index: 9999;
+      background: #000;
+      flex-direction: column; align-items: center; justify-content: center;
+      animation: screamer-flash 0.85s ease-out forwards;
+    }
+    #screamer-face {
+      font-size: clamp(8rem, 30vw, 18rem);
+      animation: screamer-zoom 0.85s ease-out forwards;
+      filter: drop-shadow(0 0 40px #ff0000) drop-shadow(0 0 80px #880000);
+      line-height: 1;
+    }
+    #screamer-text {
+      font-family: 'Creepster', cursive;
+      font-size: clamp(2rem, 8vw, 4rem);
+      color: #ff2222;
+      letter-spacing: 6px;
+      text-shadow: 0 0 20px #ff0000, 0 0 50px #ff0000;
+      animation: screamer-text-pop 0.85s ease-out forwards;
+      margin-top: 16px;
+    }
+    @keyframes screamer-flash {
+      0%   { background: #ff0000; }
+      8%   { background: #000; }
+      16%  { background: #cc0000; }
+      30%  { background: #050000; }
+      100% { background: #000; }
+    }
+    @keyframes screamer-zoom {
+      0%   { transform: scale(0.2) rotate(-8deg); opacity: 0; }
+      15%  { transform: scale(1.25) rotate(4deg); opacity: 1; }
+      40%  { transform: scale(0.95) rotate(-2deg); }
+      60%  { transform: scale(1.05) rotate(1deg); }
+      100% { transform: scale(1) rotate(0deg); }
+    }
+    @keyframes screamer-text-pop {
+      0%,20% { opacity: 0; transform: scaleX(2); }
+      35%    { opacity: 1; transform: scaleX(1); }
+      80%    { opacity: 1; }
+      100%   { opacity: 0.6; }
+    }
+
     @keyframes glitch {
       0%, 90%, 100% {
         text-shadow: 0 0 30px #00ffff, 0 0 60px #ff00ff;
@@ -628,6 +671,12 @@
     </div>
   </div>
 
+  <!-- SCREAMER monstre -->
+  <div id="screamer">
+    <div id="screamer-face">👹</div>
+    <div id="screamer-text">IL EST LÀ !!!</div>
+  </div>
+
   <!-- PASSAGE DE TOUR (multijoueur) -->
   <div class="screen" id="screen-player-switch" style="display:none;">
     <div class="win-title" id="switch-title">Joueur 1 a terminé !</div>
@@ -707,6 +756,7 @@
 
       <!-- Zone deck + actions -->
       <div id="bottom-left">
+        <div id="exits-info" style="font-size:11px;color:#f5d070;font-family:Georgia,serif;font-style:italic;margin-bottom:8px;line-height:1.7;"></div>
         <div style="font-size:10px;color:#a0785066;letter-spacing:2px;margin-bottom:6px;font-family:Georgia,serif;font-style:italic;">─── Parchemins de Vecteurs ───</div>
         <div class="deck-area" id="deck-area"><span style="color:#a0785033;font-size:12px;font-style:italic;">Vide</span></div>
         <div class="math-actions" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
@@ -1507,6 +1557,20 @@
         pctx.fillText(`(${ecx},${ecy})`, ex0, ey0 - 5);
         pctx.restore();
       });
+      // Monstre — point rouge
+      const mp0 = gameState.monsterPos;
+      const mpx = wx(mp0.x), mpy = wy(mp0.y);
+      pctx.save();
+      pctx.shadowBlur = 8; pctx.shadowColor = '#ff0000';
+      pctx.fillStyle = '#cc0000';
+      pctx.beginPath(); pctx.arc(mpx, mpy, 4, 0, Math.PI*2); pctx.fill();
+      pctx.strokeStyle = '#ff4444'; pctx.lineWidth = 1.5;
+      pctx.stroke();
+      // Petit reflet
+      pctx.shadowBlur = 0;
+      pctx.fillStyle = 'rgba(255,255,255,0.6)';
+      pctx.beginPath(); pctx.arc(mpx - 1.2, mpy - 1.2, 1, 0, Math.PI*2); pctx.fill();
+      pctx.restore();
       // Player dot (position absolue)
       const ppx = wx(pp0.x), ppy = wy(pp0.y);
       pctx.beginPath(); pctx.arc(ppx, ppy, 4, 0, Math.PI*2);
@@ -1599,7 +1663,7 @@
         gameState.playerPos.x - gameState.monsterPos.x,
         gameState.playerPos.y - gameState.monsterPos.y
       );
-      if (distAfter < 1.5) gameOver();
+      if (distAfter < 1.5) gameOver(true);
     }
 
     function monsterMove() {
@@ -1669,25 +1733,48 @@
     }
 
     // ===================== GAME OVER / WIN =====================
-    function gameOver() {
+    function showScreamer(callback) {
+      const el = document.getElementById('screamer');
+      el.style.display = 'flex';
+      // Force reflow pour relancer l'animation à chaque fois
+      void el.offsetWidth;
+      el.style.animation = 'none';
+      el.querySelector('#screamer-face').style.animation = 'none';
+      el.querySelector('#screamer-text').style.animation = 'none';
+      void el.offsetWidth;
+      el.style.animation = 'screamer-flash 0.85s ease-out forwards';
+      el.querySelector('#screamer-face').style.animation = 'screamer-zoom 0.85s ease-out forwards';
+      el.querySelector('#screamer-text').style.animation = 'screamer-text-pop 0.85s ease-out forwards';
+      setTimeout(() => {
+        el.style.display = 'none';
+        callback();
+      }, 900);
+    }
+
+    function gameOver(byMonster = false) {
       clearInterval(monsterTimer); monsterTimer = null;
-      playSound('death');
       gameState.mode = 'gameover';
       closeOverlay();
-      if (gameState.gameMode === 'multi' && gameState.playerTurn === 1) {
-        // Player 1 lost — pass to player 2
-        gameState.playerResults[0] = { player: 1, won: false, moves: gameState.moveCount, health: gameState.health };
-        document.getElementById('switch-title').textContent = 'Joueur 1 — Éliminé !';
-        document.getElementById('switch-result').textContent = `${gameState.moveCount} déplacement(s) avant la défaite.`;
-        document.getElementById('screen-player-switch').style.display = 'flex';
-      } else if (gameState.gameMode === 'multi' && gameState.playerTurn === 2) {
-        // Both done — show results
-        gameState.playerResults[1] = { player: 2, won: false, moves: gameState.moveCount, health: gameState.health };
-        showResults();
+      function showOutcome() {
+        if (gameState.gameMode === 'multi' && gameState.playerTurn === 1) {
+          gameState.playerResults[0] = { player: 1, won: false, moves: gameState.moveCount, health: gameState.health };
+          document.getElementById('switch-title').textContent = 'Joueur 1 — Éliminé !';
+          document.getElementById('switch-result').textContent = `${gameState.moveCount} déplacement(s) avant la défaite.`;
+          document.getElementById('screen-player-switch').style.display = 'flex';
+        } else if (gameState.gameMode === 'multi' && gameState.playerTurn === 2) {
+          gameState.playerResults[1] = { player: 2, won: false, moves: gameState.moveCount, health: gameState.health };
+          showResults();
+        } else {
+          document.getElementById('go-pos').textContent = `Position finale : (${gameState.playerPos.x.toFixed(1)}, ${gameState.playerPos.y.toFixed(1)})`;
+          document.getElementById('go-moves').textContent = `Déplacements : ${gameState.moveCount}`;
+          document.getElementById('screen-gameover').style.display = 'flex';
+        }
+      }
+      if (byMonster) {
+        showScreamer(() => { playSound('death'); showOutcome(); });
       } else {
-        document.getElementById('go-pos').textContent = `Position finale : (${gameState.playerPos.x.toFixed(1)}, ${gameState.playerPos.y.toFixed(1)})`;
-        document.getElementById('go-moves').textContent = `Déplacements : ${gameState.moveCount}`;
-        document.getElementById('screen-gameover').style.display = 'flex';
+        playSound('death');
+        showOutcome();
       }
     }
 
@@ -1815,9 +1902,17 @@
       if (hudPosEl) hudPosEl.textContent = `(${gs.playerPos.x.toFixed(1)}, ${gs.playerPos.y.toFixed(1)})`;
       renderDeck();
       updateHealthDisplay();
-      // Afficher bottom-left si deck non vide
-      const bottomLeft = document.getElementById('bottom-left');
-      if (bottomLeft) bottomLeft.classList.toggle('has-content', gs.deck.length > 0);
+      // Coordonnées des sorties
+      const exitsInfoEl = document.getElementById('exits-info');
+      if (exitsInfoEl) {
+        const exits = MAPS[gs.currentMap].exits;
+        exitsInfoEl.innerHTML = exits.map((e, i) => {
+          const cx = ((e.x1 + e.x2) / 2).toFixed(0);
+          const cy = ((e.y1 + e.y2) / 2).toFixed(0);
+          const icon = i === 0 ? '🚪' : '🔑';
+          return `<span style="color:${i===0?'#ffdd44':'#ff9900'}">${icon} Sortie ${i+1} : (${cx}, ${cy})</span>`;
+        }).join('<br>');
+      }
       drawPreview();
     }
 
@@ -1881,7 +1976,7 @@
         gameState.monsterPos = {...pM};
         await animateMonster(pM, nM, 300);
         gameState.monsterPos = {...nM};
-        if (Math.hypot(gameState.playerPos.x - gameState.monsterPos.x, gameState.playerPos.y - gameState.monsterPos.y) < 1.5) { gameOver(); return; }
+        if (Math.hypot(gameState.playerPos.x - gameState.monsterPos.x, gameState.playerPos.y - gameState.monsterPos.y) < 1.5) { gameOver(true); return; }
         gameState.mode = 'idle';
         setAllDisabled(false);
         document.getElementById('btn-back-cmd').disabled = false;
@@ -1904,7 +1999,7 @@
       gameState.monsterPos = {...newMonster};
       const mdx = gameState.playerPos.x - gameState.monsterPos.x;
       const mdy = gameState.playerPos.y - gameState.monsterPos.y;
-      if (Math.sqrt(mdx*mdx + mdy*mdy) < 1.5) { gameOver(); return; }
+      if (Math.sqrt(mdx*mdx + mdy*mdy) < 1.5) { gameOver(true); return; }
       gameState.mode = 'idle';
       setAllDisabled(false);
       document.getElementById('btn-back-cmd').disabled = false;
@@ -1950,7 +2045,7 @@
         await animateMonster(prevM, newM, 300);
         gameState.monsterPos = {...newM};
         const md = Math.hypot(gameState.playerPos.x - gameState.monsterPos.x, gameState.playerPos.y - gameState.monsterPos.y);
-        if (md < 1.5) { gameOver(); return; }
+        if (md < 1.5) { gameOver(true); return; }
         gameState.mode = 'idle';
         setAllDisabled(false);
         document.getElementById('btn-back-cmd').disabled = false;

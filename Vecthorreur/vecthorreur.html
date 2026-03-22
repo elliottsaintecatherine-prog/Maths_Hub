@@ -2243,17 +2243,9 @@
         const cx = handPt.sx, cy = handPt.sy;
         const haloR = 160 * (0.88 + 0.12 * Math.sin(ts * 0.009));
         darkCtx.clearRect(0, 0, W, H);
-        darkCtx.fillStyle = 'rgba(0,0,0,0.80)';
+        darkCtx.fillStyle = 'rgba(0,0,0,0.70)';
         darkCtx.fillRect(0, 0, W, H);
         darkCtx.globalCompositeOperation = 'destination-out';
-        torchPositions.forEach(({ sx: tx, sy: ty, idx }) => {
-          const tr = 110 + 20 * Math.sin(ts * 0.005 + idx * 1.3);
-          const tg = darkCtx.createRadialGradient(tx, ty, 0, tx, ty, tr);
-          tg.addColorStop(0, 'rgba(0,0,0,0.75)');
-          tg.addColorStop(1, 'rgba(0,0,0,0)');
-          darkCtx.fillStyle = tg;
-          darkCtx.beginPath(); darkCtx.arc(tx, ty, tr, 0, Math.PI * 2); darkCtx.fill();
-        });
         const cg = darkCtx.createRadialGradient(cx, cy, 0, cx, cy, haloR);
         cg.addColorStop(0, 'rgba(0,0,0,0.95)');
         cg.addColorStop(0.45, 'rgba(0,0,0,0.60)');

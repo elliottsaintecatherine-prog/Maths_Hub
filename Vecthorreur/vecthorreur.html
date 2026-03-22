@@ -1295,6 +1295,56 @@
       return { sx: W / 2 + cx * s, sy: H / 2 - cy * s, depth: cz };
     }
 
+    // Classify obstacle type from label
+    function obsType(label) {
+      const l = (label || '').toUpperCase();
+      if (/COLONNE|ESCALIER|MUR|SAS|CLOISON|S[ÉE]RAC|PASSAGE/.test(l)) return 'mur';
+      if (/BIBLIOTH[ÈE]QUE|ARMOIRE|PIANO|WAGON/.test(l)) return 'meuble';
+      return 'decoration'; // cheminée, sarcophage, roncier, candélabre…
+    }
+    function dzType(label) {
+      const l = (label || '').toUpperCase();
+      if (/BRASERO|ACIDE|CORROMPUE|ABYSSAL|GEYSER|PIXEL/.test(l)) return 'piege';
+      return 'trou'; // trappe, puits, crevasse, fosse…
+    }
+    // Floor polygon type visual styles
+    const FLOOR_STYLE = {
+      mur:        { fill:'rgba(110,130,160,0.14)', stroke:'rgba(145,170,205,0.55)', tag:'MUR'    },
+      meuble:     { fill:'rgba(145,105, 50,0.14)', stroke:'rgba(195,150, 80,0.55)', tag:'MEUBLE' },
+      decoration: { fill:'rgba(155, 85, 35,0.14)', stroke:'rgba(205,125, 65,0.55)', tag:'DÉCOR'  },
+      piege:      { fill:'rgba(210, 75,  0,0.18)', stroke:'rgba(255,115,  0,0.65)', tag:'PIÈGE'  },
+      trou:       { fill:'rgba( 95,  0,  0,0.22)', stroke:'rgba(165,  0,  0,0.65)', tag:'TROU'   },
+      sortie:     { fill:'rgba( 45,165, 60,0.15)', stroke:'rgba( 75,215, 90,0.60)', tag:'SORTIE' },
+      salle:      { fill:null,                      stroke:'rgba(185,160,115,0.18)', tag:null     },
+    };
+    // Draw a filled+stroked floor rectangle with optional type label
+    function drawFloorPoly(x1, y1, x2, y2, fillRGBA, strokeRGBA, label) {
+      const p = [
+        project(x1, y1, 0.015), project(x2, y1, 0.015),
+        project(x2, y2, 0.015), project(x1, y2, 0.015)
+      ];
+      if (p.some(pt => !pt)) return;
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(p[0].sx, p[0].sy);
+      for (let i = 1; i < 4; i++) ctx.lineTo(p[i].sx, p[i].sy);
+      ctx.closePath();
+      if (fillRGBA)   { ctx.fillStyle   = fillRGBA; ctx.fill(); }
+      if (strokeRGBA) { ctx.strokeStyle = strokeRGBA; ctx.lineWidth = 1.2; ctx.stroke(); }
+      if (label) {
+        const cx = (p[0].sx + p[1].sx + p[2].sx + p[3].sx) / 4;
+        const cy = (p[0].sy + p[1].sy + p[2].sy + p[3].sy) / 4;
+        const avgD = (p[0].depth + p[1].depth + p[2].depth + p[3].depth) / 4;
+        const fs = Math.max(6, Math.min(11, 110 / avgD));
+        ctx.fillStyle = strokeRGBA || fillRGBA;
+        ctx.font = `${fs}px monospace`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.shadowBlur = 0;
+        ctx.fillText(label, cx, cy);
+      }
+      ctx.restore();
+    }
+
     // Draw a projected polygon; skips silently if any vertex is null (behind camera).
     function drawFace3D(pts, color, strokeC) {
       if (pts.some(p => !p)) return;
@@ -2392,6 +2442,30 @@
       }
       ctx.restore();
 
+
+      // ── Marquages au sol : salles / types d'objets ───────────────
+      // Contours de salles (si définies sur la map)
+      if (map.rooms) {
+        map.rooms.forEach(rm => {
+          const s = FLOOR_STYLE.salle;
+          drawFloorPoly(rm.x1, rm.y1, rm.x2, rm.y2, s.fill, s.stroke, rm.name);
+        });
+      }
+      // Obstacles — couleur selon type (MUR / MEUBLE / DÉCOR)
+      map.obstacles.forEach(obs => {
+        const s = FLOOR_STYLE[obsType(obs.label)];
+        drawFloorPoly(obs.x1, obs.y1, obs.x2, obs.y2, s.fill, s.stroke, s.tag);
+      });
+      // Zones de mort — PIÈGE ou TROU
+      map.deathZones.forEach(dz => {
+        const s = FLOOR_STYLE[dzType(dz.label)];
+        drawFloorPoly(dz.x1, dz.y1, dz.x2, dz.y2, s.fill, s.stroke, s.tag);
+      });
+      // Sorties
+      exits.forEach(exit => {
+        const s = FLOOR_STYLE.sortie;
+        drawFloorPoly(exit.x1, exit.y1, exit.x2, exit.y2, s.fill, s.stroke, s.tag);
+      });
 
       // ── Build depth-sorted render queue ──────────────────────────
       function cDist(x1, y1, x2, y2) {

@@ -10,7 +10,7 @@
 
     html, body {
       width: 100%; height: 100%; overflow: hidden;
-      background: #04050a;
+      background: #0a0806;
       font-family: 'Courier New', monospace;
     }
 
@@ -25,8 +25,8 @@
     #col-left {
       width: 50%; height: 100%;
       position: relative;
-      background: #04050a;
-      border-right: 1px solid #00ffff33;
+      background: #0a0806;
+      border-right: 1px solid #3d281033;
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -36,7 +36,7 @@
     #col-right {
       width: 50%; height: 100%;
       position: relative;
-      background: #060810;
+      background: #0a0806;
       overflow: hidden;
     }
 
@@ -47,10 +47,11 @@
       height: 40px;
       display: flex; align-items: center; justify-content: center;
       font-size: 11px; letter-spacing: 2px;
-      border-top: 1px solid #00ffff22;
-      background: #04050a;
-      color: #00ffff66;
+      border-top: 1px solid #3d281022;
+      background: #0a0806;
+      color: #a0785066;
       text-transform: uppercase;
+      font-family: Georgia, serif; font-style: italic;
       z-index: 5;
     }
 
@@ -59,11 +60,11 @@
       position: absolute;
       top: 12px; left: 12px;
       z-index: 20;
-      background: rgba(4,5,10,0.88);
-      border: 1px solid #00ffff44;
+      background: rgba(20,12,6,0.93);
+      border: 1px solid #5a3d1a;
       padding: 10px 14px;
       min-width: 200px;
-      box-shadow: 0 0 20px rgba(0,255,255,0.08);
+      box-shadow: 0 0 30px rgba(255,140,0,0.1), inset 0 0 30px rgba(0,0,0,0.4);
     }
 
     #ui-panel::before {
@@ -71,15 +72,17 @@
       position: absolute; inset: 0; pointer-events: none;
       background: repeating-linear-gradient(
         0deg, transparent 0px, transparent 3px,
-        rgba(0,255,255,0.013) 3px, rgba(0,255,255,0.013) 4px
+        rgba(90,61,26,0.06) 3px, rgba(90,61,26,0.06) 4px
       );
     }
 
     .ui-panel-title {
-      font-size: 10px; letter-spacing: 1.5px;
-      color: #00ffff; margin-bottom: 8px;
-      border-bottom: 1px solid #00ffff22; padding-bottom: 6px;
+      font-size: 11px; letter-spacing: 1.5px;
+      color: #c8a882; margin-bottom: 8px;
+      border-bottom: 1px solid #3d281033; padding-bottom: 6px;
       white-space: nowrap;
+      font-family: Georgia, serif; font-style: italic;
+      text-shadow: 0 0 8px rgba(255,140,0,0.25);
     }
 
     .ui-row {
@@ -88,32 +91,32 @@
     }
 
     .ui-label {
-      font-size: 10px; color: #00ffff88; letter-spacing: 1px;
+      font-size: 10px; color: #a07850; letter-spacing: 1px;
       white-space: nowrap;
     }
 
     /* ── Labels 3D dans la vue droite ── */
     .label-3d {
       position: absolute;
-      font-size: 10px; letter-spacing: 1.5px; color: #00ffff;
-      background: rgba(0,0,0,0.5);
+      font-size: 10px; letter-spacing: 1.5px; color: #c8a882;
+      background: rgba(10,6,3,0.72);
       padding: 2px 6px; pointer-events: none;
-      border-left: 2px solid #00ffff;
-      font-family: 'Courier New', monospace;
+      border-left: 2px solid #5a3d1a;
+      font-family: Georgia, serif; font-style: italic;
     }
-    #label-map    { top: 8px; right: 12px; color: #ff00ff; border-color: #ff00ff; font-size: 11px; }
-    #label-view   { bottom: 48px; right: 12px; color: #00ffff88; border: none; font-size: 9px; }
-    #label-trou   { top: 55%; right: 16px; }
-    #label-carcasse { top: 18%; right: 12px; color: #ff00ff66; border-color: #ff00ff44; }
+    #label-map    { top: 8px; right: 12px; color: #c8a882; border-color: #8a6a2a; font-size: 11px; }
+    #label-view   { bottom: 48px; right: 12px; color: #a0785055; border: none; font-size: 9px; font-style: italic; }
+    #label-trou   { top: 55%; right: 16px; color: #cc4400; border-color: #8a3000; }
+    #label-carcasse { top: 18%; right: 12px; color: #c8a88266; border-color: #5a3d1a44; }
 
     /* ── HUD bas droite minimal ── */
     #hud-neo {
       position: absolute;
       bottom: 48px; left: 8px;
       display: flex; gap: 16px; align-items: center;
-      font-size: 11px; color: #00ffff66;
+      font-size: 12px; color: #a0785066;
       z-index: 10; pointer-events: none;
-      font-family: 'Courier New', monospace;
+      font-family: Georgia, serif;
     }
 
     /* ── Zone deck + actions (bas colonne gauche) ── */
@@ -122,8 +125,8 @@
       bottom: 40px; left: 0; right: 0;
       max-height: 35%;
       overflow-y: auto;
-      background: rgba(4,5,10,0.92);
-      border-top: 1px solid #00ffff22;
+      background: rgba(14,8,4,0.94);
+      border-top: 1px solid #3d281022;
       padding: 8px 12px;
       z-index: 15;
       display: none;
@@ -143,51 +146,52 @@
     #btn-gear {
       position: fixed; top: 8px; right: 8px; z-index: 1000;
       width: 36px; height: 36px;
-      background: #0a0a0fcc; color: #00ffff;
-      border: 1px solid #00ffff44;
+      background: rgba(14,8,4,0.82); color: #a07850;
+      border: 1px solid #5a3d1a44;
       font-size: 18px; cursor: pointer; display: none;
       align-items: center; justify-content: center;
       transition: border-color 0.2s, box-shadow 0.2s;
     }
-    #btn-gear:hover { border-color: #00ffff; box-shadow: 0 0 10px #00ffff44; }
+    #btn-gear:hover { border-color: #8a6a2a; box-shadow: 0 0 10px rgba(255,140,0,0.25); }
     #btn-gear.visible { display: flex; }
 
     /* Panneau de réglages */
     #settings-panel {
       position: fixed; top: 0; right: 0; z-index: 999;
       width: 280px; height: 100vh;
-      background: #0a0a0f; border-left: 1px solid #00ffff33;
-      font-family: 'Courier New', monospace; color: #00ffff;
+      background: #0e0906; border-left: 1px solid #3d281033;
+      font-family: Georgia, serif; color: #c8a882;
       padding: 20px 20px 20px;
       display: flex; flex-direction: column; gap: 18px;
       transform: translateX(100%);
       transition: transform 300ms ease-in-out;
-      box-shadow: -10px 0 30px rgba(0,0,0,0.6);
+      box-shadow: -10px 0 30px rgba(0,0,0,0.7);
     }
     #settings-panel.open { transform: translateX(0); }
     #settings-panel::before {
       content: ''; position: absolute; inset: 0; pointer-events: none;
       background: repeating-linear-gradient(
         0deg, transparent 0px, transparent 2px,
-        rgba(0,255,255,0.01) 2px, rgba(0,255,255,0.01) 4px
+        rgba(90,61,26,0.04) 2px, rgba(90,61,26,0.04) 4px
       );
     }
     .settings-title {
-      font-size: 13px; letter-spacing: 2px; color: #00ffff;
-      border-bottom: 1px solid #00ffff22; padding-bottom: 10px;
+      font-size: 13px; letter-spacing: 2px; color: #c8a882;
+      border-bottom: 1px solid #3d281033; padding-bottom: 10px;
       display: flex; justify-content: space-between; align-items: center;
+      font-style: italic;
     }
     .settings-close {
-      background: transparent; border: none; color: #00ffff88;
+      background: transparent; border: none; color: #a0785088;
       font-size: 18px; cursor: pointer; padding: 0 4px; line-height: 1;
     }
-    .settings-close:hover { color: #00ffff; }
-    .settings-section { font-size: 10px; letter-spacing: 2px; color: #00ffff44; margin-bottom: -8px; }
+    .settings-close:hover { color: #c8a882; }
+    .settings-section { font-size: 10px; letter-spacing: 2px; color: #a0785044; margin-bottom: -8px; }
     .settings-row {
       display: flex; align-items: center; justify-content: space-between; gap: 10px;
     }
-    .settings-label { font-size: 12px; color: #00ffff88; }
-    .settings-divider { border: none; border-top: 1px solid #00ffff11; margin: 0; }
+    .settings-label { font-size: 12px; color: #a07850; }
+    .settings-divider { border: none; border-top: 1px solid #3d281022; margin: 0; }
     /* Toggle switch */
     .toggle-switch {
       position: relative; width: 40px; height: 22px; cursor: pointer;
@@ -195,44 +199,44 @@
     .toggle-switch input { opacity: 0; width: 0; height: 0; }
     .toggle-track {
       position: absolute; inset: 0; border-radius: 11px;
-      background: #222; border: 1px solid #00ffff33;
+      background: #1a0f06; border: 1px solid #3d281033;
       transition: background 0.2s;
     }
     .toggle-thumb {
       position: absolute; top: 3px; left: 3px;
       width: 14px; height: 14px; border-radius: 50%;
-      background: #00ffff44;
+      background: #5a3d1a;
       transition: transform 0.2s, background 0.2s;
     }
-    .toggle-switch input:checked + .toggle-track { background: #003333; border-color: #00ffff; }
+    .toggle-switch input:checked + .toggle-track { background: #2a1a08; border-color: #8a6a2a; }
     .toggle-switch input:checked + .toggle-track + .toggle-thumb,
-    .toggle-switch input:checked ~ .toggle-thumb { background: #00ffff; transform: translateX(18px); }
+    .toggle-switch input:checked ~ .toggle-thumb { background: #c8a050; transform: translateX(18px); }
     /* Volume slider */
     .vol-slider {
       -webkit-appearance: none; appearance: none;
       width: 120px; height: 4px; border-radius: 2px;
-      background: #00ffff22; outline: none; cursor: pointer;
+      background: #3d281022; outline: none; cursor: pointer;
     }
     .vol-slider::-webkit-slider-thumb {
       -webkit-appearance: none; width: 14px; height: 14px;
-      border-radius: 50%; background: #00ffff; cursor: pointer;
-      box-shadow: 0 0 6px #00ffff66;
+      border-radius: 50%; background: #c8a050; cursor: pointer;
+      box-shadow: 0 0 6px rgba(200,160,80,0.4);
     }
     .vol-slider::-moz-range-thumb {
       width: 14px; height: 14px; border-radius: 50%;
-      background: #00ffff; cursor: pointer; border: none;
+      background: #c8a050; cursor: pointer; border: none;
     }
-    .vol-value { font-size: 11px; color: #00ffff66; width: 28px; text-align: right; }
+    .vol-value { font-size: 11px; color: #a0785066; width: 28px; text-align: right; }
     /* Boutons dans le panneau */
     .btn-settings-action {
-      background: #111; color: #00ffff; border: 1px solid #00ffff33;
-      font-family: 'Courier New', monospace; padding: 9px 14px;
-      cursor: pointer; font-size: 12px; text-align: left;
+      background: #120c06; color: #a07850; border: 1px solid #3d281033;
+      font-family: Georgia, serif; padding: 9px 14px;
+      cursor: pointer; font-size: 12px; text-align: left; font-style: italic;
       transition: background 0.15s, border-color 0.15s; width: 100%;
     }
-    .btn-settings-action:hover { background: #002222; border-color: #00ffff; }
-    .btn-settings-action.danger { border-color: #ff444433; color: #ff6666; }
-    .btn-settings-action.danger:hover { background: #220000; border-color: #ff4444; }
+    .btn-settings-action:hover { background: #1a1008; border-color: #5a3d1a; }
+    .btn-settings-action.danger { border-color: #5a1a0833; color: #cc6644; }
+    .btn-settings-action.danger:hover { background: #1a0806; border-color: #8a3010; }
 
     #mode-indicator { display: none !important; }
 
@@ -245,27 +249,28 @@
     .vec-input-group { display: flex; flex-direction: column; gap: 4px; }
     .vec-input-group label { font-size: 10px; color: #00ffff88; letter-spacing: 1px; }
     .vec-input-group input {
-      width: 52px; background: #0a0a1a; border: 1px solid #00ffff44;
-      color: #00ffff; font-family: 'Courier New', monospace; font-size: 15px;
+      width: 52px; background: #0a0603; border: 1px solid #5a3d1a;
+      color: #e8c896; font-family: 'Courier New', monospace; font-size: 15px;
       padding: 4px 6px; text-align: center;
       -moz-appearance: textfield;
     }
     .vec-input-group input::-webkit-outer-spin-button,
     .vec-input-group input::-webkit-inner-spin-button { -webkit-appearance: none; }
-    .vec-input-group input:focus { outline: none; border-color: #00ffff; box-shadow: 0 0 8px #00ffff44; }
+    .vec-input-group input:focus { outline: none; border-color: #8a6a2a; box-shadow: 0 0 8px rgba(255,140,0,0.2); }
 
-    /* Bouton EXÉCUTER néon */
+    /* Bouton EXÉCUTER manoir */
     .btn-execute-neo {
-      background: linear-gradient(135deg, #001a1a, #003333);
-      color: #00ffff; border: 1px solid #00ffff;
-      font-family: 'Courier New', monospace; padding: 6px 14px;
-      cursor: pointer; font-size: 12px; font-weight: bold;
-      letter-spacing: 2px;
+      background: #1a0f06;
+      color: #c8a882; border: 1px solid #5a3d1a;
+      font-family: Georgia, serif; padding: 7px 14px;
+      cursor: pointer; font-size: 12px; font-weight: bold; font-style: italic;
+      letter-spacing: 1px;
       transition: background 0.2s, box-shadow 0.2s;
       white-space: nowrap;
     }
     .btn-execute-neo:hover:not(:disabled) {
-      background: #003333; box-shadow: 0 0 14px #00ffff88;
+      background: #2a1a0a; box-shadow: 0 0 14px rgba(255,140,0,0.25);
+      border-color: #8a6a2a;
     }
     .btn-execute-neo:disabled { opacity: 0.3; cursor: not-allowed; }
 
@@ -279,14 +284,14 @@
     }
 
     .btn-hacker {
-      background: #111; color: #00ffff; border: 1px solid #00ffff;
+      background: #120c06; color: #a07850; border: 1px solid #3d2810;
       font-family: 'Courier New', monospace; padding: 8px 16px;
       cursor: pointer; transition: background 0.2s, box-shadow 0.2s;
       font-size: 13px;
     }
-    .btn-hacker:hover:not(:disabled) { background: #002222; box-shadow: 0 0 10px #00ffff66; }
+    .btn-hacker:hover:not(:disabled) { background: #1a1008; border-color: #5a3d1a; box-shadow: 0 0 8px rgba(255,140,0,0.15); }
     .btn-hacker:disabled { opacity: 0.3; cursor: not-allowed; }
-    .btn-hacker:active:not(:disabled) { background: #003333; }
+    .btn-hacker:active:not(:disabled) { background: #2a1a08; }
 
     .btn-execute {
       background: #110011; color: #ff00ff; border: 1px solid #ff00ff;
@@ -297,21 +302,21 @@
     .btn-execute:hover:not(:disabled) { background: #220022; box-shadow: 0 0 15px #ff00ff66; }
     .btn-execute:disabled { opacity: 0.3; cursor: not-allowed; }
 
-    #message-zone { font-size: 12px; color: #ff4444; min-height: 16px; }
+    #message-zone { font-size: 12px; color: #cc3300; min-height: 16px; font-style: italic; font-family: Georgia, serif; text-shadow: 0 0 6px rgba(200,50,0,0.35); }
 
     .deck-area { display: flex; flex-wrap: wrap; gap: 6px; }
     .btn-deck {
-      background: #110011; color: #ff00ff; border: 1px solid #ff00ff44;
+      background: #120c06; color: #a07850; border: 1px solid #3d281044;
       font-family: 'Courier New', monospace; padding: 5px 10px;
       cursor: pointer; font-size: 12px; transition: all 0.15s;
     }
-    .btn-deck:hover { border-color: #ff00ff; box-shadow: 0 0 6px #ff00ff44; }
-    .btn-deck.selected { background: #220022; border-color: #ff00ff; box-shadow: 0 0 8px #ff00ff66; }
+    .btn-deck:hover { background: #1a1008; border-color: #5a3d1a; }
+    .btn-deck.selected { background: #2a1a08; border-color: #8a6a2a; box-shadow: 0 0 6px rgba(255,140,0,0.2); }
 
     .math-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
     .scalar-input {
-      width: 60px; background: #111; border: 1px solid #00ffff44;
-      color: #00ffff; font-family: 'Courier New', monospace; font-size: 14px;
+      width: 60px; background: #0a0603; border: 1px solid #3d281044;
+      color: #e8c896; font-family: 'Courier New', monospace; font-size: 14px;
       padding: 5px 8px; text-align: center;
       -moz-appearance: textfield;
     }
@@ -330,15 +335,16 @@
     }
 
     #hud-bottom { display: none !important; }
-    #hud-pos { color: #00ffff; font-size: 13px; font-weight: bold; }
+    #hud-pos { color: #e8c896; font-size: 13px; font-weight: bold; font-family: Georgia, serif; }
     #hud-health { display: flex; gap: 4px; }
     #btn-back-cmd { display: none !important; }
 
     #vec-overlay {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      font-size: 3rem; color: #ff00ff; font-family: 'Courier New', monospace;
-      text-shadow: 0 0 20px #00ffff; pointer-events: none;
+      font-size: 2.5rem; color: #ff8c00; font-family: Georgia, serif;
+      text-shadow: 0 0 20px rgba(255,140,0,0.6); pointer-events: none;
       opacity: 0; transition: opacity 150ms; z-index: 20;
+      font-style: italic;
     }
 
     .screen {
@@ -635,17 +641,17 @@
 
       <!-- Panneau UI superposé -->
       <div id="ui-panel">
-        <div class="ui-panel-title">VECTHORREUR: INTERFACE DE SCRIPT — J<span id="cmd-map-num">1</span>.</div>
+        <div class="ui-panel-title">✦ Grimoire de Script — Acte <span id="cmd-map-num">1</span></div>
         <div class="ui-row">
-          <span class="ui-label">POSITION ACTUELLE:</span>
-          <span id="hud-pos" style="color:#00ffff;font-size:13px;font-weight:bold;">(0, -18)</span>
+          <span class="ui-label">Position actuelle :</span>
+          <span id="hud-pos" style="font-size:13px;font-weight:bold;">(0, -18)</span>
         </div>
         <div class="ui-row">
-          <span class="ui-label">SANTÉ:</span>
-          <span id="cmd-health" style="color:#00ffff88;font-size:12px;">●●●●●</span>
+          <span class="ui-label">Vitalité :</span>
+          <span id="cmd-health" style="color:#a07850;font-size:12px;font-family:Georgia,serif;">●●●●●</span>
         </div>
         <div class="ui-row">
-          <span class="ui-label">VECTEUR DÉPLACEMENT:</span>
+          <span class="ui-label">Vecteur de déplacement :</span>
         </div>
         <div class="ui-row" style="align-items:flex-end;gap:6px;">
           <div class="vec-input-group">
@@ -656,9 +662,9 @@
             <label>Y</label><br>
             <input type="number" id="inp-y" value="0" min="-20" max="20" step="1">
           </div>
-          <button class="btn-execute-neo" id="btn-execute">EXÉCUTER</button>
+          <button class="btn-execute-neo" id="btn-execute">✦ Invoquer</button>
         </div>
-        <div id="message-zone" style="font-size:10px;color:#ff4444;min-height:14px;margin-top:4px;"></div>
+        <div id="message-zone" style="min-height:14px;margin-top:4px;"></div>
       </div>
 
       <!-- Canvas 2D aperçu (pleine colonne) -->
@@ -666,17 +672,17 @@
 
       <!-- Zone deck + actions (bas colonne gauche) -->
       <div id="bottom-left">
-        <div style="font-size:10px;color:#ff00ff88;letter-spacing:2px;margin-bottom:6px;">VECTOR DECK</div>
-        <div class="deck-area" id="deck-area"><span style="color:#00ffff33;font-size:12px;">Vide</span></div>
+        <div style="font-size:10px;color:#a0785066;letter-spacing:2px;margin-bottom:6px;font-family:Georgia,serif;font-style:italic;">─── Parchemins de Vecteurs ───</div>
+        <div class="deck-area" id="deck-area"><span style="color:#a0785033;font-size:12px;font-style:italic;">Vide</span></div>
         <div class="math-actions" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-          <button class="btn-hacker" id="btn-combo">u&#x20D7;+v&#x20D7;</button>
+          <button class="btn-hacker" id="btn-combo">u&#x20D7;+v&#x20D7; Combo</button>
           <input type="number" class="scalar-input" id="scalar-input" value="2" step="0.5" placeholder="coeff">
-          <button class="btn-hacker" id="btn-scalar">k&#xD7;u&#x20D7;</button>
-          <button class="btn-hacker" id="btn-mute" style="margin-left:auto;">&#9834; SON : ON</button>
+          <button class="btn-hacker" id="btn-scalar">k&#xD7;u&#x20D7; Scalaire</button>
+          <button class="btn-hacker" id="btn-mute" style="margin-left:auto;">🕯 SON : ON</button>
         </div>
       </div>
 
-      <div class="col-label">VUE 2D : SAISIE DU VECTEUR</div>
+      <div class="col-label">Grimoire · Saisie du vecteur</div>
     </div>
 
     <!-- COLONNE DROITE : vue 3D -->
@@ -687,10 +693,10 @@
       <div id="vec-overlay"></div>
 
       <!-- Labels 3D superposés -->
-      <div class="label-3d" id="label-map">MAP <span id="cmd-map-name-label">1</span> 'NEON ABYSS'</div>
-      <div class="label-3d" id="label-carcasse">CARCASSE<br>de Hover-Car</div>
-      <div class="label-3d" id="label-trou">TROU</div>
-      <div class="label-3d" id="label-view">Vue 3&#232;me Personne (Over-the-shoulder)</div>
+      <div class="label-3d" id="label-map">Acte <span id="cmd-map-name-label">1</span></div>
+      <div class="label-3d" id="label-carcasse">Armoire<br>Ancienne</div>
+      <div class="label-3d" id="label-trou">⚠ Trappe</div>
+      <div class="label-3d" id="label-view">Perspective 3ème Personne</div>
 
       <!-- HUD santé + position -->
       <div id="hud-neo">
@@ -707,7 +713,7 @@
       <span id="cmd-map-name" style="display:none;"></span>
       <span id="cmd-pos" style="display:none;"></span>
 
-      <div class="col-label">VUE 3D : EXÉCUTION DU MOUVEMENT</div>
+      <div class="col-label">Manoir · Vue en perspective</div>
     </div>
 
   </div>
@@ -1342,39 +1348,23 @@
       }
     }
     function makeParticle() {
-      const map = MAPS[gameState.currentMap];
-      const isLava = map.invertLogic;
-      let color = map.accentColor;
-      if (map.theme === 'Thalassophobie') color = '#aaddff';
-      if (map.theme === 'Gothic') color = '#888888';
-      if (isLava) color = '#ff6600';
-
-      const vy_up = (map.theme === 'Thalassophobie');
-      const slow = (map.theme === 'Gothic');
-
-      const maxLife = 60 + Math.random() * 80;
+      // Poussière flottante du manoir — toutes maps reçoivent des particules de poussière
+      const maxLife = 80 + Math.random() * 120;
       return {
-        wx: (Math.random() - 0.5) * 38,
-        wy: vy_up ? (-18 + Math.random() * 5) : (14 + Math.random() * 6),
-        vx: (Math.random() - 0.5) * 0.08,
-        vy: vy_up ? (0.05 + Math.random() * 0.1) : -(slow ? 0.02 + Math.random() * 0.03 : 0.08 + Math.random() * 0.12),
+        wx: (Math.random() - 0.5) * 36,
+        wy: -18 + Math.random() * 36,   // répandues dans tout le couloir
+        vx: (Math.random() - 0.5) * 0.06,
+        vy: -(0.03 + Math.random() * 0.10), // monte lentement
         life: Math.random() * maxLife,
         maxLife,
-        color,
-        size: 1 + Math.random() * 2
+        color: '#ddc8aa', // poussière dorée
+        size: 0.6 + Math.random() * 1.4
       };
     }
     function updateParticle(p) {
-      const map = MAPS[gameState.currentMap];
-      const vy_up = (map.theme === 'Thalassophobie');
       p.wx += p.vx;
-      if (vy_up) {
-        p.wy += p.vy;
-        if (p.wy > 20) Object.assign(p, makeParticle());
-      } else {
-        p.wy += p.vy; // vy is already negative (upward), actually spec says -p.vy but vy is already negative
-        if (p.wy < -20) Object.assign(p, makeParticle());
-      }
+      p.wy += p.vy; // monte (vy négatif)
+      if (p.wy < -20) Object.assign(p, makeParticle());
       p.life++;
       if (p.life >= p.maxLife) Object.assign(p, makeParticle());
     }
@@ -1414,21 +1404,21 @@
       const PS = Math.min(PW, PH) / 20;
       const pal = MAPS[gameState.currentMap].palette;
       pctx.clearRect(0, 0, PW, PH);
-      // Fond néon-tech
-      pctx.fillStyle = '#04050a';
+      // Fond manoir parquet
+      pctx.fillStyle = '#0d0804';
       pctx.fillRect(0, 0, PW, PH);
-      // Lignes de grille normales
+      // Lignes de grille manoir (brun doré très transparent)
       pctx.lineWidth = 0.5;
       for (let u = -10; u <= 10; u++) {
         if (u === 0) continue;
-        pctx.strokeStyle = 'rgba(0,255,255,0.08)';
+        pctx.strokeStyle = 'rgba(61,40,16,0.35)';
         const cx = PW/2 + u*PS;
         pctx.beginPath(); pctx.moveTo(cx, 0); pctx.lineTo(cx, PH); pctx.stroke();
         const cy = PH/2 - u*PS;
         pctx.beginPath(); pctx.moveTo(0, cy); pctx.lineTo(PW, cy); pctx.stroke();
       }
-      // Points aux intersections tous les 5 cases
-      pctx.fillStyle = 'rgba(0,255,255,0.25)';
+      // Points aux intersections tous les 5 cases (brun doré)
+      pctx.fillStyle = 'rgba(138,106,42,0.4)';
       for (let ux = -10; ux <= 10; ux += 5) {
         for (let uy = -10; uy <= 10; uy += 5) {
           if (ux === 0 && uy === 0) continue;
@@ -1436,18 +1426,18 @@
           pctx.beginPath(); pctx.arc(px, py, 1.5, 0, Math.PI*2); pctx.fill();
         }
       }
-      // Axes X et Y néon
+      // Axes X et Y brun doré
       pctx.lineWidth = 1.2;
-      pctx.strokeStyle = 'rgba(0,255,255,0.5)';
+      pctx.strokeStyle = 'rgba(138,106,42,0.6)';
       pctx.beginPath(); pctx.moveTo(PW/2, 0); pctx.lineTo(PW/2, PH); pctx.stroke();
-      pctx.strokeStyle = 'rgba(255,0,255,0.5)';
+      pctx.strokeStyle = 'rgba(138,106,42,0.4)';
       pctx.beginPath(); pctx.moveTo(0, PH/2); pctx.lineTo(PW, PH/2); pctx.stroke();
-      // Numéros de grille
+      // Numéros de grille parchemin
       const fontSize = Math.max(8, Math.min(11, PS * 0.65));
-      pctx.font = `${fontSize}px Courier New`;
+      pctx.font = `italic ${fontSize}px Georgia, serif`;
       pctx.textAlign = 'center';
       pctx.textBaseline = 'top';
-      pctx.fillStyle = '#00ffff66';
+      pctx.fillStyle = 'rgba(200,168,130,0.4)';
       for (let u = -10; u <= 10; u += 5) {
         if (u === 0) continue;
         // Labels axe X (en bas de l'axe X)
@@ -1458,9 +1448,9 @@
         pctx.textAlign = 'center';
       }
       pctx.textBaseline = 'alphabetic';
-      // Player dot (centré = position relative 0,0 dans la vue)
+      // Player dot (centré = position relative 0,0 dans la vue) — style torche
       pctx.beginPath(); pctx.arc(PW/2, PH/2, 5, 0, Math.PI*2);
-      pctx.fillStyle = pal.player; pctx.shadowBlur = 10; pctx.shadowColor = pal.player;
+      pctx.fillStyle = pal.player; pctx.shadowBlur = 12; pctx.shadowColor = '#ff8c00';
       pctx.fill(); pctx.shadowBlur = 0;
       // Vector arrow
       const dx = parseFloat(document.getElementById('inp-x').value) || 0;
@@ -1862,41 +1852,226 @@
 
       updateCamera(pp, lv);
 
-      // ── Ceiling / floor background ───────────────────────────────
-      const bg6    = map.bgColor.slice(0, 7);
+      // ── MANOIR DE LA TERREUR — RENDU ATMOSPHÉRIQUE ───────────────
       const farPt  = project(cam.x + cam.fx * 500, cam.y + cam.fy * 500, 0);
       const horizY = farPt ? Math.max(H * 0.12, Math.min(H * 0.72, farPt.sy)) : H * 0.42;
 
-      ctx.fillStyle = darkenColor(bg6, 0.35);
+      // === PLAFOND — pierres sombres ===
+      ctx.fillStyle = '#090706';
       ctx.fillRect(0, 0, W, horizY);
+      // Plâtre fissuré entre les poutres
+      ctx.fillStyle = '#111009';
+      ctx.fillRect(0, 0, W, horizY * 0.85);
+
+      // Poutres en bois traversant le plafond
+      const beamW = 16, beamStep = 88;
+      for (let bx = -beamStep / 2; bx < W + beamStep; bx += beamStep) {
+        const bOff = Math.floor((bx + beamStep) / beamStep) % 5 * 3;
+        ctx.fillStyle = '#110d08';
+        ctx.fillRect(bx + bOff, 0, beamW, horizY);
+        ctx.fillStyle = '#0c0905';
+        ctx.fillRect(bx + bOff + beamW - 3, 0, 3, horizY);
+        // Ombre inférieure de la poutre
+        const shadowGrad = ctx.createLinearGradient(0, horizY - 10, 0, horizY + 6);
+        shadowGrad.addColorStop(0, 'rgba(0,0,0,0.5)');
+        shadowGrad.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = shadowGrad;
+        ctx.fillRect(bx + bOff, horizY - 10, beamW, 16);
+      }
+
+      // Fissures dans le plâtre du plafond (fixes, seed-based)
+      ctx.save();
+      ctx.strokeStyle = '#0c0b09'; ctx.lineWidth = 0.5;
+      for (let fc = 0; fc < 6; fc++) {
+        const fx = (fc * 173 + 47) % W;
+        const fy = (fc * 89 + 11) % (horizY * 0.8);
+        ctx.beginPath();
+        ctx.moveTo(fx, fy);
+        ctx.lineTo(fx + 9 + fc * 2, fy + 18);
+        ctx.lineTo(fx + 7 + fc, fy + 32);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // Toiles d'araignées dans les coins supérieurs
+      ctx.save();
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 0.4;
+      // Coin haut-gauche
+      ctx.globalAlpha = 0.18;
+      for (let w = 0; w < 8; w++) {
+        const wLen = 30 + w * 8;
+        const wAngle = (w / 7) * (Math.PI * 0.48);
+        ctx.beginPath(); ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(wAngle) * wLen, Math.sin(wAngle) * wLen); ctx.stroke();
+        if (w > 0) {
+          const pA = ((w-1)/7) * (Math.PI * 0.48), r1 = 18 + w * 7;
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(pA)*r1, Math.sin(pA)*r1);
+          ctx.lineTo(Math.cos(wAngle)*r1, Math.sin(wAngle)*r1); ctx.stroke();
+        }
+      }
+      // Coin haut-droit
+      ctx.save(); ctx.translate(W, 0); ctx.scale(-1, 1);
+      for (let w = 0; w < 8; w++) {
+        const wLen = 30 + w * 8;
+        const wAngle = (w / 7) * (Math.PI * 0.48);
+        ctx.beginPath(); ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(wAngle) * wLen, Math.sin(wAngle) * wLen); ctx.stroke();
+        if (w > 0) {
+          const pA = ((w-1)/7) * (Math.PI * 0.48), r1 = 18 + w * 7;
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(pA)*r1, Math.sin(pA)*r1);
+          ctx.lineTo(Math.cos(wAngle)*r1, Math.sin(wAngle)*r1); ctx.stroke();
+        }
+      }
+      ctx.restore();
+      ctx.restore();
+
+      // === SOL — parquet bois ancien ===
       const flGrad = ctx.createLinearGradient(0, horizY, 0, H);
-      flGrad.addColorStop(0, bg6);
-      flGrad.addColorStop(1, darkenColor(bg6, 0.48));
+      flGrad.addColorStop(0, '#1a0f08');
+      flGrad.addColorStop(1, '#0c0703');
       ctx.fillStyle = flGrad;
       ctx.fillRect(0, horizY, W, H - horizY);
 
-      // ── Floor grid (perspective) ──────────────────────────────────
+      // Lattes du parquet : joints horizontaux en perspective
+      ctx.lineWidth = 0.7;
       for (let u = -20; u <= 20; u++) {
-        const isA = u === 0;
-        ctx.lineWidth = isA ? 1 : 0.3;
-        const a = project(u, -20, 0), b = project(u, 20, 0);
+        const lHash = ((u + 20) * 7919 + 31) & 0xff;
+        const lv = lHash % 3; // variation de teinte de la latte
+        const isAxis = u === 0;
+        const a = project(-20, u, 0), b = project(20, u, 0);
         if (a && b) {
-          ctx.strokeStyle = isA ? pal.axisY : map.gridColor;
+          ctx.strokeStyle = isAxis ? 'rgba(138,106,42,0.35)' : 'rgba(12,7,3,0.6)';
           ctx.beginPath(); ctx.moveTo(a.sx, a.sy); ctx.lineTo(b.sx, b.sy); ctx.stroke();
+          // Variation de couleur de latte
+          if (!isAxis && lv !== 0) {
+            const nb = project(-20, u + 1, 0), nc = project(20, u + 1, 0);
+            if (nb && nc) {
+              ctx.fillStyle = lv === 1 ? 'rgba(34,18,8,0.07)' : 'rgba(6,3,1,0.08)';
+              ctx.beginPath();
+              ctx.moveTo(a.sx, a.sy); ctx.lineTo(b.sx, b.sy);
+              ctx.lineTo(nc.sx, nc.sy); ctx.lineTo(nb.sx, nb.sy);
+              ctx.closePath(); ctx.fill();
+            }
+          }
         }
-        const c = project(-20, u, 0), d = project(20, u, 0);
-        if (c && d) {
-          ctx.strokeStyle = isA ? pal.axisX : map.gridColor;
-          ctx.beginPath(); ctx.moveTo(c.sx, c.sy); ctx.lineTo(d.sx, d.sy); ctx.stroke();
+        // Joints verticaux rares (tous les 3)
+        if (u % 3 === 0) {
+          const e = project(u, -20, 0), f = project(u, 20, 0);
+          if (e && f) {
+            ctx.strokeStyle = 'rgba(10,6,2,0.3)'; ctx.lineWidth = 0.35;
+            ctx.beginPath(); ctx.moveTo(e.sx, e.sy); ctx.lineTo(f.sx, f.sy); ctx.stroke();
+            ctx.lineWidth = 0.7;
+          }
         }
       }
-      // Axis coord labels
-      ctx.fillStyle = '#ffffff22'; ctx.font = '9px Courier New'; ctx.textAlign = 'center';
+      // Axes discrets (brun doré)
+      const axA = project(0, -20, 0), axB = project(0, 20, 0);
+      if (axA && axB) {
+        ctx.strokeStyle = 'rgba(138,106,42,0.3)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(axA.sx, axA.sy); ctx.lineTo(axB.sx, axB.sy); ctx.stroke();
+      }
+      const axC = project(-20, 0, 0), axD = project(20, 0, 0);
+      if (axC && axD) {
+        ctx.strokeStyle = 'rgba(138,106,42,0.2)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(axC.sx, axC.sy); ctx.lineTo(axD.sx, axD.sy); ctx.stroke();
+      }
+      // Coordonnées parchemin
+      ctx.fillStyle = 'rgba(200,168,130,0.18)'; ctx.font = 'italic 9px Georgia, serif'; ctx.textAlign = 'center';
       for (let u = -20; u <= 20; u += 5) {
         if (u === 0) continue;
         const pa = project(u, 0, 0); if (pa && pa.depth < 35) ctx.fillText(u, pa.sx, pa.sy + 4);
         const pb = project(0, u, 0); if (pb && pb.depth < 35) ctx.fillText(u, pb.sx, pb.sy + 4);
       }
+
+      // === MURS LATÉRAUX EN PIERRE — overlays de bord ===
+      const wallLG = ctx.createLinearGradient(0, 0, W * 0.24, 0);
+      wallLG.addColorStop(0, 'rgba(8,6,4,0.92)');
+      wallLG.addColorStop(0.55, 'rgba(8,6,4,0.28)');
+      wallLG.addColorStop(1, 'rgba(8,6,4,0)');
+      ctx.fillStyle = wallLG; ctx.fillRect(0, 0, W * 0.24, H);
+
+      const wallRG = ctx.createLinearGradient(W, 0, W * 0.76, 0);
+      wallRG.addColorStop(0, 'rgba(8,6,4,0.92)');
+      wallRG.addColorStop(0.55, 'rgba(8,6,4,0.28)');
+      wallRG.addColorStop(1, 'rgba(8,6,4,0)');
+      ctx.fillStyle = wallRG; ctx.fillRect(W * 0.76, 0, W * 0.24, H);
+
+      // Joints de pierres sur les murs latéraux (faux-relief)
+      ctx.save();
+      ctx.strokeStyle = '#060504'; ctx.lineWidth = 0.6;
+      const stoneH = 22, stoneW = 38;
+      for (let row = 0; row < Math.ceil(H / stoneH); row++) {
+        const yy = row * stoneH;
+        const offsetX = (row % 2) * (stoneW / 2);
+        // Mur gauche
+        for (let col = 0; col * stoneW < W * 0.20; col++) {
+          const xx = col * stoneW + offsetX;
+          ctx.beginPath(); ctx.rect(xx - 1, yy, stoneW - 1, stoneH - 1); ctx.stroke();
+        }
+        // Mur droit
+        for (let col = 0; col * stoneW < W * 0.20; col++) {
+          const xx = W - col * stoneW - offsetX;
+          ctx.beginPath(); ctx.rect(xx - stoneW + 2, yy, stoneW - 1, stoneH - 1); ctx.stroke();
+        }
+      }
+      ctx.restore();
+
+      // === TORCHES MURALES (4 positions) ===
+      ctx.save();
+      const torchPositions = [
+        { sx: W * 0.07, sy: H * 0.36, idx: 0 },
+        { sx: W * 0.07, sy: H * 0.64, idx: 1 },
+        { sx: W * 0.93, sy: H * 0.36, idx: 2 },
+        { sx: W * 0.93, sy: H * 0.64, idx: 3 },
+      ];
+      torchPositions.forEach(({ sx: tx, sy: ty, idx }) => {
+        const flick = ts * 0.003 + idx * 1.73;
+        const flameH = 13 + 4 * Math.sin(ts * 0.008 + idx * 0.9);
+        const haloR  = (88 + 22 * Math.sin(flick)) * (0.85 + 0.15 * Math.sin(ts * 0.003 + idx));
+        const offX   = 2.2 * Math.sin(ts * 0.007 + idx * 1.3);
+
+        // Halo de lumière sur le mur
+        const halo = ctx.createRadialGradient(tx + offX, ty, 2, tx + offX, ty, haloR);
+        halo.addColorStop(0, 'rgba(255,140,0,0.20)');
+        halo.addColorStop(0.35, 'rgba(255,100,0,0.08)');
+        halo.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = halo;
+        ctx.beginPath(); ctx.arc(tx + offX, ty, haloR, 0, Math.PI * 2); ctx.fill();
+
+        // Reflet sur le parquet
+        if (ty > horizY) {
+          const fr = ctx.createRadialGradient(tx, H * 0.9, 0, tx, H * 0.9, 70);
+          fr.addColorStop(0, 'rgba(255,140,0,0.05)');
+          fr.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.fillStyle = fr;
+          ctx.beginPath(); ctx.ellipse(tx, H * 0.92, 70, 30, 0, 0, Math.PI * 2); ctx.fill();
+        }
+
+        // Support en bois
+        ctx.fillStyle = '#3a2510';
+        ctx.fillRect(tx - 2, ty - 7, 4, 14);
+        // Bol de la torche
+        ctx.fillStyle = '#2a1a0a';
+        ctx.beginPath();
+        ctx.moveTo(tx - 6, ty + 2); ctx.lineTo(tx + 6, ty + 2);
+        ctx.lineTo(tx + 4, ty + 8); ctx.lineTo(tx - 4, ty + 8);
+        ctx.closePath(); ctx.fill();
+        // Flamme principale
+        ctx.shadowBlur = 22; ctx.shadowColor = '#ff6600';
+        ctx.fillStyle = '#ff9900';
+        ctx.beginPath();
+        ctx.ellipse(tx + offX, ty - flameH * 0.4, 4, flameH * 0.55, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Cœur de flamme
+        ctx.fillStyle = '#ffcc44'; ctx.shadowColor = '#ffdd66';
+        ctx.beginPath();
+        ctx.ellipse(tx + offX * 0.5, ty - flameH * 0.28, 2.2, flameH * 0.34, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      });
+      ctx.restore();
 
       // ── Build depth-sorted render queue ──────────────────────────
       function cDist(x1, y1, x2, y2) {
@@ -1911,44 +2086,109 @@
         }));
       }
 
-      // Death zones
+      // Death zones — trappes dans le parquet
       map.deathZones.forEach(dz => Q.push({ d: cDist(dz.x1,dz.y1,dz.x2,dz.y2), fn: () => {
-        renderBox3D(dz.x1, dz.y1, dz.x2, dz.y2, DZ_H, dz.color.slice(0,7), null);
-        const m = project((dz.x1+dz.x2)/2, (dz.y1+dz.y2)/2, DZ_H + 0.1);
+        // Fond de la trappe (noir profond)
+        renderBox3D(dz.x1, dz.y1, dz.x2, dz.y2, DZ_H, '#060402', null);
+        // Brume noire montant de la trappe (overlay sur le dessus)
+        const tpTop = project((dz.x1+dz.x2)/2, (dz.y1+dz.y2)/2, DZ_H + 0.3);
+        const tpBL = project(dz.x1, dz.y1, DZ_H);
+        const tpBR = project(dz.x2, dz.y1, DZ_H);
+        if (tpBL && tpBR && tpTop) {
+          const misteH = Math.abs(tpBL.sy - tpTop.sy) * 0.6;
+          const misteGrad = ctx.createLinearGradient(0, tpTop.sy - misteH, 0, tpTop.sy);
+          misteGrad.addColorStop(0, 'rgba(5,3,2,0)');
+          misteGrad.addColorStop(1, 'rgba(5,3,2,0.55)');
+          ctx.fillStyle = misteGrad;
+          ctx.fillRect(Math.min(tpBL.sx, tpBR.sx) - 4, tpTop.sy - misteH, Math.abs(tpBR.sx - tpBL.sx) + 8, misteH + 4);
+        }
+        const m = project((dz.x1+dz.x2)/2, (dz.y1+dz.y2)/2, DZ_H + 0.15);
         if (m && m.depth < 28) {
-          ctx.fillStyle = '#ff777799';
-          ctx.font = `bold ${Math.min(13, 55/m.depth)}px Courier New`;
+          ctx.fillStyle = '#cc4400cc';
+          ctx.font = `italic ${Math.min(12, 50/m.depth)}px Georgia, serif`;
           ctx.textAlign = 'center';
-          ctx.fillText('⚠ ' + dz.label, m.sx, m.sy);
+          ctx.shadowBlur = 6; ctx.shadowColor = '#aa2200';
+          ctx.fillText('⚠ Trappe', m.sx, m.sy);
+          ctx.shadowBlur = 0;
         }
       }}));
 
-      // Exit platform
+      // Exit — porte en bois massif du manoir
       Q.push({ d: cDist(exit.x1,exit.y1,exit.x2,exit.y2), fn: () => {
-        ctx.shadowBlur = 10 + 8 * pulse; ctx.shadowColor = '#00ff00';
-        renderBox3D(exit.x1, exit.y1, exit.x2, exit.y2, EXIT_H, '#005500', null);
+        const doorPulse = 0.7 + 0.3 * Math.sin(ts / 600);
+        // Châssis de porte (bois sombre)
+        ctx.shadowBlur = (12 + 8 * pulse) * doorPulse; ctx.shadowColor = 'rgba(255,180,50,0.5)';
+        renderBox3D(exit.x1, exit.y1, exit.x2, exit.y2, EXIT_H, '#2a1a08', null);
         ctx.shadowBlur = 0;
-        const m = project((exit.x1+exit.x2)/2, (exit.y1+exit.y2)/2, EXIT_H + 0.2);
-        if (m) {
-          ctx.fillStyle = `rgba(0,255,0,${0.85 + 0.15*pulse})`;
-          ctx.font = `bold ${Math.min(16, 60/m.depth)}px Courier New`;
-          ctx.shadowBlur = 8; ctx.shadowColor = '#00ff00'; ctx.textAlign = 'center';
-          ctx.fillText('SORTIE', m.sx, m.sy); ctx.shadowBlur = 0;
+        // Halo lumière espoir autour de la porte
+        const midPt = project((exit.x1+exit.x2)/2, (exit.y1+exit.y2)/2, EXIT_H + 0.1);
+        if (midPt) {
+          const haloR = 55 * doorPulse;
+          const haloG = ctx.createRadialGradient(midPt.sx, midPt.sy, 0, midPt.sx, midPt.sy, haloR);
+          haloG.addColorStop(0, `rgba(255,180,50,${0.15 * doorPulse})`);
+          haloG.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.fillStyle = haloG;
+          ctx.beginPath(); ctx.arc(midPt.sx, midPt.sy, haloR, 0, Math.PI * 2); ctx.fill();
+          // Fente de lumière sous la porte
+          const exitBot = project((exit.x1+exit.x2)/2, (exit.y1+exit.y2)/2, 0.02);
+          if (exitBot) {
+            ctx.save();
+            ctx.strokeStyle = `rgba(255,200,100,${0.5 * doorPulse})`;
+            ctx.lineWidth = 1.5; ctx.shadowBlur = 6; ctx.shadowColor = '#ffcc44';
+            ctx.beginPath(); ctx.moveTo(midPt.sx - 14, exitBot.sy); ctx.lineTo(midPt.sx + 14, exitBot.sy);
+            ctx.stroke(); ctx.restore();
+          }
+          // Label SORTIE — flèche qui monte et descend
+          const arrowOff = 3 * Math.sin(ts * 0.002);
+          ctx.fillStyle = `rgba(200,168,130,${0.9 * doorPulse})`;
+          ctx.font = `italic bold ${Math.min(15, 58/midPt.depth)}px Georgia, serif`;
+          ctx.textAlign = 'center';
+          ctx.shadowBlur = 8; ctx.shadowColor = 'rgba(255,180,50,0.6)';
+          ctx.fillText('Sortie', midPt.sx, midPt.sy - 8 + arrowOff);
+          ctx.font = `${Math.min(11, 42/midPt.depth)}px Georgia, serif`;
+          ctx.fillText('↑', midPt.sx, midPt.sy - 20 + arrowOff);
+          ctx.shadowBlur = 0;
         }
       }});
 
-      // Obstacles
+      // Obstacles — armoires / sarcophages en bois sculpté
       map.obstacles.forEach(obs => {
         const isFlash = gameState.flashObstacle === obs && gameState.flashTimer > 0;
         Q.push({ d: cDist(obs.x1,obs.y1,obs.x2,obs.y2), fn: () => {
+          // Corps principal (bois sombre)
           renderBox3D(obs.x1, obs.y1, obs.x2, obs.y2, WALL_H,
-            obs.color.slice(0,7), isFlash ? '#ff0000' : null);
-          const m = project((obs.x1+obs.x2)/2, (obs.y1+obs.y2)/2, WALL_H + 0.2);
+            isFlash ? '#5a1a08' : '#241608', isFlash ? '#ff2200' : null);
+          // Détails sculptés sur la face visible
+          const faceBot = project((obs.x1+obs.x2)/2, obs.y1, 0.05);
+          const faceTop = project((obs.x1+obs.x2)/2, obs.y1, WALL_H);
+          const faceL   = project(obs.x1, obs.y1, WALL_H * 0.5);
+          const faceR   = project(obs.x2, obs.y1, WALL_H * 0.5);
+          if (faceBot && faceTop && faceL && faceR) {
+            const fw = Math.abs(faceR.sx - faceL.sx);
+            const fh = Math.abs(faceBot.sy - faceTop.sy);
+            const fcx = (faceL.sx + faceR.sx) / 2;
+            const fcy = (faceTop.sy + faceBot.sy) / 2;
+            // Moulures sculptées (rectangles intérieurs)
+            ctx.save();
+            ctx.strokeStyle = isFlash ? '#8a3010' : '#3a2010'; ctx.lineWidth = 0.8;
+            ctx.strokeRect(fcx - fw * 0.35, fcy - fh * 0.38, fw * 0.7, fh * 0.76);
+            ctx.strokeStyle = isFlash ? '#6a2008' : '#2a1808';
+            ctx.strokeRect(fcx - fw * 0.22, fcy - fh * 0.24, fw * 0.44, fh * 0.48);
+            // Poignées
+            ctx.fillStyle = isFlash ? '#aa5522' : '#7a5a2a';
+            ctx.beginPath(); ctx.arc(fcx - fw * 0.10, fcy + fh * 0.04, Math.max(1.5, fw * 0.04), 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(fcx + fw * 0.10, fcy + fh * 0.04, Math.max(1.5, fw * 0.04), 0, Math.PI*2); ctx.fill();
+            ctx.restore();
+          }
+          // Label flottant parchemin
+          const m = project((obs.x1+obs.x2)/2, (obs.y1+obs.y2)/2, WALL_H + 0.25);
           if (m && m.depth < 24) {
-            ctx.fillStyle = '#ffffffbb';
-            ctx.font = `${Math.min(13, 48/m.depth)}px Courier New`;
+            ctx.fillStyle = isFlash ? '#ff6644cc' : '#c8a882aa';
+            ctx.font = `italic ${Math.min(12, 46/m.depth)}px Georgia, serif`;
             ctx.textAlign = 'center';
+            if (isFlash) { ctx.shadowBlur = 8; ctx.shadowColor = '#ff2200'; }
             ctx.fillText(obs.label, m.sx, m.sy);
+            ctx.shadowBlur = 0;
           }
         }});
       });
@@ -1977,15 +2217,18 @@
       Q.sort((a, b) => b.d - a.d);
       Q.forEach(o => o.fn());
 
-      // Particles
+      // Particules de poussière flottante (manoir)
       gameState.particles.forEach(p => {
         updateParticle(p);
-        const pt = project(p.wx, p.wy, 0.1);
+        const pt = project(p.wx, p.wy, 0.8 + p.size * 0.4);
         if (!pt || pt.depth > 38) return;
-        const alpha = Math.max(0, 1 - p.life / p.maxLife);
-        const r = Math.max(1, p.size * alpha * (1 - pt.depth / 38));
+        const alpha = Math.max(0, Math.min(0.35, (1 - p.life / p.maxLife) * 0.35));
+        const r = Math.max(0.5, p.size * 0.7 * (1 - pt.depth / 38));
+        // Légèrement plus visibles près des torches
+        const nearTorch = torchPositions.some(t => Math.hypot(pt.sx - t.sx, pt.sy - t.sy) < 70);
+        const brightness = nearTorch ? Math.min(alpha * 2.2, 0.55) : alpha;
         ctx.beginPath(); ctx.arc(pt.sx, pt.sy, r, 0, Math.PI * 2);
-        ctx.fillStyle = p.color + Math.floor(alpha * 200).toString(16).padStart(2, '0');
+        ctx.fillStyle = `rgba(220,200,170,${brightness})`;
         ctx.fill();
       });
 
@@ -1993,32 +2236,41 @@
       drawVectorArrow3D(pp, lv, pal);
 
 
-      // ── Canvas vector HUD (top-left) ──────────────────────────────
+      // ── HUD vecteur (coin haut-gauche) — style parchemin ──────────
       if (lv.x !== 0 || lv.y !== 0) {
         ctx.save();
-        ctx.fillStyle = 'rgba(0,0,0,0.52)';
+        ctx.fillStyle = 'rgba(14,8,4,0.75)';
+        ctx.strokeStyle = '#5a3d1a'; ctx.lineWidth = 1;
         ctx.beginPath();
-        if (ctx.roundRect) ctx.roundRect(12, 12, 170, 38, 6); else ctx.rect(12, 12, 170, 38);
-        ctx.fill();
-        ctx.fillStyle = pal.vecOverlay;
-        ctx.font = 'bold 15px Courier New'; ctx.textAlign = 'left';
-        ctx.shadowBlur = 5; ctx.shadowColor = pal.vecOverlay;
-        ctx.fillText(`u⃗  (${lv.x} ; ${lv.y})`, 22, 37);
+        if (ctx.roundRect) ctx.roundRect(10, 10, 175, 38, 3); else ctx.rect(10, 10, 175, 38);
+        ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#c8a882';
+        ctx.font = 'italic bold 14px Georgia, serif'; ctx.textAlign = 'left';
+        ctx.shadowBlur = 6; ctx.shadowColor = 'rgba(255,140,0,0.4)';
+        ctx.fillText(`u⃗  (${lv.x} ; ${lv.y})`, 20, 35);
         ctx.shadowBlur = 0; ctx.restore();
       }
-      // Camera hint (fades after first drag)
+      // Indice rotation caméra (discret parchemin)
       if (performance.now() - camDragEnd > 1800) {
-        ctx.save(); ctx.fillStyle = 'rgba(255,255,255,0.18)';
-        ctx.font = '11px Courier New'; ctx.textAlign = 'right';
-        ctx.fillText('⟵ glisser pour tourner ⟶', W - 12, H - 12);
+        ctx.save(); ctx.fillStyle = 'rgba(200,168,130,0.25)';
+        ctx.font = 'italic 10px Georgia, serif'; ctx.textAlign = 'right';
+        ctx.fillText('⟵ faire tourner la vue ⟶', W - 12, H - 14);
         ctx.restore();
       }
 
-      // ── Vignette / depth fog ──────────────────────────────────────
-      const fog = ctx.createRadialGradient(W/2, H*0.42, H*0.1, W/2, H*0.42, H*0.8);
+      // ── Vignette manoir (bords très sombres, légère teinte violacée) ─
+      const fog = ctx.createRadialGradient(W/2, H*0.45, H*0.08, W/2, H*0.45, H*0.82);
       fog.addColorStop(0, 'rgba(0,0,0,0)');
-      fog.addColorStop(1, 'rgba(0,0,0,0.68)');
+      fog.addColorStop(0.6, 'rgba(0,0,0,0.2)');
+      fog.addColorStop(1, 'rgba(4,2,8,0.78)');
       ctx.fillStyle = fog; ctx.fillRect(0, 0, W, H);
+      // Légère brume bleue/violette dans les coins (ombre glaciale)
+      ctx.save();
+      ctx.globalAlpha = 0.06;
+      ctx.fillStyle = '#1a0a2e';
+      ctx.fillRect(0, 0, W * 0.18, H);
+      ctx.fillRect(W * 0.82, 0, W * 0.18, H);
+      ctx.restore();
 
       // ── HUD ───────────────────────────────────────────────────────
       const hudPosEl = document.getElementById('hud-pos');

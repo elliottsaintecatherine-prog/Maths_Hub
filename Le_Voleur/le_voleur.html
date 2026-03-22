@@ -282,6 +282,18 @@
             background: transparent; border: none;
             font-size: 1.4rem; cursor: pointer; padding: 0;
         }
+        .audio-divider { border: none; border-top: 1px solid rgba(0,243,255,0.15); margin: 2px 0; }
+        .btn-nav-dropdown {
+            background: transparent;
+            border: 1px solid rgba(0,243,255,0.2);
+            color: var(--text-muted);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.75rem; letter-spacing: 1px;
+            padding: 7px 10px; cursor: pointer;
+            width: 100%; text-align: left;
+            transition: background 0.15s, border-color 0.15s, color 0.15s;
+        }
+        .btn-nav-dropdown:hover { background: rgba(0,243,255,0.08); border-color: var(--primary); color: var(--primary); }
     </style>
 </head>
 <body>
@@ -318,6 +330,9 @@
                     <span>MUTE</span>
                     <button id="btn-mute" onclick="window.jouerSon('click'); window.toggleMute()">🔊</button>
                 </div>
+                <hr class="audio-divider">
+                <button class="btn-nav-dropdown" id="btn-dd-accueil">⌂ Retour à l'Accueil</button>
+                <button class="btn-nav-dropdown" id="btn-dd-hub">← Retour au Hub</button>
             </div>
         </div>
     </div>
@@ -654,6 +669,18 @@ window.sfx = {
         // --- DROPDOWN PARAMÈTRES AUDIO ---
         window.toggleAudioDropdown = function() {
             document.getElementById('audio-dropdown').classList.toggle('open');
+        };
+
+        // --- NAVIGATION DEPUIS LE DROPDOWN ---
+        document.getElementById('btn-dd-accueil').onclick = function() {
+            document.getElementById('audio-dropdown').classList.remove('open');
+            document.getElementById('bg-music').pause();
+            window.historique = ['ecran-accueil'];
+            window.afficherEcran('ecran-accueil');
+        };
+        document.getElementById('btn-dd-hub').onclick = function() {
+            if (document.referrer !== '') history.back();
+            else location.href = '../index.html';
         };
         document.addEventListener('click', function(e) {
             var wrapper = document.getElementById('audio-gear-wrapper');

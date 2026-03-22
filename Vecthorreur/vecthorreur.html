@@ -2184,34 +2184,33 @@
       ctx.fillRect(W * 0.82, 0, W * 0.18, H);
       ctx.restore();
 
-      // ── Obscurité globale + lumière bougie autour du joueur ───────
-      if (!darkCanvas) { darkCanvas = document.createElement('canvas'); darkCtx = darkCanvas.getContext('2d'); }
-      if (darkCanvas.width !== W || darkCanvas.height !== H) { darkCanvas.width = W; darkCanvas.height = H; }
-      const handPt = project(pp.x + 0.4, pp.y, 1.0);
-      if (handPt) {
-        const cx = handPt.sx, cy = handPt.sy;
-        const haloR = 160 * (0.88 + 0.12 * Math.sin(ts * 0.009));
-        darkCtx.clearRect(0, 0, W, H);
-        darkCtx.fillStyle = 'rgba(0,0,0,0.70)';
-        darkCtx.fillRect(0, 0, W, H);
-        darkCtx.globalCompositeOperation = 'destination-out';
-        const cg = darkCtx.createRadialGradient(cx, cy, 0, cx, cy, haloR);
-        cg.addColorStop(0, 'rgba(0,0,0,0.95)');
-        cg.addColorStop(0.45, 'rgba(0,0,0,0.60)');
-        cg.addColorStop(1, 'rgba(0,0,0,0)');
-        darkCtx.fillStyle = cg;
-        darkCtx.beginPath(); darkCtx.arc(cx, cy, haloR, 0, Math.PI * 2); darkCtx.fill();
-        darkCtx.globalCompositeOperation = 'source-over';
-        const wg = darkCtx.createRadialGradient(cx, cy, 0, cx, cy, haloR * 0.7);
-        wg.addColorStop(0, 'rgba(255,120,20,0.09)');
-        wg.addColorStop(1, 'rgba(255,120,20,0)');
-        darkCtx.fillStyle = wg;
-        darkCtx.beginPath(); darkCtx.arc(cx, cy, haloR * 0.7, 0, Math.PI * 2); darkCtx.fill();
-        ctx.drawImage(darkCanvas, 0, 0);
+      // ── Éclairage bougie : screen blend — illumine les objets 3D ───
+      const lightPt = project(pp.x, pp.y, 1.0);
+      if (lightPt) {
+        const cx = lightPt.sx, cy = lightPt.sy;
+        const flicker = 0.88 + 0.12 * Math.sin(ts * 0.009);
+        const haloR = 420 * flicker;
+
+        // 1. Assombrir toute la scène uniformément
+        ctx.fillStyle = 'rgba(0,0,0,0.60)';
+        ctx.fillRect(0, 0, W, H);
+
+        // 2. Projeter la lumière chaude sur les surfaces via screen blend
+        ctx.globalCompositeOperation = 'screen';
+        const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, haloR);
+        grad.addColorStop(0,    `rgba(255,230,160,${flicker})`);
+        grad.addColorStop(0.22, `rgba(255,160,40,${0.85 * flicker})`);
+        grad.addColorStop(0.55, `rgba(110,45,8,${0.55 * flicker})`);
+        grad.addColorStop(1,    'rgba(0,0,0,0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, H);
+        ctx.globalCompositeOperation = 'source-over';
+
+        // 3. Flamme de bougie au-dessus du joueur
         const flH = 7 + 2 * Math.sin(ts * 0.011);
         const flOff = 1.2 * Math.sin(ts * 0.008);
         ctx.save();
-        ctx.shadowBlur = 10; ctx.shadowColor = '#ff6600';
+        ctx.shadowBlur = 12; ctx.shadowColor = '#ff6600';
         ctx.fillStyle = '#ff9900';
         ctx.beginPath(); ctx.ellipse(cx + flOff, cy - flH * 0.5, 2.5, flH * 0.6, 0, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = '#ffcc44'; ctx.shadowColor = '#ffdd66';

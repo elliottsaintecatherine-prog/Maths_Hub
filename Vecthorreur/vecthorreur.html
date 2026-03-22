@@ -510,6 +510,34 @@
     .win-title { font-size: 2.5rem; color: #00ff44; animation: pulse-win 1.5s infinite; }
     .win-info { color: #00ff4488; font-size: 14px; line-height: 1.8; }
 
+    /* Mode solo / 2 joueurs */
+    #mode-selector {
+      display: flex; gap: 10px; justify-content: center;
+    }
+    .btn-mode {
+      background: transparent;
+      border: 1px solid #3a3020;
+      color: #a07850;
+      font-family: 'Courier New', monospace; font-size: 13px;
+      padding: 7px 18px; border-radius: 4px; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-mode:hover { border-color: #7a5030; color: #c8a880; }
+    .btn-mode.active { border-color: #c8961e; color: #f5d070; background: rgba(200,150,30,0.12); }
+
+    /* Résultats joueur */
+    .result-card {
+      background: rgba(20,12,6,0.85);
+      border: 1px solid #3a2510;
+      border-radius: 8px; padding: 18px 24px; min-width: 160px;
+      text-align: center;
+    }
+    .result-card.winner { border-color: #c8961e; box-shadow: 0 0 18px rgba(200,150,30,0.3); }
+    .result-card h3 { color: #f5d070; font-size: 1.1rem; margin: 0 0 10px; }
+    .result-card .rc-val { color: #c8a882; font-size: 14px; line-height: 2; }
+    .result-card .rc-badge { color: #00ff44; font-size: 1.4rem; margin-bottom: 6px; }
+    .result-card .rc-badge.lose { color: #ff4444; }
+
     @keyframes glitch {
       0%, 90%, 100% {
         text-shadow: 0 0 30px #00ffff, 0 0 60px #ff00ff;
@@ -571,8 +599,8 @@
 
     <hr class="settings-divider">
     <div class="settings-section">NAVIGATION</div>
-    <button class="btn-settings-action" id="settings-to-menu">↩ Retour à l'accueil du jeu</button>
-    <button class="btn-settings-action danger" id="settings-to-hub">⬅ Quitter vers le Hub</button>
+    <button class="btn-settings-action danger" id="settings-to-hub">← Retour au Hub</button>
+    <button class="btn-settings-action" id="settings-to-menu">⌂ Retour à l'Accueil</button>
   </div>
 
   <!-- mode-indicator masqué, conservé pour compat JS -->
@@ -590,10 +618,30 @@
       <div class="game-subtitle">Maîtrise les vecteurs. Survive.</div>
       <div class="menu-divider"></div>
       <div class="map-selector" id="map-selector"></div>
+      <div id="mode-selector">
+        <button class="btn-mode active" id="btn-solo">⚔ Solo</button>
+        <button class="btn-mode" id="btn-multi">👥 2 Joueurs</button>
+      </div>
       <button class="btn-menu-play" id="btn-play">▶ JOUER</button>
       <button class="btn-menu-son" id="btn-menu-mute">♪ SON : ON</button>
       <button id="btn-hub">← Retour au Hub</button>
     </div>
+  </div>
+
+  <!-- PASSAGE DE TOUR (multijoueur) -->
+  <div class="screen" id="screen-player-switch" style="display:none;">
+    <div class="win-title" id="switch-title">Joueur 1 a terminé !</div>
+    <div class="win-info" id="switch-result"></div>
+    <div class="go-info" style="margin-top:8px;">Passez l'appareil au Joueur 2.</div>
+    <button class="btn-execute" id="btn-switch-play" style="max-width:260px;">▶ JOUEUR 2 — À TOI !</button>
+  </div>
+
+  <!-- RÉSULTATS FINAUX (multijoueur) -->
+  <div class="screen" id="screen-results" style="display:none;">
+    <div class="win-title">⚔ RÉSULTATS</div>
+    <div id="results-content" style="display:flex;gap:32px;justify-content:center;flex-wrap:wrap;margin:16px 0;"></div>
+    <button class="btn-execute" id="btn-results-replay" style="max-width:260px;">REJOUER</button>
+    <button class="btn-hacker" id="btn-results-menu">MENU</button>
   </div>
 
   <!-- slide-wrapper conservé vide pour compat JS -->
@@ -781,7 +829,10 @@
           axisX:        '#f5d07022', axisY:  '#8090a822',
           haloRGB:      '245,208,112', vecOverlay: '#f5d070'
         },
-        exit: { x1:-4, y1:17, x2:4, y2:20 },
+        exits: [
+          { x1:-4, y1:17, x2:4, y2:20 },
+          { x1:-18, y1:15, x2:-10, y2:19 }
+        ],
         obstacles: [
           { x1:-18, y1: 2, x2:-10, y2: 8,  color:"#2a2520", label:"MUR OUEST" },
           { x1: 10, y1:-8, x2: 18, y2:-2,  color:"#2a2520", label:"MUR EST"   },
@@ -808,7 +859,10 @@
           axisX:        '#00aaee25', axisY: '#0055bb25',
           haloRGB:      '0,170,238', vecOverlay: '#00aaee'
         },
-        exit: { x1:-4, y1:17, x2:4, y2:20 },
+        exits: [
+          { x1:-4, y1:17, x2:4, y2:20 },
+          { x1:12, y1:15, x2:18, y2:19 }
+        ],
         obstacles: [
           { x1:-10, y1:-5, x2:-5, y2:15, color:"#1144aa", label:"PILIER" },
           { x1:5, y1:-15, x2:10, y2:5, color:"#1144aa", label:"PILIER" }
@@ -828,7 +882,10 @@
           axisX:        '#ee993328', axisY: '#88000028',
           haloRGB:      '238,153,51', vecOverlay: '#ee9933'
         },
-        exit: { x1:-4, y1:17, x2:4, y2:20 },
+        exits: [
+          { x1:-4, y1:17, x2:4, y2:20 },
+          { x1:10, y1:16, x2:18, y2:19 }
+        ],
         obstacles: [
           { x1:-18, y1:10, x2:-10, y2:15, color:"#3a3030", label:"STATUE" },
           { x1:10, y1:-15, x2:18, y2:-10, color:"#3a3030", label:"STATUE" }
@@ -848,7 +905,10 @@
           axisX:        '#aabbff1a', axisY: '#ffffff1a',
           haloRGB:      '170,187,255', vecOverlay: '#aabbff'
         },
-        exit: { x1:-4, y1:17, x2:4, y2:20 },
+        exits: [
+          { x1:-4, y1:17, x2:4, y2:20 },
+          { x1:-18, y1:14, x2:-12, y2:18 }
+        ],
         obstacles: [
           { x1:-20, y1:0, x2:-3, y2:2, color:"#445566", label:"AIRLOCK" },
           { x1:3, y1:0, x2:20, y2:2, color:"#445566", label:"AIRLOCK" }
@@ -867,7 +927,10 @@
           axisX:        '#99990022', axisY: '#66660022',
           haloRGB:      '153,153,0', vecOverlay: '#aaaa00'
         },
-        exit: { x1:-4, y1:17, x2:4, y2:20 },
+        exits: [
+          { x1:-4, y1:17, x2:4, y2:20 },
+          { x1:16, y1:14, x2:19, y2:18 }
+        ],
         obstacles: [{ x1:-15, y1:10, x2:15, y2:11, color:"#cccccc00", label:"MUR INVISIBLE", flashOnContact: true }],
         deathZones: [
           { x1:-10, y1:5, x2:-8, y2:7, color:"#ff000077", label:"DEAD PIXEL" },
@@ -887,7 +950,10 @@
           axisX:        '#44dd4420', axisY: '#00cc0020',
           haloRGB:      '68,221,68', vecOverlay: '#44dd44'
         },
-        exit: { x1:-4, y1:17, x2:4, y2:20 },
+        exits: [
+          { x1:-4, y1:17, x2:4, y2:20 },
+          { x1:5, y1:14, x2:13, y2:18 }
+        ],
         obstacles: [
           { x1:-15, y1:-8, x2:5, y2:-6, color:"#1a4a1a", label:"RONCES" },
           { x1:-5, y1:6, x2:15, y2:8, color:"#1a4a1a", label:"RONCES" }
@@ -907,7 +973,10 @@
           axisX:        '#bb44ff22', axisY: '#8800cc22',
           haloRGB:      '187,68,255', vecOverlay: '#bb44ff'
         },
-        exit: { x1:-4, y1:17, x2:4, y2:20 },
+        exits: [
+          { x1:-4, y1:17, x2:4, y2:20 },
+          { x1:-18, y1:13, x2:-12, y2:17 }
+        ],
         obstacles: [
           { x1:-20, y1:5, x2:-10, y2:10, color:"#444466", label:"RAME" },
           { x1:-10, y1:0, x2:0, y2:5, color:"#444466", label:"RAME" },
@@ -927,7 +996,10 @@
           axisX:        '#4499cc25', axisY: '#2255aa25',
           haloRGB:      '68,153,204', vecOverlay: '#4499cc'
         },
-        exit: { x1:-4, y1:17, x2:4, y2:20 },
+        exits: [
+          { x1:-4, y1:17, x2:4, y2:20 },
+          { x1:-18, y1:14, x2:-10, y2:18 }
+        ],
         obstacles: [{ x1:-6, y1:-15, x2:6, y2:-10, color:"#aaccee", label:"GLACE" }],
         deathZones: [
           { x1:-15, y1:-5, x2:0, y2:-3, color:"#88bbdd77", label:"CREVASSE" },
@@ -947,7 +1019,10 @@
           axisX:        '#ffcc7720', axisY: '#bb111120',
           haloRGB:      '255,204,119', vecOverlay: '#ffcc77'
         },
-        exit: { x1:-4, y1:17, x2:4, y2:20 },
+        exits: [
+          { x1:-4, y1:17, x2:4, y2:20 },
+          { x1:1, y1:14, x2:7, y2:18 }
+        ],
         obstacles: [
           { x1:-10, y1:-20, x2:-8, y2:10, color:"#555544", label:"MUR" },
           { x1:8, y1:-10, x2:10, y2:20, color:"#555544", label:"MUR" },
@@ -968,7 +1043,10 @@
           axisX:        '#ff660025', axisY: '#ffaa0025',
           haloRGB:      '255,102,0', vecOverlay: '#ff6600'
         },
-        exit: { x1:-5, y1:15, x2:5, y2:20 },
+        exits: [
+          { x1:-5, y1:15, x2:5, y2:20 },
+          { x1:9, y1:1, x2:14, y2:4 }
+        ],
         obstacles: [], deathZones: [],
         invertLogic: true,
         safeZones: [
@@ -999,7 +1077,11 @@
       flashObstacle: null,
       flashTimer: 0,
       selectedMenuMap: 0,
-      animRunning: false
+      animRunning: false,
+      // Multiplayer
+      gameMode: 'solo',      // 'solo' | 'multi'
+      playerTurn: 1,         // 1 or 2
+      playerResults: []      // [{player, won, moves, health}]
     };
 
     // ===================== CANVAS & RESIZE =====================
@@ -1007,6 +1089,14 @@
     const ctx = canvas.getContext('2d');
     let W, H, SCALE, ISO_CY;
     let darkCanvas = null, darkCtx = null;
+
+    // ===== DEV MODE - À SUPPRIMER AVANT PRODUCTION =====
+    let devMode = false;
+    function toggleDevMode() {
+      devMode = !devMode;
+      document.getElementById('btn-dev-mode').textContent = devMode ? 'DEV MODE : ON' : 'DEV MODE : OFF';
+    }
+    // ===== FIN DEV MODE =====
 
     function resizeCanvas() {
       // Canvas 3D plein écran
@@ -1352,68 +1442,108 @@
       if (!pc || pc.width === 0 || pc.height === 0) return;
       const pctx = pc.getContext('2d');
       const PW = pc.width, PH = pc.height;
-      // Echelle : afficher ±10 unites sur l'axe le plus court
-      const PS = Math.min(PW, PH) / 20;
+      // Vue plein arène : -20 à 20 en x et y
+      const PS = Math.min(PW, PH) / 40;
       const pal = MAPS[gameState.currentMap].palette;
+      // Coordonnées canvas pour une position monde (x,y)
+      const wx = x => PW/2 + x * PS;
+      const wy = y => PH/2 - y * PS;
       pctx.clearRect(0, 0, PW, PH);
       // Fond manoir parquet
       pctx.fillStyle = '#0d0804';
       pctx.fillRect(0, 0, PW, PH);
-      // Lignes de grille manoir (brun doré très transparent)
+      // Lignes de grille (tous les 5 unités)
       pctx.lineWidth = 0.5;
-      for (let u = -10; u <= 10; u++) {
-        if (u === 0) continue;
-        pctx.strokeStyle = 'rgba(61,40,16,0.35)';
-        const cx = PW/2 + u*PS;
-        pctx.beginPath(); pctx.moveTo(cx, 0); pctx.lineTo(cx, PH); pctx.stroke();
-        const cy = PH/2 - u*PS;
-        pctx.beginPath(); pctx.moveTo(0, cy); pctx.lineTo(PW, cy); pctx.stroke();
+      for (let u = -20; u <= 20; u += 5) {
+        pctx.strokeStyle = u === 0 ? 'rgba(138,106,42,0.55)' : 'rgba(61,40,16,0.35)';
+        pctx.beginPath(); pctx.moveTo(wx(u), 0); pctx.lineTo(wx(u), PH); pctx.stroke();
+        pctx.beginPath(); pctx.moveTo(0, wy(u)); pctx.lineTo(PW, wy(u)); pctx.stroke();
       }
-      // Points aux intersections tous les 5 cases (brun doré)
-      pctx.fillStyle = 'rgba(138,106,42,0.4)';
-      for (let ux = -10; ux <= 10; ux += 5) {
-        for (let uy = -10; uy <= 10; uy += 5) {
-          if (ux === 0 && uy === 0) continue;
-          const px = PW/2 + ux*PS, py = PH/2 - uy*PS;
-          pctx.beginPath(); pctx.arc(px, py, 1.5, 0, Math.PI*2); pctx.fill();
-        }
-      }
-      // Axes X et Y brun doré
-      pctx.lineWidth = 1.2;
-      pctx.strokeStyle = 'rgba(138,106,42,0.6)';
-      pctx.beginPath(); pctx.moveTo(PW/2, 0); pctx.lineTo(PW/2, PH); pctx.stroke();
-      pctx.strokeStyle = 'rgba(138,106,42,0.4)';
-      pctx.beginPath(); pctx.moveTo(0, PH/2); pctx.lineTo(PW, PH/2); pctx.stroke();
-      // Numéros de grille parchemin
-      const fontSize = Math.max(8, Math.min(11, PS * 0.65));
-      pctx.font = `italic ${fontSize}px Georgia, serif`;
-      pctx.textAlign = 'center';
-      pctx.textBaseline = 'top';
+      // Numéros de grille (tous les 10)
+      pctx.font = `italic 7px Georgia, serif`;
       pctx.fillStyle = 'rgba(200,168,130,0.4)';
-      for (let u = -10; u <= 10; u += 5) {
-        if (u === 0) continue;
-        // Labels axe X (en bas de l'axe X)
-        pctx.fillText(u, PW/2 + u*PS, PH/2 + 3);
-        // Labels axe Y (à droite de l'axe Y)
-        pctx.textAlign = 'left';
-        pctx.fillText(u, PW/2 + 3, PH/2 - u*PS - fontSize/2);
-        pctx.textAlign = 'center';
+      pctx.textBaseline = 'top'; pctx.textAlign = 'center';
+      for (let u = -20; u <= 20; u += 10) {
+        if (u !== 0) pctx.fillText(u, wx(u), wy(0) + 2);
+      }
+      pctx.textBaseline = 'alphabetic'; pctx.textAlign = 'left';
+      for (let u = -20; u <= 20; u += 10) {
+        if (u !== 0) pctx.fillText(u, wx(0) + 2, wy(u));
       }
       pctx.textBaseline = 'alphabetic';
-      // Player dot (centré = position relative 0,0 dans la vue) — style torche
-      pctx.beginPath(); pctx.arc(PW/2, PH/2, 5, 0, Math.PI*2);
-      pctx.fillStyle = pal.player; pctx.shadowBlur = 12; pctx.shadowColor = '#ff8c00';
+      // Obstacles (gris sombre)
+      const map = MAPS[gameState.currentMap];
+      map.obstacles.forEach(obs => {
+        pctx.fillStyle = 'rgba(60,40,20,0.7)';
+        pctx.fillRect(wx(obs.x1), wy(obs.y2), (obs.x2-obs.x1)*PS, (obs.y2-obs.y1)*PS);
+      });
+      // Death zones (rouge)
+      map.deathZones.forEach(dz => {
+        pctx.fillStyle = 'rgba(180,20,10,0.4)';
+        pctx.fillRect(wx(dz.x1), wy(dz.y2), (dz.x2-dz.x1)*PS, (dz.y2-dz.y1)*PS);
+      });
+      // Exits — marqueurs dorés avec coordonnées
+      const pp0 = gameState.playerPos;
+      map.exits.forEach((exit, ei) => {
+        const ecx = (exit.x1 + exit.x2) / 2;
+        const ecy = (exit.y1 + exit.y2) / 2;
+        const ex0 = wx(ecx), ey0 = wy(ecy);
+        pctx.save();
+        // Zone de sortie
+        pctx.fillStyle = ei === 0 ? 'rgba(255,210,50,0.18)' : 'rgba(255,150,0,0.18)';
+        pctx.strokeStyle = ei === 0 ? 'rgba(255,210,50,0.7)' : 'rgba(255,150,0,0.7)';
+        pctx.lineWidth = 1;
+        pctx.fillRect(wx(exit.x1), wy(exit.y2), (exit.x2-exit.x1)*PS, (exit.y2-exit.y1)*PS);
+        pctx.strokeRect(wx(exit.x1), wy(exit.y2), (exit.x2-exit.x1)*PS, (exit.y2-exit.y1)*PS);
+        // Point central
+        pctx.shadowBlur = 8; pctx.shadowColor = 'rgba(255,200,80,0.9)';
+        pctx.fillStyle = ei === 0 ? '#ffdd44' : '#ff9900';
+        pctx.beginPath(); pctx.arc(ex0, ey0, 3, 0, Math.PI*2); pctx.fill();
+        pctx.shadowBlur = 0;
+        // Coordonnées
+        pctx.font = `bold 8px Georgia, serif`;
+        pctx.textAlign = 'center';
+        pctx.fillStyle = ei === 0 ? 'rgba(255,220,100,0.95)' : 'rgba(255,180,80,0.95)';
+        pctx.fillText(`(${ecx},${ecy})`, ex0, ey0 - 5);
+        pctx.restore();
+      });
+      // Player dot (position absolue)
+      const ppx = wx(pp0.x), ppy = wy(pp0.y);
+      pctx.beginPath(); pctx.arc(ppx, ppy, 4, 0, Math.PI*2);
+      pctx.fillStyle = pal.player; pctx.shadowBlur = 10; pctx.shadowColor = '#ff8c00';
       pctx.fill(); pctx.shadowBlur = 0;
-      // Vector arrow
+      // Vector arrow depuis la position du joueur
       const dx = parseFloat(document.getElementById('inp-x').value) || 0;
       const dy = parseFloat(document.getElementById('inp-y').value) || 0;
-      const ex = PW/2 + dx*PS, ey = PH/2 - dy*PS;
-      const fex = Math.max(2, Math.min(PW-2, ex));
-      const fey = Math.max(2, Math.min(PH-2, ey));
-      if (dx !== 0 || dy !== 0) drawArrow(pctx, PW/2, PH/2, fex, fey, pal.vecOverlay);
+      if (dx !== 0 || dy !== 0) {
+        const tex = Math.max(2, Math.min(PW-2, wx(pp0.x + dx)));
+        const tey = Math.max(2, Math.min(PH-2, wy(pp0.y + dy)));
+        drawArrow(pctx, ppx, ppy, tex, tey, pal.vecOverlay);
+      }
     }
 
     // ===================== COLLISION DETECTION =====================
+    function checkPointObstacle(pt) {
+      const map = MAPS[gameState.currentMap];
+      if (pt.x < -20 || pt.x > 20 || pt.y < -20 || pt.y > 20) return true;
+      for (const obs of map.obstacles) {
+        if (pt.x >= obs.x1 && pt.x <= obs.x2 && pt.y >= obs.y1 && pt.y <= obs.y2) return true;
+      }
+      return false;
+    }
+
+    function findLastSafePos(start, vec) {
+      const N = Math.max(8, Math.ceil(Math.sqrt(vec.x**2 + vec.y**2) * 6));
+      let lastSafe = {...start};
+      let blockedStep = N;
+      for (let i = 1; i <= N; i++) {
+        const pt = {x: start.x + vec.x * (i / N), y: start.y + vec.y * (i / N)};
+        if (checkPointObstacle(pt)) { blockedStep = i; break; }
+        lastSafe = {...pt};
+      }
+      return {lastSafe, blockedStep, N};
+    }
+
     function checkPath(start, vec) {
       const N = Math.max(8, Math.ceil(Math.sqrt(vec.x**2 + vec.y**2) * 6));
       const map = MAPS[gameState.currentMap];
@@ -1435,14 +1565,43 @@
           if (!inSafe) return 'DEAD';
         }
         if (i === N) {
-          const exit = map.exit;
-          if (pt.x >= exit.x1 && pt.x <= exit.x2 && pt.y >= exit.y1 && pt.y <= exit.y2) return 'WIN';
+          for (const exit of map.exits) {
+            if (pt.x >= exit.x1 && pt.x <= exit.x2 && pt.y >= exit.y1 && pt.y <= exit.y2) return 'WIN';
+          }
         }
       }
       return 'OK';
     }
 
     // ===================== MONSTER AI =====================
+    let monsterTimer = null;
+
+    async function monsterAutoMove() {
+      if (gameState.mode !== 'idle') return;
+      const dx = gameState.playerPos.x - gameState.monsterPos.x;
+      const dy = gameState.playerPos.y - gameState.monsterPos.y;
+      const angle = Math.atan2(dy, dx) + (Math.random() - 0.5) * 0.8;
+      const moveDistance = 1 + Math.random() * 3;
+      const moveVec = {
+        x: Math.round(Math.cos(angle) * moveDistance),
+        y: Math.round(Math.sin(angle) * moveDistance)
+      };
+      if (checkPath(gameState.monsterPos, moveVec) !== 'OK') return;
+      const prevM = {...gameState.monsterPos};
+      gameState.monsterPos.x += moveVec.x;
+      gameState.monsterPos.y += moveVec.y;
+      const newM = {...gameState.monsterPos};
+      gameState.monsterPos = {...prevM};
+      playSound('monster');
+      await animateMonster(prevM, newM, 400);
+      gameState.monsterPos = {...newM};
+      const distAfter = Math.hypot(
+        gameState.playerPos.x - gameState.monsterPos.x,
+        gameState.playerPos.y - gameState.monsterPos.y
+      );
+      if (distAfter < 1.5) gameOver();
+    }
+
     function monsterMove() {
       const gs = gameState;
       const dx = gs.playerPos.x - gs.monsterPos.x;
@@ -1511,22 +1670,66 @@
 
     // ===================== GAME OVER / WIN =====================
     function gameOver() {
+      clearInterval(monsterTimer); monsterTimer = null;
       playSound('death');
       gameState.mode = 'gameover';
-      document.getElementById('go-pos').textContent = `Position finale : (${gameState.playerPos.x.toFixed(1)}, ${gameState.playerPos.y.toFixed(1)})`;
-      document.getElementById('go-moves').textContent = `Déplacements : ${gameState.moveCount}`;
-      document.getElementById('screen-gameover').style.display = 'flex';
+      closeOverlay();
+      if (gameState.gameMode === 'multi' && gameState.playerTurn === 1) {
+        // Player 1 lost — pass to player 2
+        gameState.playerResults[0] = { player: 1, won: false, moves: gameState.moveCount, health: gameState.health };
+        document.getElementById('switch-title').textContent = 'Joueur 1 — Éliminé !';
+        document.getElementById('switch-result').textContent = `${gameState.moveCount} déplacement(s) avant la défaite.`;
+        document.getElementById('screen-player-switch').style.display = 'flex';
+      } else if (gameState.gameMode === 'multi' && gameState.playerTurn === 2) {
+        // Both done — show results
+        gameState.playerResults[1] = { player: 2, won: false, moves: gameState.moveCount, health: gameState.health };
+        showResults();
+      } else {
+        document.getElementById('go-pos').textContent = `Position finale : (${gameState.playerPos.x.toFixed(1)}, ${gameState.playerPos.y.toFixed(1)})`;
+        document.getElementById('go-moves').textContent = `Déplacements : ${gameState.moveCount}`;
+        document.getElementById('screen-gameover').style.display = 'flex';
+      }
     }
 
     function levelComplete() {
+      clearInterval(monsterTimer); monsterTimer = null;
       playSound('win');
+      closeOverlay();
       const highest = parseInt(localStorage.getItem('vhHighest') || '0');
       if (gameState.currentMap + 1 > highest) localStorage.setItem('vhHighest', gameState.currentMap + 1);
-      document.getElementById('win-moves').textContent = `Déplacements : ${gameState.moveCount}`;
-      document.getElementById('win-deck').textContent = `Vecteurs utilisés : ${gameState.deck.map(v => `(${v.x},${v.y})`).join(' ')}`;
-      const hasNext = gameState.currentMap + 1 < MAPS.length;
-      document.getElementById('btn-next-map').style.display = hasNext ? '' : 'none';
-      document.getElementById('screen-win').style.display = 'flex';
+      if (gameState.gameMode === 'multi' && gameState.playerTurn === 1) {
+        // Player 1 won — pass to player 2
+        gameState.playerResults[0] = { player: 1, won: true, moves: gameState.moveCount, health: gameState.health };
+        document.getElementById('switch-title').textContent = 'Joueur 1 — Sortie trouvée !';
+        document.getElementById('switch-result').textContent = `${gameState.moveCount} déplacement(s), ${gameState.health} ❤ restant(s).`;
+        document.getElementById('screen-player-switch').style.display = 'flex';
+      } else if (gameState.gameMode === 'multi' && gameState.playerTurn === 2) {
+        // Both done — show results
+        gameState.playerResults[1] = { player: 2, won: true, moves: gameState.moveCount, health: gameState.health };
+        showResults();
+      } else {
+        document.getElementById('win-moves').textContent = `Déplacements : ${gameState.moveCount}`;
+        document.getElementById('win-deck').textContent = `Vecteurs utilisés : ${gameState.deck.map(v => `(${v.x},${v.y})`).join(' ')}`;
+        const hasNext = gameState.currentMap + 1 < MAPS.length;
+        document.getElementById('btn-next-map').style.display = hasNext ? '' : 'none';
+        document.getElementById('screen-win').style.display = 'flex';
+      }
+    }
+
+    function showResults() {
+      const r = gameState.playerResults;
+      const content = document.getElementById('results-content');
+      content.innerHTML = r.map(p => {
+        const isWinner = p.won && (!r.find(o => o.player !== p.player && o.won) || p.moves <= r.find(o => o.player !== p.player).moves);
+        return `<div class="result-card ${isWinner ? 'winner' : ''}">
+          <h3>Joueur ${p.player}</h3>
+          <div class="rc-badge ${p.won ? '' : 'lose'}">${p.won ? '✓ SORTI' : '✗ ÉLIMINÉ'}</div>
+          <div class="rc-val">Déplacements : ${p.moves}</div>
+          <div class="rc-val">Vitalité restante : ${p.health} ❤</div>
+          ${isWinner ? '<div style="color:#f5d070;font-size:12px;margin-top:8px;">★ Vainqueur !</div>' : ''}
+        </div>`;
+      }).join('');
+      document.getElementById('screen-results').style.display = 'flex';
     }
 
     // ===================== DECK MANAGEMENT =====================
@@ -1603,7 +1806,10 @@
       const cmdPosEl = document.getElementById('cmd-pos');
       if (cmdPosEl) cmdPosEl.textContent = `(${gs.playerPos.x.toFixed(1)}, ${gs.playerPos.y.toFixed(1)})`;
       const cmdMapNumEl = document.getElementById('cmd-map-num');
-      if (cmdMapNumEl) cmdMapNumEl.textContent = gs.currentMap + 1;
+      if (cmdMapNumEl) {
+        const turnLabel = gs.gameMode === 'multi' ? ` — J${gs.playerTurn}` : '';
+        cmdMapNumEl.textContent = (gs.currentMap + 1) + turnLabel;
+      }
       // Mise a jour du hud-pos dans le panneau gauche
       const hudPosEl = document.getElementById('hud-pos');
       if (hudPosEl) hudPosEl.textContent = `(${gs.playerPos.x.toFixed(1)}, ${gs.playerPos.y.toFixed(1)})`;
@@ -1648,11 +1854,47 @@
       await delay(520);
       const startPos = {...gameState.playerPos};
       const endPos = {x: startPos.x + dx, y: startPos.y + dy};
+
+      // ── Répulsion mur (BLOCKED) ────────────────────────────────────
+      if (result === 'BLOCKED') {
+        const {lastSafe, blockedStep, N} = findLastSafePos(startPos, vec);
+        await animateMove(startPos, lastSafe, 400, true);
+        gameState.playerPos = {...lastSafe};
+        const totalDist = Math.sqrt(vec.x**2 + vec.y**2);
+        const remainingDist = totalDist * (1 - blockedStep / N);
+        const norm = totalDist > 0 ? totalDist : 1;
+        const pushVec = {x: -(vec.x / norm) * remainingDist, y: -(vec.y / norm) * remainingDist};
+        const pushResult = checkPath(lastSafe, pushVec);
+        let finalPos;
+        if (pushResult === 'OK' || pushResult === 'WIN') {
+          finalPos = {x: lastSafe.x + pushVec.x, y: lastSafe.y + pushVec.y};
+        } else {
+          finalPos = {...lastSafe};
+        }
+        await animateMove(lastSafe, finalPos, 300, true);
+        gameState.playerPos = {...finalPos};
+        gameState.lastVector = vec;
+        setMessage('⚠ Repoussé par le mur !');
+        const pM = {...gameState.monsterPos};
+        playSound('monster'); monsterMove();
+        const nM = {...gameState.monsterPos};
+        gameState.monsterPos = {...pM};
+        await animateMonster(pM, nM, 300);
+        gameState.monsterPos = {...nM};
+        if (Math.hypot(gameState.playerPos.x - gameState.monsterPos.x, gameState.playerPos.y - gameState.monsterPos.y) < 1.5) { gameOver(); return; }
+        gameState.mode = 'idle';
+        setAllDisabled(false);
+        document.getElementById('btn-back-cmd').disabled = false;
+        clearInterval(monsterTimer); monsterTimer = setInterval(monsterAutoMove, 10000);
+        updateCommandUI(); openOverlay();
+        return;
+      }
+
       await animateMove(startPos, endPos, 600, true);
       gameState.playerPos = {...endPos};
       gameState.lastVector = vec;
       if (result === 'WIN') { levelComplete(); return; }
-      if (result === 'BLOCKED' || result === 'DEAD') { gameOver(); return; }
+      if (result === 'DEAD') { gameOver(); return; }
       const prevMonster = {...gameState.monsterPos};
       playSound('monster');
       monsterMove();
@@ -1666,6 +1908,7 @@
       gameState.mode = 'idle';
       setAllDisabled(false);
       document.getElementById('btn-back-cmd').disabled = false;
+      clearInterval(monsterTimer); monsterTimer = setInterval(monsterAutoMove, 10000);
       updateCommandUI();
     }
 
@@ -1711,6 +1954,7 @@
         gameState.mode = 'idle';
         setAllDisabled(false);
         document.getElementById('btn-back-cmd').disabled = false;
+        clearInterval(monsterTimer); monsterTimer = setInterval(monsterAutoMove, 10000);
         updateCommandUI();
       });
     }
@@ -1749,8 +1993,9 @@
     }
 
     // ===================== START GAME =====================
-    function startGame(mapIndex) {
+    function startGame(mapIndex, playerTurnOverride) {
       gameState.currentMap = mapIndex;
+      if (playerTurnOverride !== undefined) gameState.playerTurn = playerTurnOverride;
       gameState.playerPos = { x: 0, y: -18 };
       gameState.monsterPos = { x: 0, y: 18 };
       gameState.deck = [];
@@ -1764,12 +2009,15 @@
       gameState.mode = 'idle';
       gameState.flashObstacle = null;
       gameState.flashTimer = 0;
+      setAllDisabled(false);
+      clearInterval(monsterTimer); monsterTimer = setInterval(monsterAutoMove, 10000);
       document.getElementById('screen-menu').style.display = 'none';
       document.getElementById('screen-gameover').style.display = 'none';
       document.getElementById('screen-win').style.display = 'none';
+      document.getElementById('screen-player-switch').style.display = 'none';
+      document.getElementById('screen-results').style.display = 'none';
       const btnBack = document.getElementById('btn-back-cmd');
       if (btnBack) btnBack.disabled = false;
-      // Afficher le canvas 3D plein écran + l'overlay 2D
       canvas.style.display = 'block';
       closeSettings();
       showGear(true);
@@ -1794,7 +2042,7 @@
       const pp    = gameState.playerPos;
       const mp    = gameState.monsterPos;
       const lv    = gameState.lastVector;
-      const exit  = map.exit;
+      const exits = map.exits;
       const pulse = 0.5 + 0.5 * Math.sin(ts / 400);
       const WALL_H = 3.5;   // world-unit height for obstacles
       const DZ_H   = 0.22;  // death-zone slab
@@ -2009,43 +2257,41 @@
         }
       }}));
 
-      // Exit — porte en bois massif du manoir
-      Q.push({ d: cDist(exit.x1,exit.y1,exit.x2,exit.y2), fn: () => {
-        const doorPulse = 0.7 + 0.3 * Math.sin(ts / 600);
-        // Châssis de porte (bois sombre)
-        ctx.shadowBlur = (12 + 8 * pulse) * doorPulse; ctx.shadowColor = 'rgba(255,180,50,0.5)';
-        renderBox3D(exit.x1, exit.y1, exit.x2, exit.y2, EXIT_H, '#2a1a08', null);
-        ctx.shadowBlur = 0;
-        // Halo lumière espoir autour de la porte
-        const midPt = project((exit.x1+exit.x2)/2, (exit.y1+exit.y2)/2, EXIT_H + 0.1);
-        if (midPt) {
-          const haloR = 55 * doorPulse;
-          const haloG = ctx.createRadialGradient(midPt.sx, midPt.sy, 0, midPt.sx, midPt.sy, haloR);
-          haloG.addColorStop(0, `rgba(255,180,50,${0.15 * doorPulse})`);
-          haloG.addColorStop(1, 'rgba(0,0,0,0)');
-          ctx.fillStyle = haloG;
-          ctx.beginPath(); ctx.arc(midPt.sx, midPt.sy, haloR, 0, Math.PI * 2); ctx.fill();
-          // Fente de lumière sous la porte
-          const exitBot = project((exit.x1+exit.x2)/2, (exit.y1+exit.y2)/2, 0.02);
-          if (exitBot) {
-            ctx.save();
-            ctx.strokeStyle = `rgba(255,200,100,${0.5 * doorPulse})`;
-            ctx.lineWidth = 1.5; ctx.shadowBlur = 6; ctx.shadowColor = '#ffcc44';
-            ctx.beginPath(); ctx.moveTo(midPt.sx - 14, exitBot.sy); ctx.lineTo(midPt.sx + 14, exitBot.sy);
-            ctx.stroke(); ctx.restore();
-          }
-          // Label SORTIE — flèche qui monte et descend
-          const arrowOff = 3 * Math.sin(ts * 0.002);
-          ctx.fillStyle = `rgba(200,168,130,${0.9 * doorPulse})`;
-          ctx.font = `italic bold ${Math.min(15, 58/midPt.depth)}px Georgia, serif`;
-          ctx.textAlign = 'center';
-          ctx.shadowBlur = 8; ctx.shadowColor = 'rgba(255,180,50,0.6)';
-          ctx.fillText('Sortie', midPt.sx, midPt.sy - 8 + arrowOff);
-          ctx.font = `${Math.min(11, 42/midPt.depth)}px Georgia, serif`;
-          ctx.fillText('↑', midPt.sx, midPt.sy - 20 + arrowOff);
+      // Exits — portes en bois massif du manoir
+      exits.forEach(exit => {
+        Q.push({ d: cDist(exit.x1,exit.y1,exit.x2,exit.y2), fn: () => {
+          const doorPulse = 0.7 + 0.3 * Math.sin(ts / 600);
+          ctx.shadowBlur = (12 + 8 * pulse) * doorPulse; ctx.shadowColor = 'rgba(255,180,50,0.5)';
+          renderBox3D(exit.x1, exit.y1, exit.x2, exit.y2, EXIT_H, '#2a1a08', null);
           ctx.shadowBlur = 0;
-        }
-      }});
+          const midPt = project((exit.x1+exit.x2)/2, (exit.y1+exit.y2)/2, EXIT_H + 0.1);
+          if (midPt) {
+            const haloR = 55 * doorPulse;
+            const haloG = ctx.createRadialGradient(midPt.sx, midPt.sy, 0, midPt.sx, midPt.sy, haloR);
+            haloG.addColorStop(0, `rgba(255,180,50,${0.15 * doorPulse})`);
+            haloG.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = haloG;
+            ctx.beginPath(); ctx.arc(midPt.sx, midPt.sy, haloR, 0, Math.PI * 2); ctx.fill();
+            const exitBot = project((exit.x1+exit.x2)/2, (exit.y1+exit.y2)/2, 0.02);
+            if (exitBot) {
+              ctx.save();
+              ctx.strokeStyle = `rgba(255,200,100,${0.5 * doorPulse})`;
+              ctx.lineWidth = 1.5; ctx.shadowBlur = 6; ctx.shadowColor = '#ffcc44';
+              ctx.beginPath(); ctx.moveTo(midPt.sx - 14, exitBot.sy); ctx.lineTo(midPt.sx + 14, exitBot.sy);
+              ctx.stroke(); ctx.restore();
+            }
+            const arrowOff = 3 * Math.sin(ts * 0.002);
+            ctx.fillStyle = `rgba(200,168,130,${0.9 * doorPulse})`;
+            ctx.font = `italic bold ${Math.min(15, 58/midPt.depth)}px Georgia, serif`;
+            ctx.textAlign = 'center';
+            ctx.shadowBlur = 8; ctx.shadowColor = 'rgba(255,180,50,0.6)';
+            ctx.fillText('Sortie', midPt.sx, midPt.sy - 8 + arrowOff);
+            ctx.font = `${Math.min(11, 42/midPt.depth)}px Georgia, serif`;
+            ctx.fillText('↑', midPt.sx, midPt.sy - 20 + arrowOff);
+            ctx.shadowBlur = 0;
+          }
+        }});
+      });
 
       // Obstacles — armoires / sarcophages en bois sculpté
       map.obstacles.forEach(obs => {
@@ -2167,11 +2413,17 @@
       ctx.restore();
 
       // ── Éclairage bougie : screen blend — illumine les objets 3D ───
+      // ===== DEV MODE - À SUPPRIMER AVANT PRODUCTION =====
+      if (devMode) {
+        ctx.fillStyle = 'rgba(255,220,160,0.08)';
+        ctx.fillRect(0, 0, W, H);
+      } else {
+      // ===== FIN DEV MODE =====
       const lightPt = project(pp.x, pp.y, 1.0);
       if (lightPt) {
         const cx = lightPt.sx, cy = lightPt.sy;
         const flicker = 0.88 + 0.12 * Math.sin(ts * 0.009);
-        const haloR = 420 * flicker;
+        const haloR = 315 * flicker;
 
         // 1. Assombrir toute la scène uniformément
         ctx.fillStyle = 'rgba(0,0,0,0.60)';
@@ -2180,9 +2432,9 @@
         // 2. Projeter la lumière chaude sur les surfaces via screen blend
         ctx.globalCompositeOperation = 'screen';
         const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, haloR);
-        grad.addColorStop(0,    `rgba(255,230,160,${flicker})`);
-        grad.addColorStop(0.22, `rgba(255,160,40,${0.85 * flicker})`);
-        grad.addColorStop(0.55, `rgba(110,45,8,${0.55 * flicker})`);
+        grad.addColorStop(0,    `rgba(255,230,160,${flicker * 0.60})`);
+        grad.addColorStop(0.22, `rgba(255,160,40,${0.51 * flicker})`);
+        grad.addColorStop(0.55, `rgba(110,45,8,${0.33 * flicker})`);
         grad.addColorStop(1,    'rgba(0,0,0,0)');
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, W, H);
@@ -2192,13 +2444,16 @@
         const flH = 7 + 2 * Math.sin(ts * 0.011);
         const flOff = 1.2 * Math.sin(ts * 0.008);
         ctx.save();
-        ctx.shadowBlur = 12; ctx.shadowColor = '#ff6600';
+        ctx.shadowBlur = 7; ctx.shadowColor = '#ff6600';
         ctx.fillStyle = '#ff9900';
         ctx.beginPath(); ctx.ellipse(cx + flOff, cy - flH * 0.5, 2.5, flH * 0.6, 0, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = '#ffcc44'; ctx.shadowColor = '#ffdd66';
         ctx.beginPath(); ctx.ellipse(cx + flOff * 0.5, cy - flH * 0.35, 1.4, flH * 0.35, 0, 0, Math.PI * 2); ctx.fill();
         ctx.shadowBlur = 0; ctx.restore();
       }
+      // ===== DEV MODE - À SUPPRIMER AVANT PRODUCTION =====
+      } // fin else devMode
+      // ===== FIN DEV MODE =====
 
       // ── HUD ───────────────────────────────────────────────────────
       const hudPosEl = document.getElementById('hud-pos');
@@ -2295,8 +2550,41 @@
       document.getElementById('btn-scalar').onclick = executeScalar;
 
       // Menu buttons
-      document.getElementById('btn-play').onclick = () => startGame(gameState.selectedMenuMap);
+      document.getElementById('btn-play').onclick = () => {
+        gameState.playerResults = [];
+        gameState.playerTurn = 1;
+        startGame(gameState.selectedMenuMap);
+      };
       document.getElementById('btn-menu-mute').onclick = toggleMute;
+
+      // Mode solo / 2 joueurs
+      document.getElementById('btn-solo').onclick = () => {
+        gameState.gameMode = 'solo';
+        document.getElementById('btn-solo').classList.add('active');
+        document.getElementById('btn-multi').classList.remove('active');
+      };
+      document.getElementById('btn-multi').onclick = () => {
+        gameState.gameMode = 'multi';
+        document.getElementById('btn-multi').classList.add('active');
+        document.getElementById('btn-solo').classList.remove('active');
+      };
+
+      // Player-switch screen
+      document.getElementById('btn-switch-play').onclick = () => {
+        startGame(gameState.currentMap, 2);
+      };
+
+      // Results screen
+      document.getElementById('btn-results-replay').onclick = () => {
+        gameState.playerResults = [];
+        gameState.playerTurn = 1;
+        startGame(gameState.currentMap);
+      };
+      document.getElementById('btn-results-menu').onclick = () => {
+        document.getElementById('screen-results').style.display = 'none';
+        document.getElementById('screen-menu').style.display = 'flex';
+        gameState.mode = 'menu'; showGear(false); closeSettings(); renderMenu();
+      };
 
       // Gameover buttons
       document.getElementById('btn-retry').onclick = () => {
@@ -2366,12 +2654,15 @@
 
       // Réglages : Retour accueil jeu
       document.getElementById('settings-to-menu').onclick = () => {
+        clearInterval(monsterTimer); monsterTimer = null;
         closeSettings();
-        document.getElementById('screen-gameover').style.display = 'none';
-        document.getElementById('screen-win').style.display = 'none';
+        ['screen-gameover','screen-win','screen-player-switch','screen-results'].forEach(id => {
+          document.getElementById(id).style.display = 'none';
+        });
         document.getElementById('screen-menu').style.display = 'flex';
         canvas.style.display = 'none'; closeOverlay();
-        gameState.mode = 'menu'; showGear(false); renderMenu();
+        gameState.mode = 'menu'; gameState.playerResults = []; gameState.playerTurn = 1;
+        setAllDisabled(false); showGear(false); renderMenu();
       };
 
       // Réglages : Retour Hub
@@ -2391,5 +2682,13 @@
       gameState.mode = 'menu';
     });
   </script>
+
+  <!-- ===== DEV MODE - À SUPPRIMER AVANT PRODUCTION ===== -->
+  <button id="btn-dev-mode" onclick="toggleDevMode()" style="
+    position:fixed; bottom:10px; left:10px; z-index:999;
+    background:#1a1a1a; color:#888888; border:1px solid #333333;
+    font:11px 'Courier New',monospace; padding:4px 8px; opacity:0.7;
+    cursor:pointer; border-radius:3px;">DEV MODE : OFF</button>
+  <!-- ===== FIN DEV MODE ===== -->
 </body>
 </html>

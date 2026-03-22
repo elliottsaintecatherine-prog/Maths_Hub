@@ -53,13 +53,24 @@
     }
 
     .ui-panel-title {
-      font-size: 11px; letter-spacing: 1.5px;
+      font-size: 11px; letter-spacing: 1px;
       color: #c8a882; margin-bottom: 8px;
       border-bottom: 1px solid #3d281033; padding-bottom: 6px;
-      white-space: nowrap;
       font-family: Georgia, serif; font-style: italic;
       text-shadow: 0 0 8px rgba(255,140,0,0.25);
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
     }
+    .ui-panel-title span { flex: 1; min-width: 0; }
+
+    #btn-gear-panel {
+      flex-shrink: 0;
+      background: transparent; border: 1px solid #3d281044;
+      color: #a07850; font-size: 14px; cursor: pointer;
+      width: 26px; height: 26px;
+      display: flex; align-items: center; justify-content: center;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    #btn-gear-panel:hover { border-color: #8a6a2a; color: #c8a882; }
 
     .ui-row {
       display: flex; align-items: center; gap: 8px;
@@ -82,9 +93,6 @@
       z-index: 10;
     }
     #label-map    { top: 8px; right: 12px; color: #c8a882; border-color: #8a6a2a; font-size: 11px; }
-    #label-view   { bottom: 12px; right: 12px; color: #a0785055; border: none; font-size: 9px; font-style: italic; }
-    #label-trou   { top: 55%; right: 16px; color: #cc4400; border-color: #8a3000; }
-    #label-carcasse { top: 18%; right: 12px; color: #c8a88266; border-color: #5a3d1a44; }
 
     /* ── HUD bas gauche (fixé) ── */
     #hud-neo {
@@ -112,18 +120,7 @@
 
 
 
-    /* Engrenage — visible pendant le jeu */
-    #btn-gear {
-      position: fixed; top: 8px; right: 8px; z-index: 1000;
-      width: 36px; height: 36px;
-      background: rgba(14,8,4,0.82); color: #a07850;
-      border: 1px solid #5a3d1a44;
-      font-size: 18px; cursor: pointer; display: none;
-      align-items: center; justify-content: center;
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
-    #btn-gear:hover { border-color: #8a6a2a; box-shadow: 0 0 10px rgba(255,140,0,0.25); }
-    #btn-gear.visible { display: flex; }
+    #btn-gear { display: none !important; }
 
     /* Panneau de réglages */
     #settings-panel {
@@ -606,11 +603,8 @@
   <canvas id="game-canvas"></canvas>
   <div id="vec-overlay"></div>
 
-  <!-- Labels 3D (fixés sur le canvas) -->
+  <!-- label-map conservé pour compat JS (updateCommandUI le met à jour) -->
   <div class="label-3d" id="label-map">Acte <span id="cmd-map-name-label">1</span></div>
-  <div class="label-3d" id="label-carcasse">Armoire<br>Ancienne</div>
-  <div class="label-3d" id="label-trou">⚠ Trappe</div>
-  <div class="label-3d" id="label-view">Perspective 3ème Personne</div>
 
   <!-- HUD santé (fixé) -->
   <div id="hud-neo">
@@ -631,7 +625,10 @@
   <div id="overlay-2d">
     <div id="panel-command">
       <div id="ui-panel">
-        <div class="ui-panel-title">✦ Grimoire de Script — Acte <span id="cmd-map-num">1</span></div>
+        <div class="ui-panel-title">
+          <span>✦ Acte <span id="cmd-map-num">1</span></span>
+          <button id="btn-gear-panel" aria-label="Réglages">⚙</button>
+        </div>
         <div class="ui-row">
           <span class="ui-label">Position actuelle :</span>
           <span id="hud-pos" style="font-size:13px;font-weight:bold;">(0, -18)</span>
@@ -2329,7 +2326,11 @@
         gameState.mode = 'menu'; showGear(false); closeSettings(); renderMenu();
       };
 
-      // Engrenage : toggle ouverture/fermeture
+      // Engrenage dans le panel : toggle ouverture/fermeture
+      document.getElementById('btn-gear-panel').onclick = () => {
+        const panel = document.getElementById('settings-panel');
+        panel.classList.contains('open') ? closeSettings() : openSettings();
+      };
       document.getElementById('btn-gear').onclick = () => {
         const panel = document.getElementById('settings-panel');
         panel.classList.contains('open') ? closeSettings() : openSettings();

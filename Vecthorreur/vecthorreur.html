@@ -1097,18 +1097,23 @@
       cam.angle += diff * 0.07;
       cam.pitch += (cam.targetPitch - cam.pitch) * 0.1;
       const ca = Math.cos(cam.angle), sa = Math.sin(cam.angle);
-      cam.x = pp.x - ca * 4.5;
-      cam.y = pp.y - sa * 4.5;
-      cam.z = 2.8;
-      // Forward axis from yaw + pitch (Euler angles)
-      const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
-      cam.fx = ca * cp; cam.fy = sa * cp; cam.fz = sp;
-      // Right axis: perpendicular to yaw in horizontal plane
+      // Orbite sphérique autour du centre du joueur
+      // elev = -pitch : elevation positive = caméra au-dessus
+      const elev = -cam.pitch;
+      const ce = Math.cos(elev), se = Math.sin(elev);
+      const D = 5.0;           // rayon d'orbite
+      const PIVOT_H = 1.0;     // hauteur du point de pivot (centre du joueur)
+      cam.x = pp.x - ca * ce * D;
+      cam.y = pp.y - sa * ce * D;
+      cam.z = Math.max(0.5, PIVOT_H + se * D);
+      // Axe avant : de la caméra vers le pivot (joueur toujours centré)
+      cam.fx = ca * ce; cam.fy = sa * ce; cam.fz = -se;
+      // Axe droit : perpendiculaire au yaw dans le plan horizontal
       cam.rx = sa; cam.ry = -ca;
-      // Up axis: right × forward
-      cam.ux = -ca * sp;
-      cam.uy = -sa * sp;
-      cam.uz = cp;
+      // Axe haut : droite × avant
+      cam.ux = ca * se;
+      cam.uy = sa * se;
+      cam.uz = ce;
     }
 
     // Project a world point to screen. Returns {sx, sy, depth} or null if behind camera.

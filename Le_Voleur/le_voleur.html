@@ -1112,10 +1112,10 @@ window.sfx = {
         };
 
         window.touche = function(k) {
-            window.jouerSon('typing'); // Jouera aléatoirement typing 1, 2 ou 3
             if(k==='DEL') window.inputMath = window.inputMath.slice(0, -1);
             else if(k==='-') { if(window.inputMath.length===0) window.inputMath += "-"; }
             else if(k==='OK') {
+                window.jouerSon('typing');
                 if(parseInt(window.inputMath)===window.currentQ.r) {
                     clearInterval(window.timerPhase5);
                     

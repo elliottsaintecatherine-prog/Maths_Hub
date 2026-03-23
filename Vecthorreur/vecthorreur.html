@@ -19,7 +19,7 @@
       position: fixed; inset: 0; z-index: 100;
       display: none;
       align-items: center; justify-content: center;
-      background: rgba(5,3,2,0.72);
+      background: transparent;
     }
 
     #panel-command {
@@ -830,10 +830,14 @@
       error:      loadSound('assets/audio/error.mp3'),
       death:      loadSound('assets/audio/death.mp3'),
       win:        loadSound('assets/audio/win.mp3'),
-      transition: loadSound('assets/audio/transition.mp3')
+      transition: loadSound('assets/audio/transition.mp3'),
+      screamer:   loadSound('assets/audio/screamer.mp3'),
+      map: Array.from({length: 10}, (_, i) => loadSound(`assets/audio/map_${i}.mp3`))
     };
     SFX.ambiance.loop = true;
     SFX.ambiance.volume = 0.3;
+    SFX.map.forEach(s => { s.loop = true; s.volume = 0.35; });
+    let currentMapSound = null;
     let audioUnlocked = false;
     document.addEventListener('click', () => {
       if (!audioUnlocked) { audioUnlocked = true; SFX.ambiance.play().catch(() => {}); }
@@ -847,8 +851,8 @@
 
     function toggleMute() {
       globalMute = !globalMute;
-      // Mute tous les SFX sauf ambiance
-      ['move','monster','execute','error','death','win','transition'].forEach(k => {
+      // Mute tous les SFX sauf ambiance et sons de map
+      ['move','monster','execute','error','death','win','transition','screamer'].forEach(k => {
         SFX[k].muted = globalMute;
       });
       const label = globalMute ? '♪ SON : OFF' : '♪ SON : ON';
@@ -863,12 +867,14 @@
     function setMusicMute(muted) {
       musicMute = muted;
       SFX.ambiance.muted = muted;
+      SFX.map.forEach(s => { s.muted = muted; });
       const toggle = document.getElementById('toggle-music');
       if (toggle) toggle.checked = !muted;
     }
 
     function setMusicVolume(v) {
       SFX.ambiance.volume = v / 100;
+      SFX.map.forEach(s => { s.volume = v / 100; });
       const disp = document.getElementById('vol-display');
       if (disp) disp.textContent = v;
     }
@@ -895,9 +901,9 @@
     // Inspirées des thèmes Chair de Poule de chaque map
     const MAPS = [
       {
-        // Chair de Poule : Le Manoir de la Terreur — manoir hanté, fantôme, bougies
-        name: "Le Manoir de la Terreur", theme: "Manoir Hanté",
-        bgColor: "#060809", gridColor: "#5a503815", accentColor: "#c8a050",
+        // Le Manoir Blackwood — manoir victorien 10 pièces, 3 sorties
+        name: "Le Manoir Blackwood", theme: "Manoir de la Terreur",
+        bgColor: "#080503", gridColor: "#3d281088", accentColor: "#8a6a2a",
         monsterSpeed: 0.50,
         palette: {
           player:       '#f5d070', playerDark: '#8a6820', playerHead: '#f0c840',
@@ -906,42 +912,98 @@
           axisX:        '#f5d07022', axisY:  '#8090a822',
           haloRGB:      '245,208,112', vecOverlay: '#f5d070'
         },
+        playerSpawn:  { x: 0, y: -18 },
+        monsterSpawn: { x: 0, y: 14 },
         exits: [
-          { x1:-4, y1:17, x2:4, y2:20 },
-          { x1:-18, y1:15, x2:-10, y2:19 }
+          { x1:-20, y1:17, x2:-17, y2:20, label:"Sortie — Laboratoire" },
+          { x1: 17, y1:17, x2: 20, y2:20, label:"Sortie — Miroirs"     },
+          { x1: -1, y1:19, x2:  1, y2:20, label:"Sortie — Trône"       }
+        ],
+        walls: [
+          { x1:-8,  y1:-14, x2:-7,  y2:-6,  color:"#1a1208" },
+          { x1: 7,  y1:-14, x2: 8,  y2:-6,  color:"#1a1208" },
+          { x1:-8,  y1:-7,  x2:-3,  y2:-6,  color:"#1a1208" },
+          { x1: 3,  y1:-7,  x2: 8,  y2:-6,  color:"#1a1208" },
+          { x1:-20, y1:-5,  x2:-8,  y2:-4,  color:"#1a1208" },
+          { x1: 8,  y1:-5,  x2:20,  y2:-4,  color:"#1a1208" },
+          { x1:-8,  y1:-6,  x2:-7,  y2: 6,  color:"#1a1208" },
+          { x1: 7,  y1:-6,  x2: 8,  y2: 6,  color:"#1a1208" },
+          { x1:-8,  y1: 5,  x2:-3,  y2: 6,  color:"#1a1208" },
+          { x1: 3,  y1: 5,  x2: 8,  y2: 6,  color:"#1a1208" },
+          { x1:-20, y1: 5,  x2:-13, y2: 6,  color:"#1a1208" },
+          { x1:-9,  y1: 5,  x2:-8,  y2: 6,  color:"#1a1208" },
+          { x1: 8,  y1: 5,  x2:13,  y2: 6,  color:"#1a1208" },
+          { x1:19,  y1: 5,  x2:20,  y2: 6,  color:"#1a1208" },
+          { x1:-8,  y1: 6,  x2:-7,  y2:16,  color:"#1a1208" },
+          { x1: 7,  y1: 6,  x2: 8,  y2:16,  color:"#1a1208" },
+          { x1:-8,  y1:15,  x2:-3,  y2:16,  color:"#1a1208" },
+          { x1: 3,  y1:15,  x2: 8,  y2:16,  color:"#1a1208" },
+          { x1:-8,  y1:15,  x2:-7,  y2:20,  color:"#1a1208" },
+          { x1: 7,  y1:15,  x2: 8,  y2:20,  color:"#1a1208" }
         ],
         obstacles: [
-          // ── Grand Foyer (entrée sud) ──
-          { x1:-12, y1:-15, x2: -9, y2:-12, color:"#2a2520", label:"COLONNE DE MARBRE"   },
-          { x1:  9, y1:-15, x2: 12, y2:-12, color:"#2a2520", label:"COLONNE DE MARBRE"   },
-          // Grand escalier central
-          { x1: -4, y1:-12, x2:  4, y2: -8, color:"#3a3530", label:"ESCALIER EN RUINE"  },
-          // ── Ailes latérales (salon) ──
-          { x1:-19, y1: -6, x2:-13, y2: -1, color:"#2a2520", label:"BIBLIOTHÈQUE BRISÉE" },
-          { x1: 13, y1: -6, x2: 19, y2: -1, color:"#2a2520", label:"ARMOIRE GOTHIQUE"    },
-          // Cheminée centrale du salon
-          { x1: -3, y1:  2, x2:  3, y2:  7, color:"#3a2010", label:"CHEMINÉE EN MARBRE" },
-          // ── Aile nord-est : Salle de bal ──
-          { x1: 11, y1:  8, x2: 17, y2: 13, color:"#2a2520", label:"PIANO À QUEUE"       },
-          // ── Aile nord-ouest : Chapelle ──
-          { x1:-15, y1:  8, x2: -9, y2: 12, color:"#2a2520", label:"SARCOPHAGE SCULPTÉ"  },
-          // ── Couloir nord : portique vers sortie 1 ──
-          { x1: -7, y1: 13, x2: -5, y2: 16, color:"#2a2520", label:"COLONNE GOTHIQUE"    },
-          { x1:  5, y1: 13, x2:  7, y2: 16, color:"#2a2520", label:"COLONNE GOTHIQUE"    }
+          { x1:-2,  y1:-20, x2: 2,  y2:-18, color:"#2a1a08", label:"Porte d'Entrée"    },
+          { x1:-5,  y1:-16, x2:-4,  y2:-14, color:"#3d3020", label:"Armure"             },
+          { x1: 4,  y1:-16, x2: 5,  y2:-14, color:"#3d3020", label:"Armure"             },
+          { x1:-5,  y1:-3,  x2:-1,  y2:-1,  color:"#2a1208", label:"Canapé"             },
+          { x1: 1,  y1:-3,  x2: 5,  y2:-1,  color:"#2a1208", label:"Canapé"             },
+          { x1:-7,  y1:-2,  x2:-6,  y2: 3,  color:"#3d2010", label:"Cheminée"           },
+          { x1:-1,  y1: 3,  x2: 1,  y2: 4,  color:"#2a1a08", label:"Table Basse"        },
+          { x1: 6,  y1:-1,  x2: 7,  y2: 3,  color:"#2a1a08", label:"Horloge"            },
+          { x1:-18, y1:-8,  x2:-13, y2:-6,  color:"#2a1a08", label:"Étagère"            },
+          { x1:-16, y1:-4,  x2:-11, y2:-2,  color:"#2a1a08", label:"Étagère"            },
+          { x1:-18, y1: 0,  x2:-13, y2: 2,  color:"#2a1a08", label:"Étagère"            },
+          { x1:-12, y1:-10, x2:-11, y2:-2,  color:"#2a1a08", label:"Bureau"             },
+          { x1:-10, y1:-4,  x2:-9,  y2:-2,  color:"#3d2010", label:"Globe"              },
+          { x1:10,  y1:-4,  x2:18,  y2:-1,  color:"#3d2010", label:"Grande Table"       },
+          { x1: 9,  y1: 1,  x2:13,  y2: 3,  color:"#2a1a08", label:"Buffet"             },
+          { x1:-18, y1:-12, x2:-16, y2:-10, color:"#1a2d1a", label:"Bac Plante"         },
+          { x1:-14, y1:-10, x2:-12, y2:-8,  color:"#1a2d1a", label:"Bac Plante"         },
+          { x1:-18, y1:-8,  x2:-16, y2:-6,  color:"#1a2d1a", label:"Bac Plante"         },
+          { x1:-14, y1:-6,  x2:-12, y2:-4,  color:"#1a2d1a", label:"Bac Plante"         },
+          { x1:-16, y1:-9,  x2:-15, y2:-8,  color:"#2a2820", label:"Fontaine"           },
+          { x1:10,  y1:-12, x2:15,  y2:-10, color:"#2a1208", label:"Lit à Baldaquin"    },
+          { x1:10,  y1:-8,  x2:15,  y2:-6,  color:"#2a1208", label:"Lit à Baldaquin"    },
+          { x1:16,  y1:-10, x2:18,  y2:-8,  color:"#2a1a08", label:"Armoire à Glace"    },
+          { x1:16,  y1:-6,  x2:18,  y2:-5,  color:"#2a1a08", label:"Coffre"             },
+          { x1:-5,  y1: 8,  x2:-2,  y2:12,  color:"#1a1208", label:"Bancs"              },
+          { x1: 2,  y1: 8,  x2: 5,  y2:12,  color:"#1a1208", label:"Bancs"              },
+          { x1:-2,  y1:13,  x2: 2,  y2:15,  color:"#2a2820", label:"Autel"              },
+          { x1:-6,  y1: 7,  x2:-5,  y2: 9,  color:"#3d3020", label:"Gargouille"         },
+          { x1:-18, y1:10,  x2:-14, y2:12,  color:"#3d3d3d", label:"Paillasse"          },
+          { x1:-14, y1:14,  x2:-10, y2:16,  color:"#3d3d3d", label:"Paillasse"          },
+          { x1:-18, y1:13,  x2:-16, y2:15,  color:"#2a2820", label:"Table d'Opération"  },
+          { x1:-12, y1:10,  x2:-11, y2:13,  color:"#1a1a18", label:"Cage"               },
+          { x1:10,  y1: 9,  x2:13,  y2:11,  color:"#1a1a1a", label:"Miroir sur Pied"    },
+          { x1:14,  y1:12,  x2:17,  y2:14,  color:"#1a1a1a", label:"Miroir sur Pied"    },
+          { x1:10,  y1:14,  x2:12,  y2:16,  color:"#1a1a1a", label:"Miroir sur Pied"    },
+          { x1:16,  y1: 8,  x2:18,  y2:10,  color:"#2a2010", label:"Console Dorée"      },
+          { x1:-2,  y1:17,  x2: 2,  y2:19,  color:"#2a1208", label:"Trône"              },
+          { x1:-5,  y1:16,  x2:-4,  y2:18,  color:"#3d3020", label:"Candélabre"         },
+          { x1: 4,  y1:16,  x2: 5,  y2:18,  color:"#3d3020", label:"Candélabre"         },
+          { x1:-4,  y1:17,  x2:-3,  y2:19,  color:"#3d3020", label:"Armure Royale"      },
+          { x1: 3,  y1:17,  x2: 4,  y2:19,  color:"#3d3020", label:"Armure Royale"      }
         ],
         deathZones: [
-          // Brasero — est du salon, près de la cheminée
-          { x1:  5, y1:  3, x2:  8, y2:  7, color:"#44150055", label:"BRASERO INCANDESCENT" },
-          // Trappe secrète — hall d'entrée, côté ouest
-          { x1: -9, y1: -6, x2: -5, y2: -3, color:"#1a080555", label:"TRAPPE SECRÈTE"      }
+          { x1:-2,  y1:10,  x2: 2,  y2:14,  color:"#05030288", label:"TRAPPE — Caveau"      },
+          { x1: 9,  y1:14,  x2:12,  y2:17,  color:"#05030288", label:"TRAPPE"               },
+          { x1:15,  y1: 8,  x2:18,  y2:11,  color:"#05030288", label:"TRAPPE"               },
+          { x1:-18, y1:16,  x2:-15, y2:19,  color:"#05030288", label:"TRAPPE — Labo"        },
+          { x1:17,  y1:-6,  x2:19,  y2:-4,  color:"#05030288", label:"TRAPPE — Cave à Vin"  },
+          { x1:17,  y1:-12, x2:19,  y2:-10, color:"#05030288", label:"TRAPPE — Placard"     }
         ],
         safeZones: [], invertLogic: false,
         rooms: [
-          { x1:-20, y1:-20, x2: 20, y2: -8, name:"GRAND FOYER"   },
-          { x1:-20, y1:  -8, x2: 20, y2:  2, name:"SALON"         },
-          { x1:-20, y1:   2, x2:  0, y2: 13, name:"CHAPELLE"      },
-          { x1:   0, y1:   2, x2: 20, y2: 13, name:"SALLE DE BAL" },
-          { x1:-20, y1:  13, x2: 20, y2: 20, name:"COULOIR NORD"  }
+          { x1:-8,  y1:-20, x2: 8,  y2:-6,  name:"Hall d'Entrée"     },
+          { x1:-8,  y1:-6,  x2: 8,  y2: 6,  name:"Salon Principal"   },
+          { x1:-20, y1:-6,  x2:-8,  y2: 6,  name:"Bibliothèque"      },
+          { x1: 8,  y1:-6,  x2:20,  y2: 6,  name:"Salle à Manger"    },
+          { x1:-20, y1:-14, x2:-8,  y2:-4,  name:"Jardin d'Hiver"    },
+          { x1: 8,  y1:-14, x2:20,  y2:-4,  name:"Aile des Chambres" },
+          { x1:-8,  y1: 6,  x2: 8,  y2:16,  name:"Chapelle"          },
+          { x1:-20, y1: 6,  x2:-8,  y2:20,  name:"Laboratoire"       },
+          { x1: 8,  y1: 6,  x2:20,  y2:20,  name:"Salle des Miroirs" },
+          { x1:-8,  y1:16,  x2: 8,  y2:20,  name:"Salle du Trône"    }
         ]
       },
       {
@@ -1155,6 +1217,87 @@
       }
     ];
 
+    // ===================== ROOMS — Manoir Blackwood (rendu visuel map 0 uniquement) =====================
+    const ROOMS = [
+      {
+        name:"Hall d'Entrée",
+        x1:-8, y1:-20, x2:8, y2:-6,
+        floor:{ type:"checkerboard", colorA:"#1a1a1a", colorB:"#e8e0d0", tileSize:2 },
+        ceiling:{ color:"#d4cdb8", hasChandelier:true, chandelierPos:{x:0,y:-13} },
+        wallColor:"#2a2820", lambrisColor:"#1a1208",
+        ambientLight:"rgba(255,200,120,0.06)",
+        hasRug:true, rugColor:"#8b0000", rugBorder:"#8a6a2a",
+        rugX1:-4, rugY1:-18, rugX2:4, rugY2:-8
+      },
+      {
+        name:"Salon Principal",
+        x1:-8, y1:-6, x2:8, y2:6,
+        floor:{ type:"chevron", colorA:"#8b6914", colorB:"#5a4510", tileSize:1.5 },
+        ceiling:{ color:"#d4c9a8", hasBeams:true, beamColor:"#2a1a08", beamSpacing:3 },
+        wallColor:"#3d0a0a", ambientLight:"rgba(255,140,0,0.08)", hasRug:false
+      },
+      {
+        name:"Bibliothèque",
+        x1:-20, y1:-6, x2:-8, y2:6,
+        floor:{ type:"planks", colorA:"#3d2510", colorB:"#2a1a08", plankWidth:1.5 },
+        ceiling:{ color:"#1a1208", hasBeams:true, beamColor:"#120d08", beamSpacing:2, hasSpiderwebs:true },
+        wallColor:"#2a1a08", ambientLight:"rgba(255,120,0,0.04)",
+        hasRug:true, rugColor:"#5a1a0a", rugX1:-12, rugY1:-4, rugX2:-9, rugY2:2
+      },
+      {
+        name:"Salle à Manger",
+        x1:8, y1:-6, x2:20, y2:6,
+        floor:{ type:"tiles", colorA:"#2a2820", colorB:"#3a3830", tileSize:2, groutColor:"#f0f0f088" },
+        ceiling:{ color:"#d4cdb8", hasChandelier:true, chandelierPos:{x:14,y:0} },
+        wallColor:"#1a2d1a", ambientLight:"rgba(255,180,100,0.05)", hasRug:false
+      },
+      {
+        name:"Jardin d'Hiver",
+        x1:-20, y1:-14, x2:-8, y2:-4,
+        floor:{ type:"stoneMoss", colorA:"#1a1208", colorB:"#1a2d1a", tileSize:2 },
+        ceiling:{ color:"#1a1a18" },
+        wallColor:"#0a1a0a", ambientLight:"rgba(0,80,0,0.04)", hasRug:false
+      },
+      {
+        name:"Aile des Chambres",
+        x1:8, y1:-14, x2:20, y2:-4,
+        floor:{ type:"carpet", colorA:"#3d0a0a", colorB:"#2a0808", tileSize:3 },
+        ceiling:{ color:"#c8c0b0" },
+        wallColor:"#3d2520", ambientLight:"rgba(255,100,0,0.03)", hasRug:false
+      },
+      {
+        name:"Chapelle",
+        x1:-8, y1:6, x2:8, y2:16,
+        floor:{ type:"irregular_stones", colorA:"#1a1a18", colorB:"#0a0a0a", tileSize:2.5 },
+        ceiling:{ color:"#0f0f0d" },
+        wallColor:"#1a1a18", ambientLight:"rgba(80,0,0,0.06)",
+        hasRug:true, rugColor:"#5a0000", rugX1:-1, rugY1:7, rugX2:1, rugY2:14
+      },
+      {
+        name:"Laboratoire Secret",
+        x1:-20, y1:6, x2:-8, y2:20,
+        floor:{ type:"hex_tiles", colorA:"#c8c0b0", colorB:"#b8b0a0", tileSize:1, stainColor:"#1a1a18" },
+        ceiling:{ color:"#2a2828", hasFlickerLight:true },
+        wallColor:"#c8c0b0", ambientLight:"rgba(200,220,255,0.03)", hasRug:false
+      },
+      {
+        name:"Salle des Miroirs",
+        x1:8, y1:6, x2:20, y2:20,
+        floor:{ type:"lacquered", colorA:"#0a0a0a", colorB:"#111111", tileSize:2 },
+        ceiling:{ color:"#1a1a1a" },
+        wallColor:"#1a1a1a", ambientLight:"rgba(180,220,255,0.04)", hasRug:false
+      },
+      {
+        name:"Salle du Trône",
+        x1:-8, y1:16, x2:8, y2:20,
+        floor:{ type:"marble_radial", colorA:"#3d0000", colorB:"#0a0a0a", tileSize:2 },
+        ceiling:{ color:"#1a0a0a" },
+        wallColor:"#1a1208", ambientLight:"rgba(180,0,0,0.05)",
+        hasRug:true, rugColor:"#5a0000", rugBorder:"#8a6a2a",
+        rugX1:-1, rugY1:16, rugX2:1, rugY2:19
+      }
+    ];
+
     // ===================== GAME STATE =====================
     const gameState = {
       mode: 'menu',
@@ -1221,6 +1364,12 @@
     }
     // Legacy alias (used by a few helpers)
     function worldToCanvas(wx, wy) { return worldToIso(wx, wy); }
+
+    // Flat top-down projection for render3D() — updated each frame in render3D()
+    let SC2D = 1;
+    function worldTo2D(wx, wy) {
+      return { cx: W / 2 + wx * SC2D, cy: H / 2 - wy * SC2D };
+    }
 
     // Darken / lighten a 6-digit hex colour by factor f
     function darkenColor(hex, f) {
@@ -1585,17 +1734,20 @@
     }
 
     // ===================== PREVIEW CANVAS =====================
-    function drawPreview(canvasOverride) {
+    function drawPreview(canvasOverride, transform) {
       const pc = canvasOverride || document.getElementById('preview-canvas');
       if (!pc || pc.width === 0 || pc.height === 0) return;
       const pctx = pc.getContext('2d');
       const PW = pc.width, PH = pc.height;
+      const zoom = transform?.zoom ?? 1;
+      const panX = transform?.panX ?? 0;
+      const panY = transform?.panY ?? 0;
       // Vue plein arène : -20 à 20 en x et y
-      const PS = Math.min(PW, PH) / 40;
+      const PS = Math.min(PW, PH) / 40 * zoom;
       const pal = MAPS[gameState.currentMap].palette;
       // Coordonnées canvas pour une position monde (x,y)
-      const wx = x => PW/2 + x * PS;
-      const wy = y => PH/2 - y * PS;
+      const wx = x => PW/2 + (x - panX) * PS;
+      const wy = y => PH/2 - (y - panY) * PS;
       pctx.clearRect(0, 0, PW, PH);
       // Fond manoir parquet
       pctx.fillStyle = '#0d0804';
@@ -1789,6 +1941,11 @@
       for (const obs of map.obstacles) {
         if (pt.x >= obs.x1 && pt.x <= obs.x2 && pt.y >= obs.y1 && pt.y <= obs.y2) return true;
       }
+      if (map.walls) {
+        for (const wall of map.walls) {
+          if (pt.x >= wall.x1 && pt.x <= wall.x2 && pt.y >= wall.y1 && pt.y <= wall.y2) return true;
+        }
+      }
       return false;
     }
 
@@ -1815,6 +1972,11 @@
           if (pt.x >= obs.x1 && pt.x <= obs.x2 && pt.y >= obs.y1 && pt.y <= obs.y2) {
             if (obs.flashOnContact) gameState.flashObstacle = obs;
             return 'BLOCKED';
+          }
+        }
+        if (map.walls) {
+          for (const wall of map.walls) {
+            if (pt.x >= wall.x1 && pt.x <= wall.x2 && pt.y >= wall.y1 && pt.y <= wall.y2) return 'BLOCKED';
           }
         }
         for (const dz of map.deathZones) {
@@ -1849,6 +2011,11 @@
         if (x < -19 || x > 19 || y < -19 || y > 19) return false;
         for (const obs of map.obstacles) {
           if (x > obs.x1 && x < obs.x2 && y > obs.y1 && y < obs.y2) return false;
+        }
+        if (map.walls) {
+          for (const wall of map.walls) {
+            if (x > wall.x1 && x < wall.x2 && y > wall.y1 && y < wall.y2) return false;
+          }
         }
         if (map.invertLogic) {
           return map.safeZones.some(sz => x >= sz.x1 && x <= sz.x2 && y >= sz.y1 && y <= sz.y2);
@@ -1978,6 +2145,7 @@
 
     // ===================== GAME OVER / WIN =====================
     function showScreamer(callback) {
+      playSound('screamer');
       const el = document.getElementById('screamer');
       el.style.display = 'flex';
       // Force reflow pour relancer l'animation à chaque fois
@@ -2108,6 +2276,8 @@
     function closeOverlay() {
       overlayOpen = false;
       document.getElementById('overlay-2d').style.display = 'none';
+      const fso = document.getElementById('map-fullscreen-overlay');
+      if (fso) fso.classList.remove('open');
     }
     function updateModeIndicator() {
       // indicateur masqué — rien à faire
@@ -2335,8 +2505,9 @@
     function startGame(mapIndex, playerTurnOverride) {
       gameState.currentMap = mapIndex;
       if (playerTurnOverride !== undefined) gameState.playerTurn = playerTurnOverride;
-      gameState.playerPos = { x: 0, y: -18 };
-      gameState.monsterPos = { x: 0, y: 18 };
+      const spawnMap = MAPS[mapIndex];
+      gameState.playerPos  = spawnMap.playerSpawn  ? {...spawnMap.playerSpawn}  : { x: 0, y: -18 };
+      gameState.monsterPos = spawnMap.monsterSpawn ? {...spawnMap.monsterSpawn} : { x: 0, y: 18 };
       gameState.deck = [];
       gameState.selectedDeck = [];
       gameState.health = 5;
@@ -2364,9 +2535,494 @@
       showGear(true);
       initParticles();
       resizeCanvas();
+      // Son ambiant de la map
+      if (currentMapSound) { currentMapSound.pause(); currentMapSound.currentTime = 0; }
+      currentMapSound = SFX.map[mapIndex] || null;
+      if (currentMapSound) currentMapSound.play().catch(() => {});
       openOverlay();
       slideTo('execute');
       requestAnimationFrame(renderLoop);
+    }
+
+    // ===================== RENDER3D — VUE TOP-DOWN 2D (MAP 0 : Le Manoir Blackwood) =====================
+
+    function drawFloor2D(ctx, room) {
+      const {cx:rx, cy:ry} = worldTo2D(room.x1, room.y2);
+      const rw = (room.x2 - room.x1) * SC2D, rh = (room.y2 - room.y1) * SC2D;
+      const f = room.floor;
+      ctx.save(); ctx.beginPath(); ctx.rect(rx, ry, rw, rh); ctx.clip();
+      switch (f.type) {
+        case 'checkerboard': {
+          const ts = f.tileSize * SC2D;
+          for (let tx = rx; tx < rx + rw; tx += ts)
+            for (let ty = ry; ty < ry + rh; ty += ts) {
+              ctx.fillStyle = ((Math.floor((tx-rx)/ts) + Math.floor((ty-ry)/ts)) % 2 === 0) ? f.colorA : f.colorB;
+              ctx.fillRect(tx, ty, ts + 1, ts + 1);
+            }
+          break;
+        }
+        case 'chevron': {
+          ctx.fillStyle = f.colorA; ctx.fillRect(rx, ry, rw, rh);
+          const ps = f.tileSize * SC2D;
+          ctx.strokeStyle = f.colorB; ctx.lineWidth = 1;
+          for (let i = -rh; i < rw + rh; i += ps * 1.5) {
+            ctx.beginPath(); ctx.moveTo(rx+i, ry); ctx.lineTo(rx+i+rh, ry+rh); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(rx+i, ry+rh); ctx.lineTo(rx+i+rh, ry); ctx.stroke();
+          }
+          break;
+        }
+        case 'planks': {
+          const pw = f.plankWidth * SC2D; let yy = ry, tog = 0;
+          while (yy < ry + rh) {
+            ctx.fillStyle = tog % 2 === 0 ? f.colorA : f.colorB; ctx.fillRect(rx, yy, rw, pw);
+            ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(rx, yy+pw-1, rw, 1);
+            if (Math.sin(yy*13.7 + room.x1*7.3) > 0.85) {
+              ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(rx + Math.abs(Math.sin(yy*3.1))*rw, yy, 1, pw*0.6);
+            }
+            yy += pw; tog++;
+          }
+          break;
+        }
+        case 'tiles': {
+          ctx.fillStyle = f.colorA; ctx.fillRect(rx, ry, rw, rh);
+          const tts = f.tileSize * SC2D;
+          ctx.strokeStyle = f.groutColor || 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1;
+          for (let tx=rx; tx<rx+rw; tx+=tts) { ctx.beginPath(); ctx.moveTo(tx,ry); ctx.lineTo(tx,ry+rh); ctx.stroke(); }
+          for (let ty=ry; ty<ry+rh; ty+=tts) { ctx.beginPath(); ctx.moveTo(rx,ty); ctx.lineTo(rx+rw,ty); ctx.stroke(); }
+          break;
+        }
+        case 'carpet': {
+          const g = ctx.createLinearGradient(rx,ry,rx+rw,ry+rh);
+          g.addColorStop(0,f.colorA); g.addColorStop(0.5,f.colorB); g.addColorStop(1,f.colorA);
+          ctx.fillStyle=g; ctx.fillRect(rx,ry,rw,rh);
+          ctx.strokeStyle='rgba(0,0,0,0.15)'; ctx.lineWidth=0.5;
+          const ds=2*SC2D;
+          for (let dx=-rh; dx<rw+rh; dx+=ds) { ctx.beginPath(); ctx.moveTo(rx+dx,ry); ctx.lineTo(rx+dx+rh*0.5,ry+rh); ctx.stroke(); }
+          break;
+        }
+        case 'irregular_stones': {
+          ctx.fillStyle=f.colorA; ctx.fillRect(rx,ry,rw,rh);
+          ctx.strokeStyle=f.colorB; ctx.lineWidth=1.5;
+          for (let sx=rx; sx<rx+rw; sx+=3*SC2D)
+            for (let sy=ry; sy<ry+rh; sy+=2.5*SC2D) {
+              const ox=Math.sin(sx*0.1+sy*0.07)*0.5*SC2D, oy=Math.sin(sx*0.07+sy*0.11)*0.5*SC2D;
+              const sw=(2.5+Math.sin(sx*0.13+sy*0.09))*SC2D, sh=(2+Math.sin(sx*0.09+sy*0.13))*SC2D;
+              ctx.strokeRect(sx+ox,sy+oy,sw,sh);
+              if (Math.sin(sx*7.3+sy*11.1)>0.7) { ctx.fillStyle='rgba(0,0,0,0.1)'; ctx.fillRect(sx+ox,sy+oy,sw,sh); ctx.fillStyle=f.colorA; }
+            }
+          break;
+        }
+        case 'hex_tiles': {
+          const hs=f.tileSize*SC2D; ctx.fillStyle=f.colorA; ctx.fillRect(rx,ry,rw,rh);
+          ctx.strokeStyle='rgba(0,0,0,0.3)'; ctx.lineWidth=1; let row=0;
+          for (let ty2=ry; ty2<ry+rh; ty2+=hs*0.866) {
+            const off=row%2===0?0:hs*0.5;
+            for (let tx2=rx-hs+off; tx2<rx+rw+hs; tx2+=hs) {
+              ctx.beginPath();
+              for (let a=0;a<6;a++) { const ang=(a*60-30)*Math.PI/180; const hx=tx2+hs*0.45*Math.cos(ang),hy=ty2+hs*0.45*Math.sin(ang); a===0?ctx.moveTo(hx,hy):ctx.lineTo(hx,hy); }
+              ctx.closePath(); ctx.stroke();
+              if (Math.sin(tx2*0.3+ty2*0.2)>0.8) { ctx.fillStyle=f.stainColor+'66'; ctx.fill(); ctx.fillStyle=f.colorA; }
+            }
+            row++;
+          }
+          break;
+        }
+        case 'lacquered': {
+          ctx.fillStyle=f.colorA; ctx.fillRect(rx,ry,rw,rh);
+          ctx.strokeStyle=f.colorB; ctx.lineWidth=0.5;
+          const lps=f.tileSize*SC2D;
+          for (let lx=rx; lx<rx+rw; lx+=lps) { ctx.beginPath(); ctx.moveTo(lx,ry); ctx.lineTo(lx,ry+rh); ctx.stroke(); }
+          const ref=ctx.createRadialGradient(rx+rw/2,ry+rh/2,0,rx+rw/2,ry+rh/2,rw*0.4);
+          ref.addColorStop(0,'rgba(255,255,255,0.04)'); ref.addColorStop(1,'rgba(0,0,0,0)');
+          ctx.fillStyle=ref; ctx.fillRect(rx,ry,rw,rh);
+          break;
+        }
+        case 'marble_radial': {
+          ctx.fillStyle=f.colorA; ctx.fillRect(rx,ry,rw,rh);
+          const mr=ctx.createRadialGradient(rx+rw/2,ry+rh/2,0,rx+rw/2,ry+rh/2,Math.max(rw,rh)*0.7);
+          mr.addColorStop(0,f.colorB+'88'); mr.addColorStop(0.5,f.colorA); mr.addColorStop(1,f.colorB);
+          ctx.fillStyle=mr; ctx.fillRect(rx,ry,rw,rh);
+          ctx.strokeStyle='rgba(255,255,255,0.05)'; ctx.lineWidth=1;
+          for (let ml=0;ml<8;ml++) { const ang=(ml/8)*Math.PI*2; ctx.beginPath(); ctx.moveTo(rx+rw/2,ry+rh/2); ctx.lineTo(rx+rw/2+Math.cos(ang)*rw,ry+rh/2+Math.sin(ang)*rh); ctx.stroke(); }
+          break;
+        }
+        case 'stoneMoss': {
+          ctx.fillStyle=f.colorA; ctx.fillRect(rx,ry,rw,rh);
+          const sms=f.tileSize*SC2D;
+          for (let smx=rx; smx<rx+rw; smx+=sms)
+            for (let smy=ry; smy<ry+rh; smy+=sms) {
+              ctx.strokeStyle='rgba(0,0,0,0.4)'; ctx.lineWidth=1.5; ctx.strokeRect(smx,smy,sms,sms);
+              if (Math.sin(smx*0.2+smy*0.15)>0.3) { ctx.fillStyle=f.colorB+'99'; ctx.fillRect(smx,smy,sms*0.15,sms); ctx.fillRect(smx,smy,sms,sms*0.15); }
+            }
+          break;
+        }
+        default: { ctx.fillStyle=f.colorA||'#1a1208'; ctx.fillRect(rx,ry,rw,rh); }
+      }
+      if (room.hasRug) {
+        const {cx:rugX,cy:rugY}=worldTo2D(room.rugX1,room.rugY2);
+        const rugW=(room.rugX2-room.rugX1)*SC2D, rugH=(room.rugY2-room.rugY1)*SC2D;
+        ctx.fillStyle=room.rugColor+'cc'; ctx.fillRect(rugX,rugY,rugW,rugH);
+        if (room.rugBorder) { ctx.strokeStyle=room.rugBorder; ctx.lineWidth=2; ctx.strokeRect(rugX+3,rugY+3,rugW-6,rugH-6); ctx.strokeRect(rugX+5,rugY+5,rugW-10,rugH-10); }
+      }
+      ctx.restore();
+    }
+
+    function drawCeiling2D(ctx, room) {
+      const {cx:rx,cy:ry}=worldTo2D(room.x1,room.y2);
+      const rw=(room.x2-room.x1)*SC2D, rh=(room.y2-room.y1)*SC2D;
+      const c=room.ceiling; if (!c) return;
+      ctx.save(); ctx.beginPath(); ctx.rect(rx,ry,rw,rh); ctx.clip();
+      ctx.fillStyle=c.color+'18'; ctx.fillRect(rx,ry,rw,rh);
+      if (c.hasBeams) {
+        const sp=c.beamSpacing*SC2D; ctx.fillStyle=(c.beamColor||'#120d08')+'30';
+        for (let bx=rx; bx<rx+rw; bx+=sp) ctx.fillRect(bx,ry,sp*0.2,rh);
+        for (let by=ry; by<ry+rh; by+=sp) ctx.fillRect(rx,by,rw,sp*0.15);
+      }
+      if (c.hasSpiderwebs) {
+        const corners=[{x:rx,y:ry},{x:rx+rw,y:ry},{x:rx,y:ry+rh},{x:rx+rw,y:ry+rh}];
+        ctx.strokeStyle='rgba(255,255,255,0.05)'; ctx.lineWidth=0.5;
+        corners.forEach(cor => { for (let f=0;f<5;f++) { const len=20+f*8,ang=(f/5)*Math.PI*0.5,dx=cor.x===rx?1:-1,dy=cor.y===ry?1:-1; ctx.beginPath(); ctx.moveTo(cor.x,cor.y); ctx.lineTo(cor.x+dx*Math.cos(ang)*len,cor.y+dy*Math.sin(ang)*len); ctx.stroke(); } });
+      }
+      if (c.hasChandelier) {
+        const {cx:chx,cy:chy}=worldTo2D(c.chandelierPos.x,c.chandelierPos.y);
+        const cg=ctx.createRadialGradient(chx,chy,0,chx,chy,SC2D*3);
+        cg.addColorStop(0,'rgba(255,200,80,0.25)'); cg.addColorStop(1,'rgba(255,150,0,0)');
+        ctx.fillStyle=cg; ctx.beginPath(); ctx.arc(chx,chy,SC2D*3,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(chx,chy,SC2D*0.3,0,Math.PI*2); ctx.fillStyle='#e8c860'; ctx.fill();
+      }
+      if (c.hasFlickerLight && Math.random()>0.03) {
+        const {cx:lx,cy:ly}=worldTo2D((room.x1+room.x2)/2,(room.y1+room.y2)/2);
+        const lg=ctx.createRadialGradient(lx,ly,0,lx,ly,SC2D*4);
+        lg.addColorStop(0,'rgba(200,220,255,0.15)'); lg.addColorStop(1,'rgba(0,0,0,0)');
+        ctx.fillStyle=lg; ctx.beginPath(); ctx.arc(lx,ly,SC2D*4,0,Math.PI*2); ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function drawWalls2D(ctx) {
+      const map=MAPS[gameState.currentMap]; if (!map.walls) return;
+      map.walls.forEach(wall => {
+        const {cx:wx,cy:wy}=worldTo2D(wall.x1,wall.y2);
+        const ww=(wall.x2-wall.x1)*SC2D, wh=(wall.y2-wall.y1)*SC2D;
+        ctx.fillStyle=wall.color||'#1a1208'; ctx.fillRect(wx,wy,ww,wh);
+        ctx.strokeStyle='rgba(0,0,0,0.5)'; ctx.lineWidth=1;
+        const bh=Math.max(wh*0.3,4);
+        for (let by=wy; by<wy+wh; by+=bh) {
+          const off=Math.floor((by-wy)/bh)%2===0?0:Math.max(ww*0.25,6);
+          for (let bx=wx-off; bx<wx+ww+ww*0.5; bx+=Math.max(ww*0.5,8)) ctx.strokeRect(bx,by,Math.max(ww*0.5,8),bh);
+        }
+        ctx.strokeStyle='rgba(0,0,0,0.65)'; ctx.lineWidth=1.5; ctx.strokeRect(wx,wy,ww,wh);
+        const sg=ctx.createLinearGradient(wx,wy,wx+ww,wy);
+        sg.addColorStop(0,'rgba(0,0,0,0.3)'); sg.addColorStop(1,'rgba(0,0,0,0)');
+        ctx.fillStyle=sg; ctx.fillRect(wx+ww,wy,6,wh);
+      });
+    }
+
+    function drawDecoObjects2D(ctx, ts) {
+      function armor(cx,cy,sz) {
+        ctx.fillStyle='#3d3020'; ctx.fillRect(cx-sz*0.3,cy-sz*0.6,sz*0.6,sz*0.8);
+        ctx.fillStyle='#2a2018'; ctx.beginPath(); ctx.arc(cx,cy-sz*0.7,sz*0.25,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle='#2a2010'; ctx.fillRect(cx-sz*0.4,cy+sz*0.2,sz*0.8,sz*0.15);
+      }
+      function column(cx,cy,r) {
+        const g=ctx.createRadialGradient(cx-r*0.3,cy-r*0.3,0,cx,cy,r);
+        g.addColorStop(0,'#3a3a38'); g.addColorStop(1,'#0f0f0e');
+        ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fillStyle=g; ctx.fill();
+        ctx.strokeStyle='#4a4a48'; ctx.lineWidth=1; ctx.stroke();
+      }
+      function fireplace(cx,cy,w,h,t) {
+        ctx.fillStyle='#1a0f06'; ctx.fillRect(cx-w/2,cy-h,w,h);
+        ctx.strokeStyle='#3d2810'; ctx.lineWidth=2; ctx.strokeRect(cx-w/2,cy-h,w,h);
+        ctx.fillStyle='#050300'; ctx.fillRect(cx-w*0.35,cy-h*0.7,w*0.7,h*0.65);
+        for (let f=0;f<3;f++) {
+          const fh=h*0.4*(0.7+0.3*Math.sin(t*0.009+f)),fw=w*0.12,fx=cx+(-1+f)*w*0.18,fo=fw*0.3*Math.sin(t*0.007+f*1.3);
+          ctx.beginPath(); ctx.ellipse(fx+fo,cy-h*0.05-fh*0.5,fw,fh,0,0,Math.PI*2);
+          ctx.fillStyle=f===1?'#ffcc44':'#ff6600'; ctx.shadowBlur=12; ctx.shadowColor='#ff4400'; ctx.fill(); ctx.shadowBlur=0;
+        }
+        ctx.fillStyle='#2a1a08'; ctx.fillRect(cx-w*0.55,cy-h,w*1.1,h*0.08);
+      }
+      function clock(cx,cy,w,h,t) {
+        ctx.fillStyle='#2a1a08'; ctx.fillRect(cx-w/2,cy-h,w,h);
+        ctx.strokeStyle='#3d2810'; ctx.lineWidth=1.5; ctx.strokeRect(cx-w/2,cy-h,w,h);
+        const cr=w*0.35; ctx.beginPath(); ctx.arc(cx,cy-h*0.7,cr,0,Math.PI*2); ctx.fillStyle='#c8c0a0'; ctx.fill(); ctx.strokeStyle='#2a1a08'; ctx.stroke();
+        const mn=(t/60000)%60; ctx.strokeStyle='#1a1208'; ctx.lineWidth=1.5;
+        ctx.beginPath(); ctx.moveTo(cx,cy-h*0.7); ctx.lineTo(cx+Math.cos((mn/60)*Math.PI*2-Math.PI/2)*cr*0.8, cy-h*0.7+Math.sin((mn/60)*Math.PI*2-Math.PI/2)*cr*0.8); ctx.stroke();
+        const sw=Math.sin(t*0.002)*10; ctx.fillStyle='#8a6a2a'; ctx.beginPath(); ctx.arc(cx+sw,cy-h*0.3,5,0,Math.PI*2); ctx.fill();
+      }
+      function fountain(cx,cy,r,t) {
+        ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fillStyle='#0a1a2a'; ctx.fill(); ctx.strokeStyle='#2a3a4a'; ctx.lineWidth=2; ctx.stroke();
+        ctx.beginPath(); ctx.arc(cx,cy,r*0.8,0,Math.PI*2); ctx.fillStyle='rgba(0,80,120,0.4)'; ctx.fill();
+        const jh=r*(0.8+0.2*Math.sin(t*0.006));
+        ctx.beginPath(); ctx.moveTo(cx,cy); ctx.quadraticCurveTo(cx+r*0.2,cy-jh*0.7,cx,cy-jh);
+        ctx.strokeStyle='rgba(150,200,255,0.5)'; ctx.lineWidth=1.5; ctx.stroke();
+      }
+      function fonts(cx,cy,r) {
+        ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fillStyle='#1a1a18'; ctx.fill(); ctx.strokeStyle='#2a2a28'; ctx.lineWidth=2; ctx.stroke();
+        ctx.beginPath(); ctx.arc(cx,cy,r*0.7,0,Math.PI*2); ctx.fillStyle='rgba(100,150,200,0.15)'; ctx.fill();
+        ctx.fillStyle='#1a1a18'; ctx.fillRect(cx-3,cy,6,8); ctx.fillRect(cx-8,cy+8,16,3);
+      }
+      function gargoyle(cx,cy,sz) {
+        ctx.fillStyle='#2a2828'; ctx.fillRect(cx-sz*0.4,cy-sz*0.5,sz*0.8,sz*0.6);
+        ctx.beginPath(); ctx.arc(cx,cy-sz*0.6,sz*0.3,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle='#ff000033'; ctx.beginPath(); ctx.arc(cx-sz*0.12,cy-sz*0.65,sz*0.06,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(cx+sz*0.12,cy-sz*0.65,sz*0.06,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle='#1a1818';
+        ctx.beginPath(); ctx.moveTo(cx-sz*0.4,cy-sz*0.3); ctx.lineTo(cx-sz*0.8,cy-sz*0.1); ctx.lineTo(cx-sz*0.4,cy+sz*0.1); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(cx+sz*0.4,cy-sz*0.3); ctx.lineTo(cx+sz*0.8,cy-sz*0.1); ctx.lineTo(cx+sz*0.4,cy+sz*0.1); ctx.closePath(); ctx.fill();
+      }
+      const SC=SC2D; let c;
+      c=worldTo2D(-5,-15); armor(c.cx,c.cy,SC*0.8);
+      c=worldTo2D( 5,-15); armor(c.cx,c.cy,SC*0.8);
+      c=worldTo2D(-7,-8);  column(c.cx,c.cy,SC*0.5);
+      c=worldTo2D( 7,-8);  column(c.cx,c.cy,SC*0.5);
+      c=worldTo2D(-7,0.5); fireplace(c.cx,c.cy,SC*1.5,SC*2,ts);
+      c=worldTo2D( 6,1);   clock(c.cx,c.cy,SC,SC*3,ts);
+      c=worldTo2D(-16,-9); fountain(c.cx,c.cy,SC*0.7,ts);
+      c=worldTo2D( 0,7.5); fonts(c.cx,c.cy,SC*0.6);
+      c=worldTo2D(-6,7);   gargoyle(c.cx,c.cy,SC*0.8);
+    }
+
+    function drawObstacles2D(ctx) {
+      const map=MAPS[gameState.currentMap];
+      map.obstacles.forEach(obs => {
+        const {cx:px,cy:py}=worldTo2D(obs.x1,obs.y2);
+        const w=(obs.x2-obs.x1)*SC2D, h=(obs.y2-obs.y1)*SC2D;
+        const isFlash=gameState.flashObstacle===obs && gameState.flashTimer>0;
+        ctx.fillStyle=isFlash?'#5a1a08':(obs.color||'#241608'); ctx.fillRect(px,py,w,h);
+        ctx.strokeStyle=isFlash?'#ff2200':'rgba(255,200,150,0.2)'; ctx.lineWidth=isFlash?2:0.5;
+        if (isFlash) { ctx.shadowBlur=8; ctx.shadowColor='#ff2200'; }
+        ctx.strokeRect(px,py,w,h); ctx.shadowBlur=0;
+      });
+      if (gameState.flashTimer>0) gameState.flashTimer--;
+    }
+
+    function drawDeathZones2D(ctx, ts) {
+      const map=MAPS[gameState.currentMap];
+      const pulse=0.5+0.5*Math.sin(ts/400);
+      map.deathZones.forEach(dz => {
+        const {cx:px,cy:py}=worldTo2D(dz.x1,dz.y2);
+        const w=(dz.x2-dz.x1)*SC2D, h=(dz.y2-dz.y1)*SC2D;
+        const dcx=px+w/2, dcy=py+h/2;
+        ctx.fillStyle=`rgba(50,0,0,${0.55+0.25*pulse})`; ctx.fillRect(px,py,w,h);
+        const dg=ctx.createRadialGradient(dcx,dcy,0,dcx,dcy,Math.max(w,h)*0.5);
+        dg.addColorStop(0,'rgba(0,0,0,0.7)'); dg.addColorStop(1,'rgba(0,0,0,0)');
+        ctx.fillStyle=dg; ctx.fillRect(px,py,w,h);
+        ctx.strokeStyle=`rgba(180,0,0,${0.6+0.3*pulse})`; ctx.lineWidth=1; ctx.strokeRect(px,py,w,h);
+      });
+    }
+
+    function drawExits2D(ctx, ts) {
+      const map=MAPS[gameState.currentMap];
+      const pulse=0.5+0.5*Math.sin(ts/600);
+      map.exits.forEach(exit => {
+        const {cx:px,cy:py}=worldTo2D(exit.x1,exit.y2);
+        const w=(exit.x2-exit.x1)*SC2D, h=(exit.y2-exit.y1)*SC2D;
+        const ecx=px+w/2, ecy=py+h/2;
+        ctx.fillStyle=`rgba(0,70,0,${0.35+0.2*pulse})`; ctx.fillRect(px,py,w,h);
+        const eg=ctx.createRadialGradient(ecx,ecy,0,ecx,ecy,Math.max(w,h)*0.7);
+        eg.addColorStop(0,`rgba(50,200,50,${0.2*pulse})`); eg.addColorStop(1,'rgba(0,0,0,0)');
+        ctx.fillStyle=eg; ctx.fillRect(px,py,w,h);
+        ctx.strokeStyle=`rgba(100,220,100,${0.7+0.3*pulse})`; ctx.lineWidth=1.5;
+        ctx.shadowBlur=8; ctx.shadowColor='#00cc00'; ctx.strokeRect(px,py,w,h); ctx.shadowBlur=0;
+      });
+    }
+
+    function drawParticles2D(ctx, ts) {
+      gameState.particles.forEach(p => {
+        updateParticle(p);
+        const {cx,cy}=worldTo2D(p.wx,p.wy);
+        const alpha=Math.max(0,Math.min(0.22,(1-p.life/p.maxLife)*0.22));
+        ctx.beginPath(); ctx.arc(cx,cy,Math.max(0.5,p.size*0.5),0,Math.PI*2);
+        ctx.fillStyle=`rgba(220,200,170,${alpha})`; ctx.fill();
+      });
+    }
+
+    function drawTrail2D(ctx) {
+      const pal=MAPS[gameState.currentMap].palette;
+      const trail=gameState.trail.slice(-6);
+      trail.forEach((pos,i) => {
+        const t=(i+1)/trail.length;
+        const {cx,cy}=worldTo2D(pos.x,pos.y);
+        ctx.beginPath(); ctx.arc(cx,cy,Math.max(1,t*SC2D*0.12),0,Math.PI*2);
+        ctx.fillStyle=`rgba(${pal.trailRGB},${t*0.45})`; ctx.fill();
+      });
+    }
+
+    function drawPlayer2D(ctx, ts) {
+      const pp=gameState.playerPos;
+      const {cx,cy}=worldTo2D(pp.x,pp.y);
+      const r=SC2D*0.38;
+      const lv=gameState.lastVector;
+      let angle=Math.PI/2;
+      if (lv.x!==0||lv.y!==0) angle=Math.atan2(lv.y,-lv.x);
+      ctx.save();
+      ctx.translate(cx,cy);
+      ctx.rotate(angle);
+      // Halo cyan
+      ctx.shadowBlur=12; ctx.shadowColor='#00ddff';
+      // Corps pilule
+      ctx.beginPath(); ctx.ellipse(0,0,r*0.55,r,0,0,Math.PI*2);
+      ctx.fillStyle='#00ddff'; ctx.fill();
+      ctx.strokeStyle='#006688'; ctx.lineWidth=1.5; ctx.stroke();
+      ctx.shadowBlur=0;
+      // Épaules
+      ctx.fillStyle='#00aacc';
+      ctx.beginPath(); ctx.ellipse(-r*0.72,r*0.22,r*0.28,r*0.18,0.3,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse( r*0.72,r*0.22,r*0.28,r*0.18,-0.3,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+
+    function drawMonster2D(ctx, ts) {
+      const mp=gameState.monsterPos;
+      const {cx,cy}=worldTo2D(mp.x,mp.y);
+      const r=SC2D*0.45, pulse=1+0.1*Math.sin(ts*0.005);
+      const pal=MAPS[gameState.currentMap].palette;
+      ctx.save(); ctx.translate(cx,cy); ctx.rotate(ts*0.0008); ctx.scale(pulse,pulse);
+      ctx.beginPath();
+      for (let i=0;i<12;i++) { const sp=i%2===0?r:r*0.45,a=(i/12)*Math.PI*2; i===0?ctx.moveTo(Math.cos(a)*sp,Math.sin(a)*sp):ctx.lineTo(Math.cos(a)*sp,Math.sin(a)*sp); }
+      ctx.closePath(); ctx.fillStyle=pal.monster; ctx.shadowBlur=18; ctx.shadowColor=pal.monsterGlow; ctx.fill();
+      ctx.beginPath(); ctx.arc(0,0,r*0.2,0,Math.PI*2); ctx.fillStyle=pal.monsterEye; ctx.fill();
+      ctx.shadowBlur=0; ctx.restore();
+    }
+
+    function drawLightOverlay2D(ctx, ts) {
+      const pp=gameState.playerPos;
+      const {cx,cy}=worldTo2D(pp.x,pp.y);
+      const flicker=0.88+0.12*Math.sin(ts*0.009);
+      const lightR=SC2D*6.5*flicker;
+      if (devMode) { ctx.fillStyle='rgba(0,0,0,0.1)'; ctx.fillRect(0,0,W,H); return; }
+      const grad=ctx.createRadialGradient(cx,cy,0,cx,cy,lightR);
+      grad.addColorStop(0,'rgba(0,0,0,0)'); grad.addColorStop(0.35,'rgba(0,0,0,0.15)');
+      grad.addColorStop(0.65,'rgba(0,0,0,0.65)'); grad.addColorStop(1,'rgba(0,0,0,0.92)');
+      ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
+      // Lumière d'ambiance de la pièce courante
+      ROOMS.forEach(room => {
+        if (pp.x>=room.x1&&pp.x<=room.x2&&pp.y>=room.y1&&pp.y<=room.y2&&room.ambientLight) {
+          const ag=ctx.createRadialGradient(cx,cy,0,cx,cy,lightR*0.8);
+          ag.addColorStop(0,room.ambientLight); ag.addColorStop(1,'rgba(0,0,0,0)');
+          ctx.fillStyle=ag; ctx.fillRect(0,0,W,H);
+        }
+      });
+    }
+
+    function drawUIOverlayRight(ctx) {
+      const map=MAPS[gameState.currentMap];
+      const pp=gameState.playerPos;
+      ctx.save();
+      // Noms des pièces (très discrets)
+      ROOMS.forEach(room => {
+        const {cx,cy}=worldTo2D((room.x1+room.x2)/2,(room.y1+room.y2)/2);
+        ctx.font='italic 9px Georgia, serif'; ctx.fillStyle='rgba(200,168,130,0.35)';
+        ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(room.name,cx,cy);
+      });
+      // Labels obstacles (seulement à proximité)
+      map.obstacles.forEach(obs => {
+        if (Math.hypot(pp.x-(obs.x1+obs.x2)/2, pp.y-(obs.y1+obs.y2)/2)>7) return;
+        const {cx,cy}=worldTo2D((obs.x1+obs.x2)/2,(obs.y1+obs.y2)/2);
+        const {cy:oty}=worldTo2D(obs.x1,obs.y2);
+        ctx.font='italic 10px Georgia, serif'; ctx.fillStyle='#c8a882cc';
+        ctx.textAlign='center'; ctx.textBaseline='bottom'; ctx.fillText(obs.label,cx,oty-2);
+      });
+      // Labels trappes (toujours)
+      map.deathZones.forEach(dz => {
+        const {cx,cy}=worldTo2D((dz.x1+dz.x2)/2,(dz.y1+dz.y2)/2);
+        ctx.font='bold 8px Georgia, serif'; ctx.fillStyle='#cc3300cc';
+        ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('⚠ '+dz.label,cx,cy);
+      });
+      // Labels sorties (toujours)
+      map.exits.forEach(exit => {
+        const {cx,cy}=worldTo2D((exit.x1+exit.x2)/2,(exit.y1+exit.y2)/2);
+        ctx.font='italic 10px Georgia, serif'; ctx.fillStyle='#8aff8acc';
+        ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('✦ '+(exit.label||'Sortie'),cx,cy);
+      });
+      ctx.restore();
+    }
+
+    function render3D(ts) {
+      SC2D = Math.min(W * 0.92 / 40, H * 0.92 / 40);
+      const map = MAPS[gameState.currentMap];
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = map.bgColor; ctx.fillRect(0, 0, W, H);
+      ROOMS.forEach(r => drawFloor2D(ctx, r));
+      ROOMS.forEach(r => drawCeiling2D(ctx, r));
+      drawWalls2D(ctx);
+      drawDecoObjects2D(ctx, ts);
+      drawObstacles2D(ctx);
+      drawDeathZones2D(ctx, ts);
+      drawExits2D(ctx, ts);
+      drawParticles2D(ctx, ts);
+      drawTrail2D(ctx);
+      drawPlayer2D(ctx, ts);
+      drawMonster2D(ctx, ts);
+      drawLightOverlay2D(ctx, ts);
+      drawUIOverlayRight(ctx);
+    }
+
+    // ===================== COMMAND MODE — VUE TOP-DOWN =====================
+    function renderCommandView(ts) {
+      if (gameState.currentMap === 0) { render3D(ts); return; }
+      renderTopDown(ts);
+    }
+
+    function renderTopDown(ts) {
+      SC2D = Math.min(W * 0.92 / 40, H * 0.92 / 40);
+      const map = MAPS[gameState.currentMap];
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = map.bgColor || '#080808'; ctx.fillRect(0, 0, W, H);
+      // Grille
+      ctx.save();
+      ctx.strokeStyle = map.gridColor || '#2a2a2a44'; ctx.lineWidth = 0.5;
+      for (let i = -20; i <= 20; i++) {
+        const {cx:x0,cy:y0}=worldTo2D(i,-20), {cx:x1,cy:y1}=worldTo2D(i,20);
+        ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke();
+        const {cx:x2,cy:y2}=worldTo2D(-20,i), {cx:x3,cy:y3}=worldTo2D(20,i);
+        ctx.beginPath(); ctx.moveTo(x2,y2); ctx.lineTo(x3,y3); ctx.stroke();
+      }
+      ctx.restore();
+      // Murs
+      if (map.walls) {
+        ctx.save();
+        map.walls.forEach(wall => {
+          const {cx:px,cy:py}=worldTo2D(wall.x1,wall.y2);
+          const w=(wall.x2-wall.x1)*SC2D, h=(wall.y2-wall.y1)*SC2D;
+          ctx.fillStyle='#1a1208'; ctx.strokeStyle='#5a3d1a'; ctx.lineWidth=1;
+          ctx.fillRect(px,py,w,h); ctx.strokeRect(px,py,w,h);
+        });
+        ctx.restore();
+      }
+      drawDeathZones2D(ctx, ts);
+      drawExits2D(ctx, ts);
+      drawObstacles2D(ctx);
+      drawTrail2D(ctx);
+      drawPlayer2D(ctx, ts);
+      drawMonster2D(ctx, ts);
+      drawLightOverlay2D(ctx, ts);
+      // Labels
+      const pp = gameState.playerPos;
+      ctx.save();
+      map.exits.forEach(exit => {
+        const {cx,cy}=worldTo2D((exit.x1+exit.x2)/2,(exit.y1+exit.y2)/2);
+        ctx.font='italic 10px Georgia, serif'; ctx.fillStyle='#8aff8acc';
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText('✦ '+(exit.label||'Sortie'),cx,cy);
+      });
+      map.deathZones.forEach(dz => {
+        const {cx,cy}=worldTo2D((dz.x1+dz.x2)/2,(dz.y1+dz.y2)/2);
+        ctx.font='bold 8px Georgia, serif'; ctx.fillStyle='#cc3300cc';
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText('⚠ '+(dz.label||'Trappe'),cx,cy);
+      });
+      map.obstacles.forEach(obs => {
+        if (Math.hypot(pp.x-(obs.x1+obs.x2)/2, pp.y-(obs.y1+obs.y2)/2)>7) return;
+        const {cx,cy}=worldTo2D((obs.x1+obs.x2)/2,(obs.y1+obs.y2)/2);
+        ctx.font='italic 10px Georgia, serif'; ctx.fillStyle='#c8a882cc';
+        ctx.textAlign='center'; ctx.textBaseline='bottom';
+        ctx.fillText(obs.label,cx,cy-2);
+      });
+      ctx.restore();
+      // HUD
+      const hudPos = document.getElementById('hud-pos');
+      if (hudPos) hudPos.textContent = `(${pp.x.toFixed(1)}, ${pp.y.toFixed(1)})`;
+      updateHealthDisplay();
     }
 
     // ===================== RENDER LOOP (3rd-person perspective) =====================
@@ -2375,6 +3031,13 @@
       gameState.timestamp = ts;
       if (gameState.mode === 'menu') { renderLoopRunning = false; return; }
       renderLoopRunning = true;
+      // ── Dispatch mode commande (overlay 2D ouvert) → vue top-down ───
+      if (overlayOpen) {
+        ctx.shadowBlur = 0;
+        renderCommandView(ts);
+        if (gameState.mode !== 'menu') requestAnimationFrame(renderLoop);
+        return;
+      }
       ctx.shadowBlur = 0;
       ctx.clearRect(0, 0, W, H);
 
@@ -2611,6 +3274,26 @@
           ctx.fillStyle = misteGrad;
           ctx.fillRect(Math.min(tpBL.sx, tpBR.sx) - 4, tpTop.sy - misteH, Math.abs(tpBR.sx - tpBL.sx) + 8, misteH + 4);
         }
+        // Hachures diagonales animées sur la face supérieure
+        const c0=project(dz.x1,dz.y1,DZ_H), c1=project(dz.x2,dz.y1,DZ_H);
+        const c2=project(dz.x2,dz.y2,DZ_H), c3=project(dz.x1,dz.y2,DZ_H);
+        if (c0&&c1&&c2&&c3) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(c0.sx,c0.sy); ctx.lineTo(c1.sx,c1.sy);
+          ctx.lineTo(c2.sx,c2.sy); ctx.lineTo(c3.sx,c3.sy);
+          ctx.closePath(); ctx.clip();
+          ctx.strokeStyle='rgba(180,0,0,0.52)'; ctx.lineWidth=1;
+          const step=12, hOff=(ts*0.03)%step;
+          const bx=Math.min(c0.sx,c1.sx,c2.sx,c3.sx)-step;
+          const ex=Math.max(c0.sx,c1.sx,c2.sx,c3.sx)+step;
+          const by=Math.min(c0.sy,c1.sy,c2.sy,c3.sy)-step;
+          const ey=Math.max(c0.sy,c1.sy,c2.sy,c3.sy)+step;
+          for (let s=bx-(ey-by)+hOff; s<ex+(ey-by); s+=step) {
+            ctx.beginPath(); ctx.moveTo(s,by); ctx.lineTo(s+(ey-by),ey); ctx.stroke();
+          }
+          ctx.restore();
+        }
         const m = project((dz.x1+dz.x2)/2, (dz.y1+dz.y2)/2, DZ_H + 0.15);
         if (m && m.depth < 28) {
           ctx.fillStyle = '#cc4400cc';
@@ -2622,10 +3305,36 @@
         }
       }}));
 
-      // Exits — portes en bois massif du manoir
+      // Exits — pulsation verte lumineuse
       exits.forEach(exit => {
         Q.push({ d: cDist(exit.x1,exit.y1,exit.x2,exit.y2), fn: () => {
-          renderBox3D(exit.x1, exit.y1, exit.x2, exit.y2, EXIT_H, '#2a1a08', null);
+          const ep = 0.5 + 0.5 * Math.sin(ts / 400);
+          renderBox3D(exit.x1, exit.y1, exit.x2, exit.y2, EXIT_H,
+            `rgba(0,${Math.floor(70+55*ep)},0,1)`, null);
+          // Contour lumineux sur la face supérieure
+          const ep0=project(exit.x1,exit.y1,EXIT_H), ep1=project(exit.x2,exit.y1,EXIT_H);
+          const ep2=project(exit.x2,exit.y2,EXIT_H), ep3=project(exit.x1,exit.y2,EXIT_H);
+          if (ep0&&ep1&&ep2&&ep3) {
+            ctx.save();
+            ctx.shadowBlur=12+8*ep; ctx.shadowColor='#00ff44';
+            ctx.strokeStyle=`rgba(80,255,120,${0.55+0.45*ep})`; ctx.lineWidth=1.5;
+            ctx.beginPath();
+            ctx.moveTo(ep0.sx,ep0.sy); ctx.lineTo(ep1.sx,ep1.sy);
+            ctx.lineTo(ep2.sx,ep2.sy); ctx.lineTo(ep3.sx,ep3.sy);
+            ctx.closePath(); ctx.stroke();
+            ctx.shadowBlur=0; ctx.restore();
+          }
+          // Label
+          const em=project((exit.x1+exit.x2)/2,(exit.y1+exit.y2)/2,EXIT_H+0.2);
+          if (em&&em.depth<22) {
+            ctx.save();
+            ctx.font=`italic ${Math.min(13,48/em.depth)}px Georgia, serif`;
+            ctx.fillStyle=`rgba(100,255,130,${0.65+0.35*ep})`;
+            ctx.textAlign='center';
+            ctx.shadowBlur=8; ctx.shadowColor='#00cc44';
+            ctx.fillText('✦ '+(exit.label||'Sortie'),em.sx,em.sy);
+            ctx.shadowBlur=0; ctx.restore();
+          }
         }});
       });
 
@@ -2687,9 +3396,29 @@
       const pPt = project(pp.x, pp.y, 1.0);
       Q.push({ d: pPt ? pPt.depth : 0, fn: () => drawPlayer3D(pp, pal) });
 
-      // Monster
+      // Monster — billboard 6 points magenta, glow rouge, pulsation
       const mPt = project(mp.x, mp.y, 1.4);
-      Q.push({ d: mPt ? mPt.depth : 999, fn: () => drawMonster3D(mp, ts, pal) });
+      Q.push({ d: mPt ? mPt.depth : 999, fn: () => {
+        if (!mPt || mPt.depth > 35) return;
+        const mScale = Math.max(8, 60 / mPt.depth) * (1 + 0.15 * Math.sin(ts * 0.005));
+        ctx.save();
+        ctx.translate(mPt.sx, mPt.sy);
+        ctx.rotate(ts * 0.0006);
+        ctx.shadowBlur = 20; ctx.shadowColor = '#ff0000';
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+          const r = i % 2 === 0 ? mScale : mScale * 0.42;
+          const a = (i / 6) * Math.PI * 2 - Math.PI / 2;
+          i === 0 ? ctx.moveTo(Math.cos(a)*r, Math.sin(a)*r)
+                  : ctx.lineTo(Math.cos(a)*r, Math.sin(a)*r);
+        }
+        ctx.closePath();
+        ctx.fillStyle = '#ff00ff'; ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.beginPath(); ctx.arc(0, 0, mScale * 0.18, 0, Math.PI*2);
+        ctx.fillStyle = '#ffffff'; ctx.fill();
+        ctx.restore();
+      }});
 
       // Sort farthest first and render
       Q.sort((a, b) => b.d - a.d);
@@ -2710,6 +3439,36 @@
 
       // ── Vector arrow on ground ────────────────────────────────────
       drawVectorArrow3D(pp, lv, pal);
+
+      // ── Grand vecteur overlay pendant l'animation ─────────────────
+      if (gameState.mode === 'animating' && gameState.pendingVector &&
+          (gameState.pendingVector.x !== 0 || gameState.pendingVector.y !== 0)) {
+        const pv = gameState.pendingVector;
+        const pPt2 = project(pp.x, pp.y, 0.1);
+        const ePt  = project(pp.x + pv.x, pp.y + pv.y, 0.1);
+        if (pPt2 && ePt) {
+          const aAngle = Math.atan2(ePt.sy - pPt2.sy, ePt.sx - pPt2.sx);
+          const aLen = 18;
+          ctx.save();
+          ctx.strokeStyle = 'rgba(255,220,60,0.88)'; ctx.lineWidth = 3;
+          ctx.shadowBlur = 16; ctx.shadowColor = '#ffcc00';
+          ctx.beginPath(); ctx.moveTo(pPt2.sx, pPt2.sy); ctx.lineTo(ePt.sx, ePt.sy); ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(ePt.sx, ePt.sy);
+          ctx.lineTo(ePt.sx - aLen*Math.cos(aAngle-0.45), ePt.sy - aLen*Math.sin(aAngle-0.45));
+          ctx.moveTo(ePt.sx, ePt.sy);
+          ctx.lineTo(ePt.sx - aLen*Math.cos(aAngle+0.45), ePt.sy - aLen*Math.sin(aAngle+0.45));
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+          // Grand label centré en haut
+          ctx.font = 'bold italic 32px Georgia, serif';
+          ctx.fillStyle = 'rgba(255,230,80,0.92)';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.shadowBlur = 20; ctx.shadowColor = '#ffaa00';
+          ctx.fillText(`u\u20D7 (${pv.x} ; ${pv.y})`, W / 2, H * 0.14);
+          ctx.shadowBlur = 0; ctx.restore();
+        }
+      }
 
 
       // ── HUD vecteur (coin haut-gauche) — style parchemin ──────────
@@ -2748,48 +3507,41 @@
       ctx.fillRect(W * 0.82, 0, W * 0.18, H);
       ctx.restore();
 
-      // ── Éclairage bougie : screen blend — illumine les objets 3D ───
-      // ===== DEV MODE - À SUPPRIMER AVANT PRODUCTION =====
-      if (devMode) {
-        ctx.fillStyle = 'rgba(255,220,160,0.08)';
-        ctx.fillRect(0, 0, W, H);
-      } else {
-      // ===== FIN DEV MODE =====
-      const lightPt = project(pp.x, pp.y, 1.0);
-      if (lightPt) {
-        const cx = lightPt.sx, cy = lightPt.sy;
-        const flicker = 0.88 + 0.12 * Math.sin(ts * 0.009);
-        const haloR = 315 * flicker;
+      // ── Lampe torche (cone 60°) — obscurité 0.82 ───────────────────
+      if (!devMode) {
+        const lightPt = project(pp.x, pp.y, 1.0);
+        if (lightPt) {
+          const torchAngle = Math.atan2(cam.fy, cam.fx);
+          const coneHalf = Math.PI / 3; // ±30° → cone 60°
+          const flicker = 0.92 + 0.08 * Math.sin(ts * 0.013);
+          const torchR = Math.max(W, H) * 1.2 * flicker;
 
-        // 1. Assombrir toute la scène uniformément
-        ctx.fillStyle = 'rgba(0,0,0,0.60)';
-        ctx.fillRect(0, 0, W, H);
+          // 1. Obscurité globale 0.82
+          ctx.fillStyle = 'rgba(0,0,0,0.82)';
+          ctx.fillRect(0, 0, W, H);
 
-        // 2. Projeter la lumière chaude sur les surfaces via screen blend
-        ctx.globalCompositeOperation = 'screen';
-        const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, haloR);
-        grad.addColorStop(0,    `rgba(255,230,160,${flicker * 0.60})`);
-        grad.addColorStop(0.22, `rgba(255,160,40,${0.51 * flicker})`);
-        grad.addColorStop(0.55, `rgba(110,45,8,${0.33 * flicker})`);
-        grad.addColorStop(1,    'rgba(0,0,0,0)');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, W, H);
-        ctx.globalCompositeOperation = 'source-over';
-
-        // 3. Flamme de bougie au-dessus du joueur
-        const flH = 7 + 2 * Math.sin(ts * 0.011);
-        const flOff = 1.2 * Math.sin(ts * 0.008);
-        ctx.save();
-        ctx.shadowBlur = 7; ctx.shadowColor = '#ff6600';
-        ctx.fillStyle = '#ff9900';
-        ctx.beginPath(); ctx.ellipse(cx + flOff, cy - flH * 0.5, 2.5, flH * 0.6, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#ffcc44'; ctx.shadowColor = '#ffdd66';
-        ctx.beginPath(); ctx.ellipse(cx + flOff * 0.5, cy - flH * 0.35, 1.4, flH * 0.35, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.shadowBlur = 0; ctx.restore();
+          // 2. Cone de lumière via screen blend
+          ctx.globalCompositeOperation = 'screen';
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(lightPt.sx, lightPt.sy);
+          ctx.arc(lightPt.sx, lightPt.sy, torchR, torchAngle - coneHalf, torchAngle + coneHalf);
+          ctx.closePath();
+          ctx.clip();
+          const coneGrad = ctx.createRadialGradient(
+            lightPt.sx, lightPt.sy, 0,
+            lightPt.sx, lightPt.sy, torchR * 0.72
+          );
+          coneGrad.addColorStop(0,    `rgba(220,210,180,${0.58 * flicker})`);
+          coneGrad.addColorStop(0.30, `rgba(160,140,90,${0.38 * flicker})`);
+          coneGrad.addColorStop(0.65, `rgba(60,40,10,${0.20 * flicker})`);
+          coneGrad.addColorStop(1,    'rgba(0,0,0,0)');
+          ctx.fillStyle = coneGrad;
+          ctx.fillRect(0, 0, W, H);
+          ctx.restore();
+          ctx.globalCompositeOperation = 'source-over';
+        }
       }
-      // ===== DEV MODE - À SUPPRIMER AVANT PRODUCTION =====
-      } // fin else devMode
-      // ===== FIN DEV MODE =====
 
 
       // ── HUD ───────────────────────────────────────────────────────
@@ -2973,21 +3725,73 @@
       document.getElementById('settings-close').onclick = closeSettings;
 
       // ── Carte plein écran ──────────────────────────────────────────
+      let fsTransform = { zoom: 1, panX: 0, panY: 0 };
+
+      const fsc = document.getElementById('map-fs-canvas');
+
+      function redrawFullscreen() {
+        drawPreview(fsc, fsTransform);
+      }
+
+      function zoomAt(cx, cy, delta) {
+        const PW = fsc.width, PH = fsc.height;
+        const PS = Math.min(PW, PH) / 40 * fsTransform.zoom;
+        // point monde sous le curseur
+        const wx = (cx - PW/2) / PS + fsTransform.panX;
+        const wy = -(cy - PH/2) / PS + fsTransform.panY;
+        fsTransform.zoom = Math.max(0.5, Math.min(12, fsTransform.zoom * delta));
+        const newPS = Math.min(PW, PH) / 40 * fsTransform.zoom;
+        // recaler pour que le point reste sous le curseur
+        fsTransform.panX = wx - (cx - PW/2) / newPS;
+        fsTransform.panY = wy + (cy - PH/2) / newPS;
+        redrawFullscreen();
+      }
+
       function openMapFullscreen() {
-        const overlay = document.getElementById('map-fullscreen-overlay');
-        const fsc = document.getElementById('map-fs-canvas');
         fsc.width  = window.innerWidth;
         fsc.height = window.innerHeight;
-        overlay.classList.add('open');
-        drawPreview(fsc);
+        fsTransform = { zoom: 1, panX: 0, panY: 0 };
+        document.getElementById('map-fullscreen-overlay').classList.add('open');
+        redrawFullscreen();
       }
       function closeMapFullscreen() {
         document.getElementById('map-fullscreen-overlay').classList.remove('open');
       }
-      document.getElementById('preview-canvas').addEventListener('click', () => {
-        if (gameState.mode === 'game') openMapFullscreen();
+
+      // Zoom molette
+      fsc.addEventListener('wheel', e => {
+        e.preventDefault();
+        const rect = fsc.getBoundingClientRect();
+        zoomAt(e.clientX - rect.left, e.clientY - rect.top, e.deltaY < 0 ? 1.15 : 1/1.15);
+      }, { passive: false });
+
+      // Zoom pinch (mobile)
+      let lastPinchDist = null;
+      fsc.addEventListener('touchstart', e => {
+        if (e.touches.length === 2) lastPinchDist = null;
+      }, { passive: true });
+      fsc.addEventListener('touchmove', e => {
+        if (e.touches.length !== 2) return;
+        e.preventDefault();
+        const t0 = e.touches[0], t1 = e.touches[1];
+        const dist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+        if (lastPinchDist !== null && dist > 0) {
+          const rect = fsc.getBoundingClientRect();
+          const cx = (t0.clientX + t1.clientX) / 2 - rect.left;
+          const cy = (t0.clientY + t1.clientY) / 2 - rect.top;
+          zoomAt(cx, cy, dist / lastPinchDist);
+        }
+        lastPinchDist = dist;
+      }, { passive: false });
+      fsc.addEventListener('touchend', () => { lastPinchDist = null; }, { passive: true });
+
+      document.getElementById('preview-canvas').addEventListener('click', e => {
+        e.stopPropagation();
+        openMapFullscreen();
       });
-      document.getElementById('map-fullscreen-overlay').addEventListener('click', closeMapFullscreen);
+      document.getElementById('map-fullscreen-overlay').addEventListener('click', () => {
+        closeMapFullscreen();
+      });
       document.addEventListener('keydown', e => {
         if (e.key === 'Escape') closeMapFullscreen();
       });

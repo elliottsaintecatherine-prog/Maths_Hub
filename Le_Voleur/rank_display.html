@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SYSTÈME DE GRADES — LE VOLEUR</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: #030508;
+  display: flex; justify-content: center; align-items: flex-start;
+  min-height: 100vh; padding: 40px 20px;
+  font-family: 'Rajdhani', sans-serif;
+}
+
+/* ═══════════════════════════════════════════
+   STONE WALL CONTAINER
+═══════════════════════════════════════════ */
+.wall {
+  width: 540px;
+  background:
+    repeating-linear-gradient(23deg, transparent, transparent 38px, rgba(255,255,255,0.008) 38px, rgba(255,255,255,0.008) 40px),
+    repeating-linear-gradient(-17deg, transparent, transparent 55px, rgba(255,255,255,0.005) 55px, rgba(255,255,255,0.005) 57px),
+    linear-gradient(180deg, #0d1220 0%, #080c16 50%, #0a0e1a 100%);
+  border: 1px solid rgba(80,100,160,0.2);
+  border-top: 1px solid rgba(120,150,220,0.3);
+  border-radius: 6px;
+  position: relative; overflow: hidden;
+  box-shadow:
+    0 0 80px rgba(0,0,0,0.9),
+    0 0 30px rgba(0,40,120,0.15),
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    inset 0 0 60px rgba(0,0,0,0.4);
+}
+
+/* Left neon conduit */
+.wall::before {
+  content: '';
+  position: absolute; top: 0; left: 10px; width: 2px; height: 300%;
+  background: linear-gradient(180deg,
+    transparent 0%, #00c8ff 8%, transparent 16%,
+    #0066ff 32%, transparent 40%,
+    #00c8ff 56%, transparent 64%,
+    #0044cc 80%, transparent 88%);
+  opacity: 0.5;
+  animation: conduit-l 7s linear infinite;
+}
+/* Right neon conduit */
+.wall::after {
+  content: '';
+  position: absolute; top: 0; right: 10px; width: 2px; height: 300%;
+  background: linear-gradient(180deg,
+    transparent 10%, #9900ff 20%, transparent 30%,
+    #cc00aa 48%, transparent 58%,
+    #7700ff 74%, transparent 84%);
+  opacity: 0.45;
+  animation: conduit-r 9s linear infinite reverse;
+}
+@keyframes conduit-l { from { transform: translateY(-66%); } to { transform: translateY(0%); } }
+@keyframes conduit-r { from { transform: translateY(-66%); } to { transform: translateY(0%); } }
+
+/* ═══════════════════════════════════════════
+   HEADER
+═══════════════════════════════════════════ */
+.header {
+  padding: 22px 28px 18px;
+  position: relative;
+  background: linear-gradient(180deg, rgba(0,80,200,0.06) 0%, transparent 100%);
+  border-bottom: 1px solid rgba(60,100,200,0.12);
+  overflow: hidden;
+}
+.header-sub {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.72rem; letter-spacing: 5px; color: #4a6aaa;
+  text-transform: uppercase; margin-bottom: 6px;
+}
+.header-title {
+  font-size: 1.8rem; font-weight: 700; letter-spacing: 8px;
+  color: #c8dcff;
+  text-shadow: 0 0 30px rgba(100,160,255,0.6), 0 0 60px rgba(60,100,200,0.3);
+}
+/* Holographic scan line */
+.holo-line {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent 0%, #1a4aff 20%, #aa00ff 50%, #ff00aa 80%, transparent 100%);
+  animation: holo-scan 4s ease-in-out infinite;
+}
+@keyframes holo-scan { 0%,100%{opacity:0.25} 50%{opacity:0.7} }
+
+/* Holographic data streams (header decoration) */
+.holo-stream {
+  position: absolute; top: 0; right: 30px; height: 100%; width: 1px;
+  background: linear-gradient(180deg, transparent, rgba(0,150,255,0.3), transparent);
+  animation: stream-flow 3s ease-in-out infinite;
+}
+.holo-stream:nth-child(2) { right: 50px; animation-delay: 1s; opacity: 0.5; }
+.holo-stream:nth-child(3) { right: 70px; animation-delay: 2s; opacity: 0.3; }
+@keyframes stream-flow { 0%,100%{opacity:0} 50%{opacity:1} }
+
+/* ═══════════════════════════════════════════
+   RANK LIST
+═══════════════════════════════════════════ */
+.rank-list { padding: 14px 18px; display: flex; flex-direction: column; gap: 9px; }
+
+/* ═══════════════════════════════════════════
+   BASE PANEL — 3D EXTRUDED SET PIECE
+═══════════════════════════════════════════ */
+.rp {
+  display: flex; align-items: stretch;
+  border-radius: 7px; overflow: hidden;
+  position: relative; min-height: 92px;
+  cursor: default;
+  transition: transform 0.18s ease, filter 0.18s ease;
+  /* Top bevel edge highlight */
+  border-top: 1px solid rgba(255,255,255,0.12);
+  border-bottom: 1px solid rgba(0,0,0,0.7);
+}
+.rp:hover { transform: translateX(5px) scale(1.005); filter: brightness(1.08); }
+
+/* LEFT — Character illustration */
+.rp-char {
+  width: 82px; min-width: 82px;
+  display: flex; align-items: center; justify-content: center;
+  position: relative; overflow: hidden;
+  border-right: 1px solid rgba(255,255,255,0.05);
+  flex-shrink: 0;
+}
+/* Character area inner glow */
+.rp-char::after {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 50% 80%, currentColor 0%, transparent 70%);
+  opacity: 0.08; pointer-events: none;
+}
+
+/* CENTER — Info */
+.rp-info {
+  flex: 1; padding: 11px 15px;
+  display: flex; flex-direction: column; justify-content: center; gap: 1px;
+  position: relative;
+}
+.rp-grade {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 1.55rem; font-weight: 700; line-height: 1;
+  letter-spacing: 3px;
+}
+.rp-label {
+  font-size: 0.88rem; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase; line-height: 1.2;
+}
+.rp-pct {
+  font-family: 'Share Tech Mono', monospace; font-size: 0.62rem;
+  letter-spacing: 0.5px; margin-top: 3px;
+}
+
+/* Neon energy conduit progress bar */
+.rp-bar { margin-top: 7px; display: flex; gap: 3px; }
+.rp-seg {
+  flex: 1; height: 5px; border-radius: 2px;
+  background: rgba(255,255,255,0.06);
+  position: relative; overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.04);
+}
+.rp-seg.on {
+  background: currentColor;
+  box-shadow: 0 0 6px currentColor, 0 0 12px currentColor;
+  border-color: transparent;
+}
+.rp-seg.on::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(90deg, rgba(255,255,255,0.4) 0%, transparent 60%);
+}
+
+/* RIGHT — Badge plaque */
+.rp-badge {
+  width: 84px; min-width: 84px;
+  display: flex; align-items: center; justify-content: center;
+  border-left: 1px solid rgba(255,255,255,0.05);
+  flex-shrink: 0;
+}
+.rp-badge-inner {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.58rem; font-weight: 700; letter-spacing: 2px;
+  text-align: center; line-height: 1.4; padding: 7px 9px;
+  border-radius: 5px;
+  /* Engraved metal plaque look */
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.18),
+    inset 0 -1px 0 rgba(0,0,0,0.5),
+    inset 1px 0 0 rgba(255,255,255,0.1),
+    inset -1px 0 0 rgba(0,0,0,0.35),
+    0 2px 8px rgba(0,0,0,0.5);
+}
+
+/* ═══════════════════════════════════════════
+   SS — OMBRE LÉGENDAIRE — MAGENTA
+═══════════════════════════════════════════ */
+.rp-ss {
+  background:
+    repeating-linear-gradient(45deg, transparent, transparent 16px, rgba(244,63,94,0.025) 16px, rgba(244,63,94,0.025) 18px),
+    repeating-linear-gradient(-45deg, transparent, transparent 16px, rgba(244,63,94,0.015) 16px, rgba(244,63,94,0.015) 18px),
+    linear-gradient(135deg, #1e0025 0%, #3d0038 25%, #2a001e 55%, #1a0018 100%);
+  border-color: #b01860;
+  box-shadow:
+    inset 0 1px 0 rgba(255,100,180,0.2),
+    inset 0 -1px 0 rgba(0,0,0,0.7),
+    0 0 35px rgba(244,63,94,0.3),
+    0 6px 20px rgba(0,0,0,0.7);
+  animation: ss-aura 2.8s ease-in-out infinite;
+}
+@keyframes ss-aura {
+  0%,100% { box-shadow: inset 0 1px 0 rgba(255,100,180,0.2), inset 0 -1px 0 rgba(0,0,0,0.7), 0 0 35px rgba(244,63,94,0.3), 0 6px 20px rgba(0,0,0,0.7); }
+  50%      { box-shadow: inset 0 1px 0 rgba(255,100,180,0.2), inset 0 -1px 0 rgba(0,0,0,0.7), 0 0 55px rgba(244,63,94,0.55), 0 6px 25px rgba(0,0,0,0.7); }
+}
+.rp-ss .rp-char { color: #f43f5e; }
+.rp-ss .rp-grade { color: #f43f5e; font-size: 1.75rem; text-shadow: 0 0 20px #f43f5e, 0 0 45px #db2777, 0 0 80px rgba(244,63,94,0.4); }
+.rp-ss .rp-label { color: #fb7185; letter-spacing: 2.5px; text-shadow: 0 0 10px rgba(251,113,133,0.5); }
+.rp-ss .rp-pct  { color: rgba(253,164,175,0.55); }
+.rp-ss .rp-seg  { color: #f43f5e; }
+.rp-ss .rp-badge { background: linear-gradient(180deg, rgba(60,0,25,0.7), rgba(22,0,10,0.9)); }
+.rp-ss .rp-badge-inner { background: linear-gradient(145deg, #5c0a22, #8b0f2e, #5c0a22); color: #fda4af; border: 1px solid #b01860; box-shadow: inset 0 1px 0 rgba(255,160,200,0.2), inset 0 -1px 0 rgba(0,0,0,0.5), 0 0 14px rgba(244,63,94,0.4); }
+
+/* ═══════════════════════════════════════════
+   S — FANTÔME — ORANGE / GOLD
+═══════════════════════════════════════════ */
+.rp-s {
+  background: linear-gradient(135deg, #1c0d00 0%, #321500 35%, #1c0900 75%, #140700 100%);
+  border-color: #b04808;
+  box-shadow:
+    inset 0 1px 0 rgba(255,180,80,0.15),
+    inset 0 -1px 0 rgba(0,0,0,0.7),
+    0 0 26px rgba(249,115,22,0.25),
+    0 6px 18px rgba(0,0,0,0.6);
+  animation: s-aura 3.8s ease-in-out infinite;
+}
+@keyframes s-aura {
+  0%,100% { box-shadow: inset 0 1px 0 rgba(255,180,80,0.15), inset 0 -1px 0 rgba(0,0,0,0.7), 0 0 26px rgba(249,115,22,0.25), 0 6px 18px rgba(0,0,0,0.6); }
+  50%      { box-shadow: inset 0 1px 0 rgba(255,180,80,0.15), inset 0 -1px 0 rgba(0,0,0,0.7), 0 0 44px rgba(249,115,22,0.45), 0 6px 22px rgba(0,0,0,0.6); }
+}
+.rp-s .rp-char { color: #fb923c; }
+.rp-s .rp-grade { color: #fb923c; text-shadow: 0 0 16px #fb923c, 0 0 35px #f97316; }
+.rp-s .rp-label { color: #fdba74; letter-spacing: 1.5px; }
+.rp-s .rp-pct  { color: rgba(254,215,170,0.5); }
+.rp-s .rp-seg  { color: #f97316; }
+.rp-s .rp-badge { background: linear-gradient(180deg, rgba(40,14,0,0.7), rgba(18,6,0,0.9)); }
+.rp-s .rp-badge-inner { background: linear-gradient(145deg, #431407, #7c2d12, #431407); color: #fdba74; border: 1px solid #b04808; box-shadow: inset 0 1px 0 rgba(255,200,100,0.15), inset 0 -1px 0 rgba(0,0,0,0.5), 0 0 10px rgba(249,115,22,0.3); }
+
+/* ═══════════════════════════════════════════
+   A — MAÎTRE VOLEUR — VIOLET
+═══════════════════════════════════════════ */
+.rp-a {
+  background:
+    repeating-linear-gradient(60deg, transparent, transparent 20px, rgba(139,92,246,0.02) 20px, rgba(139,92,246,0.02) 22px),
+    linear-gradient(135deg, #120820 0%, #22104a 40%, #160a30 75%, #0e0620 100%);
+  border-color: #5b21b6;
+  box-shadow:
+    inset 0 1px 0 rgba(200,160,255,0.12),
+    inset 0 -1px 0 rgba(0,0,0,0.7),
+    0 0 22px rgba(139,92,246,0.2),
+    0 6px 18px rgba(0,0,0,0.6);
+}
+.rp-a .rp-char { color: #a78bfa; }
+.rp-a .rp-grade { color: #a78bfa; text-shadow: 0 0 14px #a78bfa, 0 0 28px rgba(167,139,250,0.5); }
+.rp-a .rp-label { color: #c4b5fd; letter-spacing: 1.5px; }
+.rp-a .rp-pct  { color: rgba(221,214,254,0.45); }
+.rp-a .rp-seg  { color: #8b5cf6; }
+.rp-a .rp-badge { background: linear-gradient(180deg, rgba(18,6,35,0.7), rgba(8,3,16,0.9)); }
+.rp-a .rp-badge-inner { background: linear-gradient(145deg, #2e1065, #4c1d95, #2e1065); color: #c4b5fd; border: 1px solid #5b21b6; }
+
+/* ═══════════════════════════════════════════
+   B — CAMBRIOLEUR — BLUE
+═══════════════════════════════════════════ */
+.rp-b {
+  background: linear-gradient(135deg, #00122e 0%, #001a4a 40%, #000f26 75%, #000a1a 100%);
+  border-color: #1a42c0;
+  box-shadow:
+    inset 0 1px 0 rgba(100,180,255,0.1),
+    inset 0 -1px 0 rgba(0,0,0,0.7),
+    0 0 18px rgba(59,130,246,0.16),
+    0 6px 18px rgba(0,0,0,0.6);
+}
+.rp-b .rp-char { color: #60a5fa; }
+.rp-b .rp-grade { color: #60a5fa; text-shadow: 0 0 12px #60a5fa, 0 0 24px rgba(96,165,250,0.4); }
+.rp-b .rp-label { color: #93c5fd; }
+.rp-b .rp-pct  { color: rgba(191,219,254,0.4); }
+.rp-b .rp-seg  { color: #3b82f6; }
+.rp-b .rp-badge { background: linear-gradient(180deg, rgba(0,14,36,0.7), rgba(0,6,16,0.9)); }
+.rp-b .rp-badge-inner { background: linear-gradient(145deg, #172554, #1e3a8a, #172554); color: #93c5fd; border: 1px solid #1a42c0; }
+
+/* ═══════════════════════════════════════════
+   C — VOLEUR — GREEN
+═══════════════════════════════════════════ */
+.rp-c {
+  background: linear-gradient(135deg, #001a0e 0%, #002618 40%, #001208 75%, #000c05 100%);
+  border-color: #064e3b;
+  box-shadow:
+    inset 0 1px 0 rgba(80,220,160,0.08),
+    inset 0 -1px 0 rgba(0,0,0,0.7),
+    0 0 15px rgba(16,185,129,0.12),
+    0 6px 18px rgba(0,0,0,0.6);
+}
+.rp-c .rp-char { color: #34d399; }
+.rp-c .rp-grade { color: #34d399; text-shadow: 0 0 10px #34d399, 0 0 22px rgba(52,211,153,0.4); }
+.rp-c .rp-label { color: #6ee7b7; }
+.rp-c .rp-pct  { color: rgba(167,243,208,0.4); }
+.rp-c .rp-seg  { color: #10b981; }
+.rp-c .rp-badge { background: linear-gradient(180deg, rgba(0,18,10,0.7), rgba(0,8,4,0.9)); }
+.rp-c .rp-badge-inner { background: linear-gradient(145deg, #022c22, #065f46, #022c22); color: #6ee7b7; border: 1px solid #064e3b; }
+
+/* ═══════════════════════════════════════════
+   D — APPRENTI — YELLOW / BRONZE
+═══════════════════════════════════════════ */
+.rp-d {
+  background: linear-gradient(135deg, #160e00 0%, #241600 40%, #160800 75%, #0e0500 100%);
+  border-color: #6a3000;
+  box-shadow:
+    inset 0 1px 0 rgba(240,160,40,0.08),
+    inset 0 -1px 0 rgba(0,0,0,0.7),
+    0 0 12px rgba(245,158,11,0.1),
+    0 6px 18px rgba(0,0,0,0.6);
+}
+.rp-d .rp-char { color: #f59e0b; }
+.rp-d .rp-grade { color: #f59e0b; text-shadow: 0 0 10px #f59e0b, 0 0 20px rgba(245,158,11,0.4); }
+.rp-d .rp-label { color: #fcd34d; }
+.rp-d .rp-pct  { color: rgba(253,230,138,0.4); }
+.rp-d .rp-seg  { color: #d97706; }
+.rp-d .rp-badge { background: linear-gradient(180deg, rgba(20,10,0,0.7), rgba(8,4,0,0.9)); }
+.rp-d .rp-badge-inner { background: linear-gradient(145deg, #451a03, #78350f, #451a03); color: #fcd34d; border: 1px solid #6a3000; }
+
+/* ═══════════════════════════════════════════
+   F — RECRUE — GREY / DULL BLUE
+═══════════════════════════════════════════ */
+.rp-f {
+  background: linear-gradient(135deg, #0c1020 0%, #141828 40%, #0a0e1a 75%, #080b14 100%);
+  border-color: #27344c;
+  box-shadow:
+    inset 0 1px 0 rgba(180,200,240,0.05),
+    inset 0 -1px 0 rgba(0,0,0,0.7),
+    0 6px 18px rgba(0,0,0,0.55);
+}
+.rp-f .rp-char { color: #94a3b8; }
+.rp-f .rp-grade { color: #94a3b8; }
+.rp-f .rp-label { color: #64748b; }
+.rp-f .rp-pct  { color: rgba(100,116,139,0.5); }
+.rp-f .rp-seg  { color: #475569; }
+.rp-f .rp-badge { background: linear-gradient(180deg, rgba(10,14,22,0.7), rgba(5,6,10,0.9)); }
+.rp-f .rp-badge-inner { background: linear-gradient(145deg, #1e2a3a, #2d3a52, #1e2a3a); color: #94a3b8; border: 1px solid #27344c; }
+
+/* ═══════════════════════════════════════════
+   FOOTER
+═══════════════════════════════════════════ */
+.footer { height: 4px; margin: 4px 18px 18px;
+  background: linear-gradient(90deg, transparent, #1a4aff, #6600ff, #ff00aa, transparent);
+  border-radius: 2px; opacity: 0.45;
+}
+</style>
+</head>
+<body>
+<div class="wall">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="holo-stream"></div>
+    <div class="holo-stream"></div>
+    <div class="holo-stream"></div>
+    <div class="header-sub">// classification — agents — le voleur</div>
+    <div class="header-title">⬡ GRADES</div>
+    <div class="holo-line"></div>
+  </div>
+
+  <!-- RANK LIST -->
+  <div class="rank-list">
+
+    <!-- ════════ SS ════════ -->
+    <div class="rp rp-ss">
+      <div class="rp-char">
+        <svg viewBox="0 0 60 72" width="58" height="70" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="ss-bg" cx="50%" cy="45%">
+              <stop offset="0%" stop-color="#cc0055" stop-opacity="0.35"/>
+              <stop offset="100%" stop-color="#1a0018" stop-opacity="0"/>
+            </radialGradient>
+            <radialGradient id="ss-body" cx="50%" cy="38%">
+              <stop offset="0%" stop-color="#ee0066" stop-opacity="0.95"/>
+              <stop offset="55%" stop-color="#880033" stop-opacity="0.75"/>
+              <stop offset="100%" stop-color="#1a0010" stop-opacity="0.2"/>
+            </radialGradient>
+            <filter id="ss-glow" x="-40%" y="-40%" width="180%" height="180%">
+              <feGaussianBlur stdDeviation="2.5" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <!-- Ambient glow -->
+          <ellipse cx="30" cy="45" rx="22" ry="18" fill="url(#ss-bg)"/>
+          <!-- Shadow body — flowing form -->
+          <path d="M30 68 C16 55 5 46 10 30 C15 14 28 5 30 4 C32 5 45 14 50 30 C55 46 44 55 30 68Z" fill="url(#ss-body)"/>
+          <!-- Wispy outer tendrils -->
+          <path d="M14 38 C6 36 3 43 9 46" stroke="#ff00aa" stroke-width="1.8" fill="none" stroke-linecap="round" opacity="0.65"/>
+          <path d="M46 36 C54 34 57 41 51 44" stroke="#ee0088" stroke-width="1.8" fill="none" stroke-linecap="round" opacity="0.65"/>
+          <path d="M18 56 C11 60 10 67 15 69" stroke="#cc0066" stroke-width="1.2" fill="none" stroke-linecap="round" opacity="0.5"/>
+          <path d="M42 56 C49 60 50 67 45 69" stroke="#cc0066" stroke-width="1.2" fill="none" stroke-linecap="round" opacity="0.5"/>
+          <path d="M22 28 C18 22 20 16 24 18" stroke="#ff44cc" stroke-width="1" fill="none" stroke-linecap="round" opacity="0.4"/>
+          <path d="M38 26 C42 20 40 14 36 16" stroke="#ff44cc" stroke-width="1" fill="none" stroke-linecap="round" opacity="0.4"/>
+          <!-- Crystal shards -->
+          <polygon points="29,19 32,13 35,20 32,22" fill="#ff33dd" filter="url(#ss-glow)"/>
+          <polygon points="21,32 24,25 27,32 24,34" fill="#ff22cc" opacity="0.85"/>
+          <polygon points="36,29 39,23 41,30 38,31" fill="#ee11bb" opacity="0.75"/>
+          <polygon points="25,45 27,40 30,45 27,47" fill="#ff44cc" opacity="0.6"/>
+          <!-- Shadow crest emblem -->
+          <path d="M26 56 L30 50 L34 56 L30 58Z" fill="#ff00aa" filter="url(#ss-glow)" opacity="0.9"/>
+          <!-- Glowing eyes -->
+          <circle cx="26" cy="25" r="3.5" fill="#ff00ff" filter="url(#ss-glow)"/>
+          <circle cx="34" cy="25" r="3.5" fill="#ff00ff" filter="url(#ss-glow)"/>
+          <circle cx="26" cy="25" r="1.8" fill="#ffffff"/>
+          <circle cx="34" cy="25" r="1.8" fill="#ffffff"/>
+          <!-- Rune marks on body -->
+          <path d="M22 40 L24 37 L26 40 M28 38 L30 35 L32 38" stroke="#ff88cc" stroke-width="0.8" fill="none" opacity="0.5"/>
+        </svg>
+      </div>
+      <div class="rp-info">
+        <div class="rp-grade">SS</div>
+        <div class="rp-label">Ombre Légendaire</div>
+        <div class="rp-pct">TOP 3% · PERCENTILE 97–100</div>
+        <div class="rp-bar" id="bar-ss"></div>
+      </div>
+      <div class="rp-badge">
+        <div class="rp-badge-inner">LÉGENDAIRE</div>
+      </div>
+    </div>
+
+    <!-- ════════ S ════════ -->
+    <div class="rp rp-s">
+      <div class="rp-char">
+        <svg viewBox="0 0 60 72" width="58" height="70" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="s-body" cx="50%" cy="38%">
+              <stop offset="0%" stop-color="#ffc040" stop-opacity="0.82"/>
+              <stop offset="50%" stop-color="#cc5500" stop-opacity="0.55"/>
+              <stop offset="100%" stop-color="#1a0500" stop-opacity="0.1"/>
+            </radialGradient>
+            <filter id="s-glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="2" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <!-- Ghost body — ectoplasmic form -->
+          <path d="M14 26 C14 9 46 9 46 26 L46 54 C46 54 42 48 37 52 C32 56 28 48 24 52 C20 56 17 54 14 54Z" fill="url(#s-body)"/>
+          <!-- Translucent overlay for ghost effect -->
+          <path d="M14 26 C14 9 46 9 46 26 L46 54 C46 54 42 48 37 52 C32 56 28 48 24 52 C20 56 17 54 14 54Z" fill="rgba(255,200,80,0.08)"/>
+          <!-- Plasma energy trails -->
+          <path d="M8 32 C2 30 0 38 6 42" stroke="#f97316" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.55" filter="url(#s-glow)"/>
+          <path d="M52 30 C58 28 60 36 54 40" stroke="#fbbf24" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.55" filter="url(#s-glow)"/>
+          <path d="M10 22 C6 16 8 8 13 10" stroke="#fb923c" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.4"/>
+          <path d="M50 20 C54 14 52 6 47 8" stroke="#fbbf24" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.4"/>
+          <!-- Gold crown / crest -->
+          <path d="M19 16 L22 9 L26 15 L30 8 L34 15 L38 9 L41 16" stroke="#fbbf24" stroke-width="2" fill="none" stroke-linejoin="round" filter="url(#s-glow)"/>
+          <path d="M19 16 L41 16" stroke="#d97706" stroke-width="1" opacity="0.6"/>
+          <!-- Face — hollow eyes -->
+          <ellipse cx="24" cy="30" rx="4.5" ry="5.5" fill="#1a0500"/>
+          <ellipse cx="36" cy="30" rx="4.5" ry="5.5" fill="#1a0500"/>
+          <!-- Glowing pupils -->
+          <circle cx="24" cy="29" r="2.5" fill="#fb923c" filter="url(#s-glow)"/>
+          <circle cx="36" cy="29" r="2.5" fill="#fbbf24" filter="url(#s-glow)"/>
+          <circle cx="24" cy="28" r="1" fill="#fff8e0"/>
+          <circle cx="36" cy="28" r="1" fill="#fff8e0"/>
+          <!-- Gold polished crest medallion -->
+          <circle cx="30" cy="42" r="4" fill="#92400e" stroke="#d97706" stroke-width="1.2"/>
+          <circle cx="30" cy="42" r="2.5" fill="#fbbf24" opacity="0.6"/>
+          <path d="M28 41 L30 39 L32 41 L31 43 L29 43Z" fill="#fff8e0" opacity="0.5"/>
+        </svg>
+      </div>
+      <div class="rp-info">
+        <div class="rp-grade">S</div>
+        <div class="rp-label">Fantôme</div>
+        <div class="rp-pct">TOP 10% · PERCENTILE 90–97</div>
+        <div class="rp-bar" id="bar-s"></div>
+      </div>
+      <div class="rp-badge">
+        <div class="rp-badge-inner">ÉLITE</div>
+      </div>
+    </div>
+
+    <!-- ════════ A ════════ -->
+    <div class="rp rp-a">
+      <div class="rp-char">
+        <svg viewBox="0 0 60 72" width="58" height="70" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="a-cloak" x1="0" y1="0" x2="0.4" y2="1">
+              <stop offset="0%" stop-color="#3b1070"/>
+              <stop offset="50%" stop-color="#1e0845"/>
+              <stop offset="100%" stop-color="#0e0425"/>
+            </linearGradient>
+            <linearGradient id="a-cloak-hi" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#5b21b6" stop-opacity="0.4"/>
+              <stop offset="40%" stop-color="transparent"/>
+            </linearGradient>
+            <filter id="a-glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="2" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <!-- Cloak — dramatic sweep -->
+          <path d="M30 6 C24 6 18 11 16 18 L10 62 C10 65 13 67 16 67 L44 67 C47 67 50 65 50 62 L44 18 C42 11 36 6 30 6Z" fill="url(#a-cloak)"/>
+          <!-- Cloak highlight edge -->
+          <path d="M30 6 C24 6 18 11 16 18 L10 62 C10 65 13 67 16 67" fill="url(#a-cloak-hi)" opacity="0.5"/>
+          <!-- Hood -->
+          <path d="M20 14 C20 5 40 5 40 14 C40 20 37 24 30 24 C23 24 20 20 20 14Z" fill="#2a0a5c"/>
+          <!-- Hood shadow depth line -->
+          <path d="M20 14 L40 14" stroke="#1a0840" stroke-width="1" opacity="0.6"/>
+          <!-- Face + violet crystal mask motif -->
+          <ellipse cx="30" cy="18" rx="7" ry="6" fill="#12033a"/>
+          <!-- Mask top -->
+          <path d="M24 16 L27 13 L30 16 L33 13 L36 16" stroke="#7c3aed" stroke-width="1.2" fill="none" filter="url(#a-glow)"/>
+          <!-- Mask eyes — glowing -->
+          <ellipse cx="27" cy="18" rx="2.5" ry="2" fill="#7c3aed" filter="url(#a-glow)"/>
+          <ellipse cx="33" cy="18" rx="2.5" ry="2" fill="#7c3aed" filter="url(#a-glow)"/>
+          <ellipse cx="27" cy="18" rx="1.2" ry="1" fill="#c4b5fd"/>
+          <ellipse cx="33" cy="18" rx="1.2" ry="1" fill="#c4b5fd"/>
+          <!-- Gold trim — cloak edges -->
+          <path d="M16 28 L12 60" stroke="#d4af37" stroke-width="0.9" opacity="0.5" stroke-linecap="round"/>
+          <path d="M44 28 L48 60" stroke="#d4af37" stroke-width="0.9" opacity="0.5" stroke-linecap="round"/>
+          <!-- Cloak interior lining detail -->
+          <path d="M22 35 C22 35 26 33 30 35 C34 37 38 35 38 35" stroke="#5b21b6" stroke-width="0.8" fill="none" opacity="0.4"/>
+          <path d="M20 46 C20 46 25 44 30 46 C35 48 40 46 40 46" stroke="#5b21b6" stroke-width="0.8" fill="none" opacity="0.3"/>
+          <!-- Violet energy dagger — right hand -->
+          <g transform="rotate(-22, 41, 46)">
+            <rect x="39" y="36" width="4" height="22" rx="1.5" fill="#4c1d95"/>
+            <rect x="39.5" y="36.5" width="3" height="21" rx="1" fill="#6d28d9"/>
+            <polygon points="39,36 43,36 41,27" fill="#a78bfa" filter="url(#a-glow)"/>
+            <rect x="37" y="42" width="8" height="2.5" rx="1" fill="#7c3aed"/>
+          </g>
+          <!-- Crystal mask medallion on chest -->
+          <path d="M27 44 L30 40 L33 44 L30 46Z" fill="#7c3aed" filter="url(#a-glow)"/>
+          <path d="M25 48 L30 52 L35 48" stroke="#a78bfa" stroke-width="1" fill="none" opacity="0.6"/>
+        </svg>
+      </div>
+      <div class="rp-info">
+        <div class="rp-grade">A</div>
+        <div class="rp-label">Maître Voleur</div>
+        <div class="rp-pct">TOP 20% · PERCENTILE 80–90</div>
+        <div class="rp-bar" id="bar-a"></div>
+      </div>
+      <div class="rp-badge">
+        <div class="rp-badge-inner">EXPERT</div>
+      </div>
+    </div>
+
+    <!-- ════════ B ════════ -->
+    <div class="rp rp-b">
+      <div class="rp-char">
+        <svg viewBox="0 0 60 72" width="58" height="70" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="b-suit" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#0a1a3a"/>
+              <stop offset="100%" stop-color="#041030"/>
+            </linearGradient>
+            <filter id="b-glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="1.8" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <!-- Legs — crouching stance -->
+          <rect x="16" y="50" width="10" height="18" rx="3" fill="#071228" transform="rotate(-8,21,59)"/>
+          <rect x="34" y="48" width="10" height="18" rx="3" fill="#071228" transform="rotate(12,39,57)"/>
+          <!-- Body / hi-tech suit -->
+          <rect x="14" y="24" width="32" height="28" rx="5" fill="url(#b-suit)"/>
+          <!-- Suit panel lines -->
+          <path d="M14 32 L46 32" stroke="#1e3a8a" stroke-width="1.2" opacity="0.7"/>
+          <path d="M14 40 L46 40" stroke="#1e3a8a" stroke-width="1.2" opacity="0.5"/>
+          <rect x="28" y="24" width="4" height="28" fill="rgba(30,58,138,0.3)"/>
+          <!-- Neon blue suit glow seams -->
+          <path d="M14 32 L46 32" stroke="#3b82f6" stroke-width="0.5" opacity="0.6" filter="url(#b-glow)"/>
+          <!-- Head / tactical helmet -->
+          <rect x="18" y="10" width="24" height="16" rx="4" fill="#0d1e3a"/>
+          <!-- Visor -->
+          <rect x="19" y="14" width="22" height="7" rx="2" fill="#091628"/>
+          <rect x="20" y="15" width="20" height="5" rx="1.5" fill="#1a4a8a" opacity="0.85" filter="url(b-glow)"/>
+          <!-- Visor glow detail -->
+          <rect x="21" y="16" width="18" height="3" rx="1" fill="#3b82f6" opacity="0.35"/>
+          <!-- Left arm — neon blue glove -->
+          <rect x="4" y="30" width="12" height="9" rx="3.5" fill="#1e40af"/>
+          <rect x="4" y="30" width="12" height="9" rx="3.5" fill="none" stroke="#3b82f6" stroke-width="1" filter="url(#b-glow)"/>
+          <!-- Right arm — holding hacking tool -->
+          <rect x="44" y="28" width="12" height="9" rx="3.5" fill="#1e40af"/>
+          <!-- Hacking tool -->
+          <rect x="52" y="22" width="6" height="15" rx="2" fill="#1d4ed8"/>
+          <rect x="53" y="23" width="4" height="8" rx="1" fill="#2563eb"/>
+          <circle cx="55" cy="22" r="2.5" fill="#60a5fa" filter="url(#b-glow)"/>
+          <!-- Data stream energy lock on chest -->
+          <rect x="21" y="34" width="18" height="14" rx="3" fill="#030e26" stroke="#1d4ed8" stroke-width="1.2"/>
+          <path d="M25 34 C25 29 35 29 35 34" stroke="#3b82f6" stroke-width="1.8" fill="none" filter="url(#b-glow)"/>
+          <!-- Data lines on lock -->
+          <path d="M23 38 L27 38 M29 38 L33 38 M35 38 L37 38" stroke="#1d4ed8" stroke-width="1" opacity="0.7"/>
+          <path d="M24 41 L28 41 M30 41 L36 41" stroke="#1d4ed8" stroke-width="0.8" opacity="0.5"/>
+          <!-- Keyhole -->
+          <circle cx="30" cy="40" r="2" fill="#1d4ed8" filter="url(#b-glow)"/>
+          <rect x="29" y="40" width="2" height="3" rx="0.5" fill="#1d4ed8"/>
+        </svg>
+      </div>
+      <div class="rp-info">
+        <div class="rp-grade">B</div>
+        <div class="rp-label">Cambrioleur</div>
+        <div class="rp-pct">TOP 25% · PERCENTILE 75–80</div>
+        <div class="rp-bar" id="bar-b"></div>
+      </div>
+      <div class="rp-badge">
+        <div class="rp-badge-inner">AVANCÉ</div>
+      </div>
+    </div>
+
+    <!-- ════════ C ════════ -->
+    <div class="rp rp-c">
+      <div class="rp-char">
+        <svg viewBox="0 0 60 72" width="58" height="70" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="c-gear" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#0e2818"/>
+              <stop offset="100%" stop-color="#061008"/>
+            </linearGradient>
+            <filter id="c-glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="1.5" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <!-- Running legs -->
+          <rect x="14" y="48" width="10" height="20" rx="3" fill="#0a1e0a" transform="rotate(-12,19,58)"/>
+          <rect x="34" y="46" width="10" height="20" rx="3" fill="#0a1e0a" transform="rotate(16,39,56)"/>
+          <!-- Body -->
+          <rect x="14" y="24" width="30" height="26" rx="4" fill="url(#c-gear)"/>
+          <!-- Neon green runic details on gear -->
+          <path d="M18 30 L21 27 L24 30 L27 27 L30 30 L33 27 L36 30 L39 27 L42 30" stroke="#10b981" stroke-width="1" fill="none" opacity="0.65" filter="url(#c-glow)"/>
+          <path d="M16 37 C19 35 22 37 25 35 C28 33 31 35 34 33 C37 31 40 33 44 31" stroke="#10b981" stroke-width="0.8" fill="none" opacity="0.4"/>
+          <!-- Vertical center seam -->
+          <rect x="28" y="24" width="4" height="26" fill="rgba(16,185,129,0.1)"/>
+          <!-- Head — mask + hat -->
+          <circle cx="29" cy="15" r="9" fill="#0e2818"/>
+          <path d="M20 14 C20 4 38 4 38 14" fill="#081408"/>
+          <!-- Hat brim -->
+          <rect x="17" y="14" width="24" height="3" rx="1.5" fill="#0a1e0a"/>
+          <!-- Mask -->
+          <path d="M21 16 C21 12 37 12 37 16 C37 20 35 22 29 22 C23 22 21 20 21 16Z" fill="#061008"/>
+          <!-- Eyes — green glow -->
+          <circle cx="26" cy="16" r="2.5" fill="#10b981" filter="url(#c-glow)"/>
+          <circle cx="32" cy="16" r="2.5" fill="#10b981" filter="url(#c-glow)"/>
+          <circle cx="26" cy="16" r="1.2" fill="#a7f3d0"/>
+          <circle cx="32" cy="16" r="1.2" fill="#a7f3d0"/>
+          <!-- Left arm (running, back) -->
+          <rect x="4" y="26" width="12" height="8" rx="3" fill="#0a1e0a" transform="rotate(20,10,30)"/>
+          <!-- Right arm reaching forward -->
+          <rect x="44" y="26" width="14" height="7" rx="3" fill="#0a1e0a" transform="rotate(-15,50,29)"/>
+          <!-- Glowing loot bag -->
+          <circle cx="50" cy="42" r="10" fill="#061008" stroke="#10b981" stroke-width="1.5"/>
+          <circle cx="50" cy="42" r="8.5" fill="#0a1e0a"/>
+          <!-- Runic artifact key on bag -->
+          <path d="M46 39 L48 36 L50 39 L52 36 L54 39" stroke="#34d399" stroke-width="1.2" fill="none" filter="url(#c-glow)"/>
+          <!-- Bag glow gems -->
+          <circle cx="47" cy="43" r="1.5" fill="#34d399" filter="url(#c-glow)" opacity="0.9"/>
+          <circle cx="50" cy="45" r="1.5" fill="#10b981" filter="url(#c-glow)" opacity="0.8"/>
+          <circle cx="53" cy="43" r="1.5" fill="#6ee7b7" filter="url(#c-glow)" opacity="0.7"/>
+          <!-- Bag strap -->
+          <path d="M44 38 C42 34 40 30 38 28" stroke="#0e2818" stroke-width="3" stroke-linecap="round"/>
+          <path d="M44 38 C42 34 40 30 38 28" stroke="#10b981" stroke-width="0.8" stroke-linecap="round" opacity="0.4"/>
+        </svg>
+      </div>
+      <div class="rp-info">
+        <div class="rp-grade">C</div>
+        <div class="rp-label">Voleur</div>
+        <div class="rp-pct">TOP 35% · PERCENTILE 65–75</div>
+        <div class="rp-bar" id="bar-c"></div>
+      </div>
+      <div class="rp-badge">
+        <div class="rp-badge-inner">CONFIRMÉ</div>
+      </div>
+    </div>
+
+    <!-- ════════ D ════════ -->
+    <div class="rp rp-d">
+      <div class="rp-char">
+        <svg viewBox="0 0 60 72" width="58" height="70" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="d-gear" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#3a2000"/>
+              <stop offset="100%" stop-color="#1a0e00"/>
+            </linearGradient>
+            <radialGradient id="d-light" cx="0%" cy="50%">
+              <stop offset="0%" stop-color="#fbbf24" stop-opacity="0.35"/>
+              <stop offset="60%" stop-color="#f59e0b" stop-opacity="0.1"/>
+              <stop offset="100%" stop-color="#d97706" stop-opacity="0"/>
+            </radialGradient>
+            <filter id="d-glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="1.5" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <!-- Legs -->
+          <rect x="18" y="48" width="10" height="20" rx="3" fill="#221200"/>
+          <rect x="32" y="48" width="10" height="20" rx="3" fill="#1e1000"/>
+          <!-- Body — worn leather gear -->
+          <rect x="14" y="22" width="30" height="28" rx="4" fill="url(#d-gear)"/>
+          <!-- Leather strap + worn details -->
+          <path d="M14 30 L44 30" stroke="#4a2800" stroke-width="2" opacity="0.8"/>
+          <path d="M14 38 L44 38" stroke="#4a2800" stroke-width="1.5" opacity="0.6"/>
+          <rect x="26" y="22" width="6" height="28" fill="rgba(74,40,0,0.4)"/>
+          <!-- Worn patches (Clash of Clans style detail) -->
+          <rect x="15" y="23" width="8" height="6" rx="1" fill="#2a1400" opacity="0.6"/>
+          <rect x="37" y="23" width="6" height="5" rx="1" fill="#2a1400" opacity="0.5"/>
+          <!-- Head / apprentice cap -->
+          <circle cx="29" cy="14" r="9" fill="#3a2000"/>
+          <path d="M20 13 C20 3 38 3 38 13" fill="#221200"/>
+          <!-- Cap button -->
+          <circle cx="29" cy="4" r="1.5" fill="#4a2800"/>
+          <!-- Face -->
+          <rect x="21" y="13" width="16" height="5" rx="1.5" fill="#1a0e00" opacity="0.8"/>
+          <circle cx="26" cy="15" r="2" fill="#f59e0b" filter="url(#d-glow)"/>
+          <circle cx="32" cy="15" r="2" fill="#d97706" filter="url(#d-glow)"/>
+          <circle cx="26" cy="15" r="0.9" fill="#fde68a"/>
+          <circle cx="32" cy="15" r="0.9" fill="#fde68a"/>
+          <!-- Arm holding flashlight (right) -->
+          <rect x="42" y="26" width="16" height="6" rx="2.5" fill="#2a1400" transform="rotate(-12,50,29)"/>
+          <!-- Flashlight body -->
+          <rect x="52" y="22" width="7" height="8" rx="2.5" fill="#3a2000" transform="rotate(-12,55,26)" stroke="#6a3000" stroke-width="0.8"/>
+          <!-- Textured golden light cone -->
+          <path d="M58 23 L60 10 L60 44 L58 33Z" fill="url(#d-light)" transform="rotate(-12,59,28)"/>
+          <path d="M56 24 L59 15 L59 37 L56 32Z" fill="rgba(251,191,36,0.12)" transform="rotate(-12,57,28)"/>
+          <!-- Light rays -->
+          <path d="M58 28 L80 18" stroke="#f59e0b" stroke-width="0.5" opacity="0.2" transform="rotate(-12,69,23)"/>
+          <path d="M58 28 L80 28" stroke="#fbbf24" stroke-width="0.5" opacity="0.25" transform="rotate(-12,69,28)"/>
+          <path d="M58 28 L80 38" stroke="#f59e0b" stroke-width="0.5" opacity="0.2" transform="rotate(-12,69,33)"/>
+          <!-- Left arm (back, relaxed) -->
+          <rect x="4" y="28" width="12" height="7" rx="3" fill="#2a1400"/>
+          <!-- Bronze insignia on chest -->
+          <circle cx="29" cy="33" r="5" fill="#78350f" stroke="#d97706" stroke-width="1.2"/>
+          <circle cx="29" cy="33" r="3.5" fill="#92400e"/>
+          <text x="29" y="36.5" font-size="5.5" text-anchor="middle" fill="#fcd34d" font-weight="bold" font-family="serif" filter="url(#d-glow)">D</text>
+          <!-- Worn lace crossing on body -->
+          <path d="M20 42 L38 46" stroke="#4a2800" stroke-width="0.8" opacity="0.5"/>
+          <path d="M20 46 L38 42" stroke="#4a2800" stroke-width="0.8" opacity="0.4"/>
+        </svg>
+      </div>
+      <div class="rp-info">
+        <div class="rp-grade">D</div>
+        <div class="rp-label">Apprenti</div>
+        <div class="rp-pct">TOP 50% · PERCENTILE 50–65</div>
+        <div class="rp-bar" id="bar-d"></div>
+      </div>
+      <div class="rp-badge">
+        <div class="rp-badge-inner">DÉBUTANT</div>
+      </div>
+    </div>
+
+    <!-- ════════ F ════════ -->
+    <div class="rp rp-f">
+      <div class="rp-char">
+        <svg viewBox="0 0 60 72" width="58" height="70" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="f-suit" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#1e2a3a"/>
+              <stop offset="100%" stop-color="#0e1622"/>
+            </linearGradient>
+            <filter id="f-lock" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation="1" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <!-- Legs — standing, slightly apart -->
+          <rect x="18" y="48" width="10" height="22" rx="3" fill="#101c2e"/>
+          <rect x="32" y="48" width="10" height="22" rx="3" fill="#101c2e"/>
+          <!-- Boot soles detail -->
+          <rect x="17" y="68" width="12" height="3" rx="1" fill="#0a1020"/>
+          <rect x="31" y="68" width="12" height="3" rx="1" fill="#0a1020"/>
+          <!-- Body / standard issue uniform -->
+          <rect x="14" y="22" width="32" height="28" rx="5" fill="url(#f-suit)"/>
+          <!-- Uniform panel seams -->
+          <rect x="14" y="30" width="32" height="1.5" fill="#27344c" opacity="0.8"/>
+          <rect x="14" y="38" width="32" height="1.5" fill="#27344c" opacity="0.6"/>
+          <rect x="28" y="22" width="4" height="28" fill="rgba(39,52,76,0.4)"/>
+          <!-- Chest patch — rookie insignia -->
+          <rect x="19" y="23" width="10" height="7" rx="1.5" fill="#1e2a3a" stroke="#374151" stroke-width="0.8"/>
+          <rect x="20" y="24" width="8" height="5" rx="1" fill="#27344c"/>
+          <!-- Shoulder patches -->
+          <rect x="14" y="23" width="6" height="4" rx="1" fill="#1a2436"/>
+          <rect x="40" y="23" width="6" height="4" rx="1" fill="#1a2436"/>
+          <!-- Arms -->
+          <rect x="4" y="24" width="12" height="8" rx="3.5" fill="#1a2638"/>
+          <rect x="44" y="24" width="12" height="8" rx="3.5" fill="#1a2638"/>
+          <!-- Head / tactical helmet -->
+          <circle cx="30" cy="14" r="10" fill="#1a2638"/>
+          <path d="M20 13 C20 2 40 2 40 13" fill="#141e2e"/>
+          <!-- Helmet brim -->
+          <rect x="18" y="13" width="24" height="3" rx="1.5" fill="#1a2638" stroke="#27344c" stroke-width="0.5"/>
+          <!-- Tactical visor -->
+          <rect x="20" y="14" width="20" height="6" rx="2" fill="#0d1520"/>
+          <rect x="21" y="15" width="18" height="4" rx="1.5" fill="#1e2a3a" opacity="0.7"/>
+          <!-- Visor dim reflection -->
+          <rect x="22" y="15.5" width="8" height="2" rx="1" fill="#374151" opacity="0.4"/>
+          <!-- DATA CONTAINMENT LOCK — complex unit on chest -->
+          <rect x="20" y="33" width="20" height="16" rx="3" fill="#080e1a" stroke="#374151" stroke-width="1.2"/>
+          <!-- Lock shackle -->
+          <path d="M24 33 C24 27 36 27 36 33" stroke="#4b5563" stroke-width="2.2" fill="none" filter="url(#f-lock)"/>
+          <!-- Lock display panel -->
+          <rect x="22" y="35" width="16" height="5" rx="1.5" fill="#0a1420" stroke="#27344c" stroke-width="0.5"/>
+          <!-- Binary code on display -->
+          <text x="24" y="39" font-size="3.5" fill="#374151" font-family="monospace">01001</text>
+          <!-- Keyhole data port -->
+          <circle cx="30" cy="44" r="2.5" fill="#27344c" stroke="#4b5563" stroke-width="0.8" filter="url(#f-lock)"/>
+          <rect x="29.2" y="44" width="1.6" height="3.5" rx="0.5" fill="#27344c"/>
+          <!-- Lock bolt indicators (left/right) -->
+          <rect x="21" y="41" width="3" height="2" rx="0.5" fill="#374151" opacity="0.7"/>
+          <rect x="36" y="41" width="3" height="2" rx="0.5" fill="#374151" opacity="0.7"/>
+          <!-- Status LEDs on lock -->
+          <circle cx="23" cy="36.5" r="0.8" fill="#374151" opacity="0.5"/>
+          <circle cx="37" cy="36.5" r="0.8" fill="#374151" opacity="0.5"/>
+        </svg>
+      </div>
+      <div class="rp-info">
+        <div class="rp-grade">F</div>
+        <div class="rp-label">Recrue</div>
+        <div class="rp-pct">BAS DU CLASSEMENT · PERCENTILE 0–50</div>
+        <div class="rp-bar" id="bar-f"></div>
+      </div>
+      <div class="rp-badge">
+        <div class="rp-badge-inner">RECRUE</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footer"></div>
+</div>
+
+<script>
+// Build neon energy conduit progress bars
+const bars = [
+  { id: 'bar-ss', filled: 10, total: 10 },
+  { id: 'bar-s',  filled: 9,  total: 10 },
+  { id: 'bar-a',  filled: 7,  total: 10 },
+  { id: 'bar-b',  filled: 5,  total: 10 },
+  { id: 'bar-c',  filled: 4,  total: 10 },
+  { id: 'bar-d',  filled: 3,  total: 10 },
+  { id: 'bar-f',  filled: 2,  total: 10 },
+];
+bars.forEach(function(b) {
+  var el = document.getElementById(b.id);
+  if (!el) return;
+  var html = '';
+  for (var i = 0; i < b.total; i++) {
+    html += '<div class="rp-seg' + (i < b.filled ? ' on' : '') + '"></div>';
+  }
+  el.innerHTML = html;
+});
+</script>
+</body>
+</html>

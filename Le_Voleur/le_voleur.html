@@ -8,6 +8,17 @@
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 
     <style>
+        * {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        *::-webkit-scrollbar {
+            display: none;
+        }
+        html, body {
+            overflow: hidden;
+        }
+
         /* --- VARIABLES DE THEME --- */
         :root {
             --bg-color: #0b0f19;
@@ -25,7 +36,7 @@
         /* --- GLOBAL --- */
         body {
             background-color: var(--bg-color);
-            background-image: 
+            background-image:
                 radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
                 linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
                 linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
@@ -33,10 +44,11 @@
             background-attachment: fixed;
             color: var(--text-main);
             font-family: 'Rajdhani', sans-serif;
-            margin: 0; padding: 15px;
-            min-height: 100vh;
+            margin: 0; padding: 10px 15px;
+            height: 100dvh;
             display: flex; flex-direction: column;
-            overflow-x: hidden;
+            overflow: hidden;
+            box-sizing: border-box;
         }
 
         /* Mode Urgence Phase 5 */
@@ -56,33 +68,108 @@
             -webkit-backdrop-filter: blur(10px);
             border: 1px solid var(--panel-border);
             border-radius: 12px;
-            padding: 12px 20px; 
-            margin-bottom: 25px;
-            display: flex; justify-content: space-between; align-items: center;
-            position: sticky; top: 10px; z-index: 100;
+            padding: 8px 16px;
+            margin-bottom: 10px;
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+            z-index: 100;
             box-shadow: 0 4px 20px rgba(0,0,0,0.5);
         }
         #btn-retour {
             background: transparent; border: 1px solid var(--primary); color: var(--primary);
-            padding: 6px 12px; font-weight: 600; font-size: 1.1rem; border-radius: 6px;
+            padding: 4px 8px; font-weight: 600; font-size: 0.8rem; border-radius: 6px;
             cursor: pointer; visibility: hidden; transition: all 0.3s;
-            font-family: 'Rajdhani', sans-serif;
+            font-family: 'Rajdhani', sans-serif; white-space: nowrap;
+            width: auto; margin: 0;
         }
         #btn-retour:hover { background: var(--primary); color: #000; box-shadow: 0 0 15px var(--primary-glow);}
-        
-        .hud-item { display: flex; align-items: center; gap: 8px; font-size: 1.2rem; font-weight: 700; font-family: 'Share Tech Mono', monospace;}
-        .hud-icon { font-size: 1.3rem; }
-        #score-display { color: var(--primary); text-shadow: 0 0 10px var(--primary-glow); }
-        #combo-display { font-size: 0.8em; color: var(--text-muted); transition: color 0.3s; }
-        #timer { font-size: 1.4rem; color: #fff; letter-spacing: 1px;}
+
+        #top-bar-center {
+            display: flex; align-items: center; justify-content: center;
+            gap: 8px; font-family: 'Share Tech Mono', monospace;
+            visibility: hidden;
+        }
+        #top-bar-right {
+            display: flex; align-items: center; gap: 10px; justify-content: flex-end;
+        }
+        .hud-item { display: flex; align-items: center; gap: 6px; font-size: 1rem; font-weight: 700; font-family: 'Share Tech Mono', monospace;}
+        .hud-icon { font-size: 1.1rem; }
+        #score-display { font-size: 2.2rem; font-weight: 700; color: var(--primary); text-shadow: 0 0 12px var(--primary-glow); line-height: 1; }
+        #rank-display {
+            font-size: 0.95rem; font-weight: 700; padding: 2px 7px;
+            border-radius: 5px; background: rgba(255,255,255,0.07);
+            font-family: 'Share Tech Mono', monospace; letter-spacing: 1px;
+        }
+        #combo-display { font-size: clamp(0.75rem, 1.4vw, 1.05rem); color: var(--text-muted); transition: color 0.3s; }
+        #timer { font-size: 1.1rem; color: #fff; letter-spacing: 1px;}
+
+        /* --- SURBRILLANCE ENTRÉES LOCALES DANS LE CLASSEMENT --- */
+        tr.local-entry td {
+            background: rgba(0, 243, 255, 0.08) !important;
+            border-top: 1px solid rgba(0,243,255,0.25) !important;
+            border-bottom: 1px solid rgba(0,243,255,0.25) !important;
+        }
+        tr.local-entry td:first-child { border-left: 3px solid var(--primary); }
+        tr.local-entry .agent-name { color: var(--primary); font-weight: 700; }
+
+        /* --- BADGE RANG --- */
+        .grade-badge {
+            display: inline-block; font-weight: 700; font-family: 'Share Tech Mono', monospace;
+            font-size: 0.95em; padding: 1px 6px; border-radius: 4px;
+            background: rgba(255,255,255,0.07); letter-spacing: 0.5px;
+        }
 
         /* --- ÉCRANS & TRANSITIONS --- */
-        .screen { display: none; padding-bottom: 80px; max-width: 600px; margin: 0 auto; width: 100%;}
+        .screen {
+            display: none; padding-bottom: 20px; max-width: 600px; margin: 0 auto; width: 100%;
+            overflow-y: auto; flex: 1; min-height: 0;
+        }
         .active { display: block !important; animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+        /* Classement : l'écran devient flex-colonne, seul #liste-scores défile */
+        #ecran-classement { overflow: hidden; }
+        #ecran-classement.active {
+            display: flex !important;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Liste classement : flex 1 = tout l'espace restant, scroll interne */
+        #liste-scores {
+            flex: 1;
+            min-height: 0;          /* indispensable pour flex-child scroll */
+            overflow-y: auto;
+            overflow-x: hidden;
+            scrollbar-width: none;
+        }
+        #liste-scores::-webkit-scrollbar { display: none; }
+
+        /* ── Cellules de rang ── */
+        .rc { text-align: center; width: 54px; min-width: 54px; padding: 6px 4px; vertical-align: middle; }
+        .rc-medal { font-size: 1.5rem; line-height: 1; }
+        .rc-gold   { filter: drop-shadow(0 0 6px #ffd700) drop-shadow(0 0 14px #ffd70055); }
+        .rc-silver { filter: drop-shadow(0 0 5px #bcc8d4) drop-shadow(0 0 10px #b0c0cc55); }
+        .rc-bronze { filter: drop-shadow(0 0 5px #cd7f32) drop-shadow(0 0 10px #cd7f3255); }
+        .rc-badge {
+            display: inline-flex; flex-direction: column; align-items: center;
+            border: 1px solid; border-radius: 6px; padding: 3px 7px;
+            font-family: 'Share Tech Mono', monospace; line-height: 1.15;
+            background: rgba(0,0,0,0.3);
+        }
+        .rc-grade { font-size: 0.76rem; font-weight: 700; letter-spacing: 1px; }
+        .rc-num   { font-size: 0.56rem; letter-spacing: 0.5px; opacity: 0.75; }
+        .rc-icon  {
+            display: inline-block; border: 1px solid; border-radius: 5px;
+            padding: 3px 8px; font-family: 'Share Tech Mono', monospace;
+            font-size: 0.72rem; font-weight: 700; letter-spacing: 1px;
+            opacity: 0.65; background: rgba(0,0,0,0.3);
+        }
         @keyframes fadeIn { from{opacity:0; transform: translateY(15px) scale(0.98)} to{opacity:1; transform: translateY(0) scale(1)} }
 
         h1 { font-size: 3rem; font-weight: 700; margin-bottom: 5px; text-shadow: 0 0 20px var(--primary-glow); letter-spacing: 2px;}
-        h2 { font-size: 1.8rem; font-weight: 600; border-bottom: 1px solid var(--panel-border); padding-bottom: 10px; margin-bottom: 20px; letter-spacing: 1px;}
+        h2 { font-size: clamp(1.2rem, 3.5dvh, 1.8rem); font-weight: 600; border-bottom: 1px solid var(--panel-border); padding-bottom: 6px; margin-bottom: clamp(8px, 1.5dvh, 20px); letter-spacing: 1px;}
         .h-red { color: var(--alert); } .h-cyan { color: var(--primary); }
 
         /* --- CONTENEURS (PANELS) --- */
@@ -92,33 +179,40 @@
             -webkit-backdrop-filter: blur(12px);
             border: 1px solid var(--panel-border);
             border-radius: 12px;
-            padding: 20px; 
-            margin-bottom: 20px; 
+            padding: clamp(10px, 2dvh, 20px) clamp(12px, 2.5vw, 20px);
+            margin-bottom: clamp(8px, 1.5dvh, 20px);
             box-shadow: 0 8px 32px rgba(0,0,0,0.3);
         }
-        
-        .story-box { border-left: 4px solid var(--primary); font-size: 1.1rem; line-height: 1.6; color: #cbd5e1; }
+
+        /* Grille 2x2 pour les 4 questions de la phase 1 */
+        .questions-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: clamp(6px, 1dvh, 12px);
+            margin-bottom: clamp(8px, 1.5dvh, 20px);
+        }
+        .questions-grid .game-box { margin-bottom: 0; font-size: clamp(0.82rem, 1.6dvh, 1rem); }
+
+        .story-box { border-left: 4px solid var(--primary); font-size: clamp(0.9rem, 1.8dvh, 1.1rem); line-height: 1.5; color: #cbd5e1; }
         .story-title {
-            color: var(--primary); font-weight: 700; font-size: 1.2rem; margin-bottom: 12px; display: block;
+            color: var(--primary); font-weight: 700; font-size: clamp(0.95rem, 1.8dvh, 1.2rem); margin-bottom: clamp(6px, 1dvh, 12px); display: block;
             text-transform: uppercase; letter-spacing: 2px;
         }
        
         /* --- ELEMENTS DE FORMULAIRE --- */
-        input { 
-            width: 100%; padding: 15px; margin: 10px 0; box-sizing: border-box; 
-            background: rgba(0,0,0,0.4); border: 1px solid #334155; color: #fff; 
-            font-family: 'Share Tech Mono', monospace; font-size: 1.2rem; text-align: center;
+        input {
+            width: 100%; padding: clamp(8px, 1.5dvh, 15px); margin: clamp(5px, 0.8dvh, 10px) 0; box-sizing: border-box;
+            background: rgba(0,0,0,0.4); border: 1px solid #334155; color: #fff;
+            font-family: 'Share Tech Mono', monospace; font-size: clamp(1rem, 2dvh, 1.2rem); text-align: center;
             border-radius: 8px; transition: all 0.3s;
         }
         input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 15px var(--primary-glow); background: rgba(0, 243, 255, 0.05);}
-        
-        .code-container { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 25px 0; }
-        .digit-input { font-size: 1.8rem; padding: 15px 0; border: 2px solid #334155; color: var(--primary); font-weight: bold;}
+
+        .code-container { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: clamp(10px, 1.8dvh, 25px) 0; }
+        .digit-input { font-size: clamp(1.3rem, 3dvh, 1.8rem); padding: clamp(8px, 1.5dvh, 15px) 0; border: 2px solid #334155; color: var(--primary); font-weight: bold;}
 
         /* --- BOUTONS MODERNES --- */
-        button { 
-            width: 100%; padding: 16px; margin-top: 15px; 
-            font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 1.2rem; 
+        button {
+            width: 100%; padding: clamp(10px, 1.8dvh, 16px); margin-top: clamp(8px, 1.2dvh, 15px);
+            font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: clamp(1rem, 2dvh, 1.2rem);
             cursor: pointer; text-transform: uppercase; letter-spacing: 2px;
             border-radius: 8px; transition: all 0.2s ease;
             border: none; position: relative; overflow: hidden;
@@ -155,7 +249,7 @@
 
         /* --- GRAPHIQUES --- */
         .radar-wrapper {
-            position: relative; border-radius: 8px; margin-bottom: 15px;
+            position: relative; border-radius: 8px; margin-bottom: clamp(8px, 1.2dvh, 15px);
             background: #000; border: 1px solid var(--primary);
             box-shadow: 0 0 20px rgba(0, 243, 255, 0.1); overflow: hidden;
         }
@@ -166,31 +260,31 @@
         }
         @keyframes scan { 0% { top: -2%; opacity: 0;} 10% { opacity: 0.8;} 90% { opacity: 0.8;} 100% { top: 102%; opacity: 0;} }
 
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 25px; }
-        .card { height: 140px; background: #000; border: 1px solid #334155; border-radius: 8px; position: relative; cursor: pointer; transition: all 0.2s; overflow: hidden;}
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: clamp(10px, 1.5dvh, 25px); }
+        .card { height: clamp(80px, 13dvh, 140px); background: #000; border: 1px solid #334155; border-radius: 8px; position: relative; cursor: pointer; transition: all 0.2s; overflow: hidden;}
         .card:hover { border-color: #64748b; }
         .selected-drone { border-color: var(--primary); box-shadow: 0 0 20px var(--primary-glow); transform: translateY(-3px); z-index: 5;}
         .selected-voleur { border-color: var(--alert); box-shadow: 0 0 20px var(--alert-glow); transform: translateY(-3px); z-index: 5;}
         .label-overlay { position: absolute; top: 8px; right: 8px; font-size: 0.75rem; font-weight: bold; background: rgba(0,0,0,0.8); padding: 4px 10px; border-radius: 12px; z-index: 10; font-family: 'Share Tech Mono', monospace;}
         
         canvas { width: 100%; height: 100%; display: block; }
-        #canvas-lecture, #canvas-lecture-2 { height: 300px; width: 100%; }
+        #canvas-lecture, #canvas-lecture-2 { height: clamp(150px, 28dvh, 300px); width: 100%; }
 
         /* --- BARRE DE PROGRESSION --- */
-        #prog-bar-container { border: 1px solid #334155; height: 24px; margin: 10px 0; position: relative; background: rgba(0,0,0,0.5); border-radius: 12px; overflow: hidden; }
+        #prog-bar-container { border: 1px solid #334155; height: 20px; margin: clamp(5px, 1dvh, 10px) 0; position: relative; background: rgba(0,0,0,0.5); border-radius: 12px; overflow: hidden; }
         #prog-bar { width: 0%; height: 100%; background: linear-gradient(90deg, var(--secondary), var(--primary)); transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
         .prog-text { position: absolute; top: 0; left: 0; width: 100%; text-align: center; font-size: 0.85rem; color: white; line-height: 24px; font-weight: bold; letter-spacing: 1px;}
 
         /* --- PAVE NUMERIQUE --- */
-        .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; max-width: 380px; margin: 20px auto; }
-        .key { 
-            padding: 20px; background: rgba(255,255,255,0.03); border: 1px solid var(--panel-border); 
-            text-align: center; font-size: 1.6rem; font-family: 'Share Tech Mono', monospace; font-weight: bold; color: #fff; 
-            user-select: none; cursor: pointer; border-radius: 12px; transition: all 0.1s; 
+        .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(6px, 1dvh, 12px); max-width: 380px; margin: clamp(8px, 1.2dvh, 20px) auto; }
+        .key {
+            padding: clamp(10px, 2dvh, 20px); background: rgba(255,255,255,0.03); border: 1px solid var(--panel-border);
+            text-align: center; font-size: clamp(1.2rem, 2.8dvh, 1.6rem); font-family: 'Share Tech Mono', monospace; font-weight: bold; color: #fff;
+            user-select: none; cursor: pointer; border-radius: 12px; transition: all 0.1s;
         }
         .key:hover { background: rgba(255,255,255,0.08); }
         .key:active { transform: scale(0.95); background: rgba(255,255,255,0.15); }
-        .key-ok { grid-column: span 3; background: var(--primary); color: #000; font-family: 'Rajdhani', sans-serif; font-size: 1.3rem; letter-spacing: 2px;}
+        .key-ok { grid-column: span 3; background: var(--primary); color: #000; font-family: 'Rajdhani', sans-serif; font-size: clamp(1rem, 2dvh, 1.3rem); letter-spacing: 2px;}
         .key-ok:hover { background: #06b6d4; box-shadow: 0 0 20px var(--primary-glow);}
         
         #question-math { font-family: 'Share Tech Mono', monospace; letter-spacing: 2px; }
@@ -294,6 +388,238 @@
             transition: background 0.15s, border-color 0.15s, color 0.15s;
         }
         .btn-nav-dropdown:hover { background: rgba(0,243,255,0.08); border-color: var(--primary); color: var(--primary); }
+
+        /* --- BOUTON INFO RANG --- */
+        #btn-rank-info {
+            background: transparent; border: 1px solid rgba(255,255,255,0.15);
+            color: var(--text-muted); font-family: 'Share Tech Mono', monospace;
+            font-size: 0.78rem; letter-spacing: 1px; padding: 6px 12px;
+            cursor: pointer; border-radius: 6px; width: auto; margin: 0 0 14px 0;
+            transition: all 0.2s; display: block;
+        }
+        #btn-rank-info:hover { border-color: var(--primary); color: var(--primary); background: rgba(0,243,255,0.06); }
+
+        /* --- BARRE DE FILTRES CLASSEMENT --- */
+        #filtre-barre {
+            display: none;
+            margin-bottom: clamp(8px,1.5dvh,12px);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        #filtre-barre.visible { display: block; }
+
+        /* Bouton déroulant */
+        #filtre-toggle {
+            width: 100%; display: flex; align-items: center; gap: 8px;
+            background: rgba(255,255,255,0.03);
+            border: none; border-bottom: 1px solid transparent;
+            color: var(--text-muted);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.72rem; letter-spacing: 2px;
+            padding: 8px 12px; cursor: pointer;
+            transition: background 0.18s, color 0.18s, border-color 0.18s;
+            text-align: left; margin: 0;
+        }
+        #filtre-toggle:hover { background: rgba(0,243,255,0.05); color: var(--primary); }
+        #filtre-barre.open #filtre-toggle {
+            border-bottom-color: rgba(255,255,255,0.08);
+            color: var(--primary);
+            background: rgba(0,243,255,0.04);
+        }
+        #filtre-toggle-arrow { transition: transform 0.22s; display: inline-block; font-size: 0.6rem; }
+        #filtre-barre.open #filtre-toggle-arrow { transform: rotate(180deg); }
+
+        /* Badge nombre de filtres actifs */
+        #filtre-toggle-badge {
+            margin-left: auto; font-size: 0.6rem; font-weight: 700;
+            padding: 1px 6px; border-radius: 10px; letter-spacing: 1px;
+        }
+        .filtre-badge-off  { display: none; }
+        .filtre-badge-on   { display: inline-block; background: rgba(0,243,255,0.15); color: var(--primary); border: 1px solid rgba(0,243,255,0.35); }
+
+        /* Contenu collapsible */
+        #filtre-contenu {
+            display: none;
+            padding: clamp(8px,1.5dvh,12px);
+            gap: 7px; flex-direction: column;
+        }
+        #filtre-barre.open #filtre-contenu { display: flex; }
+
+        .filtre-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+        .filtre-periode {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.18);
+            color: rgba(255,255,255,0.42);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.68rem; letter-spacing: 0.8px;
+            padding: 4px 10px; border-radius: 20px;
+            cursor: pointer; transition: all 0.18s;
+            white-space: nowrap; margin: 0;
+        }
+        .filtre-periode:hover { border-color: rgba(0,243,255,0.45); color: rgba(0,243,255,0.75); }
+        .filtre-periode.active {
+            background: rgba(0,243,255,0.1); border-color: var(--primary);
+            color: var(--primary); box-shadow: 0 0 10px rgba(0,243,255,0.18);
+        }
+        .filtre-input {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.12);
+            color: var(--text-main);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.72rem; padding: 5px 9px; border-radius: 6px;
+            transition: border-color 0.18s; margin: 0;
+        }
+        .filtre-input:focus { outline: none; border-color: var(--primary); }
+        #filtre-nom { flex: 1; min-width: 150px; }
+        .filtre-date-input { width: 118px; }
+        .filtre-tps-input  { width: 68px; }
+        .filtre-label {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.63rem; color: var(--text-muted);
+            white-space: nowrap;
+        }
+        #filtre-reset {
+            background: transparent; border: 1px solid rgba(255,255,255,0.12);
+            color: rgba(255,255,255,0.38);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.65rem; letter-spacing: 1px;
+            padding: 4px 12px; border-radius: 5px;
+            cursor: pointer; transition: all 0.18s; margin: 0;
+        }
+        #filtre-reset:hover { border-color: var(--alert); color: var(--alert); background: rgba(255,51,102,0.05); }
+        .filtre-count {
+            text-align: center; font-family: 'Share Tech Mono', monospace;
+            font-size: 0.68rem; color: var(--text-muted);
+            padding: 8px 0 2px; opacity: 0.65;
+        }
+        .beyond-rank-row td { opacity: 0.6; font-style: italic; }
+        .beyond-rank-label {
+            font-size: 0.62rem; color: var(--primary);
+            font-family: 'Share Tech Mono', monospace;
+            display: block; margin-top: 2px;
+        }
+
+        /* --- MODAL RANK --- */
+        #rank-modal {
+            display: none; position: fixed; inset: 0; z-index: 500;
+            background: rgba(0,0,0,0.82); backdrop-filter: blur(6px);
+            align-items: center; justify-content: center;
+        }
+        #rank-modal.open { display: flex; }
+        #rank-modal-inner {
+            background: #0b0f19; border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 14px; padding: 24px 20px; max-width: 420px; width: 92%;
+            max-height: 88dvh; overflow-y: auto;
+            box-shadow: 0 0 60px rgba(0,0,0,0.8);
+        }
+        #rank-modal-inner h3 {
+            color: var(--primary); font-family: 'Share Tech Mono', monospace;
+            letter-spacing: 2px; margin: 0 0 18px 0; text-align: center; font-size: 1rem;
+        }
+        .rank-banner {
+            display: flex; align-items: center; gap: 14px;
+            border-radius: 10px; padding: 12px 16px; margin-bottom: 10px;
+            position: relative; overflow: hidden;
+        }
+        .rank-banner-icon {
+            font-size: 1.8rem; flex-shrink: 0; width: 40px; text-align: center;
+            filter: drop-shadow(0 0 6px currentColor);
+        }
+        .rank-banner-info { flex: 1; }
+        .rank-banner-grade {
+            font-family: 'Share Tech Mono', monospace; font-size: 1.3rem; font-weight: 700;
+            letter-spacing: 2px; line-height: 1;
+        }
+        .rank-banner-label { font-size: 0.85rem; font-weight: 600; letter-spacing: 1px; opacity: 0.9; margin-top: 2px; }
+        .rank-banner-pct  { font-size: 0.72rem; font-family: 'Share Tech Mono', monospace; opacity: 0.65; margin-top: 3px; }
+        .rank-banner-badge {
+            font-family: 'Share Tech Mono', monospace; font-size: 0.7rem;
+            padding: 3px 8px; border-radius: 20px; font-weight: 700;
+            letter-spacing: 1px; flex-shrink: 0;
+        }
+        /* Rank F */
+        .rb-f { background: linear-gradient(135deg, #1a1a2e, #16213e); border: 1px solid #374151; }
+        .rb-f .rank-banner-grade { color: #9ca3af; }
+        .rb-f .rank-banner-label { color: #6b7280; }
+        .rb-f .rank-banner-badge { background: #1f2937; color: #9ca3af; border: 1px solid #374151; }
+        /* Rank D */
+        .rb-d { background: linear-gradient(135deg, #1c1400, #2d1f00); border: 1px solid #92400e; }
+        .rb-d .rank-banner-grade { color: #f59e0b; text-shadow: 0 0 8px #f59e0b66; }
+        .rb-d .rank-banner-label { color: #d97706; }
+        .rb-d .rank-banner-badge { background: #451a03; color: #f59e0b; border: 1px solid #92400e; }
+        /* Rank C */
+        .rb-c { background: linear-gradient(135deg, #001a0f, #002d1a); border: 1px solid #065f46; }
+        .rb-c .rank-banner-grade { color: #10b981; text-shadow: 0 0 8px #10b98166; }
+        .rb-c .rank-banner-label { color: #059669; }
+        .rb-c .rank-banner-badge { background: #022c22; color: #10b981; border: 1px solid #065f46; }
+        /* Rank B */
+        .rb-b { background: linear-gradient(135deg, #001233, #001f5c); border: 1px solid #1d4ed8; }
+        .rb-b .rank-banner-grade { color: #60a5fa; text-shadow: 0 0 8px #60a5fa66; }
+        .rb-b .rank-banner-label { color: #3b82f6; }
+        .rb-b .rank-banner-badge { background: #172554; color: #60a5fa; border: 1px solid #1d4ed8; }
+        /* Rank A */
+        .rb-a {
+            background: linear-gradient(135deg, #150a2e, #2e1065);
+            border: 1px solid #7c3aed;
+            box-shadow: 0 0 18px rgba(124,58,237,0.2);
+        }
+        .rb-a .rank-banner-grade { color: #a78bfa; text-shadow: 0 0 10px #a78bfa88; }
+        .rb-a .rank-banner-label { color: #8b5cf6; }
+        .rb-a .rank-banner-badge { background: #2e1065; color: #a78bfa; border: 1px solid #7c3aed; }
+        /* Rank S */
+        .rb-s {
+            background: linear-gradient(135deg, #1a0a00, #3d1400);
+            border: 1px solid #ea580c;
+            box-shadow: 0 0 22px rgba(234,88,12,0.25);
+            animation: rb-s-pulse 3s ease-in-out infinite;
+        }
+        @keyframes rb-s-pulse { 0%,100%{box-shadow:0 0 22px rgba(234,88,12,0.25)} 50%{box-shadow:0 0 32px rgba(234,88,12,0.45)} }
+        .rb-s .rank-banner-grade { color: #fb923c; text-shadow: 0 0 12px #fb923c99; }
+        .rb-s .rank-banner-label { color: #f97316; }
+        .rb-s .rank-banner-badge { background: #431407; color: #fb923c; border: 1px solid #ea580c; }
+        /* Rank SS */
+        .rb-ss {
+            background: linear-gradient(135deg, #1a001a, #3d0030, #1a001a);
+            border: 1px solid #db2777;
+            box-shadow: 0 0 28px rgba(244,63,94,0.35);
+            animation: rb-ss-glow 2s ease-in-out infinite;
+        }
+        @keyframes rb-ss-glow { 0%,100%{box-shadow:0 0 28px rgba(244,63,94,0.35)} 50%{box-shadow:0 0 45px rgba(244,63,94,0.6)} }
+        .rb-ss .rank-banner-grade {
+            color: #f43f5e; font-size: 1.5rem;
+            text-shadow: 0 0 16px #f43f5e, 0 0 30px #db2777;
+        }
+        .rb-ss .rank-banner-label { color: #fb7185; letter-spacing: 2px; }
+        .rb-ss .rank-banner-badge {
+            background: linear-gradient(135deg, #4c0519, #881337);
+            color: #fda4af; border: 1px solid #db2777;
+            box-shadow: 0 0 8px rgba(244,63,94,0.4);
+        }
+        #rank-modal-close {
+            display: block; width: 100%; margin-top: 16px; padding: 10px;
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text-muted); font-family: 'Rajdhani', sans-serif;
+            font-size: 0.9rem; letter-spacing: 2px; cursor: pointer;
+            border-radius: 8px; text-transform: uppercase; transition: all 0.2s;
+        }
+        #rank-modal-close:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+        /* --- GRADE JOUEUR DANS LA TOP BAR --- */
+        #player-grade-badge {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 1rem; font-weight: 700;
+            padding: 3px 10px; border-radius: 6px;
+            letter-spacing: 1px; cursor: default;
+            border: 1px solid currentColor;
+            background: rgba(0,0,0,0.35);
+            opacity: 0.9;
+        }
+        #player-grade-badge .pb-grade { font-size: 0.85rem; font-weight: 700; letter-spacing: 1px; line-height: 1.1; }
+        #player-grade-badge .pb-rank  { font-size: 0.58rem; letter-spacing: 0.5px; opacity: 0.8; line-height: 1.1; }
     </style>
 </head>
 <body>
@@ -305,34 +631,39 @@
 
     <div id="top-bar">
         <button id="btn-retour" onclick="window.jouerSon('click'); window.actionRetour()">◀ RETOUR</button>
-        <div class="hud-item">
+
+        <div id="top-bar-center">
             <span class="hud-icon">⚡</span>
             <span id="score-display">0</span>
+            <span id="rank-display" title="">—</span>
             <span id="combo-display">[x1.0]</span>
         </div>
-        <div class="hud-item">
-            <span class="hud-icon">⏱</span>
-            <span id="timer">00:00</span>
-        </div>
-        
-        <div id="audio-gear-wrapper">
-            <button id="btn-audio-gear" onclick="window.toggleAudioDropdown()" aria-label="Paramètres audio">⚙</button>
-            <div id="audio-dropdown">
-                <div class="audio-row">
-                    <span>BGM</span>
-                    <input type="range" id="vol-bgm" class="vol-slider" min="0" max="1" step="0.05" value="0.2">
+
+        <div id="top-bar-right">
+            <span id="player-grade-badge"></span>
+            <div class="hud-item">
+                <span class="hud-icon">⏱</span>
+                <span id="timer">00:00</span>
+            </div>
+            <div id="audio-gear-wrapper">
+                <button id="btn-audio-gear" onclick="window.toggleAudioDropdown()" aria-label="Paramètres audio">⚙</button>
+                <div id="audio-dropdown">
+                    <div class="audio-row">
+                        <span>BGM</span>
+                        <input type="range" id="vol-bgm" class="vol-slider" min="0" max="1" step="0.05" value="0.2">
+                    </div>
+                    <div class="audio-row">
+                        <span>SFX</span>
+                        <input type="range" id="vol-sfx" class="vol-slider" min="0" max="1" step="0.05" value="0.8">
+                    </div>
+                    <div class="audio-row">
+                        <span>MUTE</span>
+                        <button id="btn-mute" onclick="window.jouerSon('click'); window.toggleMute()">🔊</button>
+                    </div>
+                    <hr class="audio-divider">
+                    <button class="btn-nav-dropdown" id="btn-dd-accueil">⌂ Retour à l'Accueil</button>
+                    <button class="btn-nav-dropdown" id="btn-dd-hub">← Retour au Hub</button>
                 </div>
-                <div class="audio-row">
-                    <span>SFX</span>
-                    <input type="range" id="vol-sfx" class="vol-slider" min="0" max="1" step="0.05" value="0.8">
-                </div>
-                <div class="audio-row">
-                    <span>MUTE</span>
-                    <button id="btn-mute" onclick="window.jouerSon('click'); window.toggleMute()">🔊</button>
-                </div>
-                <hr class="audio-divider">
-                <button class="btn-nav-dropdown" id="btn-dd-accueil">⌂ Retour à l'Accueil</button>
-                <button class="btn-nav-dropdown" id="btn-dd-hub">← Retour au Hub</button>
             </div>
         </div>
     </div>
@@ -356,8 +687,125 @@
 
     <div id="ecran-classement" class="screen">
         <h2 id="titre-classement" style="color:var(--primary); text-align:center">TOP AGENTS</h2>
+        <button id="btn-rank-info" onclick="window.jouerSon('click'); window.ouvrirRankModal()">◈ SYSTÈME DE GRADES</button>
+
+        <!-- Barre de filtres (monde uniquement) -->
+        <div id="filtre-barre">
+            <!-- Bouton déroulant -->
+            <button id="filtre-toggle" onclick="window.toggleFiltres()">
+                <span id="filtre-toggle-arrow">▼</span>
+                <span id="filtre-toggle-label">FILTRES</span>
+                <span id="filtre-toggle-badge" class="filtre-badge-off"></span>
+            </button>
+
+            <!-- Contenu collapsible -->
+            <div id="filtre-contenu">
+                <!-- Ligne 1 : périodes rapides -->
+                <div class="filtre-row">
+                    <button class="filtre-periode active" data-periode="all"   onclick="window.setPeriode(this,'all')">Toujours</button>
+                    <button class="filtre-periode" data-periode="today"        onclick="window.setPeriode(this,'today')">Aujourd'hui</button>
+                    <button class="filtre-periode" data-periode="week"         onclick="window.setPeriode(this,'week')">Cette semaine</button>
+                    <button class="filtre-periode" data-periode="month"        onclick="window.setPeriode(this,'month')">Ce mois</button>
+                    <button class="filtre-periode" data-periode="year"         onclick="window.setPeriode(this,'year')">Cette année</button>
+                </div>
+                <!-- Ligne 2 : filtres précis -->
+                <div class="filtre-row">
+                    <input  type="text" id="filtre-nom" class="filtre-input"
+                            placeholder="🔍 Rechercher un joueur..."
+                            oninput="window.appliquerFiltres()">
+                    <span class="filtre-label">Du</span>
+                    <input  type="date" id="filtre-date-de" class="filtre-input filtre-date-input"
+                            onchange="window.onDateCustomChange()">
+                    <span class="filtre-label">Au</span>
+                    <input  type="date" id="filtre-date-a"  class="filtre-input filtre-date-input"
+                            onchange="window.onDateCustomChange()">
+                    <span class="filtre-label">Tmin</span>
+                    <input  type="text" id="filtre-tps-min" class="filtre-input filtre-tps-input"
+                            placeholder="00:00" maxlength="5" oninput="window.appliquerFiltres()">
+                    <span class="filtre-label">Tmax</span>
+                    <input  type="text" id="filtre-tps-max" class="filtre-input filtre-tps-input"
+                            placeholder="30:00" maxlength="5" oninput="window.appliquerFiltres()">
+                </div>
+                <!-- Ligne 3 : reset -->
+                <div class="filtre-row">
+                    <button id="filtre-reset" onclick="window.reinitialiserFiltres()">✕ Réinitialiser les filtres</button>
+                </div>
+            </div>
+        </div>
+
         <div id="liste-scores"></div>
         <button onclick="window.jouerSon('click'); window.retourAccueil()" class="secondary-btn">RETOUR AU TERMINAL</button>
+    </div>
+
+    <!-- Modal grades -->
+    <div id="rank-modal" onclick="window.fermerRankModal()">
+        <div id="rank-modal-inner" onclick="event.stopPropagation()">
+            <h3>⬡ SYSTÈME DE GRADES</h3>
+            <div class="rank-banner rb-ss">
+                <div class="rank-banner-icon">👤</div>
+                <div class="rank-banner-info">
+                    <div class="rank-banner-grade">SS</div>
+                    <div class="rank-banner-label">Ombre Légendaire</div>
+                    <div class="rank-banner-pct">Top 3% · Percentile 97–100</div>
+                </div>
+                <div class="rank-banner-badge">LÉGENDAIRE</div>
+            </div>
+            <div class="rank-banner rb-s">
+                <div class="rank-banner-icon">👻</div>
+                <div class="rank-banner-info">
+                    <div class="rank-banner-grade">S</div>
+                    <div class="rank-banner-label">Fantôme</div>
+                    <div class="rank-banner-pct">Top 10% · Percentile 90–97</div>
+                </div>
+                <div class="rank-banner-badge">ÉLITE</div>
+            </div>
+            <div class="rank-banner rb-a">
+                <div class="rank-banner-icon">🎭</div>
+                <div class="rank-banner-info">
+                    <div class="rank-banner-grade">A</div>
+                    <div class="rank-banner-label">Maître Voleur</div>
+                    <div class="rank-banner-pct">Top 20% · Percentile 80–90</div>
+                </div>
+                <div class="rank-banner-badge">EXPERT</div>
+            </div>
+            <div class="rank-banner rb-b">
+                <div class="rank-banner-icon">🔓</div>
+                <div class="rank-banner-info">
+                    <div class="rank-banner-grade">B</div>
+                    <div class="rank-banner-label">Cambrioleur</div>
+                    <div class="rank-banner-pct">Top 25% · Percentile 75–80</div>
+                </div>
+                <div class="rank-banner-badge">AVANCÉ</div>
+            </div>
+            <div class="rank-banner rb-c">
+                <div class="rank-banner-icon">🗝️</div>
+                <div class="rank-banner-info">
+                    <div class="rank-banner-grade">C</div>
+                    <div class="rank-banner-label">Voleur</div>
+                    <div class="rank-banner-pct">Top 35% · Percentile 65–75</div>
+                </div>
+                <div class="rank-banner-badge">CONFIRMÉ</div>
+            </div>
+            <div class="rank-banner rb-d">
+                <div class="rank-banner-icon">🔦</div>
+                <div class="rank-banner-info">
+                    <div class="rank-banner-grade">D</div>
+                    <div class="rank-banner-label">Apprenti</div>
+                    <div class="rank-banner-pct">Top 50% · Percentile 50–65</div>
+                </div>
+                <div class="rank-banner-badge">DÉBUTANT</div>
+            </div>
+            <div class="rank-banner rb-f">
+                <div class="rank-banner-icon">🔒</div>
+                <div class="rank-banner-info">
+                    <div class="rank-banner-grade">F</div>
+                    <div class="rank-banner-label">Recrue</div>
+                    <div class="rank-banner-pct">Bas du classement · Percentile 0–50</div>
+                </div>
+                <div class="rank-banner-badge">RECRUE</div>
+            </div>
+            <button id="rank-modal-close" onclick="window.jouerSon('click'); window.fermerRankModal()">FERMER</button>
+        </div>
     </div>
 
     <div id="ecran-0" class="screen">
@@ -386,10 +834,12 @@
 
     <div id="phase-1" class="screen">
         <h2>DÉCRYPTAGE PIN</h2>
-        <div class="game-box"><p><strong class="h-cyan">SÉQUENCE 1 :</strong> <span id="p1-txt-1" class="math-font">...</span><br><span id="p1-q-1">...</span> ?</p></div>
-        <div class="game-box"><p><strong class="h-cyan">SÉQUENCE 2 :</strong> <span id="p1-txt-2" class="math-font">...</span><br><span id="p1-q-2">...</span> ?</p></div>
-        <div class="game-box"><p><strong class="h-cyan">SÉQUENCE 3 :</strong> <span id="p1-txt-3" class="math-font">...</span><br><span id="p1-q-3">...</span> ?</p></div>
-        <div class="game-box"><p><strong class="h-cyan">SÉQUENCE 4 :</strong> <span id="p1-txt-4" class="math-font">...</span><br><span id="p1-q-4">...</span> ?</p></div>
+        <div class="questions-grid">
+            <div class="game-box"><p><strong class="h-cyan">SÉQUENCE 1 :</strong> <span id="p1-txt-1" class="math-font">...</span><br><span id="p1-q-1">...</span> ?</p></div>
+            <div class="game-box"><p><strong class="h-cyan">SÉQUENCE 2 :</strong> <span id="p1-txt-2" class="math-font">...</span><br><span id="p1-q-2">...</span> ?</p></div>
+            <div class="game-box"><p><strong class="h-cyan">SÉQUENCE 3 :</strong> <span id="p1-txt-3" class="math-font">...</span><br><span id="p1-q-3">...</span> ?</p></div>
+            <div class="game-box"><p><strong class="h-cyan">SÉQUENCE 4 :</strong> <span id="p1-txt-4" class="math-font">...</span><br><span id="p1-q-4">...</span> ?</p></div>
+        </div>
 
         <div class="code-container">
             <input type="number" id="digit1" class="digit-input" placeholder="0" onfocus="window.jouerSon('click')">
@@ -525,13 +975,13 @@
             <span class="prog-text">PROXIMITÉ CIBLE</span>
         </div>
 
-        <div id="q-timer-display" style="text-align:center; font-size:4rem; font-weight:700; color:var(--alert); margin:20px 0; font-family: 'Share Tech Mono', monospace; text-shadow: 0 0 15px var(--alert-glow);">10</div>
+        <div id="q-timer-display" style="text-align:center; font-size:clamp(2.2rem,6dvh,4rem); font-weight:700; color:var(--alert); margin:clamp(6px,1dvh,20px) 0; font-family: 'Share Tech Mono', monospace; text-shadow: 0 0 15px var(--alert-glow);">10</div>
 
-        <div class="game-box" style="text-align:center; padding:25px;">
-            <div id="question-math" style="font-size:2.5rem;">...</div>
+        <div class="game-box" style="text-align:center;">
+            <div id="question-math" style="font-size:clamp(1.6rem,4dvh,2.5rem);">...</div>
         </div>
-        
-        <div style="text-align:center; height:30px; color:var(--primary); font-weight:bold; margin-bottom:15px; font-size:1.5rem; font-family: 'Share Tech Mono', monospace;" id="feedback"></div>
+
+        <div style="text-align:center; height:28px; color:var(--primary); font-weight:bold; margin-bottom:clamp(6px,1dvh,15px); font-size:clamp(1.1rem,2.5dvh,1.5rem); font-family: 'Share Tech Mono', monospace;" id="feedback"></div>
        
         <div class="numpad">
     <div class="key" onclick="window.jouerSon('click'); window.touche(7)">7</div>
@@ -661,8 +1111,12 @@ window.sfx = {
 
             if (sonAJouer) {
                 sonAJouer.currentTime = 0;
-                sonAJouer.volume = window.sfxVolume; // <-- AJOUTE CETTE LIGNE ICI
+                sonAJouer.volume = window.sfxVolume;
                 sonAJouer.play().catch(e => console.log("Son bloqué :", e));
+                if (type === 'typing') {
+                    var stopDelay = (sonAJouer.duration > 0 ? sonAJouer.duration : 1) * 1000 / 3;
+                    setTimeout(function() { sonAJouer.pause(); }, stopDelay);
+                }
             }
         };
 // ==========================================
@@ -708,6 +1162,49 @@ window.sfx = {
             }
         };
         
+        // --- SYSTÈME DE RANGS ---
+        function calculerRang(score, tousLesScores) {
+            if (!tousLesScores || tousLesScores.length === 0) return { grade: '?', label: '', color: '#94a3b8' };
+            var nb = tousLesScores.filter(function(s) { return s <= score; }).length;
+            var pct = (nb / tousLesScores.length) * 100;
+            if (pct <= 50) return { grade: 'F',  label: 'Recrue',           color: '#64748b' };
+            if (pct <= 65) return { grade: 'D',  label: 'Apprenti',         color: '#f59e0b' };
+            if (pct <= 75) return { grade: 'C',  label: 'Voleur',           color: '#10b981' };
+            if (pct <= 80) return { grade: 'B',  label: 'Cambrioleur',      color: '#3b82f6' };
+            if (pct <= 90) return { grade: 'A',  label: 'Maître Voleur',    color: '#8b5cf6' };
+            if (pct <= 97) return { grade: 'S',  label: 'Fantôme',          color: '#f97316' };
+            return             { grade: 'SS', label: 'Ombre Légendaire',  color: '#f43f5e' };
+        }
+
+        function majAfficherGradeJoueur() {
+            var badge = document.getElementById('player-grade-badge');
+            if (!badge) return;
+            var sLocal = JSON.parse(localStorage.getItem('hackerScores')) || [];
+            if (sLocal.length === 0) { badge.style.display = 'none'; return; }
+            var allScores = sLocal.map(function(s) { return s.score; });
+            var bestScore = Math.max.apply(null, allScores);
+            var rang = calculerRang(bestScore, allScores);
+            badge.style.color = rang.color;
+            badge.style.borderColor = rang.color;
+            badge.style.textShadow = '0 0 8px ' + rang.color + ', 0 0 16px ' + rang.color + '55';
+            if (playerGlobalRank && playerGlobalRank <= 100) {
+                badge.innerHTML = '<span class="pb-grade">' + rang.grade + '</span><span class="pb-rank">#' + playerGlobalRank + '</span>';
+                badge.style.display = 'inline-flex';
+            } else {
+                badge.innerHTML = rang.grade;
+                badge.style.display = 'inline-block';
+            }
+        }
+
+        // Vérifie si une entrée du classement correspond à une partie locale
+        function estEntreeLocale(entree) {
+            var sLocal = JSON.parse(localStorage.getItem('hackerScores')) || [];
+            return sLocal.some(function(l) {
+                return String(l.name).toUpperCase() === String(entree.name).toUpperCase()
+                    && Math.round(l.score) === Math.round(entree.score);
+            });
+        }
+
         // ... la suite de votre code (window.getRandomInt = function...)
         window.getRandomInt = function(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; };
 
@@ -731,6 +1228,7 @@ window.sfx = {
         window.timerPhase5 = null;
         window.compteurQ = 10;
         window.historique = ['ecran-accueil'];
+        window.missionStartee = false;
         window.score = 0;
         window.multiplicateur = 3.00; // DÉPART À x3.00
         window.gameData = { p1: {}, drone: {}, voleur: {}, lectureG: {}, lectureG2: {} };
@@ -740,6 +1238,8 @@ window.sfx = {
 
         // LIEN GOOGLE SCRIPT MONDAL
         const GOOGLE_APP_URL = "https://script.google.com/macros/s/AKfycbxhLdAHHn9rtVDufA3asid6IrHMlcF7YxqT-yq07bKWv5KCeGKJpeTpSVa8AvBk1VOmsQ/exec";
+        var allGlobalScoresFull = []; // full dataset (all ranks) from server
+        var playerGlobalRank   = null; // rang mondial du joueur (top 100 uniquement)
         
         // LECTURE DU NOM DU JEU VIA L'URL
         const urlParams = new URLSearchParams(window.location.search);
@@ -844,24 +1344,34 @@ window.sfx = {
         window.updateScoreUI = function() {
             var elScore = document.getElementById('score-display');
             if(elScore) elScore.innerText = Math.round(window.score);
-            
+
             var elCombo = document.getElementById('combo-display');
             if(elCombo) {
-                // Affichage avec 2 décimales
                 elCombo.innerText = "[x" + window.multiplicateur.toFixed(2) + "]";
-                
-                // Adaptation des couleurs (Max 3.0)
                 if (window.multiplicateur >= 2.5) elCombo.style.color = "#00ff41";
                 else if (window.multiplicateur > 1.5) elCombo.style.color = "#eab308";
                 else elCombo.style.color = "var(--alert)";
+            }
+
+            var elRank = document.getElementById('rank-display');
+            if (elRank) {
+                var sLocal = JSON.parse(localStorage.getItem('hackerScores')) || [];
+                var allScores = sLocal.map(function(s) { return s.score; });
+                allScores.push(Math.round(window.score));
+                var rang = calculerRang(Math.round(window.score), allScores);
+                elRank.innerText = rang.grade;
+                elRank.style.color = rang.color;
+                elRank.title = rang.label;
             }
         };
 
         window.retourAccueil = function() {
             document.body.classList.remove('alert-mode');
-            document.getElementById('bg-music').pause(); // COUPE LA MUSIQUE
+            document.getElementById('bg-music').pause();
+            window.missionStartee = false;
             window.historique = ['ecran-accueil'];
             window.afficherEcran('ecran-accueil');
+            majAfficherGradeJoueur();
         };
 
         window.afficherEcran = function(id) {
@@ -874,6 +1384,10 @@ window.sfx = {
         };
 
         window.lancerJeu = function() {
+            window.missionStartee = true;
+            window.majRetour();
+            var gb = document.getElementById('player-grade-badge');
+            if (gb) gb.style.display = 'none';
             // Lancement de la musique avec un volume réduit
             if(!window.isMuted) {
                 var bgMusic = document.getElementById('bg-music');
@@ -997,10 +1511,13 @@ window.sfx = {
         };
 
         window.majRetour = function() {
-            var btn = document.getElementById('btn-retour');
-            if(window.historique.length <= 1 || window.historique[window.historique.length-1] === 'ecran-accueil') btn.style.visibility = 'hidden';
-            else btn.style.visibility = 'visible';
+            var ecranActuel = window.historique[window.historique.length-1];
+            var surAccueil = window.historique.length <= 1 || ecranActuel === 'ecran-accueil' || ecranActuel === 'ecran-classement';
+            document.getElementById('btn-retour').style.visibility = surAccueil ? 'hidden' : 'visible';
+            document.getElementById('top-bar-center').style.visibility = (!window.missionStartee) ? 'hidden' : 'visible';
         };
+
+        majAfficherGradeJoueur();
 
         // --- PHASES DE JEU : VERIFICATIONS & PENALITÉS ---
         window.verifierPhase1 = function() {
@@ -1169,6 +1686,7 @@ window.sfx = {
             document.body.classList.remove('alert-mode');
             if(window.intervalle) clearInterval(window.intervalle);
             if(window.timerPhase5) clearInterval(window.timerPhase5);
+            document.getElementById('bg-music').pause();
            
             window.afficherEcran('ecran-revelation');
             document.getElementById('btn-retour').style.visibility="hidden";
@@ -1205,17 +1723,17 @@ window.sfx = {
             btn.innerText = "ENVOI EN COURS...";
             btn.disabled = true;
 
-            var t = Math.max(0, window.temps);
-            var m = Math.floor(t / 60); 
-            var s = t % 60;
-            var mStr = (m < 10 ? "0" : "") + m;
+            var elapsed = Math.max(0, 30 * 60 - window.temps);
+            var m = Math.floor(elapsed / 60);
+            var s = elapsed % 60;
             var sStr = (s < 10 ? "0" : "") + s;
-            var tempsFormate = mStr + " min " + sStr + "s";
+            var tempsFormate = m + "m " + sStr + "s";
 
             var sLocal = JSON.parse(localStorage.getItem('hackerScores')) || [];
             sLocal.push({ name: name, score: Math.round(window.score), date: new Date().toLocaleDateString('fr-FR'), time: tempsFormate });
             sLocal.sort((a,b) => b.score - a.score);
             localStorage.setItem('hackerScores', JSON.stringify(sLocal.slice(0, 10)));
+            majAfficherGradeJoueur();
 
             if(GOOGLE_APP_URL.includes("library")) {
                 alert("Archive locale mise à jour.");
@@ -1241,53 +1759,286 @@ window.sfx = {
             });
         };
 
+        // ─── Helpers filtres ────────────────────────────────────────
+
+        function escapeHTML(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function parseTempsSecs(str) {
+            if (!str) return null;
+            var m1 = str.match(/^(\d+)m\s*(\d+)s$/);
+            if (m1) return parseInt(m1[1]) * 60 + parseInt(m1[2]);
+            var m2 = str.match(/(\d+)\s*min\s*(\d+)s/);
+            if (m2) return parseInt(m2[1]) * 60 + parseInt(m2[2]);
+            return null;
+        }
+
+        function parseDateEntry(str) {
+            if (!str) return null;
+            if (str.includes('T')) return new Date(str);
+            var p = str.split('/');
+            if (p.length === 3) return new Date(parseInt(p[2]), parseInt(p[1]) - 1, parseInt(p[0]));
+            return null;
+        }
+
+        function getPeriodRange(periode) {
+            var now = new Date();
+            var y = now.getFullYear(), mo = now.getMonth(), d = now.getDate();
+            if (periode === 'today')  return { from: new Date(y,mo,d,0,0,0),  to: new Date(y,mo,d,23,59,59) };
+            if (periode === 'week')   { var diff = (now.getDay() === 0 ? 6 : now.getDay() - 1); return { from: new Date(y,mo,d-diff,0,0,0), to: new Date(y,mo,d,23,59,59) }; }
+            if (periode === 'month')  return { from: new Date(y,mo,1,0,0,0),  to: new Date(y,mo,d,23,59,59) };
+            if (periode === 'year')   return { from: new Date(y,0,1,0,0,0),   to: new Date(y,mo,d,23,59,59) };
+            return null;
+        }
+
+        // Génère la cellule de rang selon la position globale
+        function cellRang(rank, score, allScoreValues) {
+            if (rank === 1) return '<td class="rc rc-medal rc-gold">🥇</td>';
+            if (rank === 2) return '<td class="rc rc-medal rc-silver">🥈</td>';
+            if (rank === 3) return '<td class="rc rc-medal rc-bronze">🥉</td>';
+            var r = calculerRang(score, allScoreValues);
+            var c = r.color;
+            var glow = c + '44';
+            if (rank <= 100) {
+                return '<td class="rc"><div class="rc-badge" style="color:'+c+';border-color:'+c+';box-shadow:0 0 8px '+glow+'">' +
+                       '<span class="rc-grade">'+r.grade+'</span>' +
+                       '<span class="rc-num">#'+rank+'</span>' +
+                       '</div></td>';
+            }
+            // rang > 100 : badge grade seul, sans numéro
+            return '<td class="rc"><div class="rc-icon" style="color:'+c+';border-color:'+c+'66">'+r.grade+'</div></td>';
+        }
+
+        function afficherTableauMondial(scores, totalFull, filteredTotal) {
+            var div = document.getElementById('liste-scores');
+
+            // Valeurs de score pour calcul percentile (sur le dataset complet)
+            var allScoreValues = allGlobalScoresFull.map(function(s) { return s.score; });
+
+            // Joueur local hors top-200 ?
+            var playerBeyond = null;
+            allGlobalScoresFull.forEach(function(x) {
+                if (!playerBeyond && x._grank > 200 && estEntreeLocale(x)) playerBeyond = x;
+            });
+
+            var html = '<table><tr><th>RANG</th><th>AGENT</th><th>SCORE</th><th>TEMPS</th><th>DATE</th></tr>';
+            scores.forEach(function(x) {
+                var tempsAffiche = x.time ? escapeHTML(x.time) : '—';
+                var dateAffiche  = x.date;
+                if (dateAffiche && dateAffiche.includes('T')) dateAffiche = new Date(dateAffiche).toLocaleDateString('fr-FR');
+                else dateAffiche = escapeHTML(dateAffiche) || '—';
+                var safeName  = escapeHTML(x.name);
+                var isLocal   = estEntreeLocale(x);
+                var trClass   = isLocal ? ' class="local-entry"' : '';
+                var nameCell  = isLocal ? '<span class="agent-name">'+safeName+'</span>' : safeName;
+                html += '<tr'+trClass+'>'+cellRang(x._grank, x.score, allScoreValues)+'<td>'+nameCell+'</td><td class="score-num">'+escapeHTML(x.score)+'</td><td>'+tempsAffiche+'</td><td>'+dateAffiche+'</td></tr>';
+            });
+
+            // Ligne joueur hors top-200
+            if (playerBeyond) {
+                var pTemps    = playerBeyond.time ? escapeHTML(playerBeyond.time) : '—';
+                var pDate     = playerBeyond.date;
+                if (pDate && pDate.includes('T')) pDate = new Date(pDate).toLocaleDateString('fr-FR');
+                else pDate = escapeHTML(pDate) || '—';
+                var pSafeName = escapeHTML(playerBeyond.name);
+                html += '<tr class="beyond-rank-row local-entry">'+cellRang(playerBeyond._grank, playerBeyond.score, allScoreValues)+'<td><span class="agent-name">'+pSafeName+'</span><span class="beyond-rank-label">Votre classement : #'+playerBeyond._grank+'</span></td><td class="score-num">'+escapeHTML(playerBeyond.score)+'</td><td>'+pTemps+'</td><td>'+pDate+'</td></tr>';
+            }
+
+            var shownCount  = filteredTotal !== undefined ? filteredTotal : scores.length;
+            var displayedNb = scores.length;
+            html += '</table>';
+            html += '<p class="filtre-count">'+displayedNb+' joueur'+(displayedNb>1?'s':'')+' affiché'+(displayedNb>1?'s':'')+' · '+shownCount+' correspondant'+(shownCount>1?'s':'')+' · '+totalFull+' en base</p>';
+            div.innerHTML = html;
+        }
+
+        window.appliquerFiltres = function() {
+            if (!allGlobalScoresFull.length) return;
+
+            var nom     = (document.getElementById('filtre-nom').value || '').trim().toLowerCase();
+            var dateDe  = document.getElementById('filtre-date-de').value;
+            var dateA   = document.getElementById('filtre-date-a').value;
+            var tpsMin  = document.getElementById('filtre-tps-min').value.trim();
+            var tpsMax  = document.getElementById('filtre-tps-max').value.trim();
+            var activePer = document.querySelector('.filtre-periode.active');
+            var periode = activePer ? activePer.dataset.periode : 'all';
+
+            var periodRange = (periode !== 'all' && !dateDe && !dateA) ? getPeriodRange(periode) : null;
+            var customFrom  = dateDe ? new Date(dateDe + 'T00:00:00') : null;
+            var customTo    = dateA  ? new Date(dateA  + 'T23:59:59') : null;
+
+            var tpsMinSecs = null, tpsMaxSecs = null;
+            if (tpsMin) { var p=tpsMin.split(':'); tpsMinSecs = (parseInt(p[0])||0)*60+(parseInt(p[1])||0); }
+            if (tpsMax) { var q=tpsMax.split(':'); tpsMaxSecs = (parseInt(q[0])||0)*60+(parseInt(q[1])||0); }
+
+            // Filtrer SUR LE TABLEAU COMPLET, puis couper à 200 pour l'affichage
+            var filtered = allGlobalScoresFull.filter(function(x) {
+                if (nom && x.name.toLowerCase().indexOf(nom) === -1) return false;
+                var xDate = parseDateEntry(x.date);
+                if (periodRange && xDate) {
+                    if (periodRange.from && xDate < periodRange.from) return false;
+                    if (periodRange.to   && xDate > periodRange.to)   return false;
+                }
+                if (customFrom && xDate && xDate < customFrom) return false;
+                if (customTo   && xDate && xDate > customTo)   return false;
+                if (tpsMinSecs !== null || tpsMaxSecs !== null) {
+                    var xSecs = parseTempsSecs(x.time);
+                    if (xSecs !== null) {
+                        if (tpsMinSecs !== null && xSecs < tpsMinSecs) return false;
+                        if (tpsMaxSecs !== null && xSecs > tpsMaxSecs) return false;
+                    }
+                }
+                return true;
+            });
+
+            // Cap à 200 après filtrage (pas avant)
+            var display200 = filtered.slice(0, 200);
+
+            majFiltreBadge();
+            afficherTableauMondial(display200, allGlobalScoresFull.length, filtered.length);
+        };
+
+        window.setPeriode = function(btn, periode) {
+            document.querySelectorAll('.filtre-periode').forEach(function(b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+            document.getElementById('filtre-date-de').value = '';
+            document.getElementById('filtre-date-a').value  = '';
+            majFiltreBadge();
+            window.appliquerFiltres();
+        };
+
+        window.onDateCustomChange = function() {
+            document.querySelectorAll('.filtre-periode').forEach(function(b) { b.classList.remove('active'); });
+            majFiltreBadge();
+            window.appliquerFiltres();
+        };
+
+        function majFiltreBadge() {
+            var badge = document.getElementById('filtre-toggle-badge');
+            if (!badge) return;
+            var n = 0;
+            var nom    = document.getElementById('filtre-nom');
+            var dateDe = document.getElementById('filtre-date-de');
+            var dateA  = document.getElementById('filtre-date-a');
+            var tMin   = document.getElementById('filtre-tps-min');
+            var tMax   = document.getElementById('filtre-tps-max');
+            var per    = document.querySelector('.filtre-periode.active');
+            if (nom    && nom.value.trim())       n++;
+            if (dateDe && dateDe.value)           n++;
+            if (dateA  && dateA.value)            n++;
+            if (tMin   && tMin.value.trim())      n++;
+            if (tMax   && tMax.value.trim())      n++;
+            if (per    && per.dataset.periode !== 'all') n++;
+            if (n > 0) {
+                badge.textContent = n + ' actif' + (n > 1 ? 's' : '');
+                badge.className = 'filtre-badge-on';
+            } else {
+                badge.className = 'filtre-badge-off';
+            }
+        }
+
+        window.toggleFiltres = function() {
+            document.getElementById('filtre-barre').classList.toggle('open');
+        };
+
+        window.reinitialiserFiltres = function() {
+            document.getElementById('filtre-nom').value     = '';
+            document.getElementById('filtre-date-de').value = '';
+            document.getElementById('filtre-date-a').value  = '';
+            document.getElementById('filtre-tps-min').value = '';
+            document.getElementById('filtre-tps-max').value = '';
+            document.querySelectorAll('.filtre-periode').forEach(function(b) { b.classList.remove('active'); });
+            document.querySelector('.filtre-periode[data-periode="all"]').classList.add('active');
+            majFiltreBadge();
+            window.appliquerFiltres();
+        };
+
+        // ─── voirScores ─────────────────────────────────────────────
+
         window.voirScores = function(mode) {
-            window.naviguerVers('ecran-classement'); 
-            var div = document.getElementById('liste-scores'); 
+            window.naviguerVers('ecran-classement');
+            var div   = document.getElementById('liste-scores');
             var titre = document.getElementById('titre-classement');
-            
-            if(mode === 'local') {
+            var filtreBarre = document.getElementById('filtre-barre');
+
+            if (mode === 'local') {
                 titre.innerText = "ARCHIVES LOCALES";
+                filtreBarre.classList.remove('visible');
+                filtreBarre.classList.remove('open');
                 affichageLocalSeulement(div); return;
             }
 
             titre.innerText = "RÉSEAU MONDIAL";
+            filtreBarre.classList.add('visible');
+            filtreBarre.classList.remove('open');
+            // reset filters state
+            document.querySelectorAll('.filtre-periode').forEach(function(b) { b.classList.remove('active'); });
+            document.querySelector('.filtre-periode[data-periode="all"]').classList.add('active');
+            document.getElementById('filtre-nom').value     = '';
+            document.getElementById('filtre-date-de').value = '';
+            document.getElementById('filtre-date-a').value  = '';
+            document.getElementById('filtre-tps-min').value = '';
+            document.getElementById('filtre-tps-max').value = '';
+            majFiltreBadge();
+
             div.innerHTML = "<p style='text-align:center; animation: blink 1s infinite;'>Connexion à la base de données...</p>";
-            
-            if(GOOGLE_APP_URL.includes("library")) {
-                 div.innerHTML = "<p style='text-align:center; color:red;'>Liaison montante rompue.</p>"; return;
+
+            if (GOOGLE_APP_URL.includes("library")) {
+                div.innerHTML = "<p style='text-align:center; color:red;'>Liaison montante rompue.</p>"; return;
             }
 
             var urlLecture = GOOGLE_APP_URL + "?action=read&Jeu=" + encodeURIComponent(NOM_DU_JEU);
-            
+
             fetch(urlLecture)
-                .then(res => res.json())
-                .then(scores => {
-                    if(scores.length === 0) { div.innerHTML = "<p style='text-align:center'>Base de données vierge.</p>"; return; }
-                    var html = "<table><tr><th>RANG</th><th>AGENT</th><th>SCORE</th><th>TEMPS</th><th>DATE</th></tr>";
-                    scores.forEach((x, i) => {
-                        var tempsAffiche = x.time ? x.time : "-- min --s";
-                        var dateAffiche = x.date;
-                        if(dateAffiche && dateAffiche.includes('T')) dateAffiche = new Date(dateAffiche).toLocaleDateString('fr-FR');
-                        html += "<tr><td>#"+(i+1)+"</td><td>"+x.name+"</td><td class='score-num'>"+x.score+"</td><td>"+tempsAffiche+"</td><td>"+dateAffiche+"</td></tr>";
-                    });
-                    div.innerHTML = html + "</table>";
+                .then(function(res) { return res.json(); })
+                .then(function(raw) {
+                    // Normaliser : certains Apps Scripts enveloppent dans { data: [...] }
+                    var scores = Array.isArray(raw) ? raw : (raw.data || raw.scores || Object.values(raw));
+                    if (!scores || scores.length === 0) { div.innerHTML = "<p style='text-align:center'>Base de données vierge.</p>"; return; }
+                    scores.sort(function(a,b) { return b.score - a.score; });
+                    // Pré-assigner le rang global sur chaque objet — évite indexOf()
+                    scores.forEach(function(x, i) { x._grank = i + 1; });
+                    allGlobalScoresFull = scores;
+                    // Détecter le meilleur rang mondial du joueur local
+                    playerGlobalRank = null;
+                    for (var ri = 0; ri < allGlobalScoresFull.length; ri++) {
+                        if (estEntreeLocale(allGlobalScoresFull[ri])) {
+                            playerGlobalRank = allGlobalScoresFull[ri]._grank;
+                            break; // premier = meilleur rang (déjà trié)
+                        }
+                    }
+                    majAfficherGradeJoueur();
+                    window.appliquerFiltres();
                 })
-                .catch(error => { 
-                    div.innerHTML = "<p style='text-align:center; color:red;'>Échec de l'extraction des données.</p>"; 
+                .catch(function() {
+                    div.innerHTML = "<p style='text-align:center; color:red;'>Échec de l'extraction des données.</p>";
                 });
         };
 
         function affichageLocalSeulement(div) {
             var sLocal = JSON.parse(localStorage.getItem('hackerScores')) || [];
             if(sLocal.length === 0) { div.innerHTML = "<p style='text-align:center; color:#94a3b8;'>Aucune archive locale trouvée.</p>"; return; }
-            var html = "<table><tr><th>RANG</th><th>AGENT</th><th>SCORE</th><th>TEMPS</th><th>DATE</th></tr>";
-            sLocal.forEach((x, i) => {
+            var allScores = sLocal.map(function(s) { return s.score; });
+            var html = "<table><tr><th>#</th><th>AGENT</th><th>SCORE</th><th>TEMPS PRIS</th><th>DATE</th></tr>";
+            sLocal.forEach(function(x, i) {
                 var tempsAffiche = x.time ? x.time : "-- min --s";
-                html += "<tr><td>#"+(i+1)+"</td><td>"+x.name+"</td><td class='score-num'>"+x.score+"</td><td>"+tempsAffiche+"</td><td>"+x.date+"</td></tr>";
+                // Toutes les entrées locales sont "les miennes"
+                html += '<tr class="local-entry"><td>#'+(i+1)+'</td><td><span class="agent-name">'+x.name+'</span></td><td class="score-num">'+x.score+'</td><td>'+tempsAffiche+'</td><td>'+x.date+'</td></tr>';
             });
             div.innerHTML = html + "</table>";
         }
+
+        window.ouvrirRankModal = function() {
+            document.getElementById('rank-modal').classList.add('open');
+        };
+        window.fermerRankModal = function() {
+            document.getElementById('rank-modal').classList.remove('open');
+        };
 
     } catch(e) { document.getElementById('error-box').style.display = 'block'; document.getElementById('error-box').innerText = "FATAL ERROR: " + e.message; }
     </script>

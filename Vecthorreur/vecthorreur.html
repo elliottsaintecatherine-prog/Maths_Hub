@@ -816,7 +816,9 @@
   </div>
 
   <script>
-    // ===================== AUDIO =====================
+    // ═══════════════════════════════════════════════════
+    // SECTION 1 — AUDIO
+    // ═══════════════════════════════════════════════════
     function loadSound(src) {
       const a = new Audio(src);
       a.onerror = () => {};
@@ -838,9 +840,8 @@
     SFX.ambiance.volume = 0.3;
     SFX.map.forEach(s => { s.loop = true; s.volume = 0.35; });
     let currentMapSound = null;
-    let audioUnlocked = false;
     document.addEventListener('click', () => {
-      if (!audioUnlocked) { audioUnlocked = true; SFX.ambiance.play().catch(() => {}); }
+      SFX.ambiance.play().catch(() => {});
     }, { once: true });
     function playSound(key) {
       const s = SFX[key]; if (!s) return;
@@ -896,7 +897,9 @@
       panel.setAttribute('aria-hidden', 'true');
     }
 
-    // ===================== MAPS DATA =====================
+    // ═══════════════════════════════════════════════════
+    // SECTION 2 — MAPS DATA
+    // ═══════════════════════════════════════════════════
     // palette : couleurs du canvas (joueur, monstre, trail, axes, halo)
     // Inspirées des thèmes Chair de Poule de chaque map
     const MAPS = [
@@ -1217,7 +1220,9 @@
       }
     ];
 
-    // ===================== ROOMS — Manoir Blackwood (rendu visuel map 0 uniquement) =====================
+    // ═══════════════════════════════════════════════════
+    // SECTION 3 — ROOMS (Manoir Blackwood, rendu visuel map 0 uniquement)
+    // ═══════════════════════════════════════════════════
     const ROOMS = [
       {
         name:"Hall d'Entrée",
@@ -1225,7 +1230,7 @@
         floor:{ type:"checkerboard", colorA:"#1a1a1a", colorB:"#e8e0d0", tileSize:2 },
         ceiling:{ color:"#d4cdb8", hasChandelier:true, chandelierPos:{x:0,y:-13} },
         wallColor:"#2a2820", lambrisColor:"#1a1208",
-        ambientLight:"rgba(255,200,120,0.06)",
+        ambientLight:"rgba(255,200,120,0.13)",
         hasRug:true, rugColor:"#8b0000", rugBorder:"#8a6a2a",
         rugX1:-4, rugY1:-18, rugX2:4, rugY2:-8
       },
@@ -1234,14 +1239,14 @@
         x1:-8, y1:-6, x2:8, y2:6,
         floor:{ type:"chevron", colorA:"#8b6914", colorB:"#5a4510", tileSize:1.5 },
         ceiling:{ color:"#d4c9a8", hasBeams:true, beamColor:"#2a1a08", beamSpacing:3 },
-        wallColor:"#3d0a0a", ambientLight:"rgba(255,140,0,0.08)", hasRug:false
+        wallColor:"#3d0a0a", ambientLight:"rgba(255,140,0,0.15)", hasRug:false
       },
       {
         name:"Bibliothèque",
         x1:-20, y1:-6, x2:-8, y2:6,
         floor:{ type:"planks", colorA:"#3d2510", colorB:"#2a1a08", plankWidth:1.5 },
         ceiling:{ color:"#1a1208", hasBeams:true, beamColor:"#120d08", beamSpacing:2, hasSpiderwebs:true },
-        wallColor:"#2a1a08", ambientLight:"rgba(255,120,0,0.04)",
+        wallColor:"#2a1a08", ambientLight:"rgba(255,120,0,0.10)",
         hasRug:true, rugColor:"#5a1a0a", rugX1:-12, rugY1:-4, rugX2:-9, rugY2:2
       },
       {
@@ -1249,28 +1254,28 @@
         x1:8, y1:-6, x2:20, y2:6,
         floor:{ type:"tiles", colorA:"#2a2820", colorB:"#3a3830", tileSize:2, groutColor:"#f0f0f088" },
         ceiling:{ color:"#d4cdb8", hasChandelier:true, chandelierPos:{x:14,y:0} },
-        wallColor:"#1a2d1a", ambientLight:"rgba(255,180,100,0.05)", hasRug:false
+        wallColor:"#1a2d1a", ambientLight:"rgba(255,180,100,0.12)", hasRug:false
       },
       {
         name:"Jardin d'Hiver",
         x1:-20, y1:-14, x2:-8, y2:-4,
         floor:{ type:"stoneMoss", colorA:"#1a1208", colorB:"#1a2d1a", tileSize:2 },
         ceiling:{ color:"#1a1a18" },
-        wallColor:"#0a1a0a", ambientLight:"rgba(0,80,0,0.04)", hasRug:false
+        wallColor:"#0a1a0a", ambientLight:"rgba(0,80,0,0.09)", hasRug:false
       },
       {
         name:"Aile des Chambres",
         x1:8, y1:-14, x2:20, y2:-4,
         floor:{ type:"carpet", colorA:"#3d0a0a", colorB:"#2a0808", tileSize:3 },
         ceiling:{ color:"#c8c0b0" },
-        wallColor:"#3d2520", ambientLight:"rgba(255,100,0,0.03)", hasRug:false
+        wallColor:"#3d2520", ambientLight:"rgba(255,100,0,0.09)", hasRug:false
       },
       {
         name:"Chapelle",
         x1:-8, y1:6, x2:8, y2:16,
         floor:{ type:"irregular_stones", colorA:"#1a1a18", colorB:"#0a0a0a", tileSize:2.5 },
         ceiling:{ color:"#0f0f0d" },
-        wallColor:"#1a1a18", ambientLight:"rgba(80,0,0,0.06)",
+        wallColor:"#1a1a18", ambientLight:"rgba(80,0,0,0.11)",
         hasRug:true, rugColor:"#5a0000", rugX1:-1, rugY1:7, rugX2:1, rugY2:14
       },
       {
@@ -1278,27 +1283,29 @@
         x1:-20, y1:6, x2:-8, y2:20,
         floor:{ type:"hex_tiles", colorA:"#c8c0b0", colorB:"#b8b0a0", tileSize:1, stainColor:"#1a1a18" },
         ceiling:{ color:"#2a2828", hasFlickerLight:true },
-        wallColor:"#c8c0b0", ambientLight:"rgba(200,220,255,0.03)", hasRug:false
+        wallColor:"#c8c0b0", ambientLight:"rgba(200,220,255,0.09)", hasRug:false
       },
       {
         name:"Salle des Miroirs",
         x1:8, y1:6, x2:20, y2:20,
         floor:{ type:"lacquered", colorA:"#0a0a0a", colorB:"#111111", tileSize:2 },
         ceiling:{ color:"#1a1a1a" },
-        wallColor:"#1a1a1a", ambientLight:"rgba(180,220,255,0.04)", hasRug:false
+        wallColor:"#1a1a1a", ambientLight:"rgba(180,220,255,0.10)", hasRug:false
       },
       {
         name:"Salle du Trône",
         x1:-8, y1:16, x2:8, y2:20,
         floor:{ type:"marble_radial", colorA:"#3d0000", colorB:"#0a0a0a", tileSize:2 },
         ceiling:{ color:"#1a0a0a" },
-        wallColor:"#1a1208", ambientLight:"rgba(180,0,0,0.05)",
+        wallColor:"#1a1208", ambientLight:"rgba(180,0,0,0.11)",
         hasRug:true, rugColor:"#5a0000", rugBorder:"#8a6a2a",
         rugX1:-1, rugY1:16, rugX2:1, rugY2:19
       }
     ];
 
-    // ===================== GAME STATE =====================
+    // ═══════════════════════════════════════════════════
+    // SECTION 4 — GAME STATE & GLOBALES
+    // ═══════════════════════════════════════════════════
     const gameState = {
       mode: 'menu',
       view: 'command',
@@ -1325,11 +1332,21 @@
       difficulty: 'medium'   // 'easy' | 'medium' | 'hard'
     };
 
-    // ===================== CANVAS & RESIZE =====================
+    const MONSTER_INTERVALS = { easy: 10000, medium: 7000, hard: 4000 };
+    let monsterTimer = null;
+    let overlayOpen = false;
+
+    function resetMonsterTimer() {
+      clearInterval(monsterTimer);
+      monsterTimer = setInterval(monsterAutoMove, MONSTER_INTERVALS[gameState.difficulty] || MONSTER_INTERVALS.medium);
+    }
+
+    // ═══════════════════════════════════════════════════
+    // SECTION 5 — CANVAS & RESIZE
+    // ═══════════════════════════════════════════════════
     const canvas = document.getElementById('game-canvas');
     const ctx = canvas.getContext('2d');
     let W, H, SCALE, ISO_CY;
-    let darkCanvas = null, darkCtx = null;
 
     // ===== DEV MODE - À SUPPRIMER AVANT PRODUCTION =====
     let devMode = false;
@@ -1351,9 +1368,6 @@
       // Preview canvas — taille fixe 160×160
       const pc = document.getElementById('preview-canvas');
       if (pc) { pc.width = 160; pc.height = 160; }
-
-      // Synchroniser le darkCanvas si existant
-      if (darkCanvas) { darkCanvas.width = W; darkCanvas.height = H; }
     }
     window.addEventListener('resize', resizeCanvas);
 
@@ -1362,21 +1376,18 @@
       const IX = SCALE * 0.866, IY = SCALE * 0.5;
       return { cx: W / 2 + (wx - wy) * IX, cy: ISO_CY - (wx + wy) * IY - wz * SCALE };
     }
-    // Legacy alias (used by a few helpers)
-    function worldToCanvas(wx, wy) { return worldToIso(wx, wy); }
-
     // Flat top-down projection for render3D() — updated each frame in render3D()
-    let SC2D = 1;
+    let scale2D = 1;
     function worldTo2D(wx, wy) {
-      return { cx: W / 2 + wx * SC2D, cy: H / 2 - wy * SC2D };
+      return { cx: W / 2 + wx * scale2D, cy: H / 2 - wy * scale2D };
     }
 
     // Darken / lighten a 6-digit hex colour by factor f
     function darkenColor(hex, f) {
-      const m = hex.match(/^#([0-9a-f]{6})/i);
-      if (!m) return hex;
+      const hexMatch = hex.match(/^#([0-9a-f]{6})/i);
+      if (!hexMatch) return hex;
       return '#' + [0, 2, 4].map(i =>
-        Math.min(255, Math.round(parseInt(m[1].substr(i, 2), 16) * f))
+        Math.min(255, Math.round(parseInt(hexMatch[1].substr(i, 2), 16) * f))
           .toString(16).padStart(2, '0')
       ).join('');
     }
@@ -1408,7 +1419,9 @@
       if (strokeC) { ctx.strokeStyle = strokeC; ctx.lineWidth = 1; ctx.stroke(); }
     }
 
-    // ===================== 3D CAMERA & PROJECTION =====================
+    // ═══════════════════════════════════════════════════
+    // SECTION 6 — 3D CAMERA & PROJECTION
+    // ═══════════════════════════════════════════════════
     const cam = {
       x: 0, y: -22, z: 2.8,
       fx: 0, fy: 1, fz: 0,
@@ -1587,58 +1600,58 @@
       const cy = gp.sy;       // feet on the ground
 
       ctx.save();
-      ctx.shadowBlur = 18; ctx.shadowColor = pal.player;
+      ctx.shadowBlur = 6; ctx.shadowColor = pal.player;
 
       // ── Torso ────────────────────────────────────────────
-      const bw = s * 1.55, bh = s * 2.2;
-      const bx = cx - bw / 2, by = cy - bh;
+      const bodyW = s * 1.55, bodyH = s * 2.2;
+      const bodyX = cx - bodyW / 2, bodyY = cy - bodyH;
       ctx.globalAlpha = 0.7; ctx.fillStyle = pal.playerDark;
-      ctx.beginPath(); ctx.rect(bx - s*0.13, by + s*0.12, s*0.13, bh - s*0.12); ctx.fill();
+      ctx.beginPath(); ctx.rect(bodyX - s*0.13, bodyY + s*0.12, s*0.13, bodyH - s*0.12); ctx.fill();
       ctx.globalAlpha = 1;
       ctx.fillStyle = pal.player;
       ctx.beginPath();
-      if (ctx.roundRect) ctx.roundRect(bx, by, bw, bh, [s*0.12, s*0.12, 0, 0]);
-      else ctx.rect(bx, by, bw, bh);
+      if (ctx.roundRect) ctx.roundRect(bodyX, bodyY, bodyW, bodyH, [s*0.12, s*0.12, 0, 0]);
+      else ctx.rect(bodyX, bodyY, bodyW, bodyH);
       ctx.fill();
       ctx.save(); ctx.globalAlpha = 0.15; ctx.strokeStyle = '#000'; ctx.lineWidth = s * 0.07;
-      ctx.beginPath(); ctx.moveTo(cx, by + s*0.25); ctx.lineTo(cx, by + bh * 0.92); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx, bodyY + s*0.25); ctx.lineTo(cx, bodyY + bodyH * 0.92); ctx.stroke();
       ctx.restore();
 
       // ── Bras ─────────────────────────────────────────────
-      const aw = s * 0.58, ah = s * 2.0;
+      const armW = s * 0.58, armH = s * 2.0;
       ctx.fillStyle = pal.playerDark;
-      ctx.save(); ctx.translate(bx - aw * 0.55, by + s * 0.12); ctx.rotate(-0.1);
+      ctx.save(); ctx.translate(bodyX - armW * 0.55, bodyY + s * 0.12); ctx.rotate(-0.1);
       ctx.beginPath();
-      if (ctx.roundRect) ctx.roundRect(0, 0, aw, ah, s*0.14); else ctx.rect(0, 0, aw, ah);
+      if (ctx.roundRect) ctx.roundRect(0, 0, armW, armH, s*0.14); else ctx.rect(0, 0, armW, armH);
       ctx.fill(); ctx.restore();
-      ctx.save(); ctx.translate(bx + bw - aw * 0.45, by + s * 0.12); ctx.rotate(0.1);
+      ctx.save(); ctx.translate(bodyX + bodyW - armW * 0.45, bodyY + s * 0.12); ctx.rotate(0.1);
       ctx.beginPath();
-      if (ctx.roundRect) ctx.roundRect(0, 0, aw, ah, s*0.14); else ctx.rect(0, 0, aw, ah);
+      if (ctx.roundRect) ctx.roundRect(0, 0, armW, armH, s*0.14); else ctx.rect(0, 0, armW, armH);
       ctx.fill(); ctx.restore();
 
       // ── Cou ──────────────────────────────────────────────
-      const nw = s * 0.45, nh = s * 0.25;
+      const neckW = s * 0.45, neckH = s * 0.25;
       ctx.fillStyle = pal.playerHead;
-      ctx.beginPath(); ctx.rect(cx - nw/2, by - nh, nw, nh); ctx.fill();
+      ctx.beginPath(); ctx.rect(cx - neckW/2, bodyY - neckH, neckW, neckH); ctx.fill();
 
       // ── Tête ─────────────────────────────────────────────
-      const hw = s * 1.12, hh = s * 1.12;
-      const hx = cx - hw / 2, hy = by - nh - hh;
+      const headW = s * 1.12, headH = s * 1.12;
+      const headX = cx - headW / 2, headY = bodyY - neckH - headH;
       ctx.save(); ctx.globalAlpha = 0.38; ctx.fillStyle = pal.playerDark;
-      ctx.beginPath(); ctx.rect(hx - s*0.1, hy + s*0.1, s*0.1, hh * 0.8); ctx.fill();
+      ctx.beginPath(); ctx.rect(headX - s*0.1, headY + s*0.1, s*0.1, headH * 0.8); ctx.fill();
       ctx.restore();
       ctx.fillStyle = pal.playerHead;
       ctx.beginPath();
-      if (ctx.roundRect) ctx.roundRect(hx, hy, hw, hh, s*0.12); else ctx.rect(hx, hy, hw, hh);
+      if (ctx.roundRect) ctx.roundRect(headX, headY, headW, headH, s*0.12); else ctx.rect(headX, headY, headW, headH);
       ctx.fill();
-      ctx.beginPath(); ctx.rect(hx - s*0.11, hy + hh*0.28, s*0.11, hh*0.3); ctx.fill();
-      ctx.beginPath(); ctx.rect(hx + hw,      hy + hh*0.28, s*0.11, hh*0.3); ctx.fill();
+      ctx.beginPath(); ctx.rect(headX - s*0.11, headY + headH*0.28, s*0.11, headH*0.3); ctx.fill();
+      ctx.beginPath(); ctx.rect(headX + headW,  headY + headH*0.28, s*0.11, headH*0.3); ctx.fill();
 
       // ── Cheveux (style Roblox carré) ──────────────────────
       ctx.fillStyle = pal.playerDark;
       ctx.beginPath();
-      if (ctx.roundRect) ctx.roundRect(hx - s*0.05, hy - s*0.07, hw + s*0.1, hh*0.48, [s*0.14, s*0.14, 0, 0]);
-      else ctx.rect(hx, hy, hw, hh * 0.45);
+      if (ctx.roundRect) ctx.roundRect(headX - s*0.05, headY - s*0.07, headW + s*0.1, headH*0.48, [s*0.14, s*0.14, 0, 0]);
+      else ctx.rect(headX, headY, headW, headH * 0.45);
       ctx.fill();
       ctx.beginPath(); ctx.rect(hx - s*0.05, hy + hh*0.42, hw + s*0.1, hh*0.12); ctx.fill();
 
@@ -1679,7 +1692,9 @@
       ctx.restore();
     }
 
-    // ===================== PARTICLES =====================
+    // ═══════════════════════════════════════════════════
+    // SECTION 7 — PARTICLES
+    // ═══════════════════════════════════════════════════
     function initParticles() {
       gameState.particles = [];
       for (let i = 0; i < 30; i++) {
@@ -1708,7 +1723,9 @@
       if (p.life >= p.maxLife) Object.assign(p, makeParticle());
     }
 
-    // ===================== DRAW ARROW =====================
+    // ═══════════════════════════════════════════════════
+    // SECTION 8 — DRAW ARROW (helper 2D canvas)
+    // ═══════════════════════════════════════════════════
     function drawArrow(actx, x1, y1, x2, y2, color) {
       const dx = x2 - x1, dy = y2 - y1;
       const len = Math.sqrt(dx*dx + dy*dy);
@@ -1733,7 +1750,9 @@
       actx.shadowBlur = 0;
     }
 
-    // ===================== PREVIEW CANVAS =====================
+    // ═══════════════════════════════════════════════════
+    // SECTION 9 — PREVIEW CANVAS
+    // ═══════════════════════════════════════════════════
     function drawPreview(canvasOverride, transform) {
       const pc = canvasOverride || document.getElementById('preview-canvas');
       if (!pc || pc.width === 0 || pc.height === 0) return;
@@ -1934,7 +1953,9 @@
       }
     }
 
-    // ===================== COLLISION DETECTION =====================
+    // ═══════════════════════════════════════════════════
+    // SECTION 10 — COLLISION DETECTION
+    // ═══════════════════════════════════════════════════
     function checkPointObstacle(pt) {
       const map = MAPS[gameState.currentMap];
       if (pt.x < -20 || pt.x > 20 || pt.y < -20 || pt.y > 20) return true;
@@ -1995,8 +2016,9 @@
       return 'OK';
     }
 
-    // ===================== MONSTER AI =====================
-    let monsterTimer = null;
+    // ═══════════════════════════════════════════════════
+    // SECTION 11 — MONSTER AI
+    // ═══════════════════════════════════════════════════
 
     // BFS pathfinding — retourne le premier pas vers le joueur
     function getMonsterNextStep() {
@@ -2094,7 +2116,9 @@
       if (checkPath(gs.monsterPos, {x:0, y:ny}) === 'OK') { gs.monsterPos.y += ny; }
     }
 
-    // ===================== ANIMATION HELPERS =====================
+    // ═══════════════════════════════════════════════════
+    // SECTION 12 — ANIMATION HELPERS
+    // ═══════════════════════════════════════════════════
     function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
     function animateMove(start, end, duration, showOverlay) {
@@ -2143,7 +2167,9 @@
       });
     }
 
-    // ===================== GAME OVER / WIN =====================
+    // ═══════════════════════════════════════════════════
+    // SECTION 13 — GAME OVER / WIN
+    // ═══════════════════════════════════════════════════
     function showScreamer(callback) {
       playSound('screamer');
       const el = document.getElementById('screamer');
@@ -2231,7 +2257,9 @@
       document.getElementById('screen-results').style.display = 'flex';
     }
 
-    // ===================== DECK MANAGEMENT =====================
+    // ═══════════════════════════════════════════════════
+    // SECTION 14 — DECK MANAGEMENT
+    // ═══════════════════════════════════════════════════
     function addToDeck(vec) {
       gameState.deck.unshift({x: vec.x, y: vec.y});
       if (gameState.deck.length > 8) gameState.deck.pop();
@@ -2259,14 +2287,17 @@
       renderDeck();
     }
 
-    // ===================== SLIDE (no-op) =====================
+    // ═══════════════════════════════════════════════════
+    // SECTION 15 — SLIDE (no-op)
+    // ═══════════════════════════════════════════════════
     function slideTo(view) {
       gameState.view = view; // neutralisé — overlay gère l'état visuel
       updateModeIndicator();
     }
 
-    // ===================== OVERLAY 2D =====================
-    let overlayOpen = false;
+    // ═══════════════════════════════════════════════════
+    // SECTION 16 — OVERLAY 2D
+    // ═══════════════════════════════════════════════════
     function openOverlay() {
       overlayOpen = true;
       document.getElementById('overlay-2d').style.display = 'flex';
@@ -2282,13 +2313,9 @@
     function updateModeIndicator() {
       // indicateur masqué — rien à faire
     }
-    function setButtonsDisabled(disabled) {
-      ['btn-execute', 'btn-combo', 'btn-scalar', 'btn-mute'].forEach(id => {
-        const el = document.getElementById(id); if (el) el.disabled = disabled;
-      });
-    }
-
-    // ===================== UI HELPERS =====================
+    // ═══════════════════════════════════════════════════
+    // SECTION 17 — UI HELPERS
+    // ═══════════════════════════════════════════════════
     function setMessage(msg) { document.getElementById('message-zone').textContent = msg; }
 
     function setAllDisabled(disabled) {
@@ -2338,7 +2365,9 @@
       });
     }
 
-    // ===================== EXECUTE VECTOR =====================
+    // ═══════════════════════════════════════════════════
+    // SECTION 18 — EXECUTE VECTOR
+    // ═══════════════════════════════════════════════════
     async function executeVector() {
       if (gameState.mode !== 'command' && gameState.mode !== 'idle') return;
       const dx = parseInt(document.getElementById('inp-x').value) || 0;
@@ -2394,7 +2423,7 @@
         gameState.mode = 'idle';
         setAllDisabled(false);
         document.getElementById('btn-back-cmd').disabled = false;
-        clearInterval(monsterTimer); monsterTimer = setInterval(monsterAutoMove, {easy:10000,medium:7000,hard:4000}[gameState.difficulty]||7000);
+        resetMonsterTimer();
         updateCommandUI(); openOverlay();
         return;
       }
@@ -2417,11 +2446,13 @@
       gameState.mode = 'idle';
       setAllDisabled(false);
       document.getElementById('btn-back-cmd').disabled = false;
-      clearInterval(monsterTimer); monsterTimer = setInterval(monsterAutoMove, 10000);
+      resetMonsterTimer();
       updateCommandUI();
     }
 
-    // ===================== COMBO =====================
+    // ═══════════════════════════════════════════════════
+    // SECTION 19 — COMBO
+    // ═══════════════════════════════════════════════════
     function executeCombo() {
       if (gameState.selectedDeck.length !== 2) { setMessage('⚠ Sélectionne exactement 2 vecteurs du deck.'); return; }
       const [i1, i2] = gameState.selectedDeck;
@@ -2463,12 +2494,14 @@
         gameState.mode = 'idle';
         setAllDisabled(false);
         document.getElementById('btn-back-cmd').disabled = false;
-        clearInterval(monsterTimer); monsterTimer = setInterval(monsterAutoMove, {easy:10000,medium:7000,hard:4000}[gameState.difficulty]||7000);
+        resetMonsterTimer();
         updateCommandUI();
       });
     }
 
-    // ===================== SCALAR =====================
+    // ═══════════════════════════════════════════════════
+    // SECTION 20 — SCALAR
+    // ═══════════════════════════════════════════════════
     function executeScalar() {
       if (gameState.selectedDeck.length !== 1) { setMessage('⚠ Sélectionne exactement 1 vecteur du deck.'); return; }
       const coeff = parseFloat(document.getElementById('scalar-input').value);
@@ -2484,7 +2517,9 @@
       setMessage(`× ${coeff} appliqué → (${scaled.x}, ${scaled.y}). Clique EXÉCUTER pour confirmer.`);
     }
 
-    // ===================== MENU =====================
+    // ═══════════════════════════════════════════════════
+    // SECTION 21 — MENU
+    // ═══════════════════════════════════════════════════
     function renderMenu() {
       const highest = parseInt(localStorage.getItem('vhHighest') || '0');
       const sel = document.getElementById('map-selector');
@@ -2501,7 +2536,9 @@
       });
     }
 
-    // ===================== START GAME =====================
+    // ═══════════════════════════════════════════════════
+    // SECTION 22 — START GAME
+    // ═══════════════════════════════════════════════════
     function startGame(mapIndex, playerTurnOverride) {
       gameState.currentMap = mapIndex;
       if (playerTurnOverride !== undefined) gameState.playerTurn = playerTurnOverride;
@@ -2520,9 +2557,7 @@
       gameState.flashObstacle = null;
       gameState.flashTimer = 0;
       setAllDisabled(false);
-      const diffInterval = {easy: 10000, medium: 7000, hard: 4000};
-      clearInterval(monsterTimer);
-      monsterTimer = setInterval(monsterAutoMove, diffInterval[gameState.difficulty] || 10000);
+      resetMonsterTimer();
       document.getElementById('screen-menu').style.display = 'none';
       document.getElementById('screen-gameover').style.display = 'none';
       document.getElementById('screen-win').style.display = 'none';
@@ -2544,16 +2579,18 @@
       requestAnimationFrame(renderLoop);
     }
 
-    // ===================== RENDER3D — VUE TOP-DOWN 2D (MAP 0 : Le Manoir Blackwood) =====================
+    // ═══════════════════════════════════════════════════
+    // SECTION 23 — RENDER 2D (MAP 0 : Le Manoir Blackwood)
+    // ═══════════════════════════════════════════════════
 
     function drawFloor2D(ctx, room) {
       const {cx:rx, cy:ry} = worldTo2D(room.x1, room.y2);
-      const rw = (room.x2 - room.x1) * SC2D, rh = (room.y2 - room.y1) * SC2D;
+      const rw = (room.x2 - room.x1) * scale2D, rh = (room.y2 - room.y1) * scale2D;
       const f = room.floor;
       ctx.save(); ctx.beginPath(); ctx.rect(rx, ry, rw, rh); ctx.clip();
       switch (f.type) {
         case 'checkerboard': {
-          const ts = f.tileSize * SC2D;
+          const ts = f.tileSize * scale2D;
           for (let tx = rx; tx < rx + rw; tx += ts)
             for (let ty = ry; ty < ry + rh; ty += ts) {
               ctx.fillStyle = ((Math.floor((tx-rx)/ts) + Math.floor((ty-ry)/ts)) % 2 === 0) ? f.colorA : f.colorB;
@@ -2563,7 +2600,7 @@
         }
         case 'chevron': {
           ctx.fillStyle = f.colorA; ctx.fillRect(rx, ry, rw, rh);
-          const ps = f.tileSize * SC2D;
+          const ps = f.tileSize * scale2D;
           ctx.strokeStyle = f.colorB; ctx.lineWidth = 1;
           for (let i = -rh; i < rw + rh; i += ps * 1.5) {
             ctx.beginPath(); ctx.moveTo(rx+i, ry); ctx.lineTo(rx+i+rh, ry+rh); ctx.stroke();
@@ -2572,7 +2609,7 @@
           break;
         }
         case 'planks': {
-          const pw = f.plankWidth * SC2D; let yy = ry, tog = 0;
+          const pw = f.plankWidth * scale2D; let yy = ry, tog = 0;
           while (yy < ry + rh) {
             ctx.fillStyle = tog % 2 === 0 ? f.colorA : f.colorB; ctx.fillRect(rx, yy, rw, pw);
             ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(rx, yy+pw-1, rw, 1);
@@ -2585,7 +2622,7 @@
         }
         case 'tiles': {
           ctx.fillStyle = f.colorA; ctx.fillRect(rx, ry, rw, rh);
-          const tts = f.tileSize * SC2D;
+          const tts = f.tileSize * scale2D;
           ctx.strokeStyle = f.groutColor || 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1;
           for (let tx=rx; tx<rx+rw; tx+=tts) { ctx.beginPath(); ctx.moveTo(tx,ry); ctx.lineTo(tx,ry+rh); ctx.stroke(); }
           for (let ty=ry; ty<ry+rh; ty+=tts) { ctx.beginPath(); ctx.moveTo(rx,ty); ctx.lineTo(rx+rw,ty); ctx.stroke(); }
@@ -2596,24 +2633,24 @@
           g.addColorStop(0,f.colorA); g.addColorStop(0.5,f.colorB); g.addColorStop(1,f.colorA);
           ctx.fillStyle=g; ctx.fillRect(rx,ry,rw,rh);
           ctx.strokeStyle='rgba(0,0,0,0.15)'; ctx.lineWidth=0.5;
-          const ds=2*SC2D;
+          const ds=2*scale2D;
           for (let dx=-rh; dx<rw+rh; dx+=ds) { ctx.beginPath(); ctx.moveTo(rx+dx,ry); ctx.lineTo(rx+dx+rh*0.5,ry+rh); ctx.stroke(); }
           break;
         }
         case 'irregular_stones': {
           ctx.fillStyle=f.colorA; ctx.fillRect(rx,ry,rw,rh);
           ctx.strokeStyle=f.colorB; ctx.lineWidth=1.5;
-          for (let sx=rx; sx<rx+rw; sx+=3*SC2D)
-            for (let sy=ry; sy<ry+rh; sy+=2.5*SC2D) {
-              const ox=Math.sin(sx*0.1+sy*0.07)*0.5*SC2D, oy=Math.sin(sx*0.07+sy*0.11)*0.5*SC2D;
-              const sw=(2.5+Math.sin(sx*0.13+sy*0.09))*SC2D, sh=(2+Math.sin(sx*0.09+sy*0.13))*SC2D;
+          for (let sx=rx; sx<rx+rw; sx+=3*scale2D)
+            for (let sy=ry; sy<ry+rh; sy+=2.5*scale2D) {
+              const ox=Math.sin(sx*0.1+sy*0.07)*0.5*scale2D, oy=Math.sin(sx*0.07+sy*0.11)*0.5*scale2D;
+              const sw=(2.5+Math.sin(sx*0.13+sy*0.09))*scale2D, sh=(2+Math.sin(sx*0.09+sy*0.13))*scale2D;
               ctx.strokeRect(sx+ox,sy+oy,sw,sh);
               if (Math.sin(sx*7.3+sy*11.1)>0.7) { ctx.fillStyle='rgba(0,0,0,0.1)'; ctx.fillRect(sx+ox,sy+oy,sw,sh); ctx.fillStyle=f.colorA; }
             }
           break;
         }
         case 'hex_tiles': {
-          const hs=f.tileSize*SC2D; ctx.fillStyle=f.colorA; ctx.fillRect(rx,ry,rw,rh);
+          const hs=f.tileSize*scale2D; ctx.fillStyle=f.colorA; ctx.fillRect(rx,ry,rw,rh);
           ctx.strokeStyle='rgba(0,0,0,0.3)'; ctx.lineWidth=1; let row=0;
           for (let ty2=ry; ty2<ry+rh; ty2+=hs*0.866) {
             const off=row%2===0?0:hs*0.5;
@@ -2630,7 +2667,7 @@
         case 'lacquered': {
           ctx.fillStyle=f.colorA; ctx.fillRect(rx,ry,rw,rh);
           ctx.strokeStyle=f.colorB; ctx.lineWidth=0.5;
-          const lps=f.tileSize*SC2D;
+          const lps=f.tileSize*scale2D;
           for (let lx=rx; lx<rx+rw; lx+=lps) { ctx.beginPath(); ctx.moveTo(lx,ry); ctx.lineTo(lx,ry+rh); ctx.stroke(); }
           const ref=ctx.createRadialGradient(rx+rw/2,ry+rh/2,0,rx+rw/2,ry+rh/2,rw*0.4);
           ref.addColorStop(0,'rgba(255,255,255,0.04)'); ref.addColorStop(1,'rgba(0,0,0,0)');
@@ -2648,7 +2685,7 @@
         }
         case 'stoneMoss': {
           ctx.fillStyle=f.colorA; ctx.fillRect(rx,ry,rw,rh);
-          const sms=f.tileSize*SC2D;
+          const sms=f.tileSize*scale2D;
           for (let smx=rx; smx<rx+rw; smx+=sms)
             for (let smy=ry; smy<ry+rh; smy+=sms) {
               ctx.strokeStyle='rgba(0,0,0,0.4)'; ctx.lineWidth=1.5; ctx.strokeRect(smx,smy,sms,sms);
@@ -2660,7 +2697,7 @@
       }
       if (room.hasRug) {
         const {cx:rugX,cy:rugY}=worldTo2D(room.rugX1,room.rugY2);
-        const rugW=(room.rugX2-room.rugX1)*SC2D, rugH=(room.rugY2-room.rugY1)*SC2D;
+        const rugW=(room.rugX2-room.rugX1)*scale2D, rugH=(room.rugY2-room.rugY1)*scale2D;
         ctx.fillStyle=room.rugColor+'cc'; ctx.fillRect(rugX,rugY,rugW,rugH);
         if (room.rugBorder) { ctx.strokeStyle=room.rugBorder; ctx.lineWidth=2; ctx.strokeRect(rugX+3,rugY+3,rugW-6,rugH-6); ctx.strokeRect(rugX+5,rugY+5,rugW-10,rugH-10); }
       }
@@ -2669,12 +2706,12 @@
 
     function drawCeiling2D(ctx, room) {
       const {cx:rx,cy:ry}=worldTo2D(room.x1,room.y2);
-      const rw=(room.x2-room.x1)*SC2D, rh=(room.y2-room.y1)*SC2D;
+      const rw=(room.x2-room.x1)*scale2D, rh=(room.y2-room.y1)*scale2D;
       const c=room.ceiling; if (!c) return;
       ctx.save(); ctx.beginPath(); ctx.rect(rx,ry,rw,rh); ctx.clip();
       ctx.fillStyle=c.color+'18'; ctx.fillRect(rx,ry,rw,rh);
       if (c.hasBeams) {
-        const sp=c.beamSpacing*SC2D; ctx.fillStyle=(c.beamColor||'#120d08')+'30';
+        const sp=c.beamSpacing*scale2D; ctx.fillStyle=(c.beamColor||'#120d08')+'30';
         for (let bx=rx; bx<rx+rw; bx+=sp) ctx.fillRect(bx,ry,sp*0.2,rh);
         for (let by=ry; by<ry+rh; by+=sp) ctx.fillRect(rx,by,rw,sp*0.15);
       }
@@ -2685,16 +2722,16 @@
       }
       if (c.hasChandelier) {
         const {cx:chx,cy:chy}=worldTo2D(c.chandelierPos.x,c.chandelierPos.y);
-        const cg=ctx.createRadialGradient(chx,chy,0,chx,chy,SC2D*3);
+        const cg=ctx.createRadialGradient(chx,chy,0,chx,chy,scale2D*3);
         cg.addColorStop(0,'rgba(255,200,80,0.25)'); cg.addColorStop(1,'rgba(255,150,0,0)');
-        ctx.fillStyle=cg; ctx.beginPath(); ctx.arc(chx,chy,SC2D*3,0,Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(chx,chy,SC2D*0.3,0,Math.PI*2); ctx.fillStyle='#e8c860'; ctx.fill();
+        ctx.fillStyle=cg; ctx.beginPath(); ctx.arc(chx,chy,scale2D*3,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(chx,chy,scale2D*0.3,0,Math.PI*2); ctx.fillStyle='#e8c860'; ctx.fill();
       }
       if (c.hasFlickerLight && Math.random()>0.03) {
         const {cx:lx,cy:ly}=worldTo2D((room.x1+room.x2)/2,(room.y1+room.y2)/2);
-        const lg=ctx.createRadialGradient(lx,ly,0,lx,ly,SC2D*4);
+        const lg=ctx.createRadialGradient(lx,ly,0,lx,ly,scale2D*4);
         lg.addColorStop(0,'rgba(200,220,255,0.15)'); lg.addColorStop(1,'rgba(0,0,0,0)');
-        ctx.fillStyle=lg; ctx.beginPath(); ctx.arc(lx,ly,SC2D*4,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle=lg; ctx.beginPath(); ctx.arc(lx,ly,scale2D*4,0,Math.PI*2); ctx.fill();
       }
       ctx.restore();
     }
@@ -2703,7 +2740,7 @@
       const map=MAPS[gameState.currentMap]; if (!map.walls) return;
       map.walls.forEach(wall => {
         const {cx:wx,cy:wy}=worldTo2D(wall.x1,wall.y2);
-        const ww=(wall.x2-wall.x1)*SC2D, wh=(wall.y2-wall.y1)*SC2D;
+        const ww=(wall.x2-wall.x1)*scale2D, wh=(wall.y2-wall.y1)*scale2D;
         ctx.fillStyle=wall.color||'#1a1208'; ctx.fillRect(wx,wy,ww,wh);
         ctx.strokeStyle='rgba(0,0,0,0.5)'; ctx.lineWidth=1;
         const bh=Math.max(wh*0.3,4);
@@ -2769,7 +2806,7 @@
         ctx.beginPath(); ctx.moveTo(cx-sz*0.4,cy-sz*0.3); ctx.lineTo(cx-sz*0.8,cy-sz*0.1); ctx.lineTo(cx-sz*0.4,cy+sz*0.1); ctx.closePath(); ctx.fill();
         ctx.beginPath(); ctx.moveTo(cx+sz*0.4,cy-sz*0.3); ctx.lineTo(cx+sz*0.8,cy-sz*0.1); ctx.lineTo(cx+sz*0.4,cy+sz*0.1); ctx.closePath(); ctx.fill();
       }
-      const SC=SC2D; let c;
+      const SC=scale2D; let c;
       c=worldTo2D(-5,-15); armor(c.cx,c.cy,SC*0.8);
       c=worldTo2D( 5,-15); armor(c.cx,c.cy,SC*0.8);
       c=worldTo2D(-7,-8);  column(c.cx,c.cy,SC*0.5);
@@ -2785,7 +2822,7 @@
       const map=MAPS[gameState.currentMap];
       map.obstacles.forEach(obs => {
         const {cx:px,cy:py}=worldTo2D(obs.x1,obs.y2);
-        const w=(obs.x2-obs.x1)*SC2D, h=(obs.y2-obs.y1)*SC2D;
+        const w=(obs.x2-obs.x1)*scale2D, h=(obs.y2-obs.y1)*scale2D;
         const isFlash=gameState.flashObstacle===obs && gameState.flashTimer>0;
         ctx.fillStyle=isFlash?'#5a1a08':(obs.color||'#241608'); ctx.fillRect(px,py,w,h);
         ctx.strokeStyle=isFlash?'#ff2200':'rgba(255,200,150,0.2)'; ctx.lineWidth=isFlash?2:0.5;
@@ -2800,7 +2837,7 @@
       const pulse=0.5+0.5*Math.sin(ts/400);
       map.deathZones.forEach(dz => {
         const {cx:px,cy:py}=worldTo2D(dz.x1,dz.y2);
-        const w=(dz.x2-dz.x1)*SC2D, h=(dz.y2-dz.y1)*SC2D;
+        const w=(dz.x2-dz.x1)*scale2D, h=(dz.y2-dz.y1)*scale2D;
         const dcx=px+w/2, dcy=py+h/2;
         ctx.fillStyle=`rgba(50,0,0,${0.55+0.25*pulse})`; ctx.fillRect(px,py,w,h);
         const dg=ctx.createRadialGradient(dcx,dcy,0,dcx,dcy,Math.max(w,h)*0.5);
@@ -2815,7 +2852,7 @@
       const pulse=0.5+0.5*Math.sin(ts/600);
       map.exits.forEach(exit => {
         const {cx:px,cy:py}=worldTo2D(exit.x1,exit.y2);
-        const w=(exit.x2-exit.x1)*SC2D, h=(exit.y2-exit.y1)*SC2D;
+        const w=(exit.x2-exit.x1)*scale2D, h=(exit.y2-exit.y1)*scale2D;
         const ecx=px+w/2, ecy=py+h/2;
         ctx.fillStyle=`rgba(0,70,0,${0.35+0.2*pulse})`; ctx.fillRect(px,py,w,h);
         const eg=ctx.createRadialGradient(ecx,ecy,0,ecx,ecy,Math.max(w,h)*0.7);
@@ -2842,7 +2879,7 @@
       trail.forEach((pos,i) => {
         const t=(i+1)/trail.length;
         const {cx,cy}=worldTo2D(pos.x,pos.y);
-        ctx.beginPath(); ctx.arc(cx,cy,Math.max(1,t*SC2D*0.12),0,Math.PI*2);
+        ctx.beginPath(); ctx.arc(cx,cy,Math.max(1,t*scale2D*0.12),0,Math.PI*2);
         ctx.fillStyle=`rgba(${pal.trailRGB},${t*0.45})`; ctx.fill();
       });
     }
@@ -2850,7 +2887,7 @@
     function drawPlayer2D(ctx, ts) {
       const pp=gameState.playerPos;
       const {cx,cy}=worldTo2D(pp.x,pp.y);
-      const r=SC2D*0.38;
+      const r=scale2D*0.38;
       const lv=gameState.lastVector;
       let angle=Math.PI/2;
       if (lv.x!==0||lv.y!==0) angle=Math.atan2(lv.y,-lv.x);
@@ -2858,14 +2895,14 @@
       ctx.translate(cx,cy);
       ctx.rotate(angle);
       // Halo cyan
-      ctx.shadowBlur=12; ctx.shadowColor='#00ddff';
+      ctx.shadowBlur=5; ctx.shadowColor='#00aabb';
       // Corps pilule
       ctx.beginPath(); ctx.ellipse(0,0,r*0.55,r,0,0,Math.PI*2);
-      ctx.fillStyle='#00ddff'; ctx.fill();
-      ctx.strokeStyle='#006688'; ctx.lineWidth=1.5; ctx.stroke();
+      ctx.fillStyle='#00aabb'; ctx.fill();
+      ctx.strokeStyle='#005566'; ctx.lineWidth=1.5; ctx.stroke();
       ctx.shadowBlur=0;
       // Épaules
-      ctx.fillStyle='#00aacc';
+      ctx.fillStyle='#008899';
       ctx.beginPath(); ctx.ellipse(-r*0.72,r*0.22,r*0.28,r*0.18,0.3,0,Math.PI*2); ctx.fill();
       ctx.beginPath(); ctx.ellipse( r*0.72,r*0.22,r*0.28,r*0.18,-0.3,0,Math.PI*2); ctx.fill();
       ctx.restore();
@@ -2874,7 +2911,7 @@
     function drawMonster2D(ctx, ts) {
       const mp=gameState.monsterPos;
       const {cx,cy}=worldTo2D(mp.x,mp.y);
-      const r=SC2D*0.45, pulse=1+0.1*Math.sin(ts*0.005);
+      const r=scale2D*0.45, pulse=1+0.1*Math.sin(ts*0.005);
       const pal=MAPS[gameState.currentMap].palette;
       ctx.save(); ctx.translate(cx,cy); ctx.rotate(ts*0.0008); ctx.scale(pulse,pulse);
       ctx.beginPath();
@@ -2888,20 +2925,60 @@
       const pp=gameState.playerPos;
       const {cx,cy}=worldTo2D(pp.x,pp.y);
       const flicker=0.88+0.12*Math.sin(ts*0.009);
-      const lightR=SC2D*6.5*flicker;
-      if (devMode) { ctx.fillStyle='rgba(0,0,0,0.1)'; ctx.fillRect(0,0,W,H); return; }
+      const lightR=scale2D*6.5*flicker;
+      if (devMode) { return; }
       const grad=ctx.createRadialGradient(cx,cy,0,cx,cy,lightR);
-      grad.addColorStop(0,'rgba(0,0,0,0)'); grad.addColorStop(0.35,'rgba(0,0,0,0.15)');
-      grad.addColorStop(0.65,'rgba(0,0,0,0.65)'); grad.addColorStop(1,'rgba(0,0,0,0.92)');
+      grad.addColorStop(0,'rgba(0,0,0,0)'); grad.addColorStop(0.35,'rgba(0,0,0,0.05)');
+      grad.addColorStop(0.65,'rgba(0,0,0,0.42)'); grad.addColorStop(1,'rgba(0,0,0,0.76)');
       ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
       // Lumière d'ambiance de la pièce courante
       ROOMS.forEach(room => {
         if (pp.x>=room.x1&&pp.x<=room.x2&&pp.y>=room.y1&&pp.y<=room.y2&&room.ambientLight) {
-          const ag=ctx.createRadialGradient(cx,cy,0,cx,cy,lightR*0.8);
-          ag.addColorStop(0,room.ambientLight); ag.addColorStop(1,'rgba(0,0,0,0)');
-          ctx.fillStyle=ag; ctx.fillRect(0,0,W,H);
+          const ambientGrad=ctx.createRadialGradient(cx,cy,0,cx,cy,lightR*0.8);
+          ambientGrad.addColorStop(0,room.ambientLight); ambientGrad.addColorStop(1,'rgba(0,0,0,0)');
+          ctx.fillStyle=ambientGrad; ctx.fillRect(0,0,W,H);
         }
       });
+      // Petites lumières statiques (chandeliers, candélabres, lueur de lune)
+      ctx.save();
+      ctx.globalCompositeOperation='screen';
+      const map=MAPS[gameState.currentMap];
+      ROOMS.forEach(room => {
+        if (room.ceiling && room.ceiling.hasChandelier) {
+          const cp=room.ceiling.chandelierPos;
+          const {cx:lx,cy:ly}=worldTo2D(cp.x,cp.y);
+          const f=0.82+0.18*Math.sin(ts*0.007+cp.x);
+          const lr=scale2D*5*f;
+          const pointLightGrad=ctx.createRadialGradient(lx,ly,0,lx,ly,lr);
+          pointLightGrad.addColorStop(0,`rgba(255,210,100,${0.30*f})`);
+          pointLightGrad.addColorStop(0.4,`rgba(200,130,30,${0.15*f})`);
+          pointLightGrad.addColorStop(1,'rgba(0,0,0,0)');
+          ctx.fillStyle=pointLightGrad; ctx.fillRect(0,0,W,H);
+        }
+        if (room.name==="Jardin d'Hiver"||room.name==="Salle des Miroirs") {
+          const {cx:rx,cy:ry}=worldTo2D((room.x1+room.x2)/2,(room.y1+room.y2)/2);
+          const lr=scale2D*6;
+          const pointLightGrad=ctx.createRadialGradient(rx,ry,0,rx,ry,lr);
+          pointLightGrad.addColorStop(0,'rgba(160,190,255,0.10)');
+          pointLightGrad.addColorStop(0.5,'rgba(100,140,255,0.05)');
+          pointLightGrad.addColorStop(1,'rgba(0,0,0,0)');
+          ctx.fillStyle=pointLightGrad; ctx.fillRect(0,0,W,H);
+        }
+      });
+      map.obstacles.forEach(obs => {
+        if (/cand[eé]labre/i.test(obs.label||'')) {
+          const mx=(obs.x1+obs.x2)/2, my=(obs.y1+obs.y2)/2;
+          const {cx:lx,cy:ly}=worldTo2D(mx,my);
+          const f=0.78+0.22*Math.sin(ts*0.011+mx*0.5);
+          const lr=scale2D*3*f;
+          const chandelierGrad=ctx.createRadialGradient(lx,ly,0,lx,ly,lr);
+          chandelierGrad.addColorStop(0,`rgba(255,170,50,${0.24*f})`);
+          chandelierGrad.addColorStop(0.5,`rgba(160,80,10,${0.12*f})`);
+          chandelierGrad.addColorStop(1,'rgba(0,0,0,0)');
+          ctx.fillStyle=chandelierGrad; ctx.fillRect(0,0,W,H);
+        }
+      });
+      ctx.restore();
     }
 
     function drawUIOverlayRight(ctx) {
@@ -2938,7 +3015,7 @@
     }
 
     function render3D(ts) {
-      SC2D = Math.min(W * 0.92 / 40, H * 0.92 / 40);
+      scale2D = Math.min(W * 0.92 / 40, H * 0.92 / 40);
       const map = MAPS[gameState.currentMap];
       ctx.clearRect(0, 0, W, H);
       ctx.fillStyle = map.bgColor; ctx.fillRect(0, 0, W, H);
@@ -2951,20 +3028,22 @@
       drawExits2D(ctx, ts);
       drawParticles2D(ctx, ts);
       drawTrail2D(ctx);
+      drawLightOverlay2D(ctx, ts);
       drawPlayer2D(ctx, ts);
       drawMonster2D(ctx, ts);
-      drawLightOverlay2D(ctx, ts);
       drawUIOverlayRight(ctx);
     }
 
-    // ===================== COMMAND MODE — VUE TOP-DOWN =====================
+    // ═══════════════════════════════════════════════════
+    // SECTION 24 — COMMAND MODE (vue top-down, maps 1+)
+    // ═══════════════════════════════════════════════════
     function renderCommandView(ts) {
       if (gameState.currentMap === 0) { render3D(ts); return; }
       renderTopDown(ts);
     }
 
     function renderTopDown(ts) {
-      SC2D = Math.min(W * 0.92 / 40, H * 0.92 / 40);
+      scale2D = Math.min(W * 0.92 / 40, H * 0.92 / 40);
       const map = MAPS[gameState.currentMap];
       ctx.clearRect(0, 0, W, H);
       ctx.fillStyle = map.bgColor || '#080808'; ctx.fillRect(0, 0, W, H);
@@ -2983,7 +3062,7 @@
         ctx.save();
         map.walls.forEach(wall => {
           const {cx:px,cy:py}=worldTo2D(wall.x1,wall.y2);
-          const w=(wall.x2-wall.x1)*SC2D, h=(wall.y2-wall.y1)*SC2D;
+          const w=(wall.x2-wall.x1)*scale2D, h=(wall.y2-wall.y1)*scale2D;
           ctx.fillStyle='#1a1208'; ctx.strokeStyle='#5a3d1a'; ctx.lineWidth=1;
           ctx.fillRect(px,py,w,h); ctx.strokeRect(px,py,w,h);
         });
@@ -2993,9 +3072,9 @@
       drawExits2D(ctx, ts);
       drawObstacles2D(ctx);
       drawTrail2D(ctx);
+      drawLightOverlay2D(ctx, ts);
       drawPlayer2D(ctx, ts);
       drawMonster2D(ctx, ts);
-      drawLightOverlay2D(ctx, ts);
       // Labels
       const pp = gameState.playerPos;
       ctx.save();
@@ -3025,12 +3104,12 @@
       updateHealthDisplay();
     }
 
-    // ===================== RENDER LOOP (3rd-person perspective) =====================
-    let renderLoopRunning = false;
+    // ═══════════════════════════════════════════════════
+    // SECTION 25 — RENDER LOOP (3rd-person perspective)
+    // ═══════════════════════════════════════════════════
     function renderLoop(ts) {
       gameState.timestamp = ts;
-      if (gameState.mode === 'menu') { renderLoopRunning = false; return; }
-      renderLoopRunning = true;
+      if (gameState.mode === 'menu') { return; }
       // ── Dispatch mode commande (overlay 2D ouvert) → vue top-down ───
       if (overlayOpen) {
         ctx.shadowBlur = 0;
@@ -3494,52 +3573,48 @@
       }
 
       // ── Vignette manoir (bords très sombres, légère teinte violacée) ─
-      const fog = ctx.createRadialGradient(W/2, H*0.45, H*0.08, W/2, H*0.45, H*0.82);
-      fog.addColorStop(0, 'rgba(0,0,0,0)');
-      fog.addColorStop(0.6, 'rgba(0,0,0,0.2)');
-      fog.addColorStop(1, 'rgba(4,2,8,0.78)');
-      ctx.fillStyle = fog; ctx.fillRect(0, 0, W, H);
-      // Légère brume bleue/violette dans les coins (ombre glaciale)
-      ctx.save();
-      ctx.globalAlpha = 0.06;
-      ctx.fillStyle = '#1a0a2e';
-      ctx.fillRect(0, 0, W * 0.18, H);
-      ctx.fillRect(W * 0.82, 0, W * 0.18, H);
-      ctx.restore();
+      if (!devMode) {
+        const fog = ctx.createRadialGradient(W/2, H*0.45, H*0.08, W/2, H*0.45, H*0.82);
+        fog.addColorStop(0, 'rgba(0,0,0,0)');
+        fog.addColorStop(0.6, 'rgba(0,0,0,0.2)');
+        fog.addColorStop(1, 'rgba(4,2,8,0.78)');
+        ctx.fillStyle = fog; ctx.fillRect(0, 0, W, H);
+        // Légère brume bleue/violette dans les coins (ombre glaciale)
+        ctx.save();
+        ctx.globalAlpha = 0.06;
+        ctx.fillStyle = '#1a0a2e';
+        ctx.fillRect(0, 0, W * 0.18, H);
+        ctx.fillRect(W * 0.82, 0, W * 0.18, H);
+        ctx.restore();
+      }
 
-      // ── Lampe torche (cone 60°) — obscurité 0.82 ───────────────────
+      // ── Bougie (halo rond) — obscurité 0.72 ───────────────────
       if (!devMode) {
         const lightPt = project(pp.x, pp.y, 1.0);
         if (lightPt) {
-          const torchAngle = Math.atan2(cam.fy, cam.fx);
-          const coneHalf = Math.PI / 3; // ±30° → cone 60°
           const flicker = 0.92 + 0.08 * Math.sin(ts * 0.013);
-          const torchR = Math.max(W, H) * 1.2 * flicker;
+          const haloR = Math.max(W, H) * 0.40 * flicker;
 
-          // 1. Obscurité globale 0.82
-          ctx.fillStyle = 'rgba(0,0,0,0.82)';
+          // 1. Obscurité globale
+          ctx.fillStyle = 'rgba(0,0,0,0.62)';
           ctx.fillRect(0, 0, W, H);
 
-          // 2. Cone de lumière via screen blend
+          // 2. Halo rond via screen blend
           ctx.globalCompositeOperation = 'screen';
-          ctx.save();
-          ctx.beginPath();
-          ctx.moveTo(lightPt.sx, lightPt.sy);
-          ctx.arc(lightPt.sx, lightPt.sy, torchR, torchAngle - coneHalf, torchAngle + coneHalf);
-          ctx.closePath();
-          ctx.clip();
-          const coneGrad = ctx.createRadialGradient(
+          const haloGrad = ctx.createRadialGradient(
             lightPt.sx, lightPt.sy, 0,
-            lightPt.sx, lightPt.sy, torchR * 0.72
+            lightPt.sx, lightPt.sy, haloR
           );
-          coneGrad.addColorStop(0,    `rgba(220,210,180,${0.58 * flicker})`);
-          coneGrad.addColorStop(0.30, `rgba(160,140,90,${0.38 * flicker})`);
-          coneGrad.addColorStop(0.65, `rgba(60,40,10,${0.20 * flicker})`);
-          coneGrad.addColorStop(1,    'rgba(0,0,0,0)');
-          ctx.fillStyle = coneGrad;
+          haloGrad.addColorStop(0,    `rgba(180,155,100,${0.38 * flicker})`);
+          haloGrad.addColorStop(0.30, `rgba(110,80,35,${0.22 * flicker})`);
+          haloGrad.addColorStop(0.65, `rgba(45,25,5,${0.10 * flicker})`);
+          haloGrad.addColorStop(1,    'rgba(0,0,0,0)');
+          ctx.fillStyle = haloGrad;
           ctx.fillRect(0, 0, W, H);
-          ctx.restore();
           ctx.globalCompositeOperation = 'source-over';
+
+          // 3. Redessiner le joueur PAR-DESSUS le halo
+          drawPlayer3D(pp, pal);
         }
       }
 
@@ -3553,7 +3628,9 @@
       if (gameState.mode !== 'menu') requestAnimationFrame(renderLoop);
     }
 
-    // ===================== DOM READY =====================
+    // ═══════════════════════════════════════════════════
+    // SECTION 26 — DOM READY & EVENT LISTENERS
+    // ═══════════════════════════════════════════════════
     document.addEventListener('DOMContentLoaded', () => {
       resizeCanvas();
       gameState.selectedMenuMap = 0;

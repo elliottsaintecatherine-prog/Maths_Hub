@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>🎤 Karaoké Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="logo" id="logo">🎤 Karaoké Studio</div>
+  <div class="nav-right">
+    <button class="btn-nav" id="btn-theme">☀️ Mode Clair</button>
+    <button class="btn-nav" id="btn-hub">🏠 Hub</button>
+  </div>
+</nav>
+
+<!-- CONTENU PRINCIPAL -->
+<main class="main">
+
+  <!-- PANNEAU GAUCHE : Lecteur + Paroles -->
+  <section class="panel">
+    <div class="song-title-display" id="song-title-display">—</div>
+
+    <!-- Combobox de recherche -->
+    <div class="song-combo" id="song-combo">
+      <input type="text" id="song-search" class="song-search" placeholder="Rechercher une chanson…" autocomplete="off">
+      <div class="song-dropdown" id="song-dropdown"></div>
+    </div>
+    <select id="song-select" style="display:none"></select>
+
+    <!-- Lecteur audio -->
+    <div class="player-box">
+      <div class="progress-wrap">
+        <span id="t-cur">0:00</span>
+        <input type="range" class="seek-bar" id="seek-bar" value="0" min="0" max="100" step="0.1">
+        <span id="t-dur">0:00</span>
+      </div>
+      <div class="controls-row">
+        <div class="playback-btns">
+          <button class="btn-icon" id="btn-stop" title="Stop">⏮</button>
+          <button class="btn-icon btn-play-main" id="btn-play">▶</button>
+        </div>
+        <div class="mixer">
+          <button class="btn-isolate" id="btn-isolate">🪄 Isoler voix</button>
+          🗣️
+          <input type="range" id="vol-orig" min="0" max="1" step="0.01" value="0.5">
+          <span id="vol-val">50%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Paroles en mode normal (lecture seule) -->
+    <div class="lyrics-editor">
+      <div class="panel-title" style="font-size:14px;margin-bottom:10px">📝 Paroles</div>
+      <textarea id="normal-lyrics" rows="7" readonly style="cursor:default;opacity:.7;resize:none"></textarea>
+    </div>
+  </section>
+
+  <!-- PANNEAU DROIT : Enregistrement + Harmonie -->
+  <section class="panel rec-panel">
+
+    <!-- Éléments cachés pour la synchronisation des paroles -->
+    <div id="lyrics-bar" style="display:none">
+      <div id="lyric-cur"></div>
+      <div id="lyric-nxt"></div>
+    </div>
+
+    <div class="panel-title">🎙️ Enregistrement</div>
+    <button class="btn btn-primary" id="btn-mic">🎤 Activer le micro</button>
+    <div class="rec-row">
+      <button class="btn btn-danger btn-auto" id="btn-rec-start" disabled>🔴 Enregistrer</button>
+      <button class="btn btn-auto" id="btn-rec-stop" disabled>⏹️ Fin</button>
+    </div>
+    <div class="rec-listen-row">
+      <button class="btn btn-auto" id="btn-rec-listen" disabled>▶ Réécouter</button>
+    </div>
+
+    <!-- Canvas de visualisation pitch -->
+    <div class="pitch-wrap">
+      <div class="note-badge" id="note-badge">--</div>
+      <div class="pitch-deviation" id="pitch-deviation"></div>
+      <canvas id="pitch-canvas"></canvas>
+    </div>
+    <p class="rec-hint">Chante dans le micro pour voir ta justesse en temps réel.</p>
+
+    <!-- Harmonie IA -->
+    <div class="harmony-box">
+      <div class="panel-title">✨ Harmonie IA</div>
+      <label class="sub">Source :</label>
+      <select id="harmony-src">
+        <option value="original">🎵 Voix artiste</option>
+        <option value="record">🎙️ Mon enregistrement</option>
+      </select>
+      <label class="sub">Intervalle :</label>
+      <select id="harmony-semi">
+        <option value="3">Tierce Mineure (+3)</option>
+        <option value="4" selected>Tierce Majeure (+4)</option>
+        <option value="7">Quinte Juste (+7)</option>
+        <option value="12">Octave Sup. (+12)</option>
+        <option value="-5">Quarte Inf. (−5)</option>
+        <option value="-12">Octave Inf. (−12)</option>
+      </select>
+      <div class="harmony-row">
+        <button class="btn btn-primary btn-auto" id="btn-harmony-play">▶️ Harmoniser</button>
+        <button class="btn btn-auto" id="btn-harmony-stop" disabled>⏹️</button>
+      </div>
+    </div>
+
+  </section>
+
+</main>
+
+<!-- ÉLÉMENTS AUDIO -->
+<audio id="player-instru" preload="metadata"></audio>
+<audio id="player-orig"   preload="metadata"></audio>
+
+<!-- MODE DÉVELOPPEUR (overlay plein écran, PIN : 1702) -->
+<div class="dev-overlay" id="dev-overlay">
+  <div class="dev-shell">
+
+    <aside class="dev-sidebar">
+      <div class="dev-header">
+        <div class="dev-title-block">
+          <div class="dev-title">🛠️ Éditeur de Notes</div>
+          <div class="dev-sub">Blocs = notes MIDI + syllabe</div>
+        </div>
+        <button class="btn btn-auto btn-sm" id="btn-dev-close">✕</button>
+      </div>
+
+      <div class="dev-sidebar-scroll">
+
+        <!-- Chanson -->
+        <div class="dev-card">
+          <div class="dev-card-head">
+            <div class="dev-card-head-left"><div class="accent" style="background:#6366f1"></div>🎵 Chanson</div>
+            <div class="dev-card-head-right">
+              <button class="info-btn" data-tip="Sélectionne la chanson à éditer. Le piano roll charge automatiquement les notes sauvegardées.">?</button>
+              <span class="dev-chevron">▾</span>
+            </div>
+          </div>
+          <div class="dev-card-body">
+            <div class="dev-field"><label>Titre à éditer</label><select id="dev-song-sel"></select></div>
+            <div class="dev-status" id="dev-save-status">Sauvegarde : —</div>
+          </div>
+        </div>
+
+        <!-- Tempo -->
+        <div class="dev-card">
+          <div class="dev-card-head">
+            <div class="dev-card-head-left"><div class="accent" style="background:#f59e0b"></div>⏱️ Tempo & Grille</div>
+            <div class="dev-card-head-right">
+              <button class="info-btn" data-tip="BPM : vitesse de la chanson. Steps/Beat : précision de la grille. Offset : décalage en secondes avant la première note.">?</button>
+              <span class="dev-chevron">▾</span>
+            </div>
+          </div>
+          <div class="dev-card-body dev-grid2">
+            <div class="dev-field"><label>BPM</label><input id="dev-bpm" type="number" min="30" max="260" value="120"></div>
+            <div class="dev-field">
+              <label>Steps / Beat</label>
+              <select id="dev-steps">
+                <option value="1">1 – noires</option>
+                <option value="2">2 – croches</option>
+                <option value="4" selected>4 – dbl-croches</option>
+                <option value="8">8</option>
+              </select>
+            </div>
+            <div class="dev-field" style="grid-column:1/-1"><label>Offset début (sec)</label><input id="dev-offset" type="number" step="0.01" value="0"></div>
+          </div>
+        </div>
+
+        <!-- Outils -->
+        <div class="dev-card">
+          <div class="dev-card-head">
+            <div class="dev-card-head-left"><div class="accent" style="background:#10b981"></div>🧱 Outils</div>
+            <div class="dev-card-head-right">
+              <button class="info-btn" data-tip="✏️ Dessiner : clic-glisser pour créer un bloc. 🖱️ Sélection : déplacer/redimensionner, double-clic pour syllabe. 🧭 Pan : déplacer la vue.">?</button>
+              <span class="dev-chevron">▾</span>
+            </div>
+          </div>
+          <div class="dev-card-body">
+            <div class="dev-row" style="margin-bottom:8px">
+              <div class="dev-toolbar" role="group">
+                <button class="btn active-tool" id="dev-tool-draw">✏️ Dessiner</button>
+                <button class="btn" id="dev-tool-sel">🖱️ Sélection</button>
+                <button class="btn" id="dev-tool-pan">🧭 Pan</button>
+              </div>
+            </div>
+            <div class="dev-grid2">
+              <div class="dev-field"><label>Zoom <button class="info-btn" data-tip="Pixels par seconde. Plus grand = vue plus zoomée.">?</button></label><input id="dev-zoom" type="number" min="40" max="400" step="10" value="140"></div>
+              <div class="dev-field"><label>Scroll (sec) <button class="info-btn" data-tip="Position horizontale de la vue en secondes.">?</button></label><input id="dev-scroll" type="number" min="0" step="0.1" value="0"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Auto-écoute -->
+        <div class="dev-card">
+          <div class="dev-card-head">
+            <div class="dev-card-head-left"><div class="accent" style="background:#ec4899"></div>🤖 Auto-écoute</div>
+            <div class="dev-card-head-right">
+              <button class="info-btn" data-tip="Lance la musique et génère des blocs automatiquement en analysant la hauteur de la piste choisie. Nécessite un serveur HTTP.">?</button>
+              <span class="dev-chevron">▾</span>
+            </div>
+          </div>
+          <div class="dev-card-body">
+            <div class="dev-grid2" style="margin-bottom:8px">
+              <div class="dev-field">
+                <label>Source <button class="info-btn" data-tip="Voix : analyse la piste vocale. Instru : analyse la mélodie instrumentale.">?</button></label>
+                <select id="dev-auto-src">
+                  <option value="orig" selected>🗣️ Voix</option>
+                  <option value="instru">🎵 Instru</option>
+                </select>
+              </div>
+              <div class="dev-field">
+                <label>Durée min (ms) <button class="info-btn" data-tip="Une note doit durer au moins N ms pour être créée.">?</button></label>
+                <input id="dev-auto-ms" type="number" min="60" max="800" step="10" value="140">
+              </div>
+            </div>
+            <div class="dev-row">
+              <button class="btn btn-primary btn-auto" id="btn-auto-start">▶️ Auto</button>
+              <button class="btn btn-auto" id="btn-auto-stop" disabled>⏹️ Stop</button>
+              <button class="btn btn-auto btn-sm" id="btn-auto-clear">🧹 Effacer</button>
+            </div>
+            <div class="dev-status" id="dev-auto-status">Auto : prêt</div>
+          </div>
+        </div>
+
+        <!-- Paroles -->
+        <div class="dev-card">
+          <div class="dev-card-head">
+            <div class="dev-card-head-left"><div class="accent" style="background:#0ea5e9"></div>📝 Paroles</div>
+            <div class="dev-card-head-right">
+              <button class="info-btn" data-tip="Colle les paroles. Espace = séparateur. '--' entre deux syllabes d'un même mot. Saut de ligne = nouvelle ligne karaoké.">?</button>
+              <span class="dev-chevron">▾</span>
+            </div>
+          </div>
+          <div class="dev-card-body">
+            <div class="dev-field">
+              <label>Syllabes <button class="info-btn" data-tip="Ex : An--dro--me--da look what you've done — chaque espace ou '--' = une note.">?</button></label>
+              <textarea class="dev-field" id="dev-lyrics" rows="5" style="resize:vertical;margin:0"></textarea>
+            </div>
+            <div class="dev-row" style="margin-top:8px;justify-content:space-between">
+              <label style="display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted);cursor:pointer">
+                <input type="checkbox" id="dev-lyrics-auto" checked> Auto-assign
+              </label>
+              <button class="btn btn-primary btn-sm" id="btn-lyrics-apply">✅ Appliquer</button>
+            </div>
+            <div class="dev-status" id="dev-lyrics-status">Paroles : —</div>
+          </div>
+        </div>
+
+        <!-- Export -->
+        <div class="dev-card">
+          <div class="dev-card-head">
+            <div class="dev-card-head-left"><div class="accent" style="background:#a855f7"></div>⬇️ Export</div>
+            <div class="dev-card-head-right">
+              <button class="info-btn" data-tip="Télécharge les notes au format JSON pour les sauvegarder hors du navigateur.">?</button>
+              <span class="dev-chevron">▾</span>
+            </div>
+          </div>
+          <div class="dev-card-body">
+            <button class="btn btn-primary btn-auto btn-sm" id="btn-dev-export">📥 Télécharger JSON</button>
+          </div>
+        </div>
+
+        <!-- Liste des notes -->
+        <div class="dev-card">
+          <div class="dev-card-head">
+            <div class="dev-card-head-left"><div class="accent" style="background:#64748b"></div>🧾 Notes créées</div>
+            <div class="dev-card-head-right">
+              <button class="info-btn" data-tip="Liste de tous les blocs du piano roll, triés par temps.">?</button>
+              <span class="dev-chevron">▾</span>
+            </div>
+          </div>
+          <div class="dev-card-body">
+            <div class="dev-note-list" id="dev-note-list"></div>
+          </div>
+        </div>
+
+      </div><!-- /sidebar-scroll -->
+
+      <button class="dev-save-btn" id="btn-dev-save">💾 Enregistrer</button>
+    </aside>
+
+    <!-- CANVAS PIANO ROLL -->
+    <section class="dev-main">
+      <div class="dev-topbar">
+        <div>
+          <div class="dev-topbar-title">Piano Roll</div>
+          <div style="font-size:12px;color:var(--muted)" id="dev-song-hint">Titre : —</div>
+        </div>
+        <div class="dev-row" style="gap:14px;align-items:center;flex-wrap:wrap">
+          <button id="btn-topbar-auto" style="background:var(--success);border:none;color:#fff;border-radius:8px;padding:5px 14px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px" title="Lance la lecture et place les notes automatiquement">🎙️ Enregistrer les notes</button>
+          <button id="btn-topbar-auto-stop" style="background:transparent;border:1px solid var(--border);color:var(--text);border-radius:8px;padding:5px 14px;font-size:13px;font-weight:700;cursor:pointer;display:none" title="Arrêter l'enregistrement automatique">⏹️ Stop</button>
+          <div style="width:1px;height:24px;background:var(--border)"></div>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)">
+            Min <input type="range" id="midi-min-slider" min="0" max="100" value="40" style="width:80px;accent-color:var(--primary)">
+            <span id="midi-min-val" style="min-width:28px">C2</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)">
+            Max <input type="range" id="midi-max-slider" min="24" max="127" value="84" style="width:80px;accent-color:var(--primary)">
+            <span id="midi-max-val" style="min-width:28px">C6</span>
+          </label>
+          <button id="btn-autofit" style="background:transparent;border:1px solid var(--border);color:var(--text);border-radius:6px;padding:3px 10px;font-size:12px;cursor:pointer" title="Ajuster la plage MIDI aux notes existantes">⇲ Auto-fit</button>
+          <span style="font-size:12px;color:var(--muted)">Suppr = effacer · Entrée = syllabe · Ctrl+S = sauver</span>
+        </div>
+      </div>
+      <div class="dev-canvas-wrap" id="dev-canvas-wrap">
+        <canvas id="editor-canvas"></canvas>
+        <div class="dev-hud">
+          <span>Outil : <span class="dev-hud-pill" id="hud-tool">Dessiner</span></span>
+          <span>Sel : <span class="dev-hud-pill" id="hud-sel">—</span></span>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<!-- TOOLTIP -->
+<div id="tooltip-popup"></div>
+
+<!-- SCRIPTS (ordre important : catalogue → app → dev) -->
+<script src="catalogue.js"></script>
+<script src="app.js"></script>
+<script src="dev.js"></script>
+
+</body>
+</html>

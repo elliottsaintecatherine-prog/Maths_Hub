@@ -50,7 +50,6 @@
           🗣️
           <input type="range" id="vol-orig" min="0" max="1" step="0.01" value="0.5">
           <span id="vol-val">50%</span>
-          <button id="btn-isolate-voice" type="button" role="switch" aria-pressed="false" title="Isoler la voix (soustraction de phase)">🎤 Isoler la voix</button>
         </div>
       </div>
     </div>
@@ -255,17 +254,20 @@
           </div>
         </div>
 
-        <!-- Export -->
+        <!-- Export / Import -->
         <div class="dev-card">
           <div class="dev-card-head">
-            <div class="dev-card-head-left"><div class="accent" style="background:#a855f7"></div>⬇️ Export</div>
+            <div class="dev-card-head-left"><div class="accent" style="background:#a855f7"></div>⬇️ Export / Import</div>
             <div class="dev-card-head-right">
-              <button class="info-btn" data-tip="Télécharge les notes au format JSON pour les sauvegarder hors du navigateur.">?</button>
+              <button class="info-btn" data-tip="Export : télécharge toutes les paroles et notes de toutes les chansons dans un fichier JSON. Import : charge ce fichier pour mettre à jour le navigateur.">?</button>
               <span class="dev-chevron">▾</span>
             </div>
           </div>
-          <div class="dev-card-body">
-            <button class="btn btn-primary btn-auto btn-sm" id="btn-dev-export">📥 Télécharger JSON</button>
+          <div class="dev-card-body" style="display:flex;flex-direction:column;gap:8px">
+            <button class="btn btn-primary btn-auto btn-sm" id="btn-dev-export">📤 Exporter tout</button>
+            <button class="btn btn-auto btn-sm" id="btn-dev-import">📥 Importer un fichier</button>
+            <input type="file" id="input-dev-import" accept=".json" style="display:none">
+            <div class="dev-status" id="dev-import-status"></div>
           </div>
         </div>
 
@@ -326,9 +328,8 @@
 <!-- TOOLTIP -->
 <div id="tooltip-popup"></div>
 
-<!-- SCRIPTS (ordre important : catalogue → isolation → app → dev) -->
+<!-- SCRIPTS -->
 <script src="catalogue.js"></script>
-<script src="isolation.js"></script>
 <script src="app.js"></script>
 <script src="dev.js"></script>
 

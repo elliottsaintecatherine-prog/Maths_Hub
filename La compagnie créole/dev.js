@@ -700,12 +700,87 @@ document.getElementById('btn-lyrics-apply').addEventListener('click', () => {
   autoApplySyllsOnSave(); renderEditor();
 });
 
+/* ===== EXPORT GLOBAL ===== */
 document.getElementById('btn-dev-export').addEventListener('click', () => {
-  if (!song) return;
+  // Sauvegarder la chanson courante avant d'exporter
+  if (song) { saveDraft(); autoApplySyllsOnSave(); saveSong({ silent: true }); }
+
+  const notes  = {};
+  const drafts = {};
+
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key.startsWith(STORE_PREFIX)) {
+      try { notes[key] = JSON.parse(localStorage.getItem(key)); } catch {}
+    } else if (key.startsWith(DRAFT_PREFIX)) {
+      drafts[key] = localStorage.getItem(key);
+    }
+  }
+
+  const payload = {
+    version:    '1.0',
+    exportedAt: new Date().toISOString(),
+    notes,
+    drafts,
+  };
+
+  const date = new Date().toISOString().slice(0, 10);
   const a = document.createElement('a');
-  a.href     = URL.createObjectURL(new Blob([JSON.stringify(song, null, 2)], { type: 'application/json' }));
-  a.download = (song.title || 'song') + '.notes.json';
+  a.href     = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
+  a.download = `karaoke-data-${date}.json`;
   document.body.appendChild(a); a.click(); a.remove();
+
+  setSaveStatus(`✅ Export : ${Object.keys(notes).length} chanson(s) exportée(s)`);
+});
+
+/* ===== IMPORT GLOBAL ===== */
+document.getElementById('btn-dev-import').addEventListener('click', () => {
+  document.getElementById('input-dev-import').click();
+});
+
+document.getElementById('input-dev-import').addEventListener('change', function () {
+  const file = this.files[0];
+  if (!file) return;
+  const setStatus = t => { const e = document.getElementById('dev-import-status'); if (e) e.textContent = t; };
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const payload = JSON.parse(e.target.result);
+      if (!payload.notes || !payload.drafts) throw new Error('Format invalide');
+
+      let countN = 0, countD = 0;
+
+      for (const [key, val] of Object.entries(payload.notes)) {
+        if (!key.startsWith(STORE_PREFIX)) continue;
+        localStorage.setItem(key, JSON.stringify(val));
+        countN++;
+      }
+      for (const [key, val] of Object.entries(payload.drafts)) {
+        if (!key.startsWith(DRAFT_PREFIX)) continue;
+        localStorage.setItem(key, val);
+        countD++;
+      }
+
+      // Recharger la chanson courante si elle est dans les données importées
+      const idx = +selectEl.value || 0;
+      loadSong(idx);
+      devBpm.value    = String(song?.timing?.bpm         ?? 120);
+      devSteps.value  = String(song?.timing?.stepsPerBeat ?? 4);
+      devOffset.value = String(song?.timing?.startOffsetSec ?? 0);
+      devLyrics.value = loadDraft(idx);
+      editor.selectedId = null; editor.selectedIds.clear();
+      if (laneNotes().length) autoFitMidi(); else renderEditor();
+      loadNormalLyrics(idx);
+      rebuildLyrics();
+
+      setStatus(`✅ ${countN} chanson(s), ${countD} brouillon(s) importé(s)`);
+    } catch (err) {
+      setStatus('❌ Erreur : ' + err.message);
+    }
+    this.value = ''; // reset pour permettre un ré-import du même fichier
+  };
+  reader.readAsText(file);
 });
 
 /* ===== RACCOURCIS CLAVIER (mode dev) ===== */

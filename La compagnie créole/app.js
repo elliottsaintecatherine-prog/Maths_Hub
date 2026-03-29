@@ -216,10 +216,60 @@ function fmt(s) {
   return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 }
 
-// Fond de page = pochette de l'album
+// Fond de page = pochette de l'album + teinte extraite pour les éléments translucides
 let tryPng = false;
-const albumImg = new Image();
-function setBodyBg(url) { document.body.style.backgroundImage = url ? `url("${url}")` : 'none'; }
+const albumImg = new Image();   // PAS de crossOrigin ici → l'image s'affiche toujours
+
+function setBodyBg(url) {
+  document.body.style.backgroundImage = url ? `url("${url}")` : 'none';
+  if (!url) htmlEl.style.setProperty('--pochette', '120 120 120');
+}
+
+// Extrait la couleur la plus fréquente de l'image via comptage de classes quantifiées.
+// Utilise une image séparée avec crossOrigin pour lire les pixels (canvas CORS).
+// Si le serveur refuse CORS, l'extraction échoue silencieusement — l'image de fond
+// n'est pas affectée et --pochette reste à sa valeur neutre par défaut.
+function extractTint(url) {
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    try {
+      const SIZE = 64;
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = SIZE;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, SIZE, SIZE);
+      const data = ctx.getImageData(0, 0, SIZE, SIZE).data;
+
+      // Quantification : regroupe les couleurs proches en classes (pas de 32 → 8 niveaux/canal)
+      const STEP = 32;
+      const counts = {};
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i], g = data[i + 1], b = data[i + 2];
+        const brightness = (r + g + b) / 3;
+        if (brightness < 20 || brightness > 235) continue;  // ignore noir et blanc purs
+        const qr = Math.round(r / STEP) * STEP;
+        const qg = Math.round(g / STEP) * STEP;
+        const qb = Math.round(b / STEP) * STEP;
+        const key = `${qr},${qg},${qb}`;
+        counts[key] = (counts[key] || 0) + 1;
+      }
+
+      // Classe la plus fréquente = couleur dominante
+      let bestKey = null, bestCount = 0;
+      for (const [key, count] of Object.entries(counts)) {
+        if (count > bestCount) { bestCount = count; bestKey = key; }
+      }
+
+      if (bestKey) {
+        const [r, g, b] = bestKey.split(',').map(Number);
+        htmlEl.style.setProperty('--pochette', `${r} ${g} ${b}`);
+      }
+    } catch (_) {}  // CORS refusé : --pochette reste inchangé
+  };
+  img.onerror = () => {};print("raté");
+  img.src = url;
+}
 
 function updateSongTitle(idx) {
   const e  = CATALOGUE[idx];
@@ -229,15 +279,13 @@ function updateSongTitle(idx) {
 }
 
 function loadTrack(idx) {
-  // Réinitialiser le module d'isolation pour la nouvelle chanson
-  if (window.voiceIso?.ready) window.voiceIso.destroy();
   const e = CATALOGUE[idx];
   updateSongTitle(idx);
   playerInstru.src = 'Karaoke/' + e.file;
   playerOrig.src   = 'Parole/'  + e.file;
   const base = e.file.replace('.mp3', '');
   tryPng = false;
-  albumImg.onload  = () => setBodyBg(albumImg.src);
+  albumImg.onload  = () => { setBodyBg(albumImg.src); extractTint(albumImg.src); };
   albumImg.onerror = () => { if (!tryPng) { tryPng = true; albumImg.src = 'Affiche/' + base + '.png'; } else setBodyBg(null); };
   albumImg.src = 'Affiche/' + base + '.jpg';
   btnPlay.textContent = '▶'; isPlaying = false;
@@ -725,23 +773,3 @@ loadTrack(0);
 loadNormalLyrics(0);
 renderLoop();
 
-/* ===== ISOLATION VOCALE ===== */
-window.voiceIso = createIsolationModule(playerInstru, playerOrig, volSlider);
-
-document.getElementById('btn-isolate-voice').addEventListener('click', async () => {
-  const btn = document.getElementById('btn-isolate-voice');
-  if (!window.voiceIso.ready) {
-    btn.disabled = true;
-    btn.textContent = '⏳ Analyse…';
-    try {
-      await window.voiceIso.init();
-    } catch (err) {
-      console.error('[Isolation] Échec :', err);
-      btn.textContent = '🎤 Isoler la voix';
-      btn.disabled = false;
-      return;
-    }
-    btn.disabled = false;
-  }
-  window.voiceIso.toggle();
-});

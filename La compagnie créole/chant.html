@@ -13,10 +13,10 @@
 
 <!-- NAVBAR -->
 <nav class="navbar">
-  <div class="logo" id="logo">🎤 Karaoké Studio</div>
+  <div class="logo" id="logo">Karaoké Studio</div>
   <div class="nav-right">
-    <button class="btn-nav" id="btn-theme">☀️ Mode Clair</button>
-    <button class="btn-nav" id="btn-hub">🏠 Hub</button>
+    <button class="btn-nav" id="btn-theme">Mode Clair</button>
+    <button class="btn-nav" id="btn-hub">Hub</button>
   </div>
 </nav>
 
@@ -75,8 +75,15 @@
       <button class="btn btn-danger btn-auto" id="btn-rec-start" disabled>🔴 Enregistrer</button>
       <button class="btn btn-auto" id="btn-rec-stop" disabled>⏹️ Fin</button>
     </div>
+    <div id="rec-select-row" style="display:none">
+      <select id="rec-select"></select>
+      <button class="btn btn-auto" id="btn-rec-dots">✏️</button>
+    </div>
+    <input id="rec-rename" type="text" placeholder="Nouveau nom…" style="display:none">
     <div class="rec-listen-row">
       <button class="btn btn-auto" id="btn-rec-listen" disabled>▶ Réécouter</button>
+      <button class="btn btn-auto" id="btn-rec-restart" disabled>⏮</button>
+      <button class="btn btn-auto" id="btn-rec-export" disabled>⬇️ Export</button>
     </div>
 
     <!-- Canvas de visualisation pitch -->

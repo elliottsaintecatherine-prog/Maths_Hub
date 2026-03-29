@@ -9,7 +9,7 @@ const btnTheme = document.getElementById('btn-theme');
 btnTheme.addEventListener('click', () => {
   const isDark = htmlEl.getAttribute('data-theme') === 'dark';
   htmlEl.setAttribute('data-theme', isDark ? 'light' : 'dark');
-  btnTheme.textContent = isDark ? '🌙 Mode Sombre' : '☀️ Mode Clair';
+  btnTheme.textContent = isDark ? 'Mode Sombre' : 'Mode Clair';
 });
 
 /* ===== NAVIGATION ===== */
@@ -435,7 +435,62 @@ const NOTE_NAMES_EN = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const btnMic       = document.getElementById('btn-mic');
 const btnRecStart  = document.getElementById('btn-rec-start');
 const btnRecStop   = document.getElementById('btn-rec-stop');
-const btnRecListen = document.getElementById('btn-rec-listen');
+const btnRecListen  = document.getElementById('btn-rec-listen');
+const btnRecRestart = document.getElementById('btn-rec-restart');
+const btnRecExport  = document.getElementById('btn-rec-export');
+const recSelect     = document.getElementById('rec-select');
+const recRename     = document.getElementById('rec-rename');
+const recSelectRow  = document.getElementById('rec-select-row');
+const btnRecDots    = document.getElementById('btn-rec-dots');
+let listenAudio = null;
+let recordings  = [];   // [{ url, name }]
+
+function addRecording(url) {
+  const num  = recordings.length + 1;
+  const song = CATALOGUE[+selectEl.value]?.title || 'Prise';
+  const name = `${song} — Prise ${num}`;
+  recordings.push({ url, name });
+  const opt  = document.createElement('option');
+  opt.value  = recordings.length - 1;
+  opt.textContent = name;
+  recSelect.appendChild(opt);
+  recSelect.value = recordings.length - 1;
+  recSelectRow.style.display = '';
+  recRename.style.display = 'none';
+  recordedUrl = url;
+  btnRecListen.disabled  = false;
+  btnRecRestart.disabled = false;
+  btnRecExport.disabled  = false;
+}
+
+function applyRename() {
+  const idx = +recSelect.value;
+  const val = recRename.value.trim();
+  if (!val || !recordings[idx]) return;
+  recordings[idx].name = val;
+  recSelect.options[idx].textContent = val;
+}
+
+recRename.addEventListener('blur', () => { applyRename(); recRename.style.display = 'none'; });
+recRename.addEventListener('keydown', e => { if (e.key === 'Enter') { applyRename(); recRename.blur(); } });
+
+btnRecDots.addEventListener('click', () => {
+  const rec = recordings[+recSelect.value];
+  if (!rec) return;
+  recRename.value = rec.name;
+  recRename.style.display = '';
+  recRename.focus();
+  recRename.select();
+});
+
+recSelect.addEventListener('change', () => {
+  const rec = recordings[+recSelect.value];
+  if (!rec) return;
+  recordedUrl = rec.url;
+  recRename.style.display = 'none';
+  if (listenAudio) { listenAudio.pause(); listenAudio = null; }
+  btnRecListen.textContent = '▶ Réécouter';
+});
 
 btnMic.addEventListener('click', async () => {
   if (micActive) {
@@ -457,8 +512,9 @@ btnMic.addEventListener('click', async () => {
     mediaRec = new MediaRecorder(micStream);
     mediaRec.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
     mediaRec.onstop = () => {
-      recordedUrl = URL.createObjectURL(new Blob(audioChunks, { type: 'audio/webm' }));
-      audioChunks = []; btnRecListen.disabled = false;
+      const url = URL.createObjectURL(new Blob(audioChunks, { type: 'audio/webm' }));
+      audioChunks = [];
+      addRecording(url);
     };
     btnMic.textContent = '🛑 Désactiver le micro';
     btnMic.style.background = 'var(--success)'; btnMic.style.color = '#000';
@@ -479,7 +535,37 @@ btnRecStop.addEventListener('click', () => {
 });
 btnRecListen.addEventListener('click', () => {
   if (!recordedUrl) return;
-  new Audio(recordedUrl).play().catch(() => {});
+  if (listenAudio && !listenAudio.paused) {
+    listenAudio.pause();
+    btnRecListen.textContent = '▶ Réécouter';
+    return;
+  }
+  if (!listenAudio || listenAudio.ended) {
+    listenAudio = new Audio(recordedUrl);
+    listenAudio.addEventListener('ended', () => {
+      btnRecListen.textContent = '▶ Réécouter';
+    });
+  }
+  listenAudio.play().catch(() => {});
+  btnRecListen.textContent = '⏸ Pause';
+});
+
+btnRecRestart.addEventListener('click', () => {
+  if (!recordedUrl) return;
+  if (listenAudio) { listenAudio.pause(); listenAudio.currentTime = 0; }
+  else listenAudio = new Audio(recordedUrl);
+  listenAudio.addEventListener('ended', () => { btnRecListen.textContent = '▶ Réécouter'; }, { once: true });
+  listenAudio.play().catch(() => {});
+  btnRecListen.textContent = '⏸ Pause';
+});
+
+btnRecExport.addEventListener('click', () => {
+  const rec = recordings[+recSelect.value];
+  if (!rec) return;
+  const a = document.createElement('a');
+  a.href = rec.url;
+  a.download = rec.name.replace(/[^a-zA-Z0-9 \-éèêëàâùûîïôœç]/g, '') + '.webm';
+  document.body.appendChild(a); a.click(); a.remove();
 });
 
 /* ===== HARMONIE ===== */

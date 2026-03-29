@@ -100,5 +100,55 @@ With you
 No, I...
 (This world is only gonna break your heart)
 Nobody loves no one`
-  }
+  },
+{
+    file:   "Cage the elephant - Cigarette Daydream.mp3",
+    title:  "Cigarette Daydream",
+    artist: "Cage the elephant ",
+    draft:
+`Did you stand there all alone?
+Oh, I cannot explain what's goin' down
+I can see you standin' next to me
+In and out somewhere else right now
+You sigh, look away
+I can see it clear as day
+Close your eyes, so afraid
+Hide behind that baby face
+Do-do-do
+Do-do-do
+You can drive all night
+Lookin' for the answers in the pourin' rain
+You wanna find peace of mind
+Lookin' for the answer
+Funny how it seems like yesterday
+As I recall, you were lookin' out of place
+Gathered up your things and slipped away
+No time at all, I followed you into the hall
+Cigarette daydream
+You were only seventeen
+Soft speak with a mean streak
+Nearly brought me to my knees
+Do-do-do
+Do-do-do
+You can drive all night
+Lookin' for the answers in the pourin' rain
+You wanna find peace of mind
+Lookin' for the answer
+If we can find a reason, a reason to change
+Lookin' for the answers
+If you can find a reason, a reason to stay
+Standin' in the pourin' rain
+Do-do, do, do, do
+Do-do, do, do-do, do-do
+Do-do, do, do, do
+Do-do, do, do-do, do-do
+You can drive all night
+Lookin' for the answers in the pourin' rain
+You wanna find peace of mind
+Lookin' for the answer
+If we can find a reason, a reason to change
+Lookin' for the answer
+If you can find a reason, a reason to stay
+Standin' in the pourin' rain`
+  },
 ];

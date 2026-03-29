@@ -149,13 +149,18 @@ select:focus { border-color:var(--primary) }
 .mixer input[type=range] { width:80px; -webkit-appearance:none; appearance:none; background:transparent; cursor:pointer }
 .mixer input[type=range]::-webkit-slider-runnable-track { height:4px; background:var(--border); border-radius:2px }
 .mixer input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; height:12px; width:12px; background:var(--primary); border-radius:50%; margin-top:-4px }
-.btn-isolate {
-  background:var(--panel); border:1px solid var(--primary); color:var(--primary);
-  padding:5px 10px; font-size:12px; width:auto; margin:0; border-radius:20px;
-  cursor:pointer; font-weight:600; transition:background .15s, color .15s;
+#btn-isolate-voice {
+  background:transparent; border:1.5px solid var(--border); color:var(--muted);
+  padding:5px 12px; font-size:12px; border-radius:20px; cursor:pointer;
+  font-weight:600; transition:border-color .2s, color .2s, background .2s;
+  white-space:nowrap;
 }
-.btn-isolate.on { background:var(--primary); color:#fff; box-shadow:0 0 12px rgba(29,185,84,.4) }
-.btn-isolate.on::before { content:'✓ ' }
+#btn-isolate-voice:hover { border-color:var(--primary); color:var(--primary) }
+#btn-isolate-voice.active {
+  border-color:var(--primary); color:var(--primary);
+  background:color-mix(in srgb, var(--primary) 15%, transparent);
+}
+#btn-isolate-voice:disabled { opacity:.5; cursor:wait }
 
 /* ===== PAROLES (panneau gauche) ===== */
 .lyrics-editor {

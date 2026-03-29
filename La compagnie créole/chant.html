@@ -47,10 +47,10 @@
           <button class="btn-icon btn-play-main" id="btn-play">▶</button>
         </div>
         <div class="mixer">
-          <button class="btn-isolate" id="btn-isolate">🪄 Isoler voix</button>
           🗣️
           <input type="range" id="vol-orig" min="0" max="1" step="0.01" value="0.5">
           <span id="vol-val">50%</span>
+          <button id="btn-isolate-voice" type="button" role="switch" aria-pressed="false" title="Isoler la voix (soustraction de phase)">🎤 Isoler la voix</button>
         </div>
       </div>
     </div>
@@ -179,16 +179,16 @@
           <div class="dev-card-head">
             <div class="dev-card-head-left"><div class="accent" style="background:#10b981"></div>🧱 Outils</div>
             <div class="dev-card-head-right">
-              <button class="info-btn" data-tip="✏️ Dessiner : clic-glisser pour créer un bloc. 🖱️ Sélection : déplacer/redimensionner, double-clic pour syllabe. 🧭 Pan : déplacer la vue.">?</button>
+              <button class="info-btn" data-tip="✏️ Note : clic-glisser pour créer. 🧹 Gomme : clic/glisser pour effacer. 🖱️ Sélection : déplacer/redimensionner, double-clic = syllabe. Clic droit (n'importe où) = boîte de sélection multiple.">?</button>
               <span class="dev-chevron">▾</span>
             </div>
           </div>
           <div class="dev-card-body">
             <div class="dev-row" style="margin-bottom:8px">
               <div class="dev-toolbar" role="group">
-                <button class="btn active-tool" id="dev-tool-draw">✏️ Dessiner</button>
+                <button class="btn active-tool" id="dev-tool-draw">✏️ Note</button>
+                <button class="btn" id="dev-tool-erase">🧹 Gomme</button>
                 <button class="btn" id="dev-tool-sel">🖱️ Sélection</button>
-                <button class="btn" id="dev-tool-pan">🧭 Pan</button>
               </div>
             </div>
             <div class="dev-grid2">
@@ -210,10 +210,11 @@
           <div class="dev-card-body">
             <div class="dev-grid2" style="margin-bottom:8px">
               <div class="dev-field">
-                <label>Source <button class="info-btn" data-tip="Voix : analyse la piste vocale. Instru : analyse la mélodie instrumentale.">?</button></label>
+                <label>Source <button class="info-btn" data-tip="Voix/Instru : nécessite un serveur HTTP. Son système : partage l'audio de l'onglet via le navigateur (Chrome/Edge → sélectionner l'onglet + cocher « Partager le son »).">?</button></label>
                 <select id="dev-auto-src">
                   <option value="orig" selected>🗣️ Voix</option>
                   <option value="instru">🎵 Instru</option>
+                  <option value="system">🖥️ Son système</option>
                 </select>
               </div>
               <div class="dev-field">
@@ -307,7 +308,7 @@
             <span id="midi-max-val" style="min-width:28px">C6</span>
           </label>
           <button id="btn-autofit" style="background:transparent;border:1px solid var(--border);color:var(--text);border-radius:6px;padding:3px 10px;font-size:12px;cursor:pointer" title="Ajuster la plage MIDI aux notes existantes">⇲ Auto-fit</button>
-          <span style="font-size:12px;color:var(--muted)">Suppr = effacer · Entrée = syllabe · Ctrl+S = sauver</span>
+          <span style="font-size:12px;color:var(--muted)">Ctrl+Z/Y = undo/redo · Ctrl+A = tout sélectionner · Ctrl+S = sauver · Suppr = effacer · Clic droit = sélection · Molette = défiler</span>
         </div>
       </div>
       <div class="dev-canvas-wrap" id="dev-canvas-wrap">
@@ -325,8 +326,9 @@
 <!-- TOOLTIP -->
 <div id="tooltip-popup"></div>
 
-<!-- SCRIPTS (ordre important : catalogue → app → dev) -->
+<!-- SCRIPTS (ordre important : catalogue → isolation → app → dev) -->
 <script src="catalogue.js"></script>
+<script src="isolation.js"></script>
 <script src="app.js"></script>
 <script src="dev.js"></script>
 

@@ -205,13 +205,11 @@ const seekBar      = document.getElementById('seek-bar');
 const tCur         = document.getElementById('t-cur');
 const tDur         = document.getElementById('t-dur');
 const btnPlay      = document.getElementById('btn-play');
-const btnIsolate   = document.getElementById('btn-isolate');
 const volSlider    = document.getElementById('vol-orig');
 const volVal       = document.getElementById('vol-val');
 
 let routingReady = false, gainInstru, gainOrig;
 let sourceInstruNode, sourceOrigNode;
-let isIsolated = false;
 
 function fmt(s) {
   if (!isFinite(s)) return '0:00';
@@ -231,6 +229,8 @@ function updateSongTitle(idx) {
 }
 
 function loadTrack(idx) {
+  // Réinitialiser le module d'isolation pour la nouvelle chanson
+  if (window.voiceIso?.ready) window.voiceIso.destroy();
   const e = CATALOGUE[idx];
   updateSongTitle(idx);
   playerInstru.src = 'Karaoke/' + e.file;
@@ -246,7 +246,9 @@ function loadTrack(idx) {
 
 // Synchronisation des deux pistes audio
 playerInstru.addEventListener('loadedmetadata', () => { seekBar.max = playerInstru.duration; tDur.textContent = fmt(playerInstru.duration); });
-playerInstru.addEventListener('timeupdate',     () => { if (!isDragging) { seekBar.value = playerInstru.currentTime; tCur.textContent = fmt(playerInstru.currentTime); } });
+playerInstru.addEventListener('timeupdate', () => {
+  if (!isDragging) { seekBar.value = playerInstru.currentTime; tCur.textContent = fmt(playerInstru.currentTime); }
+});
 playerInstru.addEventListener('ended',          () => { btnPlay.textContent = '▶'; isPlaying = false; });
 seekBar.addEventListener('input',  () => { isDragging = true;  tCur.textContent = fmt(+seekBar.value); });
 seekBar.addEventListener('change', () => { playerInstru.currentTime = playerOrig.currentTime = +seekBar.value; isDragging = false; });
@@ -267,7 +269,7 @@ volSlider.addEventListener('input', e => {
   else playerOrig.volume = +e.target.value;
 });
 
-// Routing WebAudio (nécessaire pour l'isolation et l'harmonie)
+// Routing WebAudio (nécessaire pour l'harmonie)
 async function initRouting() {
   if (routingReady) return;
   await Tone.start();
@@ -281,25 +283,13 @@ async function initRouting() {
   gainInstru.gain.value = 1;
   gainOrig.gain.value   = +volSlider.value;
   routingReady = true;
+  // Exposer pour isolation.js (let n'est pas sur window automatiquement)
+  window.gainInstru       = gainInstru;
+  window.gainOrig         = gainOrig;
+  window.sourceInstruNode = sourceInstruNode;
+  window.sourceOrigNode   = sourceOrigNode;
+  window.routingReady     = true;
 }
-
-function applyIsolation() {
-  if (gainInstru && gainOrig) {
-    gainInstru.gain.value = isIsolated ? 0 : 1;
-    gainOrig.gain.value   = +volSlider.value;
-  } else {
-    playerInstru.volume = isIsolated ? 0 : 1;
-    playerOrig.volume   = +volSlider.value;
-  }
-  btnIsolate.classList.toggle('on', isIsolated);
-  btnIsolate.title = isIsolated ? 'Voix isolée — cliquer pour revenir à la piste complète' : 'Isoler la voix (masque les instruments)';
-}
-
-btnIsolate.addEventListener('click', async () => {
-  try { if (!routingReady) await initRouting(); } catch { /* fallback volume */ }
-  isIsolated = !isIsolated;
-  applyIsolation();
-});
 
 /* ===== COMBOBOX DE RECHERCHE ===== */
 // Tri alphabétique du catalogue (artiste puis titre)
@@ -361,8 +351,8 @@ function openCombo() {
   comboOpen = true;
   songSearchEl.classList.add('open');
   songDropdownEl.classList.add('open');
-  songSearchEl.select();
-  renderDropdown(songSearchEl.value);
+  songSearchEl.value = '';              // vide le champ → toute la liste s'affiche
+  renderDropdown('');
 }
 
 function closeCombo() {
@@ -377,14 +367,16 @@ songSearchEl.addEventListener('input', () => renderDropdown(songSearchEl.value))
 songSearchEl.addEventListener('blur',  () => { if (comboOpen) closeCombo(); });
 
 selectEl.addEventListener('change', () => {
-  loadSong(+selectEl.value);
-  loadTrack(+selectEl.value);
-  if (!comboOpen) songSearchEl.value = comboLabel(+selectEl.value);
+  const idx = +selectEl.value;
+  loadSong(idx);
+  loadTrack(idx);
+  loadNormalLyrics(idx);
+  if (!comboOpen) songSearchEl.value = comboLabel(idx);
 });
 
 /* ===== MICRO & ENREGISTREMENT ===== */
 let audioCtx = null, micAnalyser = null, micSource = null, micStream = null, mediaRec = null;
-let micActive = false, pitchData = [], pitchSmooth = [], lastPitch = null, audioChunks = [];
+let micActive = false, pitchData = [], pitchSmooth = [], audioChunks = [];
 
 const canvas    = document.getElementById('pitch-canvas');
 const canvasCtx = canvas.getContext('2d');
@@ -664,11 +656,10 @@ function renderLoop() {
       pitchSmooth.push(rawNote); if (pitchSmooth.length > 3) pitchSmooth.shift();
       const note = [...pitchSmooth].sort((a, b) => a - b)[Math.floor(pitchSmooth.length / 2)];
       noteBadge.textContent = NOTE_NAMES[note % 12];
-      lastPitch = pitch;
       pitchData.push(pitchNoteToY(note, canvas.height));
       updateDeviationBadge(pitch);
     } else {
-      if (pitch === -1) { pitchSmooth.length = 0; lastPitch = null; updateDeviationBadge(null); }
+      if (pitch === -1) { pitchSmooth.length = 0; updateDeviationBadge(null); }
       noteBadge.textContent = '--'; pitchData.push(null);
     }
 
@@ -686,7 +677,7 @@ function renderLoop() {
     }
     drawSmoothSegment(canvasCtx, seg);
   } else {
-    pitchData = []; pitchSmooth = []; lastPitch = null;
+    pitchData = []; pitchSmooth = [];
     updateDeviationBadge(null);
     if (!micActive) noteBadge.textContent = '--';
   }
@@ -702,7 +693,29 @@ function loadNormalLyrics(idx) {
   normalLyrics.value = loadDraft(idx).replace(/--/g, '');
 }
 
-selectEl.addEventListener('change', () => loadNormalLyrics(+selectEl.value));
+/* ===== RACCOURCIS CLAVIER ===== */
+const SKIP_SEC = 5; // secondes de saut avec les flèches
+
+window.addEventListener('keydown', e => {
+  // Ignorer si le focus est dans un champ texte / textarea / select
+  const tag = document.activeElement?.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+  // Ignorer si le mode dev est ouvert (dev.js gère ses propres raccourcis)
+  if (document.getElementById('dev-overlay')?.classList.contains('open')) return;
+
+  if (e.code === 'Space') {
+    e.preventDefault();
+    btnPlay.click();
+  } else if (e.code === 'ArrowLeft') {
+    e.preventDefault();
+    const t = Math.max(0, playerInstru.currentTime - SKIP_SEC);
+    playerInstru.currentTime = playerOrig.currentTime = t;
+  } else if (e.code === 'ArrowRight') {
+    e.preventDefault();
+    const t = Math.min(playerInstru.duration || 0, playerInstru.currentTime + SKIP_SEC);
+    playerInstru.currentTime = playerOrig.currentTime = t;
+  }
+});
 
 /* ===== INITIALISATION ===== */
 populateSelect();
@@ -711,3 +724,24 @@ loadSong(0);
 loadTrack(0);
 loadNormalLyrics(0);
 renderLoop();
+
+/* ===== ISOLATION VOCALE ===== */
+window.voiceIso = createIsolationModule(playerInstru, playerOrig, volSlider);
+
+document.getElementById('btn-isolate-voice').addEventListener('click', async () => {
+  const btn = document.getElementById('btn-isolate-voice');
+  if (!window.voiceIso.ready) {
+    btn.disabled = true;
+    btn.textContent = '⏳ Analyse…';
+    try {
+      await window.voiceIso.init();
+    } catch (err) {
+      console.error('[Isolation] Échec :', err);
+      btn.textContent = '🎤 Isoler la voix';
+      btn.disabled = false;
+      return;
+    }
+    btn.disabled = false;
+  }
+  window.voiceIso.toggle();
+});

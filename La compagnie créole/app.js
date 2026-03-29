@@ -267,7 +267,7 @@ function extractTint(url) {
       }
     } catch (_) {}  // CORS refusé : --pochette reste inchangé
   };
-  img.onerror = () => {};print("raté");
+  img.onerror = () => {};
   img.src = url;
 }
 
@@ -331,7 +331,6 @@ async function initRouting() {
   gainInstru.gain.value = 1;
   gainOrig.gain.value   = +volSlider.value;
   routingReady = true;
-  // Exposer pour isolation.js (let n'est pas sur window automatiquement)
   window.gainInstru       = gainInstru;
   window.gainOrig         = gainOrig;
   window.sourceInstruNode = sourceInstruNode;

@@ -527,7 +527,6 @@ btnHarmonyPlay.addEventListener('click', async () => {
       tonePlayer.onstop = stopHarmony;
     } catch(e) { alert('Erreur harmonie : ' + e.message); }
   } else {
-    // Harmonie sur la voix artiste — nécessite CORS (pas de file://)
     if (location.protocol === 'file:') {
       alert("L'harmonie sur la voix artiste nécessite un serveur HTTP (GitHub Pages ou Live Server).\nTu peux harmoniser ton propre enregistrement depuis ce mode.");
       return;

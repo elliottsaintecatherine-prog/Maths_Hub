@@ -316,3 +316,23 @@ canvas { width:100%; height:100% }
   cursor:help; flex-shrink:0; transition:background .12s;
 }
 .info-btn:hover { background:rgba(99,102,241,.32) }
+
+/* ===== OVERLAY ERREUR MICRO ===== */
+.mic-error-overlay {
+  position:fixed; inset:0; z-index:9999;
+  background:rgba(0,0,0,.65); backdrop-filter:blur(6px);
+  display:flex; align-items:center; justify-content:center;
+}
+.mic-error-box {
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:18px; padding:36px 32px; max-width:380px; width:90%;
+  text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.5);
+  display:flex; flex-direction:column; gap:14px;
+}
+.mic-error-icon { font-size:48px; line-height:1 }
+.mic-error-title { font-size:20px; font-weight:700; color:var(--danger) }
+.mic-error-msg { font-size:14px; color:var(--muted) }
+.mic-error-steps {
+  text-align:left; padding-left:18px; font-size:13px;
+  color:var(--text); display:flex; flex-direction:column; gap:6px;
+}

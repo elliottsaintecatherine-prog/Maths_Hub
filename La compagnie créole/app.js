@@ -3,6 +3,11 @@
  * Dépend de : catalogue.js (CATALOGUE), Tone.js
  */
 
+/* ===== OVERLAY ERREUR MICRO ===== */
+document.getElementById('mic-error-close')?.addEventListener('click', () => {
+  document.getElementById('mic-error-overlay').style.display = 'none';
+});
+
 /* ===== THÈME ===== */
 const htmlEl   = document.documentElement;
 const btnTheme = document.getElementById('btn-theme');
@@ -519,7 +524,14 @@ btnMic.addEventListener('click', async () => {
     btnMic.textContent = '🛑 Désactiver le micro';
     btnMic.style.background = 'var(--success)'; btnMic.style.color = '#000';
     btnRecStart.disabled = false; micActive = true;
-  } catch(e) { alert('Erreur micro : ' + e.message); }
+  } catch(e) {
+    const overlay = document.getElementById('mic-error-overlay');
+    const msg     = document.getElementById('mic-error-msg');
+    if (msg) msg.textContent = e.name === 'NotAllowedError'
+      ? "L'accès au microphone a été refusé par le navigateur."
+      : 'Impossible d\'accéder au microphone : ' + e.message;
+    if (overlay) overlay.style.display = 'flex';
+  }
 });
 
 btnRecStart.addEventListener('click', () => {

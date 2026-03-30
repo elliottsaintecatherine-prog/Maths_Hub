@@ -4,12 +4,18 @@
  * Accès : cliquer sur le logo, puis entrer le PIN
  */
 
-const DEV_PIN = '1702';
+// SHA-256 de '1702' — ne jamais stocker le PIN en clair
+const DEV_PIN_HASH = '7a64ce427ce0ca963ce9c3ab0da2db27c1f3ac9620444e1b4312422af8e093b9';
+async function hashPin(pin) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
 /* ===== ÉTAT DE L'ÉDITEUR ===== */
 let devOpen      = false;
 let devUnlocked  = false;
 let autoSaveTimer = null;
+let editorDirty  = false; // flag pour throttler renderEditor() via rAF
 
 const editor = {
   tool:        'draw',
@@ -370,7 +376,7 @@ editorCanvas.addEventListener('pointermove', e => {
   // Mise à jour de la boîte rubber-band (clic droit maintenu)
   if (editor.selBox) {
     editor.selBox.x1 = x; editor.selBox.y1 = y;
-    renderEditor(); return;
+    editorDirty = true; return;
   }
 
   if (!editor.isDown || !editor.drag) return;
@@ -380,7 +386,7 @@ editorCanvas.addEventListener('pointermove', e => {
 
   if (d.type === 'new' || d.type === 'resize-r') {
     const n = laneNotes().find(n => n.id === d.noteId); if (!n) return;
-    n.d = Math.max(stepSec(), coordsToTime(x) - n.t0); renderEditor();
+    n.d = Math.max(stepSec(), coordsToTime(x) - n.t0); editorDirty = true;
 
   } else if (d.type === 'move') {
     const newT0  = snapTime(d.startT0 + dx);
@@ -391,18 +397,18 @@ editorCanvas.addEventListener('pointermove', e => {
       m.t0   = Math.max(0, orig.t0 + dT);
       m.midi = Math.max(editor.view.midiMin, Math.min(editor.view.midiMax - 1, orig.midi + dMidi));
     }
-    renderEditor();
+    editorDirty = true;
 
   } else if (d.type === 'resize-l') {
     const n = laneNotes().find(n => n.id === d.noteId); if (!n) return;
     const newT = Math.max(0, snapTime(d.startT0 + dx));
-    n.d  = Math.max(stepSec(), d.startD - (newT - d.startT0)); n.t0 = newT; renderEditor();
+    n.d  = Math.max(stepSec(), d.startD - (newT - d.startT0)); n.t0 = newT; editorDirty = true;
 
   } else if (d.type === 'erase') {
     const hit = noteAtCoords(x, y);
     if (hit) {
       const idx = laneNotes().findIndex(n => n.id === hit.id);
-      if (idx >= 0) { laneNotes().splice(idx, 1); renderEditor(); }
+      if (idx >= 0) { laneNotes().splice(idx, 1); editorDirty = true; }
     }
   }
 });
@@ -658,7 +664,9 @@ document.getElementById('logo').addEventListener('click', e => {
 function promptPin() {
   const p = prompt('Mode Développeur — entre le code PIN :');
   if (p === null) return;
-  String(p).trim() === DEV_PIN ? (devUnlocked = true, openDev()) : alert('Code incorrect.');
+  hashPin(String(p).trim()).then(h => {
+    h === DEV_PIN_HASH ? (devUnlocked = true, openDev()) : alert('Code incorrect.');
+  });
 }
 
 document.getElementById('btn-dev-close').addEventListener('click', closeDev);
@@ -838,12 +846,12 @@ editorCanvas.addEventListener('wheel', e => {
   renderEditor();
 }, { passive: false });
 
-/* ===== BOUCLE DE RENDU (lecture en cours) ===== */
+/* ===== BOUCLE DE RENDU (lecture en cours + dirty flag) ===== */
 ;(function loopEditor() {
   requestAnimationFrame(loopEditor);
-  if (!devOpen || !isPlaying) return;
+  if (!devOpen) return;
   // Suivi automatique de la tête de lecture pendant l'enregistrement auto
-  if (devAuto.running) {
+  if (isPlaying && devAuto.running) {
     const pxPerSec  = +(devZoom?.value || 140);
     const scrollSec = +(devScroll?.value || 0);
     const cur       = playerInstru.currentTime;
@@ -852,7 +860,11 @@ editorCanvas.addEventListener('wheel', e => {
       if (devScroll) devScroll.value = String(Math.max(0, cur - 2));
     }
   }
-  renderEditor();
+  // Render si lecture en cours OU si une interaction a marqué dirty
+  if (isPlaying || editorDirty) {
+    editorDirty = false;
+    renderEditor();
+  }
 })();
 
 /* ===== ACCORDION (cartes sidebar) ===== */

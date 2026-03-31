@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neural Knockout - ULTIMATE EDITION</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="neural_knockout.css">
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+</head>
+<body>
+
+    <canvas id="gameCanvas"></canvas>
+    <div id="instructions" style="display:none;">[FLÈCHES / ZQSD] Bouger | [HAUT / Z] Sauter | [BAS / S / X] S'accroupir | [ESPACE] Attaquer</div>
+    <div id="announcement"></div>
+
+    <!-- CONTROLES MOBILES -->
+    <div id="mobile-controls">
+        <div style="display:flex; gap:10px;">
+            <div class="ctrl-btn" id="btn-left">◀</div>
+            <div class="ctrl-btn" id="btn-right">▶</div>
+            <div class="ctrl-btn" id="btn-down">▼</div>
+        </div>
+        <div style="display:flex; align-items:center;">
+            <div class="ctrl-btn ctrl-jump" id="btn-up">▲</div>
+            <div class="ctrl-btn ctrl-action" id="btn-attack">👊</div>
+        </div>
+    </div>
+
+    <!-- UI PUZZLES (CLASH) -->
+    <div id="puzzle-overlay">
+        <div class="puzzle-box" id="puzzle-content"></div>
+    </div>
+
+    <!-- ECRAN PRINCIPAL -->
+    <div id="screen-main" class="menu-screen">
+        <div class="menu-content">
+            <div class="menu-title">NEURAL<br>KNOCKOUT</div>
+            <p style="color:rgba(255,255,255,0.5); margin-bottom:40px;">RÉSOLVEZ POUR FRAPPER. HÉSITEZ ET MOURREZ.</p>
+            <button class="btn-main" onclick="goToCharSelect('SP')">MODE SOLO (VS I.A.)</button>
+            <button class="btn-main btn-pink" onclick="goToCharSelect('MP')">MULTIJOUEUR (P2P)</button>
+            <a href="../index.html" class="btn-main btn-secondary" style="margin-top:40px; text-decoration:none; display:inline-block;">◀ RETOUR AU HUB</a>
+        </div>
+    </div>
+
+    <!-- ECRAN SELECTION PERSONNAGE ET MANCHES -->
+    <div id="screen-char-select" class="menu-screen" style="display:none;">
+        <div class="menu-content">
+            <div class="menu-title" style="font-size:clamp(1.5rem, 4vw, 2rem);">PRÉPARATION</div>
+            <div class="char-grid" id="char-grid-container"></div>
+            <p style="color:rgba(255,255,255,0.5); font-size:0.8rem; margin-bottom:5px;">NOMBRE DE MANCHES GAGNANTES :</p>
+            <select id="rounds-select">
+                <option value="1">1 Manche (Mort Subite)</option>
+                <option value="2" selected>2 Manches (BO3)</option>
+                <option value="3">3 Manches (BO5)</option>
+            </select>
+            <div class="btn-row">
+                <button class="btn-main btn-secondary" onclick="showScreen('screen-main')">ANNULER</button>
+                <button class="btn-main" onclick="confirmCharacter()" style="background:var(--neon-yellow); color:black;">CONFIRMER</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MENU MULTIJOUEUR -->
+    <div id="screen-mp-menu" class="menu-screen" style="display:none;">
+        <div class="menu-content">
+            <div class="menu-title" style="font-size:clamp(1.5rem, 4vw, 2rem);">MULTIJOUEUR</div>
+            <button class="btn-main btn-pink" onclick="hostGame()">CRÉER UN SALON</button>
+            <button class="btn-main" onclick="showScreen('screen-mp-join')">REJOINDRE UN SALON</button>
+            <button class="btn-main btn-secondary" onclick="showScreen('screen-char-select')" style="margin-top:40px;">◀ RETOUR</button>
+        </div>
+    </div>
+
+    <!-- MENU JOIN MULTI -->
+    <div id="screen-mp-join" class="menu-screen" style="display:none;">
+        <div class="menu-content">
+            <div class="menu-title" style="font-size:clamp(1.5rem, 4vw, 2rem);">CONNEXION</div>
+            <p style="color:rgba(255,255,255,0.5); margin-bottom:10px;">ENTREZ LE CODE DU SALON :</p>
+            <input type="text" id="room-input" placeholder="EX: A1B2" maxlength="7">
+            <div class="btn-row">
+                <button class="btn-main btn-secondary" onclick="showScreen('screen-mp-menu')">ANNULER</button>
+                <button class="btn-main btn-pink" onclick="joinGame()">CONNECTER</button>
+            </div>
+            <div id="join-status" class="status-text"></div>
+        </div>
+    </div>
+
+    <!-- MENU LOBBY (HOST) -->
+    <div id="screen-lobby" class="menu-screen" style="display:none;">
+        <div class="menu-content">
+            <div class="menu-title" style="font-size:clamp(1.5rem, 4vw, 2rem);">SALON CRÉÉ</div>
+            <p style="color:rgba(255,255,255,0.5);">PARTAGEZ CE CODE À VOTRE ADVERSAIRE :</p>
+            <div id="room-id-display" style="font-size:clamp(2.5rem, 6vw, 4rem); font-family:'Press Start 2P'; color:var(--neon-yellow); margin:20px 0; text-shadow:0 0 20px var(--neon-yellow); user-select:text;">----</div>
+            <div id="host-status" class="status-text">En attente d'un adversaire...</div>
+            <button class="btn-main btn-secondary" onclick="location.reload()" style="margin-top:40px;">ANNULER</button>
+        </div>
+    </div>
+
+    <!-- ECRAN FIN -->
+    <div id="screen-end" class="menu-screen" style="display:none;">
+        <div class="menu-content">
+            <div class="menu-title" id="end-title">RÉSULTAT</div>
+            <div id="score-details" style="font-size:clamp(1.2rem, 3vw, 1.5rem); margin-bottom:30px; line-height:1.6;"></div>
+            <div class="btn-row">
+                <a href="../index.html" class="btn-main btn-secondary" style="text-decoration:none; padding-top:18px;">◀ RETOUR HUB</a>
+                <button class="btn-main" onclick="location.reload()">MENU PRINCIPAL</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts (ordre important : dépendances d'abord) -->
+    <script src="js/chars.js"></script>
+    <script src="js/fighter.js"></script>
+    <script src="js/puzzles.js"></script>
+    <script src="js/network.js"></script>
+    <script src="js/game.js"></script>
+
+</body>
+</html>

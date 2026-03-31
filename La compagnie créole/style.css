@@ -208,8 +208,10 @@ canvas { width:100%; height:100% }
 #rec-select-row { display:flex; align-items:stretch; height:28px; margin-top:6px; margin-bottom:4px; border:1px solid color-mix(in srgb,var(--border) 70%,transparent); border-radius:8px; overflow:hidden }
 #rec-select { flex:1; min-width:0; height:28px; padding:0 8px; border:none; border-radius:0; background:var(--bg); color:var(--text); font-size:12px; cursor:pointer; outline:none; -webkit-appearance:none; appearance:none }
 #rec-select option { background:var(--bg); color:var(--text) }
-#btn-rec-dots { flex-shrink:0; width:32px; height:28px; padding:0; font-size:13px; line-height:28px; margin:0; border:none; border-left:1px solid color-mix(in srgb,var(--border) 70%,transparent); border-radius:0; background:var(--bg); color:var(--text); cursor:pointer }
-#btn-rec-dots:hover { background:color-mix(in srgb,var(--border) 50%,transparent) }
+#btn-rec-dots,
+#btn-rec-delete { flex-shrink:0; width:32px; height:28px; padding:0; font-size:13px; line-height:28px; margin:0; border:none; border-left:1px solid color-mix(in srgb,var(--border) 70%,transparent); border-radius:0; background:var(--bg); color:var(--text); cursor:pointer }
+#btn-rec-dots:hover,
+#btn-rec-delete:hover { background:color-mix(in srgb,var(--border) 50%,transparent) }
 #rec-rename { width:100%; margin-bottom:4px; padding:6px 10px; border-radius:8px; border:1px solid color-mix(in srgb,var(--border) 70%,transparent); background:transparent; color:var(--text); font-size:12px; outline:none }
 #rec-rename:focus { border-color:var(--primary) }
 
@@ -236,7 +238,7 @@ canvas { width:100%; height:100% }
 
 /* ===== SIDEBAR DEV ===== */
 .dev-sidebar { display:flex; flex-direction:column; border-right:1px solid color-mix(in srgb,var(--border) 60%,transparent); background:color-mix(in srgb,var(--bg) 50%,transparent); overflow:hidden }
-.dev-sidebar-scroll { flex:1; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:10px }
+.dev-sidebar-scroll { flex:1; min-height:0; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:10px }
 .dev-sidebar-scroll::-webkit-scrollbar { width:4px }
 .dev-sidebar-scroll::-webkit-scrollbar-track { background:transparent }
 .dev-sidebar-scroll::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px }
@@ -256,6 +258,10 @@ canvas { width:100%; height:100% }
 .dev-card.collapsed .dev-chevron { transform:rotate(-90deg) }
 .dev-card-body { padding:12px }
 .dev-card.collapsed .dev-card-body { display:none }
+.dev-note-list { max-height:380px; overflow-y:auto }
+.dev-note-list::-webkit-scrollbar { width:4px }
+.dev-note-list::-webkit-scrollbar-track { background:transparent }
+.dev-note-list::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px }
 
 /* Champs de formulaire dev */
 .dev-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:8px }
@@ -336,3 +342,98 @@ canvas { width:100%; height:100% }
   text-align:left; padding-left:18px; font-size:13px;
   color:var(--text); display:flex; flex-direction:column; gap:6px;
 }
+
+/* ===== MODE APPRENDRE ===== */
+.lyrics-toolbar { display:flex; gap:8px; margin-bottom:10px }
+.learn-lines-list {
+  display:none; flex-direction:column; gap:5px;
+  overflow-y:auto; max-height:210px; padding-right:2px;
+}
+.learn-lines-list.open { display:flex }
+.learn-lines-list::-webkit-scrollbar { width:3px }
+.learn-lines-list::-webkit-scrollbar-thumb { background:color-mix(in srgb,var(--muted) 35%,transparent); border-radius:3px }
+.learn-line {
+  display:flex; align-items:center; gap:8px; padding:8px 10px;
+  border-radius:8px; cursor:pointer;
+  border:1px solid var(--border); font-size:13px;
+  transition:background .12s, border-color .12s; user-select:none;
+}
+.learn-line:hover { background:color-mix(in srgb,var(--primary) 10%,transparent) }
+.learn-line.active { background:color-mix(in srgb,var(--primary) 18%,transparent); border-color:var(--primary) }
+.ll-text { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.ll-time { font-size:10px; color:var(--muted); flex-shrink:0 }
+.learn-controls {
+  display:none; align-items:center; justify-content:space-between;
+  margin-top:8px; font-size:12px; color:var(--muted);
+}
+.learn-rep-badge { font-weight:800; color:var(--primary); font-size:15px; margin-left:4px }
+
+/* ===== SCORE EN TEMPS RÉEL ===== */
+.score-live {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:6px 12px; border-radius:8px; margin:4px 0 8px;
+  background:color-mix(in srgb,var(--bg) 45%,transparent);
+  border:1px solid var(--border); font-size:12px; color:var(--muted);
+}
+.score-live-val { font-weight:800; font-size:17px }
+
+/* ===== COMPARAISON VOIX ===== */
+.compare-section { margin:4px 0 }
+.compare-wrap { display:flex; flex-direction:column; gap:6px; margin-top:8px }
+.compare-canvas { width:100%; height:160px; border-radius:10px; display:block;
+  background:color-mix(in srgb,var(--bg) 60%,transparent); border:1px solid var(--border) }
+.compare-legend { display:flex; gap:14px; font-size:11px; color:var(--muted); justify-content:center }
+.compare-legend span { display:flex; align-items:center; gap:5px }
+.compare-dot { display:inline-block; width:14px; height:3px; border-radius:2px }
+.score-result { text-align:center; font-size:18px; font-weight:700; padding:4px 0 }
+
+/* ===== MODE DUO ===== */
+.duo-section {
+  max-width:1060px; margin:0 auto 28px; padding:0 20px;
+  display:none; grid-template-columns:1fr 1fr; gap:18px;
+}
+.duo-section.open { display:grid }
+@media(max-width:768px) { .duo-section.open { grid-template-columns:1fr } }
+.duo-player {
+  background:color-mix(in srgb,var(--panel) 52%,transparent);
+  backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+  border-radius:14px; padding:18px; border:1px solid var(--border);
+  box-shadow:var(--shadow); display:flex; flex-direction:column; gap:10px;
+}
+.duo-title { font-size:15px; font-weight:700 }
+.duo-controls { display:flex; gap:8px; flex-wrap:wrap }
+.duo-pitch-wrap {
+  position:relative; height:100px; border-radius:10px; overflow:hidden;
+  background:var(--canvas-bg); border:1px solid color-mix(in srgb,var(--border) 50%,transparent);
+}
+.duo-pitch-wrap canvas { width:100%; height:100%; display:block }
+.duo-score-row { text-align:center }
+.duo-score-num { font-size:30px; font-weight:800 }
+.duo-score-lbl { font-size:11px; color:var(--muted) }
+
+/* ===== MODE GUITAR HERO ===== */
+.gh-toggle-row { display:flex; justify-content:flex-end; margin-top:6px }
+.gh-toggle-btn {
+  background:transparent; border:1px solid var(--border);
+  color:var(--muted); border-radius:6px; padding:3px 10px;
+  font-size:11px; font-weight:600; cursor:pointer; transition:all .15s;
+}
+.gh-toggle-btn:hover { border-color:var(--primary); color:var(--primary) }
+.gh-toggle-btn.active { background:var(--primary); border-color:var(--primary); color:#fff }
+
+/* ===== OUTILS TOPBAR PIANO ROLL ===== */
+.topbar-tools {
+  display:flex; gap:2px; background:color-mix(in srgb,var(--bg) 60%,transparent);
+  border:1px solid var(--border); border-radius:8px; padding:2px; flex-shrink:0;
+}
+.topbar-tool {
+  width:32px; height:28px; border:none; border-radius:6px; cursor:pointer;
+  background:transparent; font-size:14px; display:flex; align-items:center;
+  justify-content:center; transition:background .12s; color:var(--text);
+}
+.topbar-tool:hover { background:color-mix(in srgb,var(--border) 80%,transparent) }
+.active-topbar-tool { background:var(--primary) !important; }
+.topbar-zoom { display:flex; align-items:center; gap:4px; flex-shrink:0; }
+.topbar-zoom-btn { width:22px; height:22px; border:1px solid var(--border); background:transparent; color:var(--text); border-radius:4px; font-size:15px; font-weight:700; cursor:pointer; line-height:1; display:flex; align-items:center; justify-content:center; transition:border-color .12s, color .12s; }
+.topbar-zoom-btn:hover { border-color:var(--primary); color:var(--primary); }
+#zoom-pct { font-size:11px; color:var(--muted); min-width:52px; text-align:center; }

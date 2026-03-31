@@ -1,0 +1,27 @@
+<!-- ... existing code ... -->
+    <!-- MENU JOIN MULTI -->
+    <div id="screen-mp-join" class="menu-screen" style="display:none;">
+        <div class="menu-title" style="font-size: 2rem;">CONNEXION</div>
+        <p style="color:var(--text-muted);">ENTREZ L'ID DU SALON :</p>
+        <input type="text" id="room-input" placeholder="CODE (EX: A1B2)" maxlength="7">
+        <button class="btn-main btn-pink" onclick="joinGame()">CONNECTER</button>
+        <button class="btn-main btn-secondary" onclick="showScreen('screen-mp-menu')">ANNULER</button>
+        <div id="join-status" class="status-text"></div>
+    </div>
+
+    <!-- MENU LOBBY (HOST) -->
+<!-- ... existing code ... -->
+        window.joinGame = function() {
+            gameState.mode = 'MP'; p2p.isHost = false;
+            let roomId = document.getElementById('room-input').value.toUpperCase().trim();
+            if(!roomId) return;
+            
+            // Ajout de la complétion automatique
+            if (!roomId.startsWith('NK-')) {
+                roomId = 'NK-' + roomId;
+            }
+            
+            document.getElementById('join-status').innerText = "Recherche...";
+            p2p.peer = new Peer();
+            p2p.peer.on('open', () => {
+// ... existing code ...

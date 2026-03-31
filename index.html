@@ -91,6 +91,9 @@ a { text-decoration:none; color:inherit; }
 .ph-matrice{ background:linear-gradient(150deg,#1a2000,#2e3d00); }
 .ph-vecth  { background:linear-gradient(150deg,#2e0a00,#4a1500); }
 .ph-music  { background:linear-gradient(150deg,#001a12,#00341f); }
+.ph-neural { background:linear-gradient(150deg,#0a0012,#1a0033); }
+.ph-fight { background:linear-gradient(150deg,#0b1a2e,#0d2d4a); }
+
 
 /* FOOTER */
 .footer { text-align:center; padding:20px; border-top:1px solid var(--border); }
@@ -170,11 +173,13 @@ a { text-decoration:none; color:inherit; }
             fichier (URL), disponible (bool), secretOnly (bool)
    ============================================================ */
 const JEUX = [
-  { id:"voleur",     titre:"Le Voleur de Copies",   niveau:"Seconde",   chapitre:"Fonctions & Graphiques", description:"Infiltrez le système du lycée. Résolvez des calculs d'images, lisez des graphiques et interceptez le voleur.", image:"Le_Voleur/le_voleur.png",       fichier:"Le_Voleur/le_voleur.html?jeu=Voleur",  disponible:true  },
-  { id:"vecthorreur",titre:"Vecthorreur",            niveau:"Seconde",   chapitre:"Vecteurs",               description:"Manipule des vecteurs pour survivre. Échappe au monstre en calculant ta trajectoire.",                        image:"Vecthorreur/vecthorreur.png",   fichier:"Vecthorreur/vecthorreur.html",         disponible:true  },
+  { id:"voleur",     titre:"Le Voleur de Copies",   niveau:"Seconde",   chapitre:"Fonctions & Graphiques", description:"Infiltrez le système du lycée. Résolvez des calculs d'images, lisez des graphiques et interceptez le voleur.", image:"Le_Voleur/le_voleur.png",              fichier:"Le_Voleur/le_voleur.html?jeu=Voleur",           disponible:true  },
+  { id:"vecthorreur",titre:"Vecthorreur",            niveau:"Seconde",   chapitre:"Vecteurs",               description:"Manipule des vecteurs pour survivre. Échappe au monstre en calculant ta trajectoire.",                        image:"Vecthorreur/vecthorreur.png",          fichier:"Vecthorreur/vecthorreur.html",                  disponible:true  },
   { id:"enigma",     titre:"Projet Enigma",          niveau:"Terminale", chapitre:"Probabilités",           description:"Déchiffrez les communications secrètes avec les probabilités conditionnelles.",                               imageClass:"ph-enigma", icon:"🎲",     fichier:"#",                                    disponible:false },
   { id:"matrice",    titre:"La Matrice",             niveau:"Terminale", chapitre:"Vecteurs & Espace",      description:"Naviguez en 3D avec les équations paramétriques pour trouver la sortie.",                                    imageClass:"ph-matrice",icon:"📊",     fichier:"#",                                    disponible:false },
   { id:"studiomusic",titre:"Karaoké Studio",          niveau:"Bonus",     chapitre:"Coaching vocal",         description:"Chante en karaoké, détection de justesse en temps réel, harmonies IA et éditeur de notes.",               imageClass:"ph-music",  icon:"🎤",     fichier:"La compagnie créole/chant.html",        disponible:true, secretOnly:true },
+  { id:"neural_knockout",     titre:"Neural Knockout",   niveau:"Seconde",   chapitre:"Général", description:"Battez vous contre vos amis à un jeu de reflexe et montrez leur qui est le plus fort.", image:"neural_knockout/neural_knockout.png",       fichier:"neural_knockout/neural_knockout.html",  disponible:true  },
+
 ];
 
 /* ============================================================
@@ -189,7 +194,8 @@ function creerCarte(jeu) {
               :                        `<div class="card-badge soon">Bientôt</div>`;
   const div = document.createElement('div');
   div.className = 'card' + (jeu.disponible ? '' : ' locked');
-  div.innerHTML = `<a ${jeu.disponible?`href="${jeu.fichier}"`:''}  style="display:contents;">
+  const href = jeu.disponible ? 'href="' + jeu.fichier + '"' : '';
+  div.innerHTML = `<a ${href} style="display:contents;">
     <div class="card-img-wrap">${img}<div class="card-overlay"></div>${badge}</div>
     <div class="card-info">
       <div class="card-title">${jeu.titre}</div>

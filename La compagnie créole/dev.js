@@ -17,6 +17,12 @@ let devUnlocked  = false;
 let autoSaveTimer = null;
 let editorDirty  = false; // flag pour throttler renderEditor() via rAF
 
+const LEFT_AX = 44; // largeur de l'axe des notes (gauche du canvas)
+function fmtTime(sec) {
+  const m = Math.floor(sec / 60), s = Math.floor(sec % 60);
+  return m + ':' + String(s).padStart(2, '0');
+}
+
 const editor = {
   tool:        'draw',
   selectedId:  null,
@@ -70,8 +76,6 @@ const devAutoMs     = document.getElementById('dev-auto-ms');
 const devLyrics     = document.getElementById('dev-lyrics');
 const devLyricsAuto = document.getElementById('dev-lyrics-auto');
 const devNoteList   = document.getElementById('dev-note-list');
-const hudTool       = document.getElementById('hud-tool');
-const hudSel        = document.getElementById('hud-sel');
 const midiMinSlider = document.getElementById('midi-min-slider');
 const midiMaxSlider = document.getElementById('midi-max-slider');
 const midiMinVal    = document.getElementById('midi-min-val');
@@ -193,30 +197,30 @@ function renderEditor() {
   for (let midi = midiMin; midi <= midiMax; midi++) {
     const y = H - ((midi - midiMin) * noteH);
     ectx.fillStyle = midi % 12 === 0 ? 'rgba(99,102,241,.08)' : 'rgba(255,255,255,.02)';
-    ectx.fillRect(0, y - noteH, W, noteH);
+    ectx.fillRect(LEFT_AX, y - noteH, W - LEFT_AX, noteH);
     if (midi % 12 === 0) {
       ectx.strokeStyle = 'rgba(99,102,241,.3)'; ectx.lineWidth = 1;
-      ectx.beginPath(); ectx.moveTo(0, y); ectx.lineTo(W, y); ectx.stroke();
+      ectx.beginPath(); ectx.moveTo(LEFT_AX, y); ectx.lineTo(W, y); ectx.stroke();
     }
   }
 
   // Grille temporelle (temps en secondes)
   const bpm = +(devBpm?.value || 120), steps = +(devSteps?.value || 4);
   const beatSec  = 60 / bpm, stepS = beatSec / steps;
-  const endT     = scrollSec + W / pxPerSec;
+  const endT     = scrollSec + (W - LEFT_AX) / pxPerSec;
   const firstBeat = Math.floor(scrollSec / beatSec) * beatSec;
   for (let t = firstBeat; t < endT; t += stepS) {
-    const x      = (t - scrollSec) * pxPerSec;
+    const x      = LEFT_AX + (t - scrollSec) * pxPerSec;
     const isBeat = Math.abs(t % beatSec) < 1e-6 || Math.abs(t % beatSec - beatSec) < 1e-6;
     ectx.strokeStyle = isBeat ? 'rgba(148,163,184,.25)' : 'rgba(148,163,184,.08)'; ectx.lineWidth = 1;
     ectx.beginPath(); ectx.moveTo(x, 0); ectx.lineTo(x, H); ectx.stroke();
-    if (isBeat) { ectx.fillStyle = clrText; ectx.font = '10px system-ui'; ectx.fillText(t.toFixed(1) + 's', x + 3, 10); }
+    if (isBeat) { ectx.fillStyle = clrText; ectx.font = '10px system-ui'; ectx.textBaseline = 'bottom'; ectx.fillText(fmtTime(t), x + 3, H - 1); ectx.textBaseline = 'middle'; }
   }
 
   // Notes
   const notes = laneNotes();
   for (const n of notes) {
-    const x = (n.t0 - scrollSec) * pxPerSec, w = n.d * pxPerSec;
+    const x = LEFT_AX + (n.t0 - scrollSec) * pxPerSec, w = n.d * pxPerSec;
     const y = H - ((n.midi - midiMin + 1) * noteH);
     if (x + w < 0 || x > W) continue;
     const isSel    = editor.selectedIds.has(n.id);
@@ -251,21 +255,30 @@ function renderEditor() {
 
   // Tête de lecture
   if (isFinite(playerInstru.currentTime)) {
-    const px = (playerInstru.currentTime - scrollSec) * pxPerSec;
-    if (px >= 0 && px <= W) {
+    const px = LEFT_AX + (playerInstru.currentTime - scrollSec) * pxPerSec;
+    if (px >= LEFT_AX && px <= W) {
       ectx.strokeStyle = clrPrimary; ectx.lineWidth = 2;
       ectx.beginPath(); ectx.moveTo(px, 0); ectx.lineTo(px, H); ectx.stroke();
     }
   }
 
-  updateNoteList();
-  if (hudSel) {
-    const cnt = editor.selectedIds.size;
-    hudSel.textContent = cnt > 1 ? `${cnt} notes`
-      : editor.selectedId
-        ? (lyricDisp(notes.find(n => n.id === editor.selectedId)?.lyric?.text) || editor.selectedId)
-        : '—';
+  // Axe gauche — noms de notes MIDI
+  ectx.fillStyle = clrBg;
+  ectx.fillRect(0, 0, LEFT_AX, H);
+  ectx.strokeStyle = 'rgba(148,163,184,.25)'; ectx.lineWidth = 1;
+  ectx.beginPath(); ectx.moveTo(LEFT_AX - 0.5, 0); ectx.lineTo(LEFT_AX - 0.5, H); ectx.stroke();
+  ectx.textAlign = 'center'; ectx.textBaseline = 'middle';
+  for (let midi = midiMin; midi <= midiMax; midi++) {
+    const y = H - (midi - midiMin) * noteH - noteH / 2;
+    if (y < -noteH || y > H + noteH) continue;
+    const isC     = midi % 12 === 0;
+    const isBlack = [1,3,6,8,10].includes(midi % 12);
+    ectx.fillStyle = isC ? clrPrimary : (isBlack ? 'rgba(100,116,139,.65)' : clrText);
+    ectx.font      = isC ? 'bold 9px system-ui' : '9px system-ui';
+    ectx.fillText(midiName(midi), LEFT_AX / 2, y);
   }
+
+  updateNoteList();
 }
 
 function updateNoteList() {
@@ -294,18 +307,19 @@ function getCanvasCoords(e) {
   const r = editorCanvas.getBoundingClientRect();
   return { x: e.clientX - r.left, y: e.clientY - r.top };
 }
-function coordsToTime(x)  { return x / +(devZoom?.value || 140) + +(devScroll?.value || 0); }
+function coordsToTime(x)  { return (x - LEFT_AX) / +(devZoom?.value || 140) + +(devScroll?.value || 0); }
 function coordsToMidi(y)  { return Math.floor(editor.view.midiMax - (y / (editorCanvas.height / (editor.view.midiMax - editor.view.midiMin)))); }
 function isOnEdge(n, cx, side) {
   const pxPerSec = +(devZoom?.value || 140), scroll = +(devScroll?.value || 0);
-  const nx = (n.t0 - scroll) * pxPerSec;
+  const nx = LEFT_AX + (n.t0 - scroll) * pxPerSec;
   return side === 'left' ? Math.abs(cx - nx) < 6 : Math.abs(cx - (nx + n.d * pxPerSec)) < 6;
 }
 function noteAtCoords(cx, cy) {
+  if (cx < LEFT_AX) return null; // axe gauche non interactif
   const pxPerSec = +(devZoom?.value || 140), scroll = +(devScroll?.value || 0);
   const noteH = editorCanvas.height / (editor.view.midiMax - editor.view.midiMin);
   return laneNotes().find(n => {
-    const nx = (n.t0 - scroll) * pxPerSec;
+    const nx = LEFT_AX + (n.t0 - scroll) * pxPerSec;
     const ny = editorCanvas.height - ((n.midi - editor.view.midiMin + 1) * noteH);
     return cx >= nx && cx <= nx + n.d * pxPerSec && cy >= ny && cy <= ny + noteH;
   }) || null;
@@ -316,6 +330,7 @@ editorCanvas.addEventListener('contextmenu', e => e.preventDefault());
 editorCanvas.addEventListener('pointerdown', e => {
   e.preventDefault(); editorCanvas.setPointerCapture(e.pointerId);
   const { x, y } = getCanvasCoords(e);
+  if (x < LEFT_AX) return; // clic dans l'axe gauche → ignorer
   editor.isDown = true;
   editor._preAction = JSON.stringify(laneNotes()); // snapshot pour undo
 
@@ -426,7 +441,7 @@ editorCanvas.addEventListener('pointerup', e => {
     // Ctrl/Shift = ajouter à la sélection existante, sinon remplacer
     if (!e.ctrlKey && !e.shiftKey) editor.selectedIds.clear();
     laneNotes().forEach(n => {
-      const nx = (n.t0 - scroll) * pxPerSec;
+      const nx = LEFT_AX + (n.t0 - scroll) * pxPerSec;
       const ny = editorCanvas.height - ((n.midi - editor.view.midiMin + 1) * noteH);
       if (nx < bx1 && nx + n.d * pxPerSec > bx0 && ny < by1 && ny + noteH > by0)
         editor.selectedIds.add(n.id);
@@ -460,17 +475,38 @@ editorCanvas.addEventListener('dblclick', e => {
 /* ===== OUTILS ===== */
 function setTool(t) {
   editor.tool = t;
+  // Sync boutons sidebar
   const btnId = { draw:'draw', erase:'erase', select:'sel' };
   ['draw','erase','sel'].forEach(id => {
     document.getElementById('dev-tool-' + id)?.classList.toggle('active-tool', id === (btnId[t] || t));
   });
-  const names = { draw:'Note', erase:'Gomme', select:'Sélection' };
-  if (hudTool) hudTool.textContent = names[t] || t;
+  // Sync boutons topbar
+  ['draw','erase','sel'].forEach(id => {
+    document.getElementById('topbar-tool-' + id)?.classList.toggle('active-topbar-tool', id === (btnId[t] || t));
+  });
+  const names = { draw:'Dessiner', erase:'Gomme', select:'Sélection' };
   editorCanvas.style.cursor = t === 'draw' ? 'crosshair' : t === 'erase' ? 'cell' : 'default';
 }
+// Boutons sidebar
 document.getElementById('dev-tool-draw') .addEventListener('click', () => setTool('draw'));
 document.getElementById('dev-tool-erase').addEventListener('click', () => setTool('erase'));
 document.getElementById('dev-tool-sel')  .addEventListener('click', () => setTool('select'));
+// Boutons topbar (toujours visibles)
+document.getElementById('topbar-tool-draw') ?.addEventListener('click', () => setTool('draw'));
+document.getElementById('topbar-tool-erase')?.addEventListener('click', () => setTool('erase'));
+document.getElementById('topbar-tool-sel')  ?.addEventListener('click', () => setTool('select'));
+
+/* ===== ZOOM TOPBAR ===== */
+function updateZoomDisplay() {
+  const el = document.getElementById('zoom-pct');
+  if (el && devZoom) el.textContent = devZoom.value + 'px/s';
+}
+document.getElementById('btn-zoom-in')?.addEventListener('click', () => {
+  if (devZoom) { devZoom.value = String(Math.min(400, +(devZoom.value || 140) + 20)); updateZoomDisplay(); renderEditor(); }
+});
+document.getElementById('btn-zoom-out')?.addEventListener('click', () => {
+  if (devZoom) { devZoom.value = String(Math.max(40, +(devZoom.value || 140) - 20)); updateZoomDisplay(); renderEditor(); }
+});
 
 /* ===== AUTO-ÉCOUTE ===== */
 function median(vals) {
@@ -493,6 +529,10 @@ async function startAutoListen() {
 
   // ① Lancer la musique EN PREMIER (indépendamment du routing)
   if (playerInstru.paused) {
+    // Résoudre la suspension possible du contexte Web Audio avant de jouer
+    if (window.routingReady && typeof Tone !== 'undefined' && Tone.context.state !== 'running') {
+      Tone.context.resume().catch(() => {});
+    }
     playerInstru.play().catch(() => {});
     playerOrig.play().catch(() => {});
     isPlaying = true; btnPlay.textContent = '⏸';
@@ -594,9 +634,7 @@ function stopAutoListen() {
   // Libérer la capture audio système si active
   if (sysAudioStream) { sysAudioStream.getTracks().forEach(t => t.stop()); sysAudioStream = null; }
   if (sysAudioCtx)    { sysAudioCtx.close().catch(() => {}); sysAudioCtx = null; }
-  // Arrêter la lecture
-  playerInstru.pause(); playerOrig.pause();
-  isPlaying = false; btnPlay.textContent = '▶';
+  // La lecture continue — l'utilisateur peut la stopper avec le bouton ▶/⏸ principal
   if (devAuto.segment) { commitSegment(devAuto.segment, devAuto.segment.last); devAuto.segment = null; sortNotes(); scheduleAutoSave(); renderEditor(); }
   document.getElementById('btn-auto-start').disabled = false;
   document.getElementById('btn-auto-stop').disabled  = true;
@@ -645,6 +683,7 @@ function openDev() {
 
   devOpen = true; devOverlay.classList.add('open');
   resizeEditorCanvas();
+  updateZoomDisplay();
   if (laneNotes().length) autoFitMidi(); else renderEditor();
 }
 
@@ -674,7 +713,7 @@ devOverlay.addEventListener('click', e => { if (e.target === devOverlay) closeDe
 
 document.getElementById('btn-dev-save').addEventListener('click', () => {
   saveDraft();                              // persiste le draft (avec --) avant tout traitement
-  autoApplySyllsOnSave(); saveSong({ silent: false }); rebuildLyrics();
+  autoApplySyllsOnSave(); saveSong({ silent: false }); // rebuildLyrics() déjà appelé dans saveSong()
 });
 
 devSongSel.addEventListener('change', () => {
@@ -820,6 +859,14 @@ window.addEventListener('keydown', e => {
     scheduleAutoSave(); renderEditor();
   }
 
+  // D / E / S = changer d'outil (sans Ctrl)
+  const tag = document.activeElement?.tagName;
+  if (!ctrl && !e.shiftKey && tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT') {
+    if (e.key === 'd' || e.key === 'D') { setTool('draw');   return; }
+    if (e.key === 'e' || e.key === 'E') { setTool('erase');  return; }
+    if (e.key === 's' || e.key === 'S') { setTool('select'); return; }
+  }
+
   // Entrée = éditer la syllabe de la note sélectionnée
   if (e.key === 'Enter' && editor.selectedId) {
     const n = laneNotes().find(n => n.id === editor.selectedId); if (!n) return;
@@ -828,14 +875,25 @@ window.addEventListener('keydown', e => {
   }
 });
 
-/* ===== MOLETTE : SCROLL HORIZONTAL + ZOOM ===== */
+/* ===== MOLETTE : SCROLL HORIZONTAL + ZOOM HORIZONTAL + ZOOM VERTICAL ===== */
 editorCanvas.addEventListener('wheel', e => {
   e.preventDefault();
+  const { x } = getCanvasCoords(e);
   const pxPerSec = +(devZoom?.value || 140);
-  if (e.ctrlKey) {
-    // Ctrl + molette = zoom
+
+  if (x < LEFT_AX) {
+    // Molette sur l'axe gauche = zoom vertical (plage MIDI)
+    const range  = editor.view.midiMax - editor.view.midiMin;
+    const center = Math.round((editor.view.midiMax + editor.view.midiMin) / 2);
+    const delta  = e.deltaY > 0 ? 3 : -3; // >0 = dézoom, <0 = zoom
+    const newRange = Math.max(4, Math.min(88, range + delta));
+    const half   = Math.floor(newRange / 2);
+    applyMidiRange(Math.max(0, center - half), Math.min(127, center + half));
+  } else if (e.ctrlKey) {
+    // Ctrl + molette = zoom horizontal
     const newZoom = Math.max(40, Math.min(400, pxPerSec - e.deltaY * 0.5));
     if (devZoom) devZoom.value = String(Math.round(newZoom));
+    updateZoomDisplay();
   } else {
     // Molette = scroll horizontal (deltaX = touchpad, deltaY = souris)
     const raw      = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
@@ -869,10 +927,13 @@ editorCanvas.addEventListener('wheel', e => {
 
 /* ===== ACCORDION (cartes sidebar) ===== */
 document.querySelectorAll('.dev-card').forEach(card => {
+  const body = card.querySelector('.dev-card-body');
   card.classList.add('collapsed');
+  if (body) body.style.display = 'none'; // force-hide even if inline style conflicts
   card.querySelector('.dev-card-head')?.addEventListener('click', e => {
     if (e.target.closest('.info-btn')) return;
-    card.classList.toggle('collapsed');
+    const isNowCollapsed = card.classList.toggle('collapsed');
+    if (body) body.style.display = isNowCollapsed ? 'none' : '';
   });
 });
 

@@ -1,0 +1,168 @@
+:root {
+    --neon-pink: #ff00ff;
+    --neon-blue: #00ffff;
+    --neon-yellow: #ffff00;
+    --bg-dark: #0a0a12;
+    --ui-bg: rgba(20, 20, 40, 0.9);
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0; padding: 0;
+    background-color: var(--bg-dark);
+    font-family: 'Rajdhani', sans-serif; color: white;
+    overflow: hidden; height: 100vh; width: 100vw; user-select: none;
+    touch-action: none;
+}
+
+/* --- CANVA MOTEUR DE JEU --- */
+#gameCanvas {
+    display: none;
+    width: 100%; height: 100%;
+    position: absolute; top: 0; left: 0; z-index: 1;
+}
+
+/* --- CONTROLES MOBILES --- */
+#mobile-controls {
+    display: none; position: absolute; bottom: 20px; width: 100%;
+    padding: 0 20px; justify-content: space-between;
+    z-index: 50; pointer-events: none;
+}
+.ctrl-btn {
+    background: rgba(255,255,255,0.1); border: 2px solid white; color: white;
+    border-radius: 50%; width: 70px; height: 70px; font-size: 2rem;
+    display: flex; justify-content: center; align-items: center;
+    pointer-events: auto; backdrop-filter: blur(5px);
+}
+.ctrl-btn:active { background: rgba(255,255,255,0.4); transform: scale(0.9); }
+.ctrl-action { width: 80px; height: 80px; background: rgba(255,0,255,0.3); border-color: var(--neon-pink); }
+.ctrl-jump { width: 70px; height: 70px; margin-right: 10px; }
+
+/* --- MENUS --- */
+.menu-screen {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(10, 10, 20, 0.95); z-index: 200;
+    display: flex; flex-direction: column;
+    overflow-y: auto;
+}
+.menu-screen::before {
+    content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background-image: linear-gradient(rgba(0, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 0, 255, 0.1) 1px, transparent 1px);
+    background-size: 40px 40px; z-index: -1; pointer-events: none;
+}
+
+.menu-content {
+    margin: auto; padding: 40px 20px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    width: 100%; max-width: 900px; text-align: center;
+}
+
+.menu-title {
+    font-family: 'Press Start 2P'; font-size: clamp(2rem, 5vw, 3rem);
+    color: transparent; -webkit-text-stroke: 2px var(--neon-pink);
+    margin-bottom: 30px; text-shadow: 4px 4px var(--neon-blue); line-height: 1.2;
+}
+
+.btn-main {
+    padding: 15px 20px; font-size: clamp(1rem, 3vw, 1.5rem);
+    background: var(--neon-blue); border: none; font-weight: bold; color: black;
+    margin: 10px; cursor: pointer; transform: skewX(-15deg);
+    box-shadow: 5px 5px 0px var(--neon-pink); transition: 0.2s; font-family: 'Rajdhani';
+    text-transform: uppercase; width: 100%; max-width: 350px;
+}
+.btn-main:active { transform: skewX(-15deg) translate(2px, 2px); box-shadow: 3px 3px 0px var(--neon-pink); }
+.btn-secondary { background: #333; color: #fff; box-shadow: 5px 5px 0px #111; }
+.btn-pink { background: var(--neon-pink); color: white; box-shadow: 5px 5px 0px var(--neon-blue); }
+
+.btn-row {
+    display: flex; gap: 20px; justify-content: center; width: 100%; max-width: 600px;
+    flex-wrap: wrap-reverse; margin-top: 10px;
+}
+.btn-row .btn-main {
+    flex: 1; min-width: 180px; margin: 5px 0;
+}
+
+input[type="text"], select {
+    padding: 15px; font-size: 1.2rem; font-family: 'Press Start 2P';
+    text-align: center; border: 2px solid var(--neon-blue); background: black; color: var(--neon-yellow);
+    margin-bottom: 20px; width: 100%; max-width: 400px; text-transform: uppercase; outline: none;
+}
+select { font-family: 'Rajdhani'; font-weight: bold; font-size: 1.5rem; cursor: pointer; }
+.status-text { color: var(--neon-yellow); margin-top: 20px; font-family: 'Press Start 2P'; font-size: 0.8rem; line-height: 1.5; }
+
+/* --- ECRAN SELECTION PERSO --- */
+.char-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;
+    margin-bottom: 20px; width: 100%; max-width: 700px;
+}
+.char-card {
+    background: rgba(0,0,0,0.8); border: 2px solid #333; border-radius: 10px;
+    padding: 10px; cursor: pointer; transition: all 0.2s;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.char-card:hover { border-color: var(--neon-blue); transform: translateY(-3px); box-shadow: 0 5px 15px var(--neon-blue); }
+.char-card.selected { border-color: var(--neon-pink); box-shadow: 0 0 20px var(--neon-pink); background: rgba(255,0,255,0.1); }
+.char-preview { width: clamp(50px, 12vh, 80px); height: clamp(50px, 12vh, 80px); margin-bottom: 10px; }
+.char-name-label { font-family: 'Press Start 2P'; font-size: clamp(0.5rem, 2vw, 0.7rem); color: white; }
+
+/* --- PUZZLE OVERLAY --- */
+#puzzle-overlay {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    display: none; flex-direction: column; justify-content: center; align-items: center;
+    z-index: 100; pointer-events: none; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px);
+}
+.puzzle-box {
+    background: var(--ui-bg); border: 2px solid var(--neon-yellow); padding: 30px;
+    border-radius: 15px; text-align: center; box-shadow: 0 0 40px var(--neon-yellow);
+    width: 90%; max-width: 600px; pointer-events: auto;
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+@keyframes popIn { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.clash-title { font-family: 'Press Start 2P'; color: var(--neon-yellow); margin-bottom: 20px; font-size: clamp(1rem, 3vw, 1.5rem); text-shadow: 0 0 10px red; }
+.puzzle-question { font-size: clamp(1.2rem, 3vw, 1.5rem); margin-bottom: 20px; font-weight: bold; color: white; }
+.math-expr { font-family: 'Courier New', monospace; color: var(--neon-pink); font-size: clamp(1.8rem, 5vw, 2.5rem); margin-bottom: 20px; font-weight: bold; text-shadow: 0 0 10px rgba(255,0,255,0.5); }
+.answers-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+
+.answer-btn {
+    background: rgba(0,0,0,0.5); border: 2px solid var(--neon-blue); color: var(--neon-blue);
+    padding: 15px; font-size: clamp(1.2rem, 3vw, 1.5rem); cursor: pointer; font-family: 'Rajdhani'; font-weight: bold;
+    transition: 0.1s; border-radius: 8px; text-shadow: 0 0 5px currentColor;
+}
+.answer-btn:hover { background: var(--neon-blue); color: black; box-shadow: 0 0 15px var(--neon-blue); }
+
+.visual-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 0 auto; width: fit-content; }
+.visual-cell { width: clamp(40px, 10vw, 60px); height: clamp(40px, 10vw, 60px); cursor: pointer; border: 2px solid #fff; border-radius: 5px; transition: transform 0.1s; }
+.visual-cell:hover { transform: scale(1.1); box-shadow: 0 0 10px white; }
+
+#instructions { position: absolute; top: 80px; width: 100%; text-align: center; color: rgba(255,255,255,0.5); font-size: 1rem; z-index: 5; pointer-events: none; }
+
+/* --- ANNONCES --- */
+#announcement {
+    position: absolute; top: 35%; width: 100%; text-align: center;
+    font-family: 'Press Start 2P', cursive; font-size: clamp(2rem, 5vw, 3rem);
+    z-index: 150; pointer-events: none; display: none;
+    text-shadow: 0 0 20px currentColor; line-height: 1.5;
+}
+.anim-announce { animation: zoomFade 2s forwards; }
+@keyframes zoomFade {
+    0%   { transform: scale(0.1); opacity: 0; }
+    10%  { transform: scale(1.2); opacity: 1; }
+    20%  { transform: scale(1);   opacity: 1; }
+    80%  { transform: scale(1);   opacity: 1; }
+    100% { transform: scale(2);   opacity: 0; }
+}
+
+/* --- RESPONSIVITE MOBILE --- */
+@media (max-width: 600px) {
+    .char-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    #timer-display { font-size: 20px; }
+    .char-name { font-size: 9px; }
+    .puzzle-box { padding: 15px; width: 95%; }
+    #mobile-controls { bottom: 10px; padding: 0 10px; }
+    .ctrl-btn { width: 50px; height: 50px; font-size: 1.2rem; }
+    .ctrl-jump { width: 50px; height: 50px; margin-right: 5px; }
+    .ctrl-action { width: 60px; height: 60px; }
+    input[type="text"], select { font-size: 1rem; }
+}

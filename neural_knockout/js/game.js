@@ -196,6 +196,10 @@ function gameLoop(timestamp) {
 function updateAI(dt) {
     if (!enemy.isGrounded) return;
 
+    // Si le joueur est en l'air et proche, l'IA attend qu'il atterrisse
+    // (évite que l'IA recule quand le joueur saute par-dessus)
+    if (!player.isGrounded && Math.abs(enemy.x - player.x) < ATTACK_RANGE + 80) return;
+
     let dx = enemy.x - player.x;
     enemy.dir = dx > 0 ? -1 : 1;
 

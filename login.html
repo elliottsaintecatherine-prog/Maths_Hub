@@ -263,8 +263,8 @@ window.handleAuth = async () => {
     if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
       errEl.textContent = 'Identifiant invalide (lettres, chiffres, _, 3–20 caractères).'; return;
     }
-    if (password.length < 8) {
-      errEl.textContent = 'Mot de passe trop court (8 caractères minimum).'; return;
+    if (password.length < 4) {
+      errEl.textContent = 'Mot de passe trop court (4 caractères minimum).'; return;
     }
     if (password !== confirm) {
       errEl.textContent = 'Les mots de passe ne correspondent pas.'; return;

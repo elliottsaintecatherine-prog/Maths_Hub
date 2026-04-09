@@ -26,6 +26,8 @@ let gameState = {
     timer:      99,
     clashTimer: CLASH_INTERVAL,
     clashActive: false,
+    isSurcharge: false,
+    gameSpeed: 1.0,
     currentAns: null,
     difficulty: 'normal',
     lastTime: 0, timerAcc: 0, syncAcc: 0,
@@ -34,28 +36,45 @@ let gameState = {
     p1Score: 0, p2Score: 0
 };
 
-let aiTimer = null;
-let p2p     = { peer: null, conn: null, isHost: false };
+let aiTimer    = null;
+let p2p        = { peer: null, conn: null, isHost: false };
+let burnZones  = [];
+let ghostClones = [];
 
 /* =========================================================================
    GESTION DES ENTREES
    ========================================================================= */
-const keys = { left: false, right: false, up: false, down: false, attack: false };
+const keys = { left: false, right: false, up: false, down: false, attack: false, upJustPressed: false };
 
 window.addEventListener('keydown', (e) => {
     if (!gameState.isActive || gameState.clashActive || !gameState.roundActive) return;
     if (e.code === 'ArrowLeft'  || e.code === 'KeyA' || e.code === 'KeyQ') keys.left   = true;
     if (e.code === 'ArrowRight' || e.code === 'KeyD')                      keys.right  = true;
-    if (e.code === 'ArrowUp'    || e.code === 'KeyW' || e.code === 'KeyZ') keys.up     = true;
+    if (e.code === 'ArrowUp'    || e.code === 'KeyW' || e.code === 'KeyZ') {
+        if (!keys.up) keys.upJustPressed = true;
+        keys.up = true;
+    }
     if (e.code === 'ArrowDown'  || e.code === 'KeyS' || e.code === 'KeyX') keys.down   = true;
-    if (e.code === 'Space') { if (!keys.attack) { keys.attack = true; player.tryAttack(); } }
+    if (e.code === 'KeyE') player.useAbility();
+    if (e.code === 'Space') {
+        if (!keys.attack) {
+            keys.attack = true;
+            player.tryAttack();
+            player.isCharging = true;
+            player.chargeTime = 0;
+        }
+    }
 });
 window.addEventListener('keyup', (e) => {
     if (e.code === 'ArrowLeft'  || e.code === 'KeyA' || e.code === 'KeyQ') keys.left   = false;
     if (e.code === 'ArrowRight' || e.code === 'KeyD')                      keys.right  = false;
-    if (e.code === 'ArrowUp'    || e.code === 'KeyW' || e.code === 'KeyZ') keys.up     = false;
+    if (e.code === 'ArrowUp'    || e.code === 'KeyW' || e.code === 'KeyZ') { keys.up = false; keys.upJustPressed = false; }
     if (e.code === 'ArrowDown'  || e.code === 'KeyS' || e.code === 'KeyX') keys.down   = false;
-    if (e.code === 'Space') keys.attack = false;
+    if (e.code === 'Space') {
+        keys.attack = false;
+        player.isCharging = false;
+        player.chargeTime = 0;
+    }
 });
 
 const btnL = document.getElementById('btn-left');
@@ -76,7 +95,7 @@ btnA.addEventListener('touchstart', (e) => { e.preventDefault(); player.tryAttac
 function gameLoop(timestamp) {
     if (!gameState.isActive) return;
 
-    let dt = timestamp - gameState.lastTime;
+    let dt = (timestamp - gameState.lastTime) * (gameState.gameSpeed || 1.0);
     gameState.lastTime = timestamp;
 
     player.update(dt);
@@ -92,7 +111,7 @@ function gameLoop(timestamp) {
                 if (gameState.timer <= 0) handleRoundTimeout();
             }
             gameState.clashTimer--;
-            if (gameState.clashTimer <= 0) triggerClash();
+            if (gameState.clashTimer <= 0 && gameState.timer > 3) triggerClash();
         }
 
         if (gameState.mode === 'SP') updateAI(dt);
@@ -101,7 +120,7 @@ function gameLoop(timestamp) {
             gameState.syncAcc += dt;
             if (gameState.syncAcc > 50) {
                 gameState.syncAcc = 0;
-                p2p.conn.send({ type: 'SYNC_STATE', x: player.x, y: player.y, dir: player.dir, state: player.state, power: player.hasPowerUp, hp: player.hp, combo: player.comboCount });
+                p2p.conn.send({ type: 'SYNC_STATE', x: player.x, y: player.y, dir: player.dir, state: player.state, power: player.hasPowerUp, powerTimer: player.powerTimer, hp: player.hp, combo: player.comboCount });
             }
         }
     }
@@ -120,6 +139,49 @@ function gameLoop(timestamp) {
     ctx.shadowBlur = 10; ctx.shadowColor = '#ff00ff';
     ctx.beginPath(); ctx.moveTo(0, canvas.height * 0.75); ctx.lineTo(canvas.width, canvas.height * 0.75); ctx.stroke();
     ctx.shadowBlur = 0;
+
+    // Burn zones (PHOENIX)
+    for (let i = burnZones.length - 1; i >= 0; i--) {
+        const bz = burnZones[i];
+        bz.timer -= dt / 1000;
+        if (bz.timer <= 0) { burnZones.splice(i, 1); continue; }
+        // Dessin
+        ctx.save();
+        ctx.globalAlpha = 0.25 + 0.15 * Math.sin(Date.now() / 150);
+        ctx.fillStyle = '#f97316';
+        ctx.shadowBlur = 20; ctx.shadowColor = '#f97316';
+        ctx.beginPath();
+        ctx.ellipse(bz.x, bz.y, bz.r, bz.r * 0.35, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.restore();
+        // Dégâts continus
+        if (gameState.roundActive && !gameState.clashActive) {
+            const target = bz.owner.isPlayer ? enemy : player;
+            if (Math.abs(target.x - bz.x) < bz.r && Math.abs(target.y - bz.y) < 60) {
+                target.hp -= 0.3; // ~18 dégâts/s
+                checkWinCondition();
+            }
+        }
+    }
+
+    // Ghost clones (SHADOW)
+    for (let i = ghostClones.length - 1; i >= 0; i--) {
+        const gc = ghostClones[i];
+        gc.timer -= dt / 1000;
+        if (gc.timer <= 0) { ghostClones.splice(i, 1); continue; }
+        ctx.save();
+        ctx.globalAlpha = (gc.timer / 2.0) * 0.45;
+        ctx.translate(gc.x - 60, gc.y - 120);
+        if (gc.dir === -1) { ctx.translate(120, 0); ctx.scale(-1, 1); }
+        ctx.shadowBlur = 15; ctx.shadowColor = '#eab308';
+        const pixW = 120 / 16, pixH = 120 / 16;
+        for (let r of CHARS[gc.charId].rects) {
+            ctx.fillStyle = '#eab308';
+            ctx.fillRect(r[0] * pixW, r[1] * pixH, r[2] * pixW, r[3] * pixH);
+        }
+        ctx.restore();
+    }
 
     player.draw(ctx);
     enemy.draw(ctx);
@@ -221,6 +283,9 @@ function checkWinCondition() {
     if (!gameState.roundActive) return false;
     if (player.hp <= 0 || enemy.hp <= 0) {
         gameState.roundActive = false;
+        // Slow-motion KO
+        gameState.gameSpeed = 0.2;
+        setTimeout(() => { gameState.gameSpeed = 1.0; }, 800);
         if (gameState.mode === 'SP' || p2p.isHost) {
             if (player.hp <= 0) finishRound('P2_WIN');
             else finishRound('P1_WIN');
@@ -258,6 +323,12 @@ function startNextRound() {
     player.vy = 0; enemy.vy = 0;
     player.hasPowerUp = false; enemy.hasPowerUp = false;
     player.comboCount = 0;    enemy.comboCount = 0;
+    player.energy = 0;        enemy.energy = 0;
+    player.isCharging = false; enemy.isCharging = false;
+    player.hasShield = false;  enemy.hasShield = false;
+    player.isRaging = false;   enemy.isRaging = false;
+    burnZones  = [];
+    ghostClones = [];
     player.dir = 1; enemy.dir = -1;
 
     gameState.clashTimer  = CLASH_INTERVAL;
@@ -278,7 +349,14 @@ function showScreen(id) {
 window.goToCharSelect = function(mode) {
     gameState.targetMode = mode;
     buildCharSelect();
+    document.getElementById('difficulty-section').style.display = mode === 'SP' ? 'block' : 'none';
     showScreen('screen-char-select');
+};
+
+window.selectDifficulty = function(diff) {
+    gameState.difficulty = diff;
+    document.querySelectorAll('.diff-btn').forEach(b => b.style.borderColor = '');
+    document.getElementById('diff-' + diff).style.borderColor = 'var(--neon-yellow)';
 };
 
 window.selectChar = function(id) {
@@ -292,8 +370,6 @@ window.confirmCharacter = function() {
 
     if (gameState.targetMode === 'SP') {
         gameState.mode = 'SP';
-        const diffs = ['easy', 'normal', 'expert'];
-        gameState.difficulty   = diffs[Math.floor(Math.random() * diffs.length)];
         gameState.remoteCharId = Math.floor(Math.random() * 6);
         initMatch();
     } else if (gameState.targetMode === 'MP') {
@@ -313,20 +389,68 @@ function initMatch() {
     gameState.p1Score = 0;
     gameState.p2Score = 0;
     gameState.isActive = true;
+    gameState.gameSpeed = 1.0;
     gameState.lastTime = performance.now();
 
     requestAnimationFrame(gameLoop);
-    startNextRound();
+
+    // Annonce des personnages avant le premier FIGHT!
+    const p1Name = CHARS[gameState.localCharId].name;
+    const p2Name = CHARS[gameState.remoteCharId].name;
+    showAnnouncement(`${p1Name}<br><span style="color:white; font-size:0.6em;">VS</span><br>${p2Name}`, CHARS[gameState.localCharId].glow);
+    setTimeout(startNextRound, 2500);
 }
+
+function saveToHallOfFame(result) {
+    const entry = {
+        player: CHARS[gameState.localCharId].name,
+        opponent: CHARS[gameState.remoteCharId].name,
+        result,
+        score: `${gameState.p1Score}-${gameState.p2Score}`,
+        mode: gameState.mode === 'SP' ? 'IA' : 'VS',
+        date: new Date().toLocaleDateString('fr-FR')
+    };
+    let hof = JSON.parse(localStorage.getItem('nk_hof') || '[]');
+    hof.unshift(entry);
+    if (hof.length > 10) hof = hof.slice(0, 10);
+    localStorage.setItem('nk_hof', JSON.stringify(hof));
+}
+
+window.showHallOfFame = function() {
+    const hof = JSON.parse(localStorage.getItem('nk_hof') || '[]');
+    const list = document.getElementById('hof-list');
+    if (hof.length === 0) {
+        list.innerHTML = '<p style="color:rgba(255,255,255,0.4); text-align:center;">Aucun match enregistré</p>';
+    } else {
+        list.innerHTML = hof.map((e, i) => {
+            const color = e.result === 'VICTOIRE' ? 'var(--neon-yellow)' : e.result === 'DÉFAITE' ? 'var(--neon-pink)' : 'white';
+            return `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.1);">
+                <span style="color:${color}; font-size:0.7rem;">${i + 1}. ${e.player} vs ${e.opponent} [${e.mode}]</span>
+                <span style="color:${color}; font-size:0.7rem;">${e.score} — ${e.result} — ${e.date}</span>
+            </div>`;
+        }).join('');
+    }
+    showScreen('screen-hof');
+};
+
+window.clearHallOfFame = function() {
+    localStorage.removeItem('nk_hof');
+    showHallOfFame();
+};
 
 function endGame(finalStr) {
     gameState.isActive    = false;
     gameState.roundActive = false;
+    gameState.gameSpeed   = 1.0;
     clearTimeout(aiTimer);
+    burnZones  = [];
+    ghostClones = [];
     document.getElementById('gameCanvas').style.display       = 'none';
     document.getElementById('puzzle-overlay').style.display   = 'none';
     document.getElementById('instructions').style.display     = 'none';
     document.getElementById('mobile-controls').style.display  = 'none';
+
+    saveToHallOfFame(finalStr);
 
     let coins = (finalStr === 'VICTOIRE') ? 150 : (finalStr === 'ÉGALITÉ') ? 50 : 25;
     let currentCoins = parseInt(localStorage.getItem('hubCurrency')) || 0;

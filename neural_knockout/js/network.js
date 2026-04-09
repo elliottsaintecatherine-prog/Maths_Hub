@@ -59,12 +59,13 @@ function setupConnection() {
                 gameState.timer = msg.time;
                 break;
             case 'SYNC_STATE':
-                enemy.x         = canvas.width - msg.x;
-                enemy.y         = msg.y;
-                enemy.dir       = -msg.dir;
-                enemy.state     = msg.state;
+                enemy.x          = canvas.width - msg.x;
+                enemy.y          = msg.y;
+                enemy.dir        = -msg.dir;
+                enemy.state      = msg.state;
                 enemy.hasPowerUp = msg.power;
-                enemy.hp        = msg.hp;
+                enemy.powerTimer = msg.powerTimer;
+                enemy.hp         = msg.hp;
                 enemy.comboCount = msg.combo;
                 break;
             case 'I_HIT_YOU':
@@ -83,8 +84,8 @@ function setupConnection() {
                 else resolveClash('player');
                 break;
             case 'ROUND_SCORE':
-                gameState.p1Score = msg.p2;
-                gameState.p2Score = msg.p1;
+                gameState.p1Score = msg.p1;
+                gameState.p2Score = msg.p2;
                 if (!gameState.roundActive) handleRoundEndGuest();
                 break;
             case 'GAME_OVER':

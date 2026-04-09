@@ -11,7 +11,7 @@
 <body>
 
     <canvas id="gameCanvas"></canvas>
-    <div id="instructions" style="display:none;">[FLÈCHES / ZQSD] Bouger | [HAUT / Z] Sauter | [BAS / S / X] S'accroupir | [ESPACE] Attaquer</div>
+    <div id="instructions" style="display:none;">[FLÈCHES / ZQSD] Bouger | [HAUT / Z] Sauter | [BAS / S / X] S'accroupir | [ESPACE] Attaquer (maintenir 2s = Surcharge) | [E] Capacité spéciale</div>
     <div id="announcement"></div>
 
     <!-- CONTROLES MOBILES -->
@@ -39,7 +39,8 @@
             <p style="color:rgba(255,255,255,0.5); margin-bottom:40px;">RÉSOLVEZ POUR FRAPPER. HÉSITEZ ET MOURREZ.</p>
             <button class="btn-main" onclick="goToCharSelect('SP')">MODE SOLO (VS I.A.)</button>
             <button class="btn-main btn-pink" onclick="goToCharSelect('MP')">MULTIJOUEUR (P2P)</button>
-            <a href="../index.html" class="btn-main btn-secondary" style="margin-top:40px; text-decoration:none; display:inline-block;">◀ RETOUR AU HUB</a>
+            <button class="btn-main btn-secondary" onclick="showHallOfFame()" style="margin-top:20px;">★ HALL OF FAME</button>
+            <a href="../index.html" class="btn-main btn-secondary" style="margin-top:20px; text-decoration:none; display:inline-block;">◀ RETOUR AU HUB</a>
         </div>
     </div>
 
@@ -48,6 +49,14 @@
         <div class="menu-content">
             <div class="menu-title" style="font-size:clamp(1.5rem, 4vw, 2rem);">PRÉPARATION</div>
             <div class="char-grid" id="char-grid-container"></div>
+            <div id="difficulty-section" style="display:none; margin-bottom:15px;">
+                <p style="color:rgba(255,255,255,0.5); font-size:0.8rem; margin-bottom:8px;">DIFFICULTÉ I.A. :</p>
+                <div class="btn-row">
+                    <button class="btn-main btn-secondary diff-btn" id="diff-easy" onclick="selectDifficulty('easy')" style="padding:10px 20px; font-size:0.6rem;">FACILE</button>
+                    <button class="btn-main diff-btn" id="diff-normal" onclick="selectDifficulty('normal')" style="padding:10px 20px; font-size:0.6rem; border-color:var(--neon-yellow);">NORMAL</button>
+                    <button class="btn-main btn-pink diff-btn" id="diff-expert" onclick="selectDifficulty('expert')" style="padding:10px 20px; font-size:0.6rem;">EXPERT</button>
+                </div>
+            </div>
             <p style="color:rgba(255,255,255,0.5); font-size:0.8rem; margin-bottom:5px;">NOMBRE DE MANCHES GAGNANTES :</p>
             <select id="rounds-select">
                 <option value="1">1 Manche (Mort Subite)</option>
@@ -93,6 +102,18 @@
             <div id="room-id-display" style="font-size:clamp(2.5rem, 6vw, 4rem); font-family:'Press Start 2P'; color:var(--neon-yellow); margin:20px 0; text-shadow:0 0 20px var(--neon-yellow); user-select:text;">----</div>
             <div id="host-status" class="status-text">En attente d'un adversaire...</div>
             <button class="btn-main btn-secondary" onclick="location.reload()" style="margin-top:40px;">ANNULER</button>
+        </div>
+    </div>
+
+    <!-- HALL OF FAME -->
+    <div id="screen-hof" class="menu-screen" style="display:none;">
+        <div class="menu-content">
+            <div class="menu-title" style="font-size:clamp(1.2rem, 3vw, 1.8rem); color:var(--neon-yellow);">★ HALL OF FAME ★</div>
+            <div id="hof-list" style="width:100%; max-width:500px; margin:20px 0;"></div>
+            <div class="btn-row">
+                <button class="btn-main btn-secondary" onclick="showScreen('screen-main')">◀ RETOUR</button>
+                <button class="btn-main btn-pink" onclick="clearHallOfFame()">EFFACER</button>
+            </div>
         </div>
     </div>
 

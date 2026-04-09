@@ -504,7 +504,8 @@ const gameState = {
   moveCount: 0,
   timestamp: 0,
   flashObstacle: null,
-  flashTimer: 0,
+  flashTimer: 0,          // ms remaining for flash effect
+  lastFrameTime: 0,       // timestamp of last frame for delta time
   selectedMenuMap: 0,
   animRunning: false,
   // Multiplayer
@@ -517,6 +518,7 @@ const gameState = {
 const MONSTER_INTERVALS = { easy: 10000, medium: 7000, hard: 4000 };
 let monsterTimer = null;
 let overlayOpen = false;
+let rafId = null;  // track requestAnimationFrame to prevent leak
 
 function resetMonsterTimer() {
   clearInterval(monsterTimer);
@@ -531,11 +533,15 @@ const ctx = canvas.getContext('2d');
 let W, H, SCALE, ISO_CY;
 
 function resizeCanvas() {
-  // Canvas 3D plein écran
-  canvas.width  = window.innerWidth;
-  canvas.height = window.innerHeight;
-  W = canvas.width;
-  H = canvas.height;
+  // Canvas 3D plein écran avec support Retina/HiDPI
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width  = window.innerWidth * dpr;
+  canvas.height = window.innerHeight * dpr;
+  canvas.style.width  = window.innerWidth + 'px';
+  canvas.style.height = window.innerHeight + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  W = window.innerWidth;
+  H = window.innerHeight;
   SCALE   = Math.min(W * 0.90 / (80 * 0.866), H * 0.90 / 42.2);
   ISO_CY  = H - 21.1 * SCALE;
 
@@ -827,7 +833,7 @@ function drawPlayer3D(pp, pal) {
   if (ctx.roundRect) ctx.roundRect(headX - s*0.05, headY - s*0.07, headW + s*0.1, headH*0.48, [s*0.14, s*0.14, 0, 0]);
   else ctx.rect(headX, headY, headW, headH * 0.45);
   ctx.fill();
-  ctx.beginPath(); ctx.rect(hx - s*0.05, hy + hh*0.42, hw + s*0.1, hh*0.12); ctx.fill();
+  ctx.beginPath(); ctx.rect(headX - s*0.05, headY + headH*0.42, headW + s*0.1, headH*0.12); ctx.fill();
 
   ctx.shadowBlur = 0; ctx.restore();
 }
@@ -1068,7 +1074,7 @@ function checkPath(start, vec) {
     if (pt.x < -20 || pt.x > 20 || pt.y < -20 || pt.y > 20) return 'BLOCKED';
     for (const obs of map.obstacles) {
       if (pt.x >= obs.x1 && pt.x <= obs.x2 && pt.y >= obs.y1 && pt.y <= obs.y2) {
-        if (obs.flashOnContact) gameState.flashObstacle = obs;
+        if (obs.flashOnContact) { gameState.flashObstacle = obs; gameState.flashTimer = 500; }
         return 'BLOCKED';
       }
     }
@@ -1178,14 +1184,20 @@ async function monsterAutoMove() {
                  gameState.playerPos.y - gameState.monsterPos.y) < 1.5) gameOver(true);
 }
 
-function monsterMove() {
+function monsterMove(playerVecMagnitude) {
   const gs = gameState;
   const step = getMonsterNextStep();
   if (!step) return;
   const len = Math.sqrt(step.x**2 + step.y**2);
-  const dist = Math.hypot(gs.playerPos.x - gs.monsterPos.x, gs.playerPos.y - gs.monsterPos.y);
-  const speed = Math.min(dist * MAPS[gs.currentMap].monsterSpeed, 5);
-  const nx = (step.x / len) * speed, ny = (step.y / len) * speed;
+  if (len === 0) return;
+  // Turn-based: monster speed proportional to player's vector magnitude
+  // Base: 1 cell per 1 unit of player vector, scaled by map difficulty
+  const mapSpeed = MAPS[gs.currentMap].monsterSpeed;
+  const pvMag = playerVecMagnitude || 3; // default fallback
+  const speed = Math.max(1, Math.min(Math.round(pvMag * mapSpeed), 8));
+  const nx = Math.round((step.x / len) * speed);
+  const ny = Math.round((step.y / len) * speed);
+  if (nx === 0 && ny === 0) { gs.monsterPos.x += step.x; gs.monsterPos.y += step.y; return; }
   if (checkPath(gs.monsterPos, {x:nx, y:ny}) === 'OK') {
     gs.monsterPos.x += nx; gs.monsterPos.y += ny; return;
   }
@@ -1335,18 +1347,80 @@ function showResults() {
 }
 
 // ═══════════════════════════════════════════════════
-// SECTION 14 — DECK MANAGEMENT
+// SECTION 14 — DECK MANAGEMENT (card-hand system)
 // ═══════════════════════════════════════════════════
-function addToDeck(vec) {
-  gameState.deck.unshift({x: vec.x, y: vec.y});
-  if (gameState.deck.length > 8) gameState.deck.pop();
+const DECK_SIZE = 5;
+const VECTOR_RANGES = {
+  easy:   { min: -5,  max: 5  },
+  medium: { min: -10, max: 10 },
+  hard:   { min: -15, max: 15 }
+};
+
+function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+function generateCard() {
+  const r = VECTOR_RANGES[gameState.difficulty] || VECTOR_RANGES.medium;
+  let x, y;
+  do { x = randInt(r.min, r.max); y = randInt(r.min, r.max); } while (x === 0 && y === 0);
+  return { x, y };
+}
+
+function generateHand() {
+  gameState.deck = [];
+  for (let i = 0; i < DECK_SIZE; i++) gameState.deck.push(generateCard());
+  gameState.selectedDeck = [];
   renderDeck();
 }
+
+function consumeCard(index) {
+  gameState.deck.splice(index, 1);
+  gameState.selectedDeck = [];
+  renderDeck();
+}
+
+function consumeCards(indices) {
+  // Remove in descending order to preserve indices
+  indices.sort((a, b) => b - a).forEach(i => gameState.deck.splice(i, 1));
+  gameState.selectedDeck = [];
+  renderDeck();
+}
+
+function passTurn() {
+  if (gameState.mode !== 'idle' && gameState.mode !== 'command') return;
+  // Draw a new hand, but the monster gets a free move
+  generateHand();
+  setMessage('🃏 Nouvelle main piochée — le monstre avance !');
+  gameState.moveCount++;
+  // Monster moves on pass
+  const prevM = {...gameState.monsterPos};
+  monsterMove();
+  const newM = {...gameState.monsterPos};
+  gameState.monsterPos = {...prevM};
+  playSound('monster');
+  animateMonster(prevM, newM, 400).then(() => {
+    gameState.monsterPos = {...newM};
+    if (Math.hypot(gameState.playerPos.x - gameState.monsterPos.x,
+                   gameState.playerPos.y - gameState.monsterPos.y) < 1.5) {
+      gameOver(true);
+    } else {
+      resetMonsterTimer();
+      updateCommandUI();
+    }
+  });
+}
+
+// Legacy compatibility — addToDeck now replenishes consumed slot with a new card
+function addToDeck(vec) {
+  // After using a card, replenish hand if below DECK_SIZE
+  while (gameState.deck.length < DECK_SIZE) gameState.deck.push(generateCard());
+  renderDeck();
+}
+
 function renderDeck() {
   const area = document.getElementById('deck-area');
   area.innerHTML = '';
   if (gameState.deck.length === 0) {
-    area.innerHTML = '<span style="color:#00ffff33;font-size:12px;">Vide</span>';
+    area.innerHTML = '<span style="color:#a0785033;font-size:12px;font-style:italic;">Aucun parchemin</span>';
     return;
   }
   gameState.deck.forEach((v, i) => {
@@ -1361,16 +1435,17 @@ function toggleDeckSelect(i) {
   const idx = gameState.selectedDeck.indexOf(i);
   if (idx >= 0) { gameState.selectedDeck.splice(idx, 1); }
   else { gameState.selectedDeck.push(i); }
+  // Auto-fill input fields when exactly 1 card is selected
+  if (gameState.selectedDeck.length === 1) {
+    const v = gameState.deck[gameState.selectedDeck[0]];
+    document.getElementById('inp-x').value = v.x;
+    document.getElementById('inp-y').value = v.y;
+    drawPreview();
+  }
   renderDeck();
 }
 
-// ═══════════════════════════════════════════════════
-// SECTION 15 — SLIDE (no-op)
-// ═══════════════════════════════════════════════════
-function slideTo(view) {
-  gameState.view = view; // neutralisé — overlay gère l'état visuel
-  updateModeIndicator();
-}
+// (Section 15 removed — slideTo was a no-op)
 
 // ═══════════════════════════════════════════════════
 // SECTION 16 — OVERLAY 2D
@@ -1387,16 +1462,13 @@ function closeOverlay() {
   const fso = document.getElementById('map-fullscreen-overlay');
   if (fso) fso.classList.remove('open');
 }
-function updateModeIndicator() {
-  // indicateur masqué — rien à faire
-}
 // ═══════════════════════════════════════════════════
 // SECTION 17 — UI HELPERS
 // ═══════════════════════════════════════════════════
 function setMessage(msg) { document.getElementById('message-zone').textContent = msg; }
 
 function setAllDisabled(disabled) {
-  ['btn-execute', 'btn-combo', 'btn-scalar', 'btn-back-cmd', 'btn-mute'].forEach(id => {
+  ['btn-execute', 'btn-combo', 'btn-scalar', 'btn-pass', 'btn-back-cmd', 'btn-mute'].forEach(id => {
     const el = document.getElementById(id); if (el) el.disabled = disabled;
   });
   document.querySelectorAll('.btn-deck').forEach(b => b.disabled = disabled);
@@ -1450,18 +1522,20 @@ async function executeVector() {
     return;
   }
   const vec = {x: dx, y: dy};
+  // Consume the selected card(s) from hand
+  if (gameState.selectedDeck.length === 1) {
+    consumeCard(gameState.selectedDeck[0]);
+  }
   playSound('execute');
   gameState.flashObstacle = null;
   const result = checkPath(gameState.playerPos, vec);
-  // Toujours animer le déplacement, quelle que soit l'issue
   setMessage('');
-  addToDeck(vec);
   gameState.moveCount++;
   gameState.pendingVector = vec;
   setAllDisabled(true);
   gameState.mode = 'animating';
   closeOverlay();
-  slideTo('execute');
+
   await delay(520);
   const startPos = {...gameState.playerPos};
   const endPos = {x: startPos.x + dx, y: startPos.y + dy};
@@ -1486,8 +1560,9 @@ async function executeVector() {
     gameState.playerPos = {...finalPos};
     gameState.lastVector = vec;
     setMessage('⚠ Repoussé par le mur !');
+    const vecMag = Math.hypot(vec.x, vec.y);
     const pM = {...gameState.monsterPos};
-    playSound('monster'); monsterMove();
+    playSound('monster'); monsterMove(vecMag);
     const nM = {...gameState.monsterPos};
     gameState.monsterPos = {...pM};
     await animateMonster(pM, nM, 300);
@@ -1497,6 +1572,7 @@ async function executeVector() {
     setAllDisabled(false);
     document.getElementById('btn-back-cmd').disabled = false;
     resetMonsterTimer();
+    addToDeck(); // replenish hand
     updateCommandUI(); openOverlay();
     return;
   }
@@ -1508,7 +1584,7 @@ async function executeVector() {
   if (result === 'DEAD') { gameOver(); return; }
   const prevMonster = {...gameState.monsterPos};
   playSound('monster');
-  monsterMove();
+  monsterMove(Math.hypot(vec.x, vec.y));
   const newMonster = {...gameState.monsterPos};
   gameState.monsterPos = {...prevMonster};
   await animateMonster(prevMonster, newMonster, 300);
@@ -1520,6 +1596,7 @@ async function executeVector() {
   setAllDisabled(false);
   document.getElementById('btn-back-cmd').disabled = false;
   resetMonsterTimer();
+  addToDeck(); // replenish hand
   updateCommandUI(); openOverlay();
 }
 
@@ -1527,37 +1604,81 @@ async function executeVector() {
 // SECTION 19 — COMBO
 // ═══════════════════════════════════════════════════
 function executeCombo() {
-  if (gameState.selectedDeck.length !== 2) { setMessage('⚠ Sélectionne exactement 2 vecteurs du deck.'); return; }
+  if (gameState.selectedDeck.length !== 2) { setMessage('⚠ Sélectionne exactement 2 parchemins.'); return; }
   const [i1, i2] = gameState.selectedDeck;
-  const v1 = gameState.deck[i1], v2 = gameState.deck[i2];
+  const v1 = {...gameState.deck[i1]}, v2 = {...gameState.deck[i2]};
+  // Consume both cards before executing
+  consumeCards([i1, i2]);
   const r1 = checkPath(gameState.playerPos, v1);
   const mid = {x: gameState.playerPos.x + v1.x, y: gameState.playerPos.y + v1.y};
   const r2 = (r1 === 'OK' || r1 === 'WIN') ? checkPath(mid, v2) : 'OK';
-  gameState.selectedDeck = [];
   gameState.pendingVector = v1;
   playSound('execute'); setMessage('');
   gameState.moveCount++;
   setAllDisabled(true);
   gameState.mode = 'animating';
   closeOverlay();
-  slideTo('execute');
+
   delay(520).then(async () => {
     const startPos = {...gameState.playerPos};
-    await animateMove(startPos, mid, 600, true);
-    gameState.playerPos = {...mid};
-    gameState.lastVector = v1;
+    // ── First vector: handle BLOCKED with repulsion like executeVector ──
+    if (r1 === 'BLOCKED') {
+      const {lastSafe, blockedStep, N} = findLastSafePos(startPos, v1);
+      await animateMove(startPos, lastSafe, 400, true);
+      gameState.playerPos = {...lastSafe};
+      const totalDist = Math.sqrt(v1.x**2 + v1.y**2);
+      const remainingDist = totalDist * (1 - blockedStep / N);
+      const norm = totalDist > 0 ? totalDist : 1;
+      const pushVec = {x: -(v1.x / norm) * remainingDist, y: -(v1.y / norm) * remainingDist};
+      const pushRes = checkPath(lastSafe, pushVec);
+      let finalPos;
+      if (pushRes === 'OK' || pushRes === 'WIN') {
+        finalPos = {x: lastSafe.x + pushVec.x, y: lastSafe.y + pushVec.y};
+      } else { finalPos = {...lastSafe}; }
+      await animateMove(lastSafe, finalPos, 300, true);
+      gameState.playerPos = {...finalPos};
+      gameState.lastVector = v1;
+      setMessage('⚠ Repoussé par le mur !');
+    } else {
+      await animateMove(startPos, mid, 600, true);
+      gameState.playerPos = {...mid};
+      gameState.lastVector = v1;
+    }
     if (r1 === 'WIN') { levelComplete(); return; }
-    if (r1 === 'BLOCKED' || r1 === 'DEAD') { gameOver(); return; }
-    gameState.pendingVector = v2;
-    const end2 = {x: mid.x + v2.x, y: mid.y + v2.y};
-    await animateMove({...gameState.playerPos}, end2, 400, true);
-    gameState.playerPos = {...end2};
-    gameState.lastVector = v2;
-    if (r2 === 'WIN') { levelComplete(); return; }
-    if (r2 === 'BLOCKED' || r2 === 'DEAD') { gameOver(); return; }
+    if (r1 === 'DEAD') { gameOver(); return; }
+    // ── Second vector (only if first wasn't blocked) ──
+    if (r1 !== 'BLOCKED') {
+      gameState.pendingVector = v2;
+      const end2 = {x: gameState.playerPos.x + v2.x, y: gameState.playerPos.y + v2.y};
+      if (r2 === 'BLOCKED') {
+        const {lastSafe: ls2, blockedStep: bs2, N: N2} = findLastSafePos(gameState.playerPos, v2);
+        await animateMove({...gameState.playerPos}, ls2, 400, true);
+        gameState.playerPos = {...ls2};
+        const td2 = Math.sqrt(v2.x**2 + v2.y**2);
+        const rd2 = td2 * (1 - bs2 / N2);
+        const n2 = td2 > 0 ? td2 : 1;
+        const pv2 = {x: -(v2.x / n2) * rd2, y: -(v2.y / n2) * rd2};
+        const pr2 = checkPath(ls2, pv2);
+        let fp2;
+        if (pr2 === 'OK' || pr2 === 'WIN') { fp2 = {x: ls2.x + pv2.x, y: ls2.y + pv2.y}; }
+        else { fp2 = {...ls2}; }
+        await animateMove(ls2, fp2, 300, true);
+        gameState.playerPos = {...fp2};
+        gameState.lastVector = v2;
+        setMessage('⚠ Repoussé par le mur !');
+      } else {
+        await animateMove({...gameState.playerPos}, end2, 400, true);
+        gameState.playerPos = {...end2};
+        gameState.lastVector = v2;
+      }
+      if (r2 === 'WIN') { levelComplete(); return; }
+      if (r2 === 'DEAD') { gameOver(); return; }
+    }
+    // Combo magnitude = sum of both vectors
+    const comboMag = Math.hypot(v1.x, v1.y) + Math.hypot(v2.x, v2.y);
     const prevM = {...gameState.monsterPos};
     playSound('monster');
-    monsterMove();
+    monsterMove(comboMag);
     const newM = {...gameState.monsterPos};
     gameState.monsterPos = {...prevM};
     await animateMonster(prevM, newM, 300);
@@ -1568,6 +1689,7 @@ function executeCombo() {
     setAllDisabled(false);
     document.getElementById('btn-back-cmd').disabled = false;
     resetMonsterTimer();
+    addToDeck(); // replenish hand
     updateCommandUI(); openOverlay();
   });
 }
@@ -1582,6 +1704,9 @@ function executeScalar() {
   const v = gameState.deck[gameState.selectedDeck[0]];
   const scaled = {x: v.x * coeff, y: v.y * coeff};
   if (scaled.x === 0 && scaled.y === 0) { setMessage('⚠ Vecteur résultant nul.'); return; }
+  // Bounds check: clamp magnitude so resulting position stays within [-20, 20]
+  const maxComp = Math.max(Math.abs(scaled.x), Math.abs(scaled.y));
+  if (maxComp > 40) { setMessage('⚠ Coefficient trop grand — vecteur hors limites.'); return; }
   document.getElementById('inp-x').value = Math.round(scaled.x * 10) / 10;
   document.getElementById('inp-y').value = Math.round(scaled.y * 10) / 10;
   gameState.selectedDeck = [];
@@ -1618,7 +1743,6 @@ function startGame(mapIndex, playerTurnOverride) {
   const spawnMap = MAPS[mapIndex];
   gameState.playerPos  = spawnMap.playerSpawn  ? {...spawnMap.playerSpawn}  : { x: 0, y: -18 };
   gameState.monsterPos = spawnMap.monsterSpawn ? {...spawnMap.monsterSpawn} : { x: 0, y: 18 };
-  gameState.deck = [];
   gameState.selectedDeck = [];
   gameState.health = 5;
   gameState.moveCount = 0;
@@ -1629,6 +1753,8 @@ function startGame(mapIndex, playerTurnOverride) {
   gameState.mode = 'idle';
   gameState.flashObstacle = null;
   gameState.flashTimer = 0;
+  gameState.lastFrameTime = 0;
+  generateHand();
   setAllDisabled(false);
   resetMonsterTimer();
   document.getElementById('screen-menu').style.display = 'none';
@@ -1648,8 +1774,9 @@ function startGame(mapIndex, playerTurnOverride) {
   currentMapSound = SFX.map[mapIndex] || null;
   if (currentMapSound) currentMapSound.play().catch(() => {});
   openOverlay();
-  slideTo('execute');
-  requestAnimationFrame(renderLoop);
+
+  if (rafId) cancelAnimationFrame(rafId);
+  rafId = requestAnimationFrame(renderLoop);
 }
 
 // ═══════════════════════════════════════════════════
@@ -1902,7 +2029,7 @@ function drawObstacles2D(ctx) {
     if (isFlash) { ctx.shadowBlur=8; ctx.shadowColor='#ff2200'; }
     ctx.strokeRect(px,py,w,h); ctx.shadowBlur=0;
   });
-  if (gameState.flashTimer>0) gameState.flashTimer--;
+  // flashTimer is decremented in renderLoop via delta time
 }
 
 function drawDeathZones2D(ctx, ts) {
@@ -2110,8 +2237,8 @@ function render3D(ts) {
 // SECTION 24 — COMMAND MODE (vue top-down, maps 1+)
 // ═══════════════════════════════════════════════════
 function renderCommandView(ts) {
-  if (gameState.currentMap === 0) { render3D(ts); return; }
-  renderTopDown(ts);
+  // All maps render in 3D when overlay is open (command view)
+  render3D(ts);
 }
 
 function renderTopDown(ts) {
@@ -2180,13 +2307,19 @@ function renderTopDown(ts) {
 // SECTION 25 — RENDER LOOP (3rd-person perspective)
 // ═══════════════════════════════════════════════════
 function renderLoop(ts) {
+  // Delta time calculation
+  const dt = gameState.lastFrameTime ? ts - gameState.lastFrameTime : 16;
+  gameState.lastFrameTime = ts;
   gameState.timestamp = ts;
-  if (gameState.mode === 'menu') { return; }
+  // Flash timer countdown (delta-time based, in ms)
+  if (gameState.flashTimer > 0) gameState.flashTimer = Math.max(0, gameState.flashTimer - dt);
+  if (gameState.mode === 'menu') { rafId = null; return; }
   // ── Dispatch mode commande (overlay 2D ouvert) → vue top-down ───
   if (overlayOpen) {
     ctx.shadowBlur = 0;
     renderCommandView(ts);
-    if (gameState.mode !== 'menu') requestAnimationFrame(renderLoop);
+    if (gameState.mode !== 'menu') rafId = requestAnimationFrame(renderLoop);
+    else rafId = null;
     return;
   }
   ctx.shadowBlur = 0;
@@ -2530,7 +2663,7 @@ function renderLoop(ts) {
       }
     }});
   });
-  if (gameState.flashTimer > 0) gameState.flashTimer--;
+  // flashTimer is decremented in renderLoop via delta time
 
   // Trail dots on floor
   gameState.trail.forEach((pos, i) => {
@@ -2644,6 +2777,31 @@ function renderLoop(ts) {
     ctx.restore();
   }
 
+  // ── Threat indicator — red vignette + pulsing border based on monster proximity ──
+  const threatDist = Math.hypot(pp.x - mp.x, pp.y - mp.y);
+  const maxThreatDist = 30; // beyond this = no threat overlay
+  const threatLevel = Math.max(0, 1 - threatDist / maxThreatDist); // 0 = safe, 1 = danger
+  if (threatLevel > 0.1) {
+    const tPulse = 0.5 + 0.5 * Math.sin(ts * 0.006 * (1 + threatLevel * 3));
+    const tAlpha = threatLevel * 0.35 * tPulse;
+    // Red vignette
+    ctx.save();
+    const threatGrad = ctx.createRadialGradient(W/2, H/2, H*0.15, W/2, H/2, H*0.7);
+    threatGrad.addColorStop(0, 'rgba(0,0,0,0)');
+    threatGrad.addColorStop(0.5, `rgba(80,0,0,${tAlpha * 0.3})`);
+    threatGrad.addColorStop(1, `rgba(120,0,0,${tAlpha})`);
+    ctx.fillStyle = threatGrad;
+    ctx.fillRect(0, 0, W, H);
+    // Pulsing border
+    if (threatLevel > 0.4) {
+      const bw = 3 + threatLevel * 8;
+      ctx.strokeStyle = `rgba(200,0,0,${tAlpha * 1.2})`;
+      ctx.lineWidth = bw;
+      ctx.strokeRect(bw/2, bw/2, W - bw, H - bw);
+    }
+    ctx.restore();
+  }
+
   // ── Vignette manoir (bords très sombres, légère teinte violacée) ─
   const fog = ctx.createRadialGradient(W/2, H*0.45, H*0.08, W/2, H*0.45, H*0.82);
   fog.addColorStop(0, 'rgba(0,0,0,0)');
@@ -2658,28 +2816,40 @@ function renderLoop(ts) {
   ctx.fillRect(W * 0.82, 0, W * 0.18, H);
   ctx.restore();
 
-  // ── Bougie (halo rond) — obscurité 0.72 ───────────────────
+  // ── Flashlight dynamique — direction suit le dernier vecteur ──
   const lightPt = project(pp.x, pp.y, 1.0);
   if (lightPt) {
     const flicker = 0.92 + 0.08 * Math.sin(ts * 0.013);
     const haloR = Math.max(W, H) * 0.40 * flicker;
+    // Direction angle from last vector (or camera angle if no move yet)
+    const lightAngle = (lv.x !== 0 || lv.y !== 0)
+      ? Math.atan2(-(lv.y * SCALE * 0.5 + lv.x * SCALE * 0.5), (lv.x * SCALE * 0.866 - lv.y * SCALE * 0.866))
+      : cam.angle;
+    // Offset the light center forward in the direction of movement
+    const lightOffX = Math.cos(lightAngle) * haloR * 0.25;
+    const lightOffY = Math.sin(lightAngle) * haloR * 0.25;
+    const lcx = lightPt.sx + lightOffX;
+    const lcy = lightPt.sy + lightOffY;
 
     // 1. Obscurité globale
     ctx.fillStyle = 'rgba(0,0,0,0.62)';
     ctx.fillRect(0, 0, W, H);
 
-    // 2. Halo rond via screen blend
+    // 2. Directional flashlight cone via screen blend + elliptical gradient
     ctx.globalCompositeOperation = 'screen';
-    const haloGrad = ctx.createRadialGradient(
-      lightPt.sx, lightPt.sy, 0,
-      lightPt.sx, lightPt.sy, haloR
-    );
+    ctx.save();
+    ctx.translate(lcx, lcy);
+    ctx.rotate(lightAngle);
+    ctx.scale(1.6, 1.0); // elongate in direction of movement
+    const haloGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, haloR * 0.7);
     haloGrad.addColorStop(0,    `rgba(180,155,100,${0.38 * flicker})`);
     haloGrad.addColorStop(0.30, `rgba(110,80,35,${0.22 * flicker})`);
     haloGrad.addColorStop(0.65, `rgba(45,25,5,${0.10 * flicker})`);
     haloGrad.addColorStop(1,    'rgba(0,0,0,0)');
     ctx.fillStyle = haloGrad;
-    ctx.fillRect(0, 0, W, H);
+    const bigR = haloR * 2;
+    ctx.fillRect(-bigR, -bigR, bigR * 2, bigR * 2);
+    ctx.restore(); // undo translate/rotate/scale
     ctx.globalCompositeOperation = 'source-over';
 
     // 3. Redessiner le joueur PAR-DESSUS le halo
@@ -2693,7 +2863,8 @@ function renderLoop(ts) {
     `(${pp.x.toFixed(1)}, ${pp.y.toFixed(1)})`;
   updateHealthDisplay();
 
-  if (gameState.mode !== 'menu') requestAnimationFrame(renderLoop);
+  if (gameState.mode !== 'menu') rafId = requestAnimationFrame(renderLoop);
+  else rafId = null;
 }
 
 // ═══════════════════════════════════════════════════
@@ -2773,7 +2944,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-back-cmd').onclick = () => {
     if (gameState.mode !== 'idle') return;
     gameState.mode = 'command';
-    slideTo('command');
+
     updateCommandUI();
   };
 
@@ -2782,6 +2953,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Scalar
   document.getElementById('btn-scalar').onclick = executeScalar;
+  document.getElementById('btn-pass').onclick = passTurn;
 
   // Menu buttons
   document.getElementById('btn-play').onclick = () => {
@@ -2950,12 +3122,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Réglages : SFX toggle
+  // Réglages : SFX toggle — delegate to toggleMute for consistency
   document.getElementById('toggle-sfx').onchange = function() {
-    globalMute = !this.checked;
-    ['move','monster','execute','error','death','win','transition'].forEach(k => {
-      SFX[k].muted = globalMute;
-    });
+    if (this.checked === globalMute) toggleMute(); // only toggle if out of sync
   };
 
   // Réglages : Musique toggle

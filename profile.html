@@ -38,8 +38,11 @@ a { text-decoration:none; color:inherit; }
 .profile-avatar { width:64px; height:64px; border-radius:50%; background:linear-gradient(135deg,var(--accent),var(--accent2)); display:grid; place-items:center; font-size:26px; font-weight:900; color:#fff; margin:0 auto 12px; }
 .profile-name { font-size:20px; font-weight:800; text-align:center; }
 .profile-since { font-size:11px; color:var(--text-muted); text-align:center; margin-top:4px; }
-.profile-stats { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:16px; }
-.stat { background:var(--bg); border-radius:10px; padding:12px; text-align:center; }
+.profile-stats { display:flex; flex-direction:column; gap:8px; margin-top:16px; }
+.game-stat { background:var(--bg); border-radius:10px; padding:12px 14px; }
+.game-stat-name { font-size:10px; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:.8px; margin-bottom:8px; }
+.game-stat-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.stat { text-align:center; }
 .stat-val { font-size:18px; font-weight:800; color:var(--accent); }
 .stat-lbl { font-size:10px; color:var(--text-muted); margin-top:2px; text-transform:uppercase; letter-spacing:.5px; }
 
@@ -92,10 +95,20 @@ svg.radar { overflow:visible; }
       <div class="profile-name" id="pname">Chargement…</div>
       <div class="profile-since" id="psince"></div>
       <div class="profile-stats">
-        <div class="stat"><div class="stat-val" id="stat-total">—</div><div class="stat-lbl">Score total</div></div>
-        <div class="stat"><div class="stat-val" id="stat-rank">—</div><div class="stat-lbl">Classement</div></div>
-        <div class="stat"><div class="stat-val" id="stat-voleur">—</div><div class="stat-lbl">Le Voleur</div></div>
-        <div class="stat"><div class="stat-val" id="stat-nk">—</div><div class="stat-lbl">Neural KO</div></div>
+        <div class="game-stat">
+          <div class="game-stat-name">Le Voleur de Copies</div>
+          <div class="game-stat-row">
+            <div class="stat"><div class="stat-val" id="stat-voleur">—</div><div class="stat-lbl">Meilleur score</div></div>
+            <div class="stat"><div class="stat-val" id="stat-voleur-rank">—</div><div class="stat-lbl">Classement</div></div>
+          </div>
+        </div>
+        <div class="game-stat">
+          <div class="game-stat-name">Neural Knockout</div>
+          <div class="game-stat-row">
+            <div class="stat"><div class="stat-val" id="stat-nk">—</div><div class="stat-lbl">Meilleur score</div></div>
+            <div class="stat"><div class="stat-val" id="stat-nk-rank">—</div><div class="stat-lbl">Classement</div></div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -205,19 +218,37 @@ async function init() {
 }
 
 async function loadGameStats() {
-  const games = ['voleur', 'neural_knockout'];
-  const ids   = { voleur: 'stat-voleur', neural_knockout: 'stat-nk' };
+  const games = {
+    voleur:          { scoreId: 'stat-voleur', rankId: 'stat-voleur-rank' },
+    neural_knockout: { scoreId: 'stat-nk',     rankId: 'stat-nk-rank'     }
+  };
 
-  for (const gid of games) {
-    const { data } = await supabase
+  for (const [gid, els] of Object.entries(games)) {
+    // Meilleur score du joueur
+    const { data: scoreData } = await supabase
       .from('game_scores')
       .select('score')
       .eq('user_id', currentUser.id)
       .eq('game_id', gid)
       .order('score', { ascending: false })
       .limit(1);
-    const best = data?.[0]?.score ?? null;
-    document.getElementById(ids[gid]).textContent = best !== null ? best.toLocaleString('fr-FR') : '—';
+
+    const best = scoreData?.[0]?.score ?? null;
+    document.getElementById(els.scoreId).textContent =
+      best !== null ? best.toLocaleString('fr-FR') : '—';
+
+    // Classement : compter les joueurs avec un meilleur score
+    if (best !== null) {
+      const { count } = await supabase
+        .from('best_scores')
+        .select('*', { count: 'exact', head: true })
+        .eq('game_id', gid)
+        .gt('score', best);
+      const rank = (count ?? 0) + 1;
+      document.getElementById(els.rankId).textContent = `#${rank}`;
+    } else {
+      document.getElementById(els.rankId).textContent = '—';
+    }
   }
 }
 
@@ -237,14 +268,7 @@ window.showLB = async (gameId) => {
 
   if (!rows.length) { container.innerHTML = '<div class="lb-empty">Aucun score encore.</div>'; return; }
 
-  // Rang du joueur courant
-  let myRank = null;
   const myUsername = currentUser?.username;
-  rows.forEach((r, i) => {
-    const name = gameId === 'global' ? r.username : r.profiles?.username;
-    if (name === myUsername) myRank = i + 1;
-  });
-  if (myRank) document.getElementById('stat-rank').textContent = `#${myRank}`;
 
   container.innerHTML = rows.map((r, i) => {
     const rank = i + 1;

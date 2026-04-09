@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Scolaris — Connexion</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#111214; --bg-card:#18191f; --border:#1e2026; --border-2:#2a2d35;
+  --text:#e8e8e8; --text-muted:#44484f; --text-sub:#555b66;
+  --accent:#6366f1; --accent-2:#8b5cf6;
+}
+[data-theme="light"] {
+  --bg:#f4f4f6; --bg-card:#fff; --border:#e4e4e8; --border-2:#d0d0d8;
+  --text:#111; --text-muted:#bbb; --text-sub:#aaa;
+}
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+body {
+  font-family:'Inter',system-ui,sans-serif;
+  background:var(--bg); color:var(--text);
+  min-height:100vh;
+  display:grid; place-items:center;
+  padding:16px;
+}
+
+/* CARD */
+.card {
+  background:var(--bg-card);
+  border:1px solid var(--border-2);
+  border-radius:20px;
+  padding:40px 36px;
+  width:100%; max-width:400px;
+}
+
+/* LOGO */
+.logo-wrap {
+  display:flex; align-items:center; gap:12px;
+  margin-bottom:32px; justify-content:center;
+}
+.logo {
+  width:44px; height:44px; border-radius:12px;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  display:grid; place-items:center; font-size:22px; flex-shrink:0;
+}
+.logo-name { font-size:22px; font-weight:900; letter-spacing:-.4px; }
+
+/* TABS */
+.tabs {
+  display:flex; gap:4px; margin-bottom:28px;
+  background:var(--bg); border-radius:12px; padding:4px;
+}
+.tab {
+  flex:1; padding:9px; border:none; border-radius:9px;
+  background:transparent; font-family:inherit; font-size:13px;
+  font-weight:700; color:var(--text-sub); cursor:pointer;
+  transition:all .15s;
+}
+.tab.active {
+  background:var(--bg-card); color:var(--text);
+  box-shadow:0 1px 6px rgba(0,0,0,.25);
+}
+
+/* CHAMPS */
+.field { margin-bottom:16px; }
+.label {
+  display:block; font-size:11px; font-weight:700;
+  color:var(--text-sub); text-transform:uppercase;
+  letter-spacing:.6px; margin-bottom:6px;
+}
+.input {
+  width:100%; padding:12px 16px;
+  border:1.5px solid var(--border); border-radius:10px;
+  background:var(--bg); color:var(--text);
+  font-family:inherit; font-size:15px; outline:none;
+  transition:border-color .15s;
+}
+.input:focus { border-color:var(--accent); }
+.input::placeholder { color:var(--text-muted); }
+
+/* RÈGLES PSEUDO */
+.rules {
+  font-size:11px; color:var(--text-sub);
+  margin-top:-8px; margin-bottom:14px; line-height:1.5;
+}
+
+/* ERREUR */
+.error {
+  font-size:12px; color:#f87171;
+  min-height:18px; margin-bottom:10px;
+  text-align:center;
+}
+
+/* BOUTONS */
+.btn-primary {
+  width:100%; padding:14px;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  color:#fff; border:none; border-radius:10px;
+  font-family:inherit; font-size:15px; font-weight:800;
+  cursor:pointer; transition:opacity .15s;
+  letter-spacing:-.2px;
+}
+.btn-primary:hover { opacity:.88; }
+.btn-primary:disabled { opacity:.4; cursor:not-allowed; }
+
+.sep { text-align:center; font-size:12px; color:var(--text-sub); margin:18px 0; }
+
+.btn-guest {
+  width:100%; padding:12px;
+  background:transparent; color:var(--text-sub);
+  border:1.5px solid var(--border); border-radius:10px;
+  font-family:inherit; font-size:13px; font-weight:600;
+  cursor:pointer; transition:all .15s;
+}
+.btn-guest:hover { border-color:var(--border-2); color:var(--text); }
+
+/* INFO INVITÉ */
+.guest-info {
+  font-size:11px; color:var(--text-sub);
+  text-align:center; margin-top:12px; line-height:1.5;
+}
+
+/* THEME TOGGLE */
+.theme-btn {
+  position:fixed; top:16px; right:16px;
+  border:1px solid var(--border); border-radius:8px;
+  padding:6px 12px; background:transparent;
+  color:var(--text-sub); font-family:inherit;
+  font-size:12px; font-weight:600; cursor:pointer;
+  transition:all .15s;
+}
+.theme-btn:hover { border-color:var(--border-2); color:var(--text); }
+
+/* CHAMP CACHÉ */
+.hidden { display:none !important; }
+</style>
+</head>
+<body>
+
+<button class="theme-btn" id="theme-btn" onclick="toggleTheme()">☀ Mode clair</button>
+
+<div class="card">
+  <!-- Logo -->
+  <div class="logo-wrap">
+    <div class="logo">📐</div>
+    <div class="logo-name">Scolaris</div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" id="tab-login"    onclick="switchTab('login')">Connexion</button>
+    <button class="tab"        id="tab-register" onclick="switchTab('register')">Inscription</button>
+  </div>
+
+  <!-- Champs -->
+  <div class="field">
+    <label class="label">Identifiant</label>
+    <input class="input" id="username" type="text"
+      placeholder="ton_pseudo" autocomplete="username"
+      maxlength="20" spellcheck="false">
+  </div>
+
+  <div class="field" id="field-rules-wrap">
+    <p class="rules" id="rules-text" style="display:none">
+      Lettres, chiffres et _ uniquement · 3 à 20 caractères
+    </p>
+  </div>
+
+  <div class="field">
+    <label class="label">Mot de passe</label>
+    <input class="input" id="password" type="password"
+      placeholder="••••••••" autocomplete="current-password">
+  </div>
+
+  <div class="field hidden" id="field-confirm">
+    <label class="label">Confirmer le mot de passe</label>
+    <input class="input" id="confirm" type="password" placeholder="••••••••">
+  </div>
+
+  <div class="error" id="error-msg"></div>
+
+  <button class="btn-primary" id="btn-submit" onclick="handleAuth()">
+    Se connecter
+  </button>
+
+  <div class="sep">— ou —</div>
+
+  <button class="btn-guest" onclick="continuerInvite()">
+    Continuer en invité →
+  </button>
+
+  <p class="guest-info">
+    En invité, les scores ne sont pas sauvegardés en ligne
+  </p>
+</div>
+
+<script>
+/* ── Thème ── */
+function toggleTheme() {
+  const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+  document.documentElement.setAttribute('data-theme', dark ? 'light' : 'dark');
+  document.getElementById('theme-btn').textContent = dark ? '🌙 Mode sombre' : '☀ Mode clair';
+  localStorage.setItem('theme', dark ? 'light' : 'dark');
+}
+const savedTheme = localStorage.getItem('theme');
+if (savedTheme) {
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  document.getElementById('theme-btn').textContent =
+    savedTheme === 'light' ? '🌙 Mode sombre' : '☀ Mode clair';
+}
+
+/* ── Tabs ── */
+let activeTab = 'login';
+function switchTab(tab) {
+  activeTab = tab;
+  document.getElementById('tab-login').classList.toggle('active',    tab === 'login');
+  document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+  document.getElementById('field-confirm').classList.toggle('hidden', tab === 'login');
+  document.getElementById('rules-text').style.display = tab === 'register' ? 'block' : 'none';
+  document.getElementById('btn-submit').textContent = tab === 'login' ? 'Se connecter' : "S'inscrire";
+  document.getElementById('error-msg').textContent = '';
+  document.getElementById('password').autocomplete =
+    tab === 'login' ? 'current-password' : 'new-password';
+}
+
+/* ── Invité ── */
+function continuerInvite() {
+  sessionStorage.setItem('scolaris_guest', '1');
+  location.href = 'index.html';
+}
+
+/* ── Entrée clavier ── */
+['username','password','confirm'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if (e.key === 'Enter') handleAuth();
+  });
+});
+</script>
+
+<script type="module">
+import { supabase, signIn, signUp, getCurrentUser } from './auth/supabase.js';
+
+/* Déjà connecté → hub directement */
+const { data: { session } } = await supabase.auth.getSession();
+if (session) {
+  location.href = 'index.html';
+}
+
+window.handleAuth = async () => {
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value;
+  const confirm  = document.getElementById('confirm').value;
+  const errEl    = document.getElementById('error-msg');
+  const btn      = document.getElementById('btn-submit');
+
+  errEl.textContent = '';
+
+  /* Validations front */
+  if (!username || !password) {
+    errEl.textContent = 'Remplis tous les champs.'; return;
+  }
+  if (activeTab === 'register') {
+    if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+      errEl.textContent = 'Identifiant invalide (lettres, chiffres, _, 3–20 caractères).'; return;
+    }
+    if (password.length < 8) {
+      errEl.textContent = 'Mot de passe trop court (8 caractères minimum).'; return;
+    }
+    if (password !== confirm) {
+      errEl.textContent = 'Les mots de passe ne correspondent pas.'; return;
+    }
+  }
+
+  btn.disabled = true;
+  btn.textContent = '…';
+
+  try {
+    if (activeTab === 'login') {
+      await signIn(username, password);
+    } else {
+      await signUp(username, password);
+    }
+    location.href = 'index.html';
+  } catch (e) {
+    const msg = e.message || '';
+    if (msg.includes('Invalid login credentials'))
+      errEl.textContent = 'Identifiant ou mot de passe incorrect.';
+    else if (msg.includes('already registered') || msg.includes('already been registered'))
+      errEl.textContent = 'Cet identifiant est déjà pris.';
+    else if (msg.includes('23505') || msg.includes('duplicate'))
+      errEl.textContent = 'Cet identifiant est déjà utilisé.';
+    else
+      errEl.textContent = msg;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = activeTab === 'login' ? 'Se connecter' : "S'inscrire";
+  }
+};
+</script>
+
+</body>
+</html>

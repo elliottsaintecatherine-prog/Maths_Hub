@@ -118,27 +118,6 @@ a { text-decoration:none; color:inherit; }
 .btn-login:hover { opacity:.88; }
 .guest-hint { font-size:11px; color:var(--text-muted); }
 
-/* MODAL AUTH */
-.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.72); z-index:500; display:grid; place-items:center; padding:16px; }
-.modal-overlay.hidden { display:none; }
-.modal-box { background:var(--bg-card); border:1px solid var(--border-2); border-radius:16px; padding:32px; width:100%; max-width:380px; }
-.modal-title { font-size:20px; font-weight:900; margin-bottom:6px; }
-.modal-sub { font-size:12px; color:var(--text-muted); margin-bottom:24px; }
-.modal-tabs { display:flex; gap:4px; margin-bottom:24px; background:var(--bg); border-radius:10px; padding:4px; }
-.modal-tab { flex:1; padding:7px; border:none; border-radius:7px; background:transparent; font-family:inherit; font-size:12px; font-weight:600; color:var(--text-muted); cursor:pointer; transition:all .15s; }
-.modal-tab.active { background:var(--bg-card); color:var(--text); box-shadow:0 1px 4px rgba(0,0,0,.2); }
-.modal-field { margin-bottom:14px; }
-.modal-label { font-size:11px; font-weight:600; color:var(--text-muted); margin-bottom:5px; display:block; text-transform:uppercase; letter-spacing:.5px; }
-.modal-input { width:100%; padding:10px 14px; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text); font-family:inherit; font-size:14px; outline:none; transition:border-color .15s; }
-.modal-input:focus { border-color:#6366f1; }
-.btn-submit { width:100%; padding:12px; border:none; border-radius:8px; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff; font-family:inherit; font-size:14px; font-weight:700; cursor:pointer; margin-top:6px; transition:opacity .15s; }
-.btn-submit:hover { opacity:.88; }
-.btn-submit:disabled { opacity:.45; cursor:not-allowed; }
-.modal-sep { text-align:center; font-size:11px; color:var(--text-muted); margin:16px 0; }
-.btn-guest { width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; background:transparent; color:var(--text-muted); font-family:inherit; font-size:13px; font-weight:600; cursor:pointer; transition:all .15s; }
-.btn-guest:hover { border-color:var(--border-2); color:var(--text); }
-.modal-error { font-size:12px; color:#f87171; margin-top:8px; min-height:16px; }
-.modal-close { float:right; background:none; border:none; font-size:20px; cursor:pointer; color:var(--text-muted); margin-top:-8px; }
 
 /* RESPONSIVE */
 @media (max-width:600px) {
@@ -164,34 +143,6 @@ a { text-decoration:none; color:inherit; }
   </div>
 </nav>
 
-<!-- MODAL AUTHENTIFICATION -->
-<div class="modal-overlay hidden" id="modal-auth">
-  <div class="modal-box">
-    <button class="modal-close" onclick="closeModal()">×</button>
-    <div class="modal-title">Scolaris</div>
-    <div class="modal-sub">Connecte-toi pour sauvegarder tes scores</div>
-    <div class="modal-tabs">
-      <button class="modal-tab active" id="tab-login" onclick="switchTab('login')">Connexion</button>
-      <button class="modal-tab" id="tab-register" onclick="switchTab('register')">Inscription</button>
-    </div>
-    <div class="modal-field">
-      <label class="modal-label">Identifiant</label>
-      <input class="modal-input" id="auth-username" type="text" placeholder="ton_pseudo" autocomplete="username" maxlength="20">
-    </div>
-    <div class="modal-field">
-      <label class="modal-label">Mot de passe</label>
-      <input class="modal-input" id="auth-password" type="password" placeholder="••••••••" autocomplete="current-password">
-    </div>
-    <div class="modal-field hidden" id="field-confirm">
-      <label class="modal-label">Confirmer le mot de passe</label>
-      <input class="modal-input" id="auth-confirm" type="password" placeholder="••••••••">
-    </div>
-    <div class="modal-error" id="auth-error"></div>
-    <button class="btn-submit" id="btn-submit" onclick="handleAuth()">Se connecter</button>
-    <div class="modal-sep">— ou —</div>
-    <button class="btn-guest" onclick="closeModal()">Continuer en invité →</button>
-  </div>
-</div>
 
 <!-- HERO -->
 <div class="hero">
@@ -209,8 +160,8 @@ a { text-decoration:none; color:inherit; }
       </div>
     </div>
     <div class="guest-bar hidden" id="guest-bar">
-      <button class="btn-login" onclick="openModal()">Connexion / Inscription</button>
-      <span class="guest-hint">ou continue en invité — tes scores ne seront pas sauvegardés en ligne</span>
+      <button class="btn-login" onclick="location.href='login.html'">Connexion / Inscription</button>
+      <span class="guest-hint">Mode invité — tes scores ne seront pas sauvegardés en ligne</span>
     </div>
 
     <div class="hero-top">
@@ -368,29 +319,31 @@ if (new URLSearchParams(location.search).get('hub') === 'secret') deverrouillerS
 </script>
 
 <script type="module">
-import { supabase, signIn, signUp, signOut, getCurrentUser, getUserTotalScore } from './auth/supabase.js';
+import { supabase, signOut, getCurrentUser, getUserTotalScore } from './auth/supabase.js';
 
-/* ── État global ── */
-let currentUser = null;
-
-/* ── Init : restaure la session si elle existe ── */
+/* ── Init : vérifie session, redirige si non connecté ── */
 async function init() {
   const { data: { session } } = await supabase.auth.getSession();
+  const isGuest = sessionStorage.getItem('scolaris_guest') === '1';
+
+  if (!session && !isGuest) {
+    // Ni connecté ni invité → page de connexion
+    location.href = 'login.html';
+    return;
+  }
+
   if (session) {
-    currentUser = await getCurrentUser();
-    if (currentUser) await showProfileBar(currentUser);
+    const user = await getCurrentUser();
+    if (user) await showProfileBar(user);
     else showGuestBar();
   } else {
     showGuestBar();
   }
-  // Écoute les changements de session (login/logout)
-  supabase.auth.onAuthStateChange(async (_event, session) => {
-    if (session) {
-      currentUser = await getCurrentUser();
-      if (currentUser) await showProfileBar(currentUser);
-    } else {
-      currentUser = null;
-      showGuestBar();
+
+  // Écoute déconnexion
+  supabase.auth.onAuthStateChange((_event, session) => {
+    if (!session && sessionStorage.getItem('scolaris_guest') !== '1') {
+      location.href = 'login.html';
     }
   });
 }
@@ -412,69 +365,11 @@ function showGuestBar() {
   document.getElementById('guest-bar').classList.remove('hidden');
 }
 
-/* ── Modal ── */
-let activeTab = 'login';
-
-window.openModal  = () => document.getElementById('modal-auth').classList.remove('hidden');
-window.closeModal = () => document.getElementById('modal-auth').classList.add('hidden');
-
-window.switchTab = (tab) => {
-  activeTab = tab;
-  document.getElementById('tab-login').classList.toggle('active', tab === 'login');
-  document.getElementById('tab-register').classList.toggle('active', tab === 'register');
-  document.getElementById('field-confirm').classList.toggle('hidden', tab === 'login');
-  document.getElementById('btn-submit').textContent = tab === 'login' ? 'Se connecter' : "S'inscrire";
-  document.getElementById('auth-error').textContent = '';
-};
-
-window.handleAuth = async () => {
-  const username = document.getElementById('auth-username').value.trim();
-  const password = document.getElementById('auth-password').value;
-  const confirm  = document.getElementById('auth-confirm').value;
-  const errEl    = document.getElementById('auth-error');
-  const btn      = document.getElementById('btn-submit');
-
-  errEl.textContent = '';
-  if (!username || !password) { errEl.textContent = 'Remplis tous les champs.'; return; }
-
-  if (activeTab === 'register') {
-    if (password !== confirm) { errEl.textContent = 'Les mots de passe ne correspondent pas.'; return; }
-    if (password.length < 8)  { errEl.textContent = 'Mot de passe trop court (8 caractères min).'; return; }
-    if (!/^[a-zA-Z0-9_]+$/.test(username)) { errEl.textContent = 'Identifiant : lettres, chiffres et _ uniquement.'; return; }
-  }
-
-  btn.disabled = true;
-  btn.textContent = '…';
-  try {
-    if (activeTab === 'login') await signIn(username, password);
-    else await signUp(username, password);
-    closeModal();
-  } catch (e) {
-    const msg = e.message || '';
-    if (msg.includes('Invalid login')) errEl.textContent = 'Identifiant ou mot de passe incorrect.';
-    else if (msg.includes('already registered')) errEl.textContent = 'Cet identifiant est déjà pris.';
-    else errEl.textContent = msg;
-  } finally {
-    btn.disabled = false;
-    btn.textContent = activeTab === 'login' ? 'Se connecter' : "S'inscrire";
-  }
-};
-
 window.handleSignOut = async () => {
+  sessionStorage.removeItem('scolaris_guest');
   await signOut();
+  location.href = 'login.html';
 };
-
-/* ── Fermer le modal en cliquant en dehors ── */
-document.getElementById('modal-auth').addEventListener('click', (e) => {
-  if (e.target === e.currentTarget) closeModal();
-});
-
-/* ── Soumettre avec Entrée ── */
-['auth-username','auth-password','auth-confirm'].forEach(id => {
-  document.getElementById(id)?.addEventListener('keydown', e => {
-    if (e.key === 'Enter') window.handleAuth();
-  });
-});
 
 init();
 </script>

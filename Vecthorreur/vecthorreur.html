@@ -204,8 +204,6 @@
     .btn-settings-action.danger { border-color: #5a1a0833; color: #cc6644; }
     .btn-settings-action.danger:hover { background: #1a0806; border-color: #8a3010; }
 
-    #mode-indicator { display: none !important; }
-
     .cmd-panel { display: none; }
     .cmd-title { display: none; }
     .cmd-info { display: none; }
@@ -668,12 +666,6 @@
     <button class="btn-settings-action" id="settings-to-menu">⌂ Retour à l'Accueil</button>
   </div>
 
-  <!-- mode-indicator masqué, conservé pour compat JS -->
-  <div id="mode-indicator" aria-hidden="true" style="display:none!important">
-    <span class="mode-dot active" id="dot-cmd"></span>
-    <span class="mode-dot inactive" id="dot-exe"></span>
-  </div>
-
   <!-- MENU -->
   <div class="screen" id="screen-menu">
     <img src="assets/img/garde.png" id="menu-bg-img" alt="" onerror="this.style.display='none'">
@@ -720,9 +712,6 @@
     <button class="btn-hacker" id="btn-results-menu">MENU</button>
   </div>
 
-  <!-- slide-wrapper conservé vide pour compat JS -->
-  <div id="slide-wrapper" style="display:none;"></div>
-
   <!-- CANVAS 3D PLEIN ÉCRAN -->
   <canvas id="game-canvas"></canvas>
   <div id="vec-overlay"></div>
@@ -735,15 +724,8 @@
     <div id="hud-health-dots"></div>
   </div>
 
-  <!-- hud-bottom masqué, conservé pour compat JS -->
-  <div id="hud-bottom" style="display:none!important;">
-    <div id="hud-health"></div>
-    <button id="btn-back-cmd" disabled style="display:none!important;">&#8592; RETOUR</button>
-  </div>
-
-  <!-- Infos compat JS (masquées) -->
-  <span id="cmd-map-name" style="display:none;"></span>
-  <span id="cmd-pos" style="display:none;"></span>
+  <div id="hud-health" style="display:none;"></div>
+  <button id="btn-back-cmd" disabled style="display:none;"></button>
 
   <!-- OVERLAY 2D — panneau de commandes -->
   <div id="overlay-2d">
@@ -1348,14 +1330,6 @@
     const ctx = canvas.getContext('2d');
     let W, H, SCALE, ISO_CY;
 
-    // ===== DEV MODE - À SUPPRIMER AVANT PRODUCTION =====
-    let devMode = false;
-    function toggleDevMode() {
-      devMode = !devMode;
-      document.getElementById('btn-dev-mode').textContent = devMode ? 'DEV MODE : ON' : 'DEV MODE : OFF';
-    }
-    // ===== FIN DEV MODE =====
-
     function resizeCanvas() {
       // Canvas 3D plein écran
       canvas.width  = window.innerWidth;
@@ -1826,103 +1800,6 @@
         pctx.fillText(`(${ecx},${ecy})`, ex0, ey0 - 5);
         pctx.restore();
       });
-      // ── DEV MODE : overlay complet ────────────────────────────────
-      if (devMode) {
-        const DEV_TYPE_COLOR = {
-          mur:        { stroke:'#7a9fc8', fill:'rgba(122,159,200,0.18)' },
-          meuble:     { stroke:'#c8a050', fill:'rgba(200,160, 80,0.18)' },
-          decoration: { stroke:'#c87040', fill:'rgba(200,112, 64,0.18)' },
-          piege:      { stroke:'#ff8800', fill:'rgba(255,136,  0,0.22)' },
-          trou:       { stroke:'#cc2200', fill:'rgba(204, 34,  0,0.25)' },
-          sortie:     { stroke:'#55cc55', fill:'rgba( 85,204, 85,0.18)' },
-        };
-        // Contours de salles
-        if (map.rooms) {
-          map.rooms.forEach(rm => {
-            pctx.save();
-            pctx.strokeStyle = 'rgba(185,160,110,0.45)';
-            pctx.setLineDash([3,3]); pctx.lineWidth = 1;
-            pctx.strokeRect(wx(rm.x1), wy(rm.y2), (rm.x2-rm.x1)*PS, (rm.y2-rm.y1)*PS);
-            pctx.setLineDash([]);
-            // Nom de salle
-            const rcx = wx((rm.x1+rm.x2)/2), rcy = wy((rm.y1+rm.y2)/2);
-            pctx.font = 'bold 6px monospace'; pctx.textAlign = 'center';
-            pctx.fillStyle = 'rgba(200,175,130,0.55)';
-            pctx.fillText(rm.name, rcx, rcy);
-            pctx.restore();
-          });
-        }
-        // Obstacles — contour coloré + label + type
-        map.obstacles.forEach(obs => {
-          const t = obsType(obs.label);
-          const tc = DEV_TYPE_COLOR[t] || {stroke:'#aaa', fill:'rgba(120,120,120,0.18)'};
-          const rx = wx(obs.x1), ry = wy(obs.y2);
-          const rw = (obs.x2-obs.x1)*PS, rh = (obs.y2-obs.y1)*PS;
-          pctx.save();
-          pctx.strokeStyle = tc.stroke; pctx.lineWidth = 1.5;
-          pctx.strokeRect(rx, ry, rw, rh);
-          pctx.fillStyle = tc.fill;
-          pctx.fillRect(rx, ry, rw, rh);
-          // Label nom
-          pctx.font = '5.5px monospace'; pctx.textAlign = 'center';
-          pctx.fillStyle = tc.stroke;
-          const ocx = wx((obs.x1+obs.x2)/2), ocy = wy((obs.y1+obs.y2)/2);
-          pctx.fillText(obs.label, ocx, ocy - 2);
-          pctx.fillStyle = 'rgba(255,255,255,0.5)';
-          pctx.fillText('['+t.toUpperCase()+']', ocx, ocy + 5);
-          pctx.restore();
-        });
-        // Death zones — contour coloré + label
-        map.deathZones.forEach(dz => {
-          const t = dzType(dz.label);
-          const tc2 = DEV_TYPE_COLOR[t] || {stroke:'#f00', fill:'rgba(255,0,0,0.22)'};
-          const rx = wx(dz.x1), ry = wy(dz.y2);
-          const rw = (dz.x2-dz.x1)*PS, rh = (dz.y2-dz.y1)*PS;
-          pctx.save();
-          pctx.strokeStyle = tc2.stroke; pctx.lineWidth = 1.5;
-          pctx.fillStyle = tc2.fill; pctx.fillRect(rx, ry, rw, rh);
-          pctx.setLineDash([2,2]); pctx.strokeRect(rx, ry, rw, rh); pctx.setLineDash([]);
-          const dcx = wx((dz.x1+dz.x2)/2), dcy = wy((dz.y1+dz.y2)/2);
-          pctx.font = '5.5px monospace'; pctx.textAlign = 'center';
-          pctx.fillStyle = tc2.stroke;
-          pctx.fillText(dz.label, dcx, dcy - 2);
-          pctx.fillStyle = 'rgba(255,255,255,0.5)';
-          pctx.fillText('['+t.toUpperCase()+']', dcx, dcy + 5);
-          pctx.restore();
-        });
-        // Spawn marker
-        pctx.save();
-        pctx.strokeStyle = 'rgba(255,255,100,0.7)'; pctx.lineWidth = 1;
-        const spx = wx(0), spy = wy(-18);
-        pctx.beginPath();
-        pctx.moveTo(spx-5, spy); pctx.lineTo(spx+5, spy);
-        pctx.moveTo(spx, spy-5); pctx.lineTo(spx, spy+5);
-        pctx.stroke();
-        pctx.font = '6px monospace'; pctx.textAlign = 'center';
-        pctx.fillStyle = 'rgba(255,255,100,0.8)';
-        pctx.fillText('SPAWN', spx, spy - 7);
-        pctx.restore();
-        // Légende (coin bas-gauche)
-        pctx.save();
-        const legend = [
-          {col:'#7a9fc8', lbl:'MUR'},
-          {col:'#c8a050', lbl:'MEUBLE'},
-          {col:'#c87040', lbl:'DÉCOR'},
-          {col:'#ff8800', lbl:'PIÈGE'},
-          {col:'#cc2200', lbl:'TROU'},
-          {col:'#55cc55', lbl:'SORTIE'}
-        ];
-        pctx.font = '6px monospace';
-        legend.forEach((e, i) => {
-          const lx = 4, ly = PH - 6 - i * 9;
-          pctx.fillStyle = e.col;
-          pctx.fillRect(lx, ly - 5, 5, 5);
-          pctx.fillStyle = 'rgba(200,180,150,0.8)';
-          pctx.fillText(e.lbl, lx + 8, ly);
-        });
-        pctx.restore();
-      }
-      // ──────────────────────────────────────────────────────────────
 
       // Monstre — point rouge
       const mp0 = gameState.monsterPos;
@@ -2327,12 +2204,8 @@
 
     function updateCommandUI() {
       const gs = gameState;
-      const mapNameEl = document.getElementById('cmd-map-name');
-      if (mapNameEl) mapNameEl.textContent = MAPS[gs.currentMap].name;
       const mapLabelEl = document.getElementById('cmd-map-name-label');
       if (mapLabelEl) mapLabelEl.textContent = gs.currentMap + 1;
-      const cmdPosEl = document.getElementById('cmd-pos');
-      if (cmdPosEl) cmdPosEl.textContent = `(${gs.playerPos.x.toFixed(1)}, ${gs.playerPos.y.toFixed(1)})`;
       const cmdMapNumEl = document.getElementById('cmd-map-num');
       if (cmdMapNumEl) {
         const turnLabel = gs.gameMode === 'multi' ? ` — J${gs.playerTurn}` : '';
@@ -2926,7 +2799,6 @@
       const {cx,cy}=worldTo2D(pp.x,pp.y);
       const flicker=0.88+0.12*Math.sin(ts*0.009);
       const lightR=scale2D*6.5*flicker;
-      if (devMode) { return; }
       const grad=ctx.createRadialGradient(cx,cy,0,cx,cy,lightR);
       grad.addColorStop(0,'rgba(0,0,0,0)'); grad.addColorStop(0.35,'rgba(0,0,0,0.05)');
       grad.addColorStop(0.65,'rgba(0,0,0,0.42)'); grad.addColorStop(1,'rgba(0,0,0,0.76)');
@@ -3573,49 +3445,45 @@
       }
 
       // ── Vignette manoir (bords très sombres, légère teinte violacée) ─
-      if (!devMode) {
-        const fog = ctx.createRadialGradient(W/2, H*0.45, H*0.08, W/2, H*0.45, H*0.82);
-        fog.addColorStop(0, 'rgba(0,0,0,0)');
-        fog.addColorStop(0.6, 'rgba(0,0,0,0.2)');
-        fog.addColorStop(1, 'rgba(4,2,8,0.78)');
-        ctx.fillStyle = fog; ctx.fillRect(0, 0, W, H);
-        // Légère brume bleue/violette dans les coins (ombre glaciale)
-        ctx.save();
-        ctx.globalAlpha = 0.06;
-        ctx.fillStyle = '#1a0a2e';
-        ctx.fillRect(0, 0, W * 0.18, H);
-        ctx.fillRect(W * 0.82, 0, W * 0.18, H);
-        ctx.restore();
-      }
+      const fog = ctx.createRadialGradient(W/2, H*0.45, H*0.08, W/2, H*0.45, H*0.82);
+      fog.addColorStop(0, 'rgba(0,0,0,0)');
+      fog.addColorStop(0.6, 'rgba(0,0,0,0.2)');
+      fog.addColorStop(1, 'rgba(4,2,8,0.78)');
+      ctx.fillStyle = fog; ctx.fillRect(0, 0, W, H);
+      // Légère brume bleue/violette dans les coins (ombre glaciale)
+      ctx.save();
+      ctx.globalAlpha = 0.06;
+      ctx.fillStyle = '#1a0a2e';
+      ctx.fillRect(0, 0, W * 0.18, H);
+      ctx.fillRect(W * 0.82, 0, W * 0.18, H);
+      ctx.restore();
 
       // ── Bougie (halo rond) — obscurité 0.72 ───────────────────
-      if (!devMode) {
-        const lightPt = project(pp.x, pp.y, 1.0);
-        if (lightPt) {
-          const flicker = 0.92 + 0.08 * Math.sin(ts * 0.013);
-          const haloR = Math.max(W, H) * 0.40 * flicker;
+      const lightPt = project(pp.x, pp.y, 1.0);
+      if (lightPt) {
+        const flicker = 0.92 + 0.08 * Math.sin(ts * 0.013);
+        const haloR = Math.max(W, H) * 0.40 * flicker;
 
-          // 1. Obscurité globale
-          ctx.fillStyle = 'rgba(0,0,0,0.62)';
-          ctx.fillRect(0, 0, W, H);
+        // 1. Obscurité globale
+        ctx.fillStyle = 'rgba(0,0,0,0.62)';
+        ctx.fillRect(0, 0, W, H);
 
-          // 2. Halo rond via screen blend
-          ctx.globalCompositeOperation = 'screen';
-          const haloGrad = ctx.createRadialGradient(
-            lightPt.sx, lightPt.sy, 0,
-            lightPt.sx, lightPt.sy, haloR
-          );
-          haloGrad.addColorStop(0,    `rgba(180,155,100,${0.38 * flicker})`);
-          haloGrad.addColorStop(0.30, `rgba(110,80,35,${0.22 * flicker})`);
-          haloGrad.addColorStop(0.65, `rgba(45,25,5,${0.10 * flicker})`);
-          haloGrad.addColorStop(1,    'rgba(0,0,0,0)');
-          ctx.fillStyle = haloGrad;
-          ctx.fillRect(0, 0, W, H);
-          ctx.globalCompositeOperation = 'source-over';
+        // 2. Halo rond via screen blend
+        ctx.globalCompositeOperation = 'screen';
+        const haloGrad = ctx.createRadialGradient(
+          lightPt.sx, lightPt.sy, 0,
+          lightPt.sx, lightPt.sy, haloR
+        );
+        haloGrad.addColorStop(0,    `rgba(180,155,100,${0.38 * flicker})`);
+        haloGrad.addColorStop(0.30, `rgba(110,80,35,${0.22 * flicker})`);
+        haloGrad.addColorStop(0.65, `rgba(45,25,5,${0.10 * flicker})`);
+        haloGrad.addColorStop(1,    'rgba(0,0,0,0)');
+        ctx.fillStyle = haloGrad;
+        ctx.fillRect(0, 0, W, H);
+        ctx.globalCompositeOperation = 'source-over';
 
-          // 3. Redessiner le joueur PAR-DESSUS le halo
-          drawPlayer3D(pp, pal);
-        }
+        // 3. Redessiner le joueur PAR-DESSUS le halo
+        drawPlayer3D(pp, pal);
       }
 
 
@@ -3930,14 +3798,6 @@
       gameState.mode = 'menu';
     });
   </script>
-
-  <!-- ===== DEV MODE - À SUPPRIMER AVANT PRODUCTION ===== -->
-  <button id="btn-dev-mode" onclick="toggleDevMode()" style="
-    position:fixed; bottom:10px; left:10px; z-index:999;
-    background:#1a1a1a; color:#888888; border:1px solid #333333;
-    font:11px 'Courier New',monospace; padding:4px 8px; opacity:0.7;
-    cursor:pointer; border-radius:3px;">DEV MODE : OFF</button>
-  <!-- ===== FIN DEV MODE ===== -->
 
   <!-- Carte plein écran -->
   <div id="map-fullscreen-overlay">

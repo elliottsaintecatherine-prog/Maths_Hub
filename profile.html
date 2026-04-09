@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scolaris — Profil</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#111214; --bg-card:#18191f; --border:#1e2026; --border-2:#2a2d35;
+  --text:#e8e8e8; --text-muted:#44484f; --text-sub:#555b66;
+  --accent:#6366f1; --accent2:#8b5cf6;
+}
+[data-theme="light"] {
+  --bg:#f4f4f6; --bg-card:#fff; --border:#e4e4e8; --border-2:#d0d0d8;
+  --text:#111; --text-muted:#bbb; --text-sub:#aaa;
+}
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:'Inter',system-ui,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+a { text-decoration:none; color:inherit; }
+
+/* NAV */
+.navbar { display:flex; justify-content:space-between; align-items:center; padding:0 32px; height:56px; background:var(--bg-card); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:100; }
+.nav-brand { display:flex; align-items:center; gap:10px; font-size:16px; font-weight:800; }
+.nav-logo { width:30px; height:30px; border-radius:8px; background:linear-gradient(135deg,#6366f1,#8b5cf6); display:grid; place-items:center; font-size:15px; }
+.btn-back { font-size:12px; font-weight:600; color:var(--text-sub); border:1px solid var(--border); border-radius:8px; padding:6px 14px; background:transparent; cursor:pointer; font-family:inherit; transition:all .15s; }
+.btn-back:hover { border-color:var(--border-2); color:var(--text); }
+
+/* LAYOUT */
+.page { max-width:1100px; margin:0 auto; padding:32px; display:grid; grid-template-columns:300px 1fr; gap:24px; }
+@media(max-width:780px) { .page { grid-template-columns:1fr; padding:16px; } }
+
+/* SIDEBAR */
+.sidebar { display:flex; flex-direction:column; gap:16px; }
+.card { background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:20px; }
+
+/* PROFIL CARD */
+.profile-avatar { width:64px; height:64px; border-radius:50%; background:linear-gradient(135deg,var(--accent),var(--accent2)); display:grid; place-items:center; font-size:26px; font-weight:900; color:#fff; margin:0 auto 12px; }
+.profile-name { font-size:20px; font-weight:800; text-align:center; }
+.profile-since { font-size:11px; color:var(--text-muted); text-align:center; margin-top:4px; }
+.profile-stats { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:16px; }
+.stat { background:var(--bg); border-radius:10px; padding:12px; text-align:center; }
+.stat-val { font-size:18px; font-weight:800; color:var(--accent); }
+.stat-lbl { font-size:10px; color:var(--text-muted); margin-top:2px; text-transform:uppercase; letter-spacing:.5px; }
+
+/* LEADERBOARD */
+.tabs { display:flex; gap:4px; margin-bottom:16px; background:var(--bg); border-radius:10px; padding:4px; }
+.tab { flex:1; padding:7px; border:none; border-radius:7px; background:transparent; font-family:inherit; font-size:11px; font-weight:600; color:var(--text-muted); cursor:pointer; transition:all .15s; }
+.tab.active { background:var(--bg-card); color:var(--text); box-shadow:0 1px 4px rgba(0,0,0,.2); }
+.lb-row { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--border); }
+.lb-rank { width:24px; font-size:12px; font-weight:700; color:var(--text-muted); flex-shrink:0; text-align:center; }
+.lb-rank.gold   { color:#f59e0b; }
+.lb-rank.silver { color:#94a3b8; }
+.lb-rank.bronze { color:#b45309; }
+.lb-name { flex:1; font-size:13px; font-weight:600; }
+.lb-name.me { color:var(--accent); }
+.lb-score { font-size:13px; font-weight:700; }
+.lb-empty { font-size:12px; color:var(--text-muted); text-align:center; padding:20px 0; }
+
+/* RADAR */
+.radar-header { display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
+.radar-title { font-size:15px; font-weight:700; flex:1; }
+.radar-breadcrumb { font-size:11px; color:var(--text-muted); display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.bc-item { cursor:pointer; transition:color .15s; }
+.bc-item:hover { color:var(--text); }
+.bc-sep { color:var(--border-2); }
+.btn-back-drill { font-size:11px; font-weight:600; color:var(--accent); background:transparent; border:1px solid var(--accent); border-radius:6px; padding:4px 10px; cursor:pointer; font-family:inherit; }
+.radar-hint { font-size:11px; color:var(--text-muted); margin-top:8px; text-align:center; }
+.radar-wrap { display:flex; justify-content:center; }
+svg.radar { overflow:visible; }
+.radar-axis-label { cursor:pointer; transition:fill .15s; }
+.radar-axis-label:hover { fill: var(--accent) !important; }
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-brand">
+    <div class="nav-logo">📐</div>
+    Scolaris
+  </div>
+  <button class="btn-back" onclick="location.href='index.html'">◀ Retour au Hub</button>
+</nav>
+
+<div class="page">
+  <!-- COLONNE GAUCHE -->
+  <div class="sidebar">
+
+    <!-- Profil -->
+    <div class="card" id="profile-card">
+      <div class="profile-avatar" id="av">?</div>
+      <div class="profile-name" id="pname">Chargement…</div>
+      <div class="profile-since" id="psince"></div>
+      <div class="profile-stats">
+        <div class="stat"><div class="stat-val" id="stat-total">—</div><div class="stat-lbl">Score total</div></div>
+        <div class="stat"><div class="stat-val" id="stat-rank">—</div><div class="stat-lbl">Classement</div></div>
+        <div class="stat"><div class="stat-val" id="stat-voleur">—</div><div class="stat-lbl">Le Voleur</div></div>
+        <div class="stat"><div class="stat-val" id="stat-nk">—</div><div class="stat-lbl">Neural KO</div></div>
+      </div>
+    </div>
+
+    <!-- Classement -->
+    <div class="card">
+      <div class="tabs">
+        <button class="tab active" onclick="showLB('global')">Global</button>
+        <button class="tab" onclick="showLB('voleur')">Le Voleur</button>
+        <button class="tab" onclick="showLB('neural_knockout')">Neural KO</button>
+      </div>
+      <div id="lb-content"><div class="lb-empty">Chargement…</div></div>
+    </div>
+
+  </div>
+
+  <!-- COLONNE DROITE — RADAR -->
+  <div class="card">
+    <div class="radar-header">
+      <div style="flex:1">
+        <div class="radar-title" id="radar-title">Compétences — Lycée</div>
+        <div class="radar-breadcrumb" id="radar-breadcrumb"></div>
+      </div>
+      <button class="btn-back-drill hidden" id="btn-drill-back" onclick="drillUp()">◀ Retour</button>
+    </div>
+    <div class="radar-wrap">
+      <svg class="radar" id="radar-svg" width="460" height="460" viewBox="0 0 460 460"></svg>
+    </div>
+    <div class="radar-hint" id="radar-hint">Clique sur un axe pour explorer ce niveau</div>
+  </div>
+</div>
+
+<script type="module">
+import { supabase, getCurrentUser, getLeaderboard, getUserCompetencies, getUserTotalScore } from './auth/supabase.js';
+
+/* ══════════════════════════════════════════════════════════
+   ARBRE DES COMPÉTENCES
+   Points max = plafond pour normaliser à 0–100 %
+══════════════════════════════════════════════════════════ */
+const TREE = {
+  seconde: {
+    label: "Seconde", color: "#6366f1",
+    chapitres: {
+      fonctions: {
+        label: "Fonctions",
+        competences: {
+          calcul_image_lineaire:          { label: "Image linéaire",        maxPts: 500 },
+          calcul_image_quadratique:       { label: "Image quadratique",     maxPts: 300 },
+          calcul_antecedent:              { label: "Antécédent",            maxPts: 500 },
+          lecture_graphique_image:        { label: "Lecture — image",       maxPts: 300 },
+          lecture_graphique_antecedent:   { label: "Lecture — antécédent",  maxPts: 300 },
+          identification_courbe:          { label: "Identification courbe", maxPts: 400 },
+        }
+      },
+      calcul: {
+        label: "Calcul mental",
+        competences: {
+          calcul_mental:  { label: "Calcul rapide", maxPts: 1000 },
+          pourcentages:   { label: "Pourcentages",  maxPts: 300  },
+        }
+      }
+    }
+  },
+  premiere:  { label: "Première",  color: "#8b5cf6", chapitres: {} },
+  terminale: { label: "Terminale", color: "#a855f7", chapitres: {} }
+};
+
+/* ══════════════════════════════════════════════════════════
+   ÉTAT DU DRILL-DOWN
+══════════════════════════════════════════════════════════ */
+let drillPath  = [];          // [] = niveau lycée | ['seconde'] | ['seconde','fonctions']
+let userComps  = [];          // données brutes de competency_scores
+let currentUser = null;
+
+/* ══════════════════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════════════════ */
+async function init() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) { location.href = 'index.html'; return; }
+
+  currentUser = await getCurrentUser();
+  if (!currentUser) { location.href = 'index.html'; return; }
+
+  // Profil
+  document.getElementById('av').textContent    = currentUser.username[0].toUpperCase();
+  document.getElementById('pname').textContent = currentUser.username;
+  const since = new Date(currentUser.created_at).toLocaleDateString('fr-FR', { month:'long', year:'numeric' });
+  document.getElementById('psince').textContent = `Membre depuis ${since}`;
+
+  // Chargement parallèle
+  const [compData, total] = await Promise.all([
+    getUserCompetencies(currentUser.id),
+    getUserTotalScore(currentUser.id)
+  ]);
+  userComps = compData;
+
+  document.getElementById('stat-total').textContent = total ? total.toLocaleString('fr-FR') : '0';
+
+  // Best scores par jeu
+  await loadGameStats();
+
+  // Classement global + rang
+  await showLB('global');
+
+  // Radar
+  renderRadar();
+}
+
+async function loadGameStats() {
+  const games = ['voleur', 'neural_knockout'];
+  const ids   = { voleur: 'stat-voleur', neural_knockout: 'stat-nk' };
+
+  for (const gid of games) {
+    const { data } = await supabase
+      .from('game_scores')
+      .select('score')
+      .eq('user_id', currentUser.id)
+      .eq('game_id', gid)
+      .order('score', { ascending: false })
+      .limit(1);
+    const best = data?.[0]?.score ?? null;
+    document.getElementById(ids[gid]).textContent = best !== null ? best.toLocaleString('fr-FR') : '—';
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   CLASSEMENT
+══════════════════════════════════════════════════════════ */
+const LB_TABS = document.querySelectorAll('.tab');
+window.showLB = async (gameId) => {
+  LB_TABS.forEach(t => t.classList.toggle('active', t.textContent.trim().toLowerCase().includes(
+    gameId === 'global' ? 'global' : gameId === 'voleur' ? 'voleur' : 'neural'
+  )));
+
+  const container = document.getElementById('lb-content');
+  container.innerHTML = '<div class="lb-empty">Chargement…</div>';
+
+  const rows = await getLeaderboard(gameId === 'global' ? null : gameId, 20);
+
+  if (!rows.length) { container.innerHTML = '<div class="lb-empty">Aucun score encore.</div>'; return; }
+
+  // Rang du joueur courant
+  let myRank = null;
+  const myUsername = currentUser?.username;
+  rows.forEach((r, i) => {
+    const name = gameId === 'global' ? r.username : r.profiles?.username;
+    if (name === myUsername) myRank = i + 1;
+  });
+  if (myRank) document.getElementById('stat-rank').textContent = `#${myRank}`;
+
+  container.innerHTML = rows.map((r, i) => {
+    const rank = i + 1;
+    const name = gameId === 'global' ? r.username : r.profiles?.username ?? '?';
+    const score = (gameId === 'global' ? r.total_score : r.score) ?? 0;
+    const rankClass = rank === 1 ? 'gold' : rank === 2 ? 'silver' : rank === 3 ? 'bronze' : '';
+    const nameClass = name === myUsername ? 'me' : '';
+    return `<div class="lb-row">
+      <div class="lb-rank ${rankClass}">${rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank}</div>
+      <div class="lb-name ${nameClass}">${name}</div>
+      <div class="lb-score">${score.toLocaleString('fr-FR')}</div>
+    </div>`;
+  }).join('');
+};
+
+/* ══════════════════════════════════════════════════════════
+   RADAR SVG — LOGIQUE
+══════════════════════════════════════════════════════════ */
+function aggregateScores() {
+  // Retourne { annee: { chapitre: { competence: totalPts } } }
+  const agg = {};
+  for (const row of userComps) {
+    if (!agg[row.annee]) agg[row.annee] = {};
+    if (!agg[row.annee][row.chapitre]) agg[row.annee][row.chapitre] = {};
+    const key = row.competence;
+    agg[row.annee][row.chapitre][key] = (agg[row.annee][row.chapitre][key] ?? 0) + row.points;
+  }
+  return agg;
+}
+
+function getRadarData() {
+  const agg = aggregateScores();
+
+  if (drillPath.length === 0) {
+    // Niveau 0 — une barre par année
+    return Object.entries(TREE).map(([key, yr]) => {
+      const chapitres = Object.entries(yr.chapitres);
+      if (!chapitres.length) return { key, label: yr.label, value: 0, color: yr.color, drillable: false };
+      let total = 0, maxTotal = 0;
+      for (const [ck, chap] of chapitres) {
+        for (const [comp, def] of Object.entries(chap.competences)) {
+          total    += agg[key]?.[ck]?.[comp] ?? 0;
+          maxTotal += def.maxPts;
+        }
+      }
+      return { key, label: yr.label, value: maxTotal ? Math.min(100, Math.round(total / maxTotal * 100)) : 0, color: yr.color, drillable: !!chapitres.length };
+    });
+  }
+
+  if (drillPath.length === 1) {
+    // Niveau 1 — chapitres d'une année
+    const [annee] = drillPath;
+    const yr = TREE[annee];
+    return Object.entries(yr.chapitres).map(([ck, chap]) => {
+      let total = 0, maxTotal = 0;
+      for (const [comp, def] of Object.entries(chap.competences)) {
+        total    += agg[annee]?.[ck]?.[comp] ?? 0;
+        maxTotal += def.maxPts;
+      }
+      return { key: ck, label: chap.label, value: maxTotal ? Math.min(100, Math.round(total / maxTotal * 100)) : 0, color: yr.color, drillable: true };
+    });
+  }
+
+  if (drillPath.length === 2) {
+    // Niveau 2 — compétences d'un chapitre
+    const [annee, chapitre] = drillPath;
+    const yr   = TREE[annee];
+    const chap = yr.chapitres[chapitre];
+    return Object.entries(chap.competences).map(([comp, def]) => {
+      const pts = agg[annee]?.[chapitre]?.[comp] ?? 0;
+      return { key: comp, label: def.label, value: Math.min(100, Math.round(pts / def.maxPts * 100)), color: yr.color, drillable: false };
+    });
+  }
+  return [];
+}
+
+function renderRadar() {
+  const data   = getRadarData();
+  const svg    = document.getElementById('radar-svg');
+  const W = 460, CX = W/2, CY = W/2, R = 170;
+  const n = data.length;
+
+  // Breadcrumb + titre
+  const titles = ['Lycée', ...(drillPath.map(k => {
+    if (drillPath.indexOf(k) === 0) return TREE[k].label;
+    const annee = drillPath[0];
+    return TREE[annee].chapitres[k]?.label ?? k;
+  }))];
+  document.getElementById('radar-title').textContent = 'Compétences — ' + titles[titles.length - 1];
+  document.getElementById('btn-drill-back').classList.toggle('hidden', drillPath.length === 0);
+  document.getElementById('radar-hint').textContent = drillPath.length < 2
+    ? 'Clique sur un axe pour explorer ce niveau'
+    : 'Niveau maximum — compétences individuelles';
+
+  // Breadcrumb HTML
+  const bc = document.getElementById('radar-breadcrumb');
+  bc.innerHTML = titles.map((t, i) => {
+    if (i === titles.length - 1) return `<span>${t}</span>`;
+    const path = JSON.stringify(drillPath.slice(0, i));
+    return `<span class="bc-item" onclick='window._bcNav(${path})'>${t}</span><span class="bc-sep">›</span>`;
+  }).join('');
+
+  if (!n) {
+    svg.innerHTML = `<text x="${CX}" y="${CY}" text-anchor="middle" fill="#555" font-size="14" font-family="Inter">Aucune donnée</text>`;
+    return;
+  }
+
+  const angle  = i => (2 * Math.PI * i / n) - Math.PI / 2;
+  const px     = (i, rr) => CX + rr * Math.cos(angle(i));
+  const py     = (i, rr) => CY + rr * Math.sin(angle(i));
+  const color  = data[0].color ?? '#6366f1';
+
+  let out = '';
+
+  // Anneaux de fond
+  [25, 50, 75, 100].forEach(pct => {
+    const rr = R * pct / 100;
+    const pts = data.map((_, i) => `${px(i,rr)},${py(i,rr)}`).join(' ');
+    out += `<polygon points="${pts}" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>`;
+    // % label
+    out += `<text x="${CX+4}" y="${CY - rr + 4}" fill="#444" font-size="9" font-family="Inter">${pct}%</text>`;
+  });
+
+  // Axes
+  data.forEach((_, i) => {
+    out += `<line x1="${CX}" y1="${CY}" x2="${px(i,R)}" y2="${py(i,R)}" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>`;
+  });
+
+  // Polygone données
+  const pts = data.map((d, i) => `${px(i, R * d.value / 100)},${py(i, R * d.value / 100)}`).join(' ');
+  out += `<polygon points="${pts}" fill="${color}33" stroke="${color}" stroke-width="2"/>`;
+
+  // Points + labels cliquables
+  data.forEach((d, i) => {
+    const x = px(i, R * d.value / 100), y = py(i, R * d.value / 100);
+    out += `<circle cx="${x}" cy="${y}" r="4" fill="${color}" stroke="#111" stroke-width="1.5"/>`;
+
+    // Valeur
+    out += `<text x="${x}" y="${y - 8}" text-anchor="middle" fill="${color}" font-size="10" font-weight="700" font-family="Inter">${d.value}%</text>`;
+
+    // Label axe
+    const lx = px(i, R + 26), ly = py(i, R + 26);
+    const anchor = Math.cos(angle(i)) > 0.2 ? 'start' : Math.cos(angle(i)) < -0.2 ? 'end' : 'middle';
+    const drillAttr = d.drillable ? `style="cursor:pointer" onclick="window._drill('${d.key}')"` : '';
+    out += `<text x="${lx}" y="${ly + 4}" text-anchor="${anchor}" fill="${d.drillable ? '#e8e8e8' : '#666'}" font-size="12" font-weight="${d.drillable ? '700' : '500'}" font-family="Inter" class="radar-axis-label" ${drillAttr}>${d.label}</text>`;
+  });
+
+  svg.innerHTML = out;
+}
+
+/* ── Navigation drill-down ── */
+window._drill = (key) => {
+  if (drillPath.length >= 2) return;
+  drillPath.push(key);
+  renderRadar();
+};
+window.drillUp = () => {
+  drillPath.pop();
+  renderRadar();
+};
+window._bcNav = (pathArr) => {
+  drillPath = pathArr;
+  renderRadar();
+};
+
+/* ── Thème ── */
+const saved = localStorage.getItem('theme');
+if (saved) document.documentElement.setAttribute('data-theme', saved);
+
+init();
+</script>
+</body>
+</html>

@@ -23,6 +23,28 @@
             localStorage.setItem('hackerScores', JSON.stringify(sLocal.slice(0, 10)));
             majAfficherGradeJoueur();
 
+            // Supabase — sauvegarde en ligne si l'utilisateur est connecté
+            var pts = window.voleurPhasePts || {};
+            var competencies = [];
+            var p1 = pts.p1 || 0;
+            if (p1 > 0) {
+                competencies.push({ annee: 'seconde', chapitre: 'fonctions', competence: 'calcul_image_lineaire',   points: Math.round(p1 * 0.4) });
+                competencies.push({ annee: 'seconde', chapitre: 'fonctions', competence: 'calcul_antecedent',        points: Math.round(p1 * 0.35) });
+                competencies.push({ annee: 'seconde', chapitre: 'fonctions', competence: 'calcul_image_quadratique', points: Math.round(p1 * 0.25) });
+            }
+            if (pts.p3 > 0) competencies.push({ annee: 'seconde', chapitre: 'fonctions', competence: 'identification_courbe',          points: pts.p3 });
+            if (pts.p4 > 0) competencies.push({ annee: 'seconde', chapitre: 'fonctions', competence: 'lecture_graphique_image',         points: pts.p4 });
+            if (pts.p4b > 0) {
+                competencies.push({ annee: 'seconde', chapitre: 'fonctions', competence: 'lecture_graphique_image',      points: Math.round(pts.p4b * 0.4) });
+                competencies.push({ annee: 'seconde', chapitre: 'fonctions', competence: 'lecture_graphique_antecedent', points: Math.round(pts.p4b * 0.6) });
+            }
+            if (pts.p5 > 0) competencies.push({ annee: 'seconde', chapitre: 'calcul', competence: 'calcul_mental', points: pts.p5 });
+
+            if (window._scolarisAuth) {
+                window._scolarisAuth.saveGameScore('voleur', Math.round(window.score), competencies)
+                    .catch(function(e) { console.warn('[supabase] voleur score save failed:', e.message); });
+            }
+
             if(GOOGLE_APP_URL.includes("library")) {
                 alert("Archive locale mise à jour.");
                 window.retourAccueil(); return;

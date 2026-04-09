@@ -36,7 +36,7 @@ let gameState = {
     p1Score: 0, p2Score: 0
 };
 
-let aiTimer    = null;
+let aiTimer = null;
 let p2p        = { peer: null, conn: null, isHost: false };
 let burnZones  = [];
 let ghostClones = [];
@@ -196,11 +196,8 @@ function gameLoop(timestamp) {
 function updateAI(dt) {
     if (!enemy.isGrounded) return;
 
-    // Si le joueur est en l'air et proche, l'IA attend qu'il atterrisse
-    // (évite que l'IA recule quand le joueur saute par-dessus)
-    if (!player.isGrounded && Math.abs(enemy.x - player.x) < ATTACK_RANGE + 80) return;
+    const dx = enemy.x - player.x;
 
-    let dx = enemy.x - player.x;
     enemy.dir = dx > 0 ? -1 : 1;
 
     if (Math.abs(dx) > ATTACK_RANGE + 10) {

@@ -114,6 +114,7 @@
             window.score = 0; window.temps = 30 * 60;
             window.multiplicateur = 3.00; // DEPART A x3.00
             window.graphesGeneres = false; window.selection = []; window.phase5Init = false; window.mathIndex = 0;
+            window.voleurPhasePts = { p1: 0, p3: 0, p4: 0, p4b: 0, p5: 0 };
             var inputs = document.querySelectorAll('input'); inputs.forEach(function(i){ i.value = ""; });
             window.updateScoreUI();
 
@@ -235,6 +236,7 @@
             var d1 = parseInt(document.getElementById('digit1').value); var d2 = parseInt(document.getElementById('digit2').value);
             var d3 = parseInt(document.getElementById('digit3').value); var d4 = parseInt(document.getElementById('digit4').value);
             if(d1===window.gameData.p1.c1.sol && d2===window.gameData.p1.c2.sol && d3===window.gameData.p1.c3.sol && d4===window.gameData.p1.c4.sol) {
+                window.voleurPhasePts.p1 = Math.round(500 * window.multiplicateur);
                 window.score += (500 * window.multiplicateur);
                 window.updateScoreUI(); window.naviguerVers('story-2');
             } else {
@@ -292,6 +294,7 @@
             if(dr.dataset.id === 'ok2' && vo.dataset.id === 'ok1') {
                 var tot = document.querySelectorAll('.selected-drone, .selected-voleur').length;
                 if(tot>2) { alert("Surcharge radar : Trop de cibles sélectionnées !"); return; }
+                window.voleurPhasePts.p3 = Math.round(300 * window.multiplicateur);
                 window.score += (300 * window.multiplicateur);
                 window.updateScoreUI(); window.naviguerVers('story-4');
             } else {
@@ -304,6 +307,7 @@
             var r1 = parseInt(document.getElementById('rep4-1').value);
             var r2 = parseInt(document.getElementById('rep4-2').value);
             if(r1 === window.gameData.lectureG.q1_sol && r2 === window.gameData.lectureG.q2_sol) {
+                window.voleurPhasePts.p4 = Math.round(200 * window.multiplicateur);
                 window.score += (200 * window.multiplicateur);
                 window.updateScoreUI(); window.naviguerVers('story-4b');
             } else {
@@ -325,6 +329,7 @@
             var antOk = (r2a === sol2a && r2b === sol2b) || (r2a === sol2b && r2b === sol2a);
 
             if(imgOk && antOk) {
+                window.voleurPhasePts.p4b = Math.round(200 * window.multiplicateur);
                 window.score += (200 * window.multiplicateur);
                 window.updateScoreUI(); window.naviguerVers('story-5');
             } else {
@@ -375,6 +380,7 @@
                     clearInterval(window.timerPhase5);
 
                     var points = Math.round(100 * window.multiplicateur);
+                    window.voleurPhasePts.p5 += points;
                     window.score += points;
 
                     // Récompense phase finale (Max x3.00)

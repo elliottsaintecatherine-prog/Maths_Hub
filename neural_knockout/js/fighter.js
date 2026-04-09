@@ -107,10 +107,9 @@ class Fighter {
         // Séparation physique — tient compte de la hauteur réelle (accroupi = moitié)
         const other = this.isPlayer ? enemy : player;
         if (other) {
-            const bodyW   = this.w * 0.45;
-            const otherH  = other.isCrouching ? other.h * 0.5 : other.h;
-            const isAbove = this.y < other.y - otherH * 0.1;
-            if (!isAbove && Math.abs(this.x - other.x) < bodyW) {
+            const bodyW = this.w * 0.45;
+            // Séparation uniquement si LES DEUX sont au sol
+            if (this.isGrounded && other.isGrounded && Math.abs(this.x - other.x) < bodyW) {
                 this.x = other.x + (this.x <= other.x ? -bodyW : bodyW);
             }
         }
@@ -137,16 +136,26 @@ class Fighter {
         if (this.isCrouching) return; // impossible d'attaquer accroupi
         if (this.state !== 'attack' && this.state !== 'hit') {
             this.state     = 'attack';
-            this.animTimer = 200;
+            this.animTimer = this.hasPowerUp ? 200 : 600;
 
             let target = this.isPlayer ? enemy : player;
             let dx     = target.x - this.x;
 
-            // Hauteur du poing (~75 % du sprite depuis le sol)
-            const myPunchY  = this.y - this.h * 0.75;
-            // Hitbox cible : réduite de moitié si accroupie
-            const targetTop = target.y - (target.isCrouching ? target.h * 0.5 : target.h);
-            const vertHit   = myPunchY >= targetTop - 15 && myPunchY <= target.y + 15;
+            // Hitbox verticale
+            let vertHit;
+            if (this.isGrounded && target.isGrounded) {
+                // Combat au sol : poing horizontal précis
+                const myPunchY  = this.y - this.h * 0.75;
+                const targetTop = target.y - (target.isCrouching ? target.h * 0.5 : target.h);
+                vertHit = myPunchY >= targetTop - 15 && myPunchY <= target.y + 15;
+            } else {
+                // En l'air : on compare les zones de corps entières des deux sprites
+                const myTop     = this.y - this.h;
+                const myBot     = this.y;
+                const targetTop = target.y - (target.isCrouching ? target.h * 0.5 : target.h);
+                const targetBot = target.y;
+                vertHit = myBot >= targetTop - 30 && myTop <= targetBot + 30;
+            }
 
             let inRange = false;
             if (this.dir ===  1 && dx > 0 &&              dx  <= ATTACK_RANGE && vertHit) inRange = true;

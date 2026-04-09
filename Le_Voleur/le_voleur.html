@@ -430,5 +430,9 @@
     <script src="js/jeu.js"></script>
     <script src="js/classement.js"></script>
     <script src="js/evenements.js"></script>
+    <script type="module">
+        import { saveGameScore, getCurrentUser } from '../auth/supabase.js';
+        window._scolarisAuth = { saveGameScore, getCurrentUser };
+    </script>
 </body>
 </html>

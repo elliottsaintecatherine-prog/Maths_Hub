@@ -415,11 +415,25 @@
             <p id="bonus-detail" style="font-size:0.95rem; color:var(--primary); margin-top:5px;"></p>
         </div>
         
-        <div style="text-align:left; margin-bottom:12px; font-size:1rem; color:var(--text-muted); font-weight:600;">IDENTIFICATION AGENT :</div>
-        <div style="display:flex; gap:12px; flex-direction: column;">
+        <!-- Joueur connecté -->
+        <div id="zone-connecte" style="display:none; flex-direction:column; gap:12px;">
+            <div style="display:flex; align-items:center; gap:12px; background:rgba(0,243,255,0.06); border:1px solid var(--primary); border-radius:8px; padding:14px 18px;">
+                <span style="font-size:1.4rem;">🎖</span>
+                <div>
+                    <div style="font-size:0.75rem; color:var(--text-muted); letter-spacing:2px;">AGENT IDENTIFIÉ</div>
+                    <div id="zone-connecte-nom" style="font-size:1.1rem; font-weight:700; color:var(--primary); letter-spacing:2px;">—</div>
+                </div>
+            </div>
+            <button onclick="window.jouerSon('click'); window.sauvegarderScore()" class="action-btn" style="margin:0; padding:18px;">SAUVEGARDER DANS LA BASE</button>
+        </div>
+
+        <!-- Invité -->
+        <div id="zone-invite" style="display:none; flex-direction:column; gap:12px;">
+            <div style="text-align:left; margin-bottom:4px; font-size:1rem; color:var(--text-muted); font-weight:600;">IDENTIFICATION AGENT :</div>
             <input type="text" id="player-name" placeholder="ENTREZ VOTRE PSEUDO" maxlength="12" style="text-transform:uppercase; margin:0; padding: 18px;">
             <button onclick="window.jouerSon('click'); window.sauvegarderScore()" class="action-btn" style="margin:0; padding:18px;">SAUVEGARDER DANS LA BASE</button>
         </div>
+
         <button onclick="window.jouerSon('click'); window.retourAccueil()" class="secondary-btn" style="margin-top:40px; border:none;">QUITTER VERS LE HUB</button>
     </div>
 
@@ -432,7 +446,19 @@
     <script src="js/evenements.js"></script>
     <script type="module">
         import { saveGameScore, getCurrentUser } from '../auth/supabase.js';
+
+        // Stocke l'utilisateur connecté (null = invité)
+        const user = await getCurrentUser();
         window._scolarisAuth = { saveGameScore, getCurrentUser };
+        window._scolarisUser = user;
+
+        // Affiche la bonne zone selon l'état de connexion
+        if (user) {
+            document.getElementById('zone-connecte').style.display = 'flex';
+            document.getElementById('zone-connecte-nom').textContent = user.username.toUpperCase();
+        } else {
+            document.getElementById('zone-invite').style.display = 'flex';
+        }
     </script>
 </body>
 </html>

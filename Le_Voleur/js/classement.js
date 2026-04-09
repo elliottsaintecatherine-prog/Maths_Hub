@@ -4,7 +4,10 @@
 'use strict';
 
         window.sauvegarderScore = function() {
-            var name = document.getElementById('player-name').value;
+            // Joueur connecté → nom automatique ; invité → champ de saisie
+            var name = (window._scolarisUser && window._scolarisUser.username)
+                ? window._scolarisUser.username
+                : (document.getElementById('player-name') ? document.getElementById('player-name').value : '');
             if(!name) { alert("Saisie identifiant obligatoire."); return; }
 
             var btn = document.querySelector("#ecran-fin .action-btn");

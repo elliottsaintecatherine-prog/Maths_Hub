@@ -529,7 +529,12 @@ const gameState = {
   gameMode: 'solo',      // 'solo' | 'multi'
   playerTurn: 1,         // 1 or 2
   playerResults: [],     // [{player, won, moves, health}]
-  difficulty: 'medium'   // 'easy' | 'medium' | 'hard'
+  difficulty: 'medium',  // 'easy' | 'medium' | 'hard'
+  // ── Scoring ──────────────────────────────────────
+  // Formule par map : base(800) + santé(health×80, max 400) + efficacité(max 360)
+  // Max théorique = 1560/map × 10 maps = 15 600 — impossible en pratique
+  sessionScore: 0,   // cumul sur toute la session (maps enchaînées)
+  mapScore: 0        // score gagné sur la map courante
 };
 
 const MONSTER_INTERVALS = { easy: 10000, medium: 7000, hard: 4000 };
@@ -632,9 +637,7 @@ const cam = {
 let camDragEnd = 0; // timestamp of last manual drag
 
 function updateCamera(pp, lv, dt) {
-  // Auto-follow player direction only when not recently dragged manually
-  const isManual = performance.now() < camDragEnd + 1800;
-  if (!isManual && (lv.x !== 0 || lv.y !== 0)) cam.targetAngle = Math.atan2(lv.y, lv.x);
+  // La caméra ne suit plus automatiquement le vecteur — alignement manuel via btn-cam-recenter
   let diff = cam.targetAngle - cam.angle;
   while (diff >  Math.PI) diff -= 2 * Math.PI;
   while (diff < -Math.PI) diff += 2 * Math.PI;
@@ -1140,6 +1143,35 @@ function checkPath(start, vec) {
 // SECTION 11 — MONSTER AI
 // ═══════════════════════════════════════════════════
 
+// Validation de chemin pour le MONSTRE uniquement :
+// ignore les death zones et les sorties (seuls les murs bloquent le monstre)
+function checkPathMonster(start, vec) {
+  const N = Math.max(6, Math.ceil(Math.hypot(vec.x, vec.y) * 4));
+  const map = MAPS[gameState.currentMap];
+  for (let i = 1; i <= N; i++) {
+    const t = i / N;
+    const pt = { x: start.x + vec.x * t, y: start.y + vec.y * t };
+    if (pt.x < -20 || pt.x > 20 || pt.y < -20 || pt.y > 20) return false;
+    for (const obs of map.obstacles) {
+      if (pt.x >= obs.x1 && pt.x <= obs.x2 && pt.y >= obs.y1 && pt.y <= obs.y2) return false;
+    }
+    if (map.walls) {
+      for (const wall of map.walls) {
+        if (pt.x >= wall.x1 && pt.x <= wall.x2 && pt.y >= wall.y1 && pt.y <= wall.y2) return false;
+      }
+    }
+    // Sur les maps invertLogic (ex. Fonderie), le monstre reste aussi sur les safeZones
+    if (map.invertLogic) {
+      const inSafe = map.safeZones.some(sz =>
+        pt.x >= sz.x1 && pt.x <= sz.x2 && pt.y >= sz.y1 && pt.y <= sz.y2);
+      if (!inSafe) return false;
+    }
+  }
+  return true;
+}
+
+let monsterMoving = false; // mutex — évite les animations overlappantes
+
 // BFS pathfinding — retourne le premier pas vers le joueur
 function getMonsterNextStep() {
   const map = MAPS[gameState.currentMap];
@@ -1199,55 +1231,55 @@ function getMonsterNextStep() {
 }
 
 async function monsterAutoMove() {
-  if (gameState.mode !== 'idle') return;
-  const step = getMonsterNextStep();
-  if (!step) return;
-  const len = Math.sqrt(step.x**2 + step.y**2);
-  // Utiliser la magnitude du dernier vecteur joueur pour la cohérence avec monsterMove()
-  const lastVec = gameState.lastVector;
-  const lastMag = Math.hypot(lastVec.x, lastVec.y);
-  const mapSpeed = MAPS[gameState.currentMap].monsterSpeed;
-  // Minimum 2, maximum 8 — comme monsterMove mais appliqué au mouvement auto
-  const moveDistance = lastMag > 0
-    ? Math.max(2, Math.min(Math.round(lastMag * mapSpeed), 8))
-    : 3; // fallback si pas encore de vecteur
-  const moveVec = {
-    x: Math.round((step.x / len) * moveDistance),
-    y: Math.round((step.y / len) * moveDistance)
-  };
-  const candidate = checkPath(gameState.monsterPos, moveVec) === 'OK' ? moveVec : step;
-  if (checkPath(gameState.monsterPos, candidate) !== 'OK') return;
-  const prevM = {...gameState.monsterPos};
-  gameState.monsterPos.x += candidate.x;
-  gameState.monsterPos.y += candidate.y;
-  const newM = {...gameState.monsterPos};
-  gameState.monsterPos = {...prevM};
-  playSound('monster');
-  await animateMonster(prevM, newM, 400);
-  gameState.monsterPos = {...newM};
-  if (Math.hypot(gameState.playerPos.x - gameState.monsterPos.x,
-                 gameState.playerPos.y - gameState.monsterPos.y) < 1.5) gameOver(true);
+  if (gameState.mode === 'menu' || gameState.mode === 'animating' || gameState.mode === 'gameover') return;
+  if (monsterMoving) return;
+  monsterMoving = true;
+  try {
+    // Le BFS retourne le premier pas vers le joueur, déjà validé comme walkable
+    const step = getMonsterNextStep();
+    if (!step) return;
+
+    // Snap la position du monstre à l'entier avant de bouger
+    // → évite que la dérive flottante du lerp bloque le pathfinding
+    const fromX = Math.round(gameState.monsterPos.x);
+    const fromY = Math.round(gameState.monsterPos.y);
+    const prevM = { x: fromX, y: fromY };
+    const newM  = { x: fromX + step.x, y: fromY + step.y };
+
+    playSound('monster');
+    gameState.monsterPos = {...prevM}; // partir du snap
+    await animateMonster(prevM, newM, 350);
+    gameState.monsterPos = {...newM};
+
+    if (Math.hypot(gameState.playerPos.x - gameState.monsterPos.x,
+                   gameState.playerPos.y - gameState.monsterPos.y) < 1.5) {
+      gameOver(true);
+    }
+  } finally {
+    monsterMoving = false;
+  }
 }
 
 function monsterMove(playerVecMagnitude) {
   const gs = gameState;
   const step = getMonsterNextStep();
   if (!step) return;
-  const len = Math.sqrt(step.x**2 + step.y**2);
+  // Snap position avant de calculer le déplacement
+  gs.monsterPos.x = Math.round(gs.monsterPos.x);
+  gs.monsterPos.y = Math.round(gs.monsterPos.y);
+  // Déplacement proportionnel à la magnitude du vecteur joueur
+  const len = Math.hypot(step.x, step.y);
   if (len === 0) return;
-  // Turn-based: monster speed proportional to player's vector magnitude
-  // Base: 1 cell per 1 unit of player vector, scaled by map difficulty
   const mapSpeed = MAPS[gs.currentMap].monsterSpeed;
-  const pvMag = playerVecMagnitude || 3; // default fallback
-  const speed = Math.max(1, Math.min(Math.round(pvMag * mapSpeed), 8));
-  const nx = Math.round((step.x / len) * speed);
-  const ny = Math.round((step.y / len) * speed);
-  if (nx === 0 && ny === 0) { gs.monsterPos.x += step.x; gs.monsterPos.y += step.y; return; }
-  if (checkPath(gs.monsterPos, {x:nx, y:ny}) === 'OK') {
-    gs.monsterPos.x += nx; gs.monsterPos.y += ny; return;
+  const pvMag = playerVecMagnitude || 3;
+  const speed = Math.max(1, Math.min(Math.round(pvMag * mapSpeed), 6));
+  // Avancer de `speed` pas BFS dans la même direction
+  for (let i = 0; i < speed; i++) {
+    const s = getMonsterNextStep();
+    if (!s) break;
+    gs.monsterPos.x += s.x;
+    gs.monsterPos.y += s.y;
   }
-  if (checkPath(gs.monsterPos, {x:nx, y:0}) === 'OK') { gs.monsterPos.x += nx; return; }
-  if (checkPath(gs.monsterPos, {x:0, y:ny}) === 'OK') { gs.monsterPos.y += ny; }
 }
 
 // ═══════════════════════════════════════════════════
@@ -1339,6 +1371,10 @@ function gameOver(byMonster = false) {
     } else {
       document.getElementById('go-pos').textContent = `Position finale : (${gameState.playerPos.x.toFixed(1)}, ${gameState.playerPos.y.toFixed(1)})`;
       document.getElementById('go-moves').textContent = `Déplacements : ${gameState.moveCount}`;
+      const goSS = document.getElementById('go-session-score');
+      if (goSS) goSS.textContent = gameState.sessionScore > 0
+        ? `Score de session : ${gameState.sessionScore} pts`
+        : '';
       document.getElementById('screen-gameover').style.display = 'flex';
     }
   }
@@ -1356,6 +1392,16 @@ function levelComplete() {
   closeOverlay();
   const highest = parseInt(localStorage.getItem('vhHighest') || '0');
   if (gameState.currentMap + 1 > highest) localStorage.setItem('vhHighest', gameState.currentMap + 1);
+
+  // ── Calcul du score de la map ────────────────────────────────────
+  // Max théorique : 800 + 400 + 360 = 1 560 pts/map × 10 maps = 15 600
+  const base        = 800;
+  const healthPts   = gameState.health * 80;                            // max 5×80 = 400
+  const effPts      = Math.max(0, 360 - Math.max(0, gameState.moveCount - 1) * 20); // max 360 (1 mvt)
+  gameState.mapScore = base + healthPts + effPts;
+  const displayTotal = gameState.sessionScore + gameState.mapScore;
+  // ─────────────────────────────────────────────────────────────────
+
   if (gameState.gameMode === 'multi' && gameState.playerTurn === 1) {
     // Player 1 won — pass to player 2
     gameState.playerResults[0] = { player: 1, won: true, moves: gameState.moveCount, health: gameState.health };
@@ -1367,8 +1413,12 @@ function levelComplete() {
     gameState.playerResults[1] = { player: 2, won: true, moves: gameState.moveCount, health: gameState.health };
     showResults();
   } else {
-    document.getElementById('win-moves').textContent = `Déplacements : ${gameState.moveCount}`;
+    document.getElementById('win-moves').textContent = `Déplacements : ${gameState.moveCount} mvt`;
     document.getElementById('win-deck').textContent = `Vecteurs utilisés : ${gameState.deck.map(v => `(${v.x},${v.y})`).join(' ')}`;
+    document.getElementById('win-map-score').textContent =
+      `+${gameState.mapScore} pts  (❤ ${gameState.health}/5 · ${gameState.moveCount} mvt)`;
+    document.getElementById('win-session-score').textContent =
+      `Total session : ${displayTotal} / 15 600 pts`;
     const hasNext = gameState.currentMap + 1 < MAPS.length;
     document.getElementById('btn-next-map').style.display = hasNext ? '' : 'none';
     document.getElementById('screen-win').style.display = 'flex';
@@ -1436,9 +1486,10 @@ function passTurn() {
   generateHand();
   setMessage('🃏 Nouvelle main piochée — le monstre avance !');
   gameState.moveCount++;
-  // Monster moves on pass
+  // Monster moves on pass — use last vector magnitude or fallback 4
   const prevM = {...gameState.monsterPos};
-  monsterMove();
+  const passMag = Math.hypot(gameState.lastVector.x, gameState.lastVector.y) || 4;
+  monsterMove(passMag);
   const newM = {...gameState.monsterPos};
   gameState.monsterPos = {...prevM};
   playSound('monster');
@@ -1589,11 +1640,6 @@ function respawnPlayer() {
 // ═══════════════════════════════════════════════════
 async function executeVector() {
   if (gameState.mode !== 'command' && gameState.mode !== 'idle') return;
-  // Exiger une carte sélectionnée si le deck n'est pas vide
-  if (gameState.deck.length > 0 && gameState.selectedDeck.length === 0) {
-    setMessage('⚠ Sélectionne un parchemin du deck avant d\'invoquer.');
-    return;
-  }
   const dx = parseInt(document.getElementById('inp-x').value) || 0;
   const dy = parseInt(document.getElementById('inp-y').value) || 0;
   if (dx === 0 && dy === 0) {
@@ -1601,7 +1647,7 @@ async function executeVector() {
     return;
   }
   const vec = {x: dx, y: dy};
-  // Consume the selected card from hand
+  // Consomme la carte sélectionnée si une est choisie, sinon mode libre (vecteur manuel)
   if (gameState.selectedDeck.length === 1) {
     consumeCard(gameState.selectedDeck[0]);
   }
@@ -1654,7 +1700,7 @@ async function executeVector() {
     document.getElementById('btn-back-cmd').disabled = false;
     resetMonsterTimer();
     addToDeck(); // replenish hand
-    updateCommandUI(); openOverlay();
+    updateCommandUI();
     return;
   }
 
@@ -1671,7 +1717,7 @@ async function executeVector() {
     document.getElementById('btn-back-cmd').disabled = false;
     resetMonsterTimer();
     addToDeck();
-    updateCommandUI(); openOverlay();
+    updateCommandUI();
     return;
   }
   const prevMonster = {...gameState.monsterPos};
@@ -1689,7 +1735,7 @@ async function executeVector() {
   document.getElementById('btn-back-cmd').disabled = false;
   resetMonsterTimer();
   addToDeck(); // replenish hand
-  updateCommandUI(); openOverlay();
+  updateCommandUI();
 }
 
 // ═══════════════════════════════════════════════════
@@ -1744,7 +1790,7 @@ function executeCombo() {
       respawnPlayer();
       gameState.mode = 'idle'; setAllDisabled(false);
       document.getElementById('btn-back-cmd').disabled = false;
-      resetMonsterTimer(); addToDeck(); updateCommandUI(); openOverlay(); return;
+      resetMonsterTimer(); addToDeck(); updateCommandUI(); return;
     }
     // ── Second vector (only if first wasn't blocked) ──
     if (r1 !== 'BLOCKED') {
@@ -1779,7 +1825,7 @@ function executeCombo() {
         respawnPlayer();
         gameState.mode = 'idle'; setAllDisabled(false);
         document.getElementById('btn-back-cmd').disabled = false;
-        resetMonsterTimer(); addToDeck(); updateCommandUI(); openOverlay(); return;
+        resetMonsterTimer(); addToDeck(); updateCommandUI(); return;
       }
     }
     // Combo magnitude = sum of both vectors
@@ -1798,7 +1844,7 @@ function executeCombo() {
     document.getElementById('btn-back-cmd').disabled = false;
     resetMonsterTimer();
     addToDeck(); // replenish hand
-    updateCommandUI(); openOverlay();
+    updateCommandUI();
   });
 }
 
@@ -1845,15 +1891,19 @@ function renderMenu() {
 // ═══════════════════════════════════════════════════
 // SECTION 22 — START GAME
 // ═══════════════════════════════════════════════════
-function startGame(mapIndex, playerTurnOverride) {
+function startGame(mapIndex, playerTurnOverride, preserveSession = false) {
   gameState.currentMap = mapIndex;
   if (playerTurnOverride !== undefined) gameState.playerTurn = playerTurnOverride;
+  // Réinitialise le score de session sauf si on enchaîne les maps
+  if (!preserveSession) gameState.sessionScore = 0;
+  gameState.mapScore = 0;
   const spawnMap = MAPS[mapIndex];
   gameState.playerPos  = spawnMap.playerSpawn  ? {...spawnMap.playerSpawn}  : { x: 0, y: -18 };
   gameState.monsterPos = spawnMap.monsterSpawn ? {...spawnMap.monsterSpawn} : { x: 0, y: 18 };
   gameState.selectedDeck = [];
   gameState.health = 5;
   gameState.moveCount = 0;
+  monsterMoving = false;
   gameState.trail = [];
   gameState.lastVector = { x: 0, y: 1 };
   cam.angle = Math.PI / 2; cam.targetAngle = Math.PI / 2;
@@ -1875,6 +1925,8 @@ function startGame(mapIndex, playerTurnOverride) {
   canvas.style.display = 'block';
   closeSettings();
   showGear(true);
+  const camBtn = document.getElementById('btn-cam-recenter');
+  if (camBtn) camBtn.classList.add('visible');
   initParticles();
   resizeCanvas();
   // Son ambiant de la map
@@ -1883,8 +1935,18 @@ function startGame(mapIndex, playerTurnOverride) {
   if (currentMapSound) currentMapSound.play().catch(() => {});
   openOverlay();
 
+  // Affiche le HUD score
+  const hudScore = document.getElementById('hud-score');
+  if (hudScore) hudScore.style.display = '';
+  updateHudScore();
+
   if (rafId) cancelAnimationFrame(rafId);
   rafId = requestAnimationFrame(renderLoop);
+}
+
+function updateHudScore() {
+  const el = document.getElementById('hud-score-val');
+  if (el) el.textContent = gameState.sessionScore + gameState.mapScore;
 }
 
 // ═══════════════════════════════════════════════════
@@ -2879,83 +2941,117 @@ function renderLoop(ts) {
     ctx.restore();
   }
 
-  // ── Threat indicator — red vignette + pulsing border based on monster proximity ──
-  const threatDist = Math.hypot(pp.x - mp.x, pp.y - mp.y);
-  const maxThreatDist = 30; // beyond this = no threat overlay
-  const threatLevel = Math.max(0, 1 - threatDist / maxThreatDist); // 0 = safe, 1 = danger
-  if (threatLevel > 0.1) {
-    const tPulse = 0.5 + 0.5 * Math.sin(ts * 0.006 * (1 + threatLevel * 3));
-    const tAlpha = threatLevel * 0.35 * tPulse;
-    // Red vignette
+  // ── Lampe torche — cône directionnel ──
+  // La caméra est orbitale : le joueur est TOUJOURS au centre de l'écran (W/2, H/2).
+  // Tout point projeté le long de cam.f depuis le joueur donne aussi (W/2, H/2).
+  // → atan2(0,0) = 0 : projeter un point devant ne donne pas de direction utilisable.
+  //
+  // La direction correcte "devant sur le sol" en screen-space pour une caméra orbitale
+  // est TOUJOURS -PI/2 (vers le haut de l'écran = vers l'horizon), indépendamment de
+  // la rotation horizontale. Quand tu fais tourner la caméra, le CONTENU du cône change,
+  // pas sa direction sur l'écran — comme un vrai projecteur 3D.
+  const PIVOT_H = 1.0;
+  const lightPt = project(pp.x, pp.y, PIVOT_H);
+  if (lightPt) {
+    // Animations dynamiques indépendantes (fréquences différentes)
+    const t1 = ts * 0.0017;
+    const t2 = ts * 0.0031;
+    const t3 = ts * 0.0053;
+    // Scintillement d'intensité : battement lent + harmonique rapide
+    const flicker = 0.88 + 0.07 * Math.sin(t1) + 0.05 * Math.sin(t2 * 2.3);
+    // Légère dérive angulaire — main qui tremble (deux sinusoïdes déphasées)
+    const wobble  = 0.022 * Math.sin(t2) + 0.010 * Math.sin(t3 * 1.7);
+    // Légère variation de largeur du cône (respiration)
+    const coneBreath = 0.03 * Math.sin(t3 * 0.9);
+
+    const sx = lightPt.sx, sy = lightPt.sy;
+
+    // Direction stable : vers le haut de l'écran (-PI/2 = horizon/sol devant le joueur)
+    // + petite compensation de pitch pour inclinaison plus naturelle
+    const pitchLift = cam.pitch * 0.18;  // caméra plus haute → cône légèrement plus vertical
+    const coneAngle = -Math.PI / 2 + pitchLift + wobble;
+
+    const coneLen  = Math.max(W, H) * 2.0;
+    const halfCone = Math.PI / 5.5 + coneBreath;   // ~65° total, légèrement variable
+
+    // 1. Masque noir — tout sauf le cône (evenodd)
     ctx.save();
-    const threatGrad = ctx.createRadialGradient(W/2, H/2, H*0.15, W/2, H/2, H*0.7);
-    threatGrad.addColorStop(0, 'rgba(0,0,0,0)');
-    threatGrad.addColorStop(0.5, `rgba(80,0,0,${tAlpha * 0.3})`);
-    threatGrad.addColorStop(1, `rgba(120,0,0,${tAlpha})`);
-    ctx.fillStyle = threatGrad;
-    ctx.fillRect(0, 0, W, H);
-    // Pulsing border
-    if (threatLevel > 0.4) {
-      const bw = 3 + threatLevel * 8;
-      ctx.strokeStyle = `rgba(200,0,0,${tAlpha * 1.2})`;
-      ctx.lineWidth = bw;
-      ctx.strokeRect(bw/2, bw/2, W - bw, H - bw);
-    }
+    ctx.beginPath();
+    ctx.rect(0, 0, W, H);
+    ctx.moveTo(sx, sy);
+    ctx.arc(sx, sy, coneLen, coneAngle + halfCone, coneAngle - halfCone, true);
+    ctx.closePath();
+    ctx.fillStyle = `rgba(0,0,0,${0.91 + 0.04 * (1 - flicker)})`;
+    ctx.fill('evenodd');
     ctx.restore();
+
+    // 2. Corps du faisceau — dégradé radial dans le cône
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.arc(sx, sy, coneLen, coneAngle - halfCone, coneAngle + halfCone);
+    ctx.closePath();
+    ctx.clip();
+
+    ctx.globalCompositeOperation = 'screen';
+
+    // Dégradé principal chaud → froid
+    const beamGrad = ctx.createRadialGradient(sx, sy, 0, sx, sy, coneLen * 0.60);
+    beamGrad.addColorStop(0,    `rgba(255,245,200,${0.70 * flicker})`);
+    beamGrad.addColorStop(0.10, `rgba(240,210,140,${0.50 * flicker})`);
+    beamGrad.addColorStop(0.30, `rgba(180,145,75,${0.25 * flicker})`);
+    beamGrad.addColorStop(0.55, `rgba(80,55,20,${0.08 * flicker})`);
+    beamGrad.addColorStop(1,    'rgba(0,0,0,0)');
+    ctx.fillStyle = beamGrad;
+    ctx.fillRect(0, 0, W, H);
+
+    // Rayon central intense (spot chaud au cœur du faisceau)
+    const spotAngle = coneAngle + 0.006 * Math.sin(t2 * 3.1); // micro-dérive du spot
+    const spotLen   = coneLen * 0.45;
+    const spx = sx + Math.cos(spotAngle) * spotLen * 0.3;
+    const spy = sy + Math.sin(spotAngle) * spotLen * 0.3;
+    const spotGrad  = ctx.createRadialGradient(spx, spy, 0, spx, spy, spotLen * 0.4);
+    spotGrad.addColorStop(0,   `rgba(255,255,230,${0.35 * flicker})`);
+    spotGrad.addColorStop(0.4, `rgba(200,170,90,${0.12 * flicker})`);
+    spotGrad.addColorStop(1,   'rgba(0,0,0,0)');
+    ctx.fillStyle = spotGrad;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.restore();
+
+    // 3. Halo immédiat autour de la lampe (boîtier chaud)
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    const nearR    = 75 + 8 * Math.sin(t1 * 2);
+    const nearGrad = ctx.createRadialGradient(sx, sy, 0, sx, sy, nearR);
+    nearGrad.addColorStop(0,   `rgba(255,225,130,${0.28 * flicker})`);
+    nearGrad.addColorStop(0.5, `rgba(120,80,25,${0.06})`);
+    nearGrad.addColorStop(1,   'rgba(0,0,0,0)');
+    ctx.fillStyle = nearGrad;
+    ctx.fillRect(sx - nearR - 10, sy - nearR - 10, (nearR + 10) * 2, (nearR + 10) * 2);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.restore();
+
+    // 4. Joueur PAR-DESSUS le masque
+    drawPlayer3D(pp, pal);
   }
 
-  // ── Vignette manoir (bords très sombres, légère teinte violacée) ─
-  const fog = ctx.createRadialGradient(W/2, H*0.45, H*0.08, W/2, H*0.45, H*0.82);
-  fog.addColorStop(0, 'rgba(0,0,0,0)');
-  fog.addColorStop(0.6, 'rgba(0,0,0,0.2)');
-  fog.addColorStop(1, 'rgba(4,2,8,0.78)');
-  ctx.fillStyle = fog; ctx.fillRect(0, 0, W, H);
-  // Légère brume bleue/violette dans les coins (ombre glaciale)
-  ctx.save();
-  ctx.globalAlpha = 0.06;
-  ctx.fillStyle = '#1a0a2e';
-  ctx.fillRect(0, 0, W * 0.18, H);
-  ctx.fillRect(W * 0.82, 0, W * 0.18, H);
-  ctx.restore();
-
-  // ── Flashlight dynamique — direction suit le dernier vecteur ──
-  const lightPt = project(pp.x, pp.y, 1.0);
-  if (lightPt) {
-    const flicker = 0.92 + 0.08 * Math.sin(ts * 0.013);
-    const haloR = Math.max(W, H) * 0.40 * flicker;
-    // Direction angle from last vector (or camera angle if no move yet)
-    const lightAngle = (lv.x !== 0 || lv.y !== 0)
-      ? Math.atan2(-(lv.y * SCALE * 0.5 + lv.x * SCALE * 0.5), (lv.x * SCALE * 0.866 - lv.y * SCALE * 0.866))
-      : cam.angle;
-    // Offset the light center forward in the direction of movement
-    const lightOffX = Math.cos(lightAngle) * haloR * 0.25;
-    const lightOffY = Math.sin(lightAngle) * haloR * 0.25;
-    const lcx = lightPt.sx + lightOffX;
-    const lcy = lightPt.sy + lightOffY;
-
-    // 1. Obscurité globale
-    ctx.fillStyle = 'rgba(0,0,0,0.62)';
-    ctx.fillRect(0, 0, W, H);
-
-    // 2. Directional flashlight cone via screen blend + elliptical gradient
-    ctx.globalCompositeOperation = 'screen';
+  // ── Threat indicator — bordure rouge pulsante quand le monstre est proche ──
+  const threatDist = Math.hypot(pp.x - mp.x, pp.y - mp.y);
+  const maxThreatDist = 30;
+  const threatLevel = Math.max(0, 1 - threatDist / maxThreatDist);
+  if (threatLevel > 0.1) {
+    const tPulse = 0.5 + 0.5 * Math.sin(ts * 0.006 * (1 + threatLevel * 3));
+    const tAlpha = threatLevel * 0.40 * tPulse;
     ctx.save();
-    ctx.translate(lcx, lcy);
-    ctx.rotate(lightAngle);
-    ctx.scale(1.6, 1.0); // elongate in direction of movement
-    const haloGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, haloR * 0.7);
-    haloGrad.addColorStop(0,    `rgba(180,155,100,${0.38 * flicker})`);
-    haloGrad.addColorStop(0.30, `rgba(110,80,35,${0.22 * flicker})`);
-    haloGrad.addColorStop(0.65, `rgba(45,25,5,${0.10 * flicker})`);
-    haloGrad.addColorStop(1,    'rgba(0,0,0,0)');
-    ctx.fillStyle = haloGrad;
-    const bigR = haloR * 2;
-    ctx.fillRect(-bigR, -bigR, bigR * 2, bigR * 2);
-    ctx.restore(); // undo translate/rotate/scale
-    ctx.globalCompositeOperation = 'source-over';
-
-    // 3. Redessiner le joueur PAR-DESSUS le halo
-    drawPlayer3D(pp, pal);
+    if (threatLevel > 0.4) {
+      const bw = 4 + threatLevel * 10;
+      ctx.strokeStyle = `rgba(200,0,0,${tAlpha * 1.3})`;
+      ctx.lineWidth = bw;
+      ctx.strokeRect(bw / 2, bw / 2, W - bw, H - bw);
+    }
+    ctx.restore();
   }
 
 
@@ -3032,6 +3128,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target === document.getElementById('overlay-2d')) closeOverlay();
   });
 
+  // Recentrer caméra sur le dernier vecteur
+  document.getElementById('btn-cam-recenter').onclick = () => {
+    const lv = gameState.lastVector;
+    if (lv.x !== 0 || lv.y !== 0) {
+      cam.targetAngle = Math.atan2(lv.y, lv.x);
+    } else {
+      cam.targetAngle = Math.PI / 2; // angle initial si aucun vecteur joué
+    }
+  };
+
   // Mute toggle
   document.getElementById('btn-mute').onclick = toggleMute;
 
@@ -3101,35 +3207,38 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-results-menu').onclick = () => {
     document.getElementById('screen-results').style.display = 'none';
     document.getElementById('screen-menu').style.display = 'flex';
-    gameState.mode = 'menu'; showGear(false); closeSettings(); renderMenu();
+    gameState.mode = 'menu'; showGear(false); document.getElementById('btn-cam-recenter')?.classList.remove('visible'); closeSettings(); renderMenu();
   };
 
   // Gameover buttons
   document.getElementById('btn-retry').onclick = () => {
     document.getElementById('screen-gameover').style.display = 'none';
-    startGame(gameState.currentMap);
+    startGame(gameState.currentMap, undefined, true);  // preserveSession
   };
   document.getElementById('btn-go-menu').onclick = () => {
     document.getElementById('screen-gameover').style.display = 'none';
     document.getElementById('screen-menu').style.display = 'flex';
     canvas.style.display = 'none'; closeOverlay();
-    gameState.mode = 'menu'; showGear(false); closeSettings(); renderMenu();
+    gameState.mode = 'menu'; showGear(false); document.getElementById('btn-cam-recenter')?.classList.remove('visible'); closeSettings(); renderMenu();
   };
 
   // Win buttons
   document.getElementById('btn-next-map').onclick = () => {
+    // Accumule le score de la map avant de passer à la suivante
+    gameState.sessionScore += gameState.mapScore;
     document.getElementById('screen-win').style.display = 'none';
-    startGame(gameState.currentMap + 1);
+    startGame(gameState.currentMap + 1, undefined, true);  // preserveSession
   };
   document.getElementById('btn-replay').onclick = () => {
+    // Rejouer sans ajouter le score — session précédente conservée
     document.getElementById('screen-win').style.display = 'none';
-    startGame(gameState.currentMap);
+    startGame(gameState.currentMap, undefined, true);  // preserveSession
   };
   document.getElementById('btn-win-menu').onclick = () => {
     document.getElementById('screen-win').style.display = 'none';
     document.getElementById('screen-menu').style.display = 'flex';
     canvas.style.display = 'none'; closeOverlay();
-    gameState.mode = 'menu'; showGear(false); closeSettings(); renderMenu();
+    gameState.mode = 'menu'; showGear(false); document.getElementById('btn-cam-recenter')?.classList.remove('visible'); closeSettings(); renderMenu();
   };
 
   // Engrenage dans le panel : toggle ouverture/fermeture
@@ -3256,7 +3365,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('screen-menu').style.display = 'flex';
     canvas.style.display = 'none'; closeOverlay();
     gameState.mode = 'menu'; gameState.playerResults = []; gameState.playerTurn = 1;
-    setAllDisabled(false); showGear(false); renderMenu();
+    setAllDisabled(false); showGear(false); document.getElementById('btn-cam-recenter')?.classList.remove('visible'); renderMenu();
   };
 
   // Réglages : Retour Hub

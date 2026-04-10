@@ -26,9 +26,9 @@
       position: relative;
       background: rgba(12,7,4,0.97);
       border: 1px solid #5a3d1a;
-      padding: 16px;
+      padding: 12px;
       max-width: 420px; width: 90%;
-      max-height: 90vh; overflow-y: auto;
+      overflow: visible;
       box-shadow: 0 0 40px rgba(0,0,0,0.8), 0 0 20px rgba(255,140,0,0.08);
     }
 
@@ -74,7 +74,7 @@
 
     .ui-row {
       display: flex; align-items: center; gap: 8px;
-      margin-bottom: 7px; flex-wrap: wrap;
+      margin-bottom: 5px; flex-wrap: wrap;
     }
 
     .ui-label {
@@ -107,20 +107,42 @@
     /* ── Zone deck + actions (dans le panel-command) ── */
     #bottom-left {
       position: relative;
-      max-height: 35%;
-      overflow-y: auto;
       background: transparent;
       border-top: 1px solid #3d281022;
-      padding: 8px 0;
+      padding: 6px 0;
       z-index: 1;
       display: block;
-      margin-top: 8px;
+      margin-top: 6px;
     }
 
 
 
     #btn-gear { display: none; }
     #btn-gear.visible { display: flex; }
+
+    #btn-cam-recenter {
+      position: fixed;
+      top: 8px; left: 12px;
+      z-index: 15;
+      background: rgba(10,6,3,0.72);
+      border: 1px solid #5a3d1a44;
+      color: #c8a88299;
+      font-size: 16px;
+      width: 32px; height: 32px;
+      cursor: pointer;
+      display: none;
+      align-items: center; justify-content: center;
+      transition: border-color 0.2s, color 0.2s, background 0.2s;
+      font-family: Georgia, serif;
+      line-height: 1;
+      padding: 0;
+    }
+    #btn-cam-recenter:hover {
+      border-color: #8a6a2a;
+      color: #f5d070;
+      background: rgba(20,12,5,0.88);
+    }
+    #btn-cam-recenter.visible { display: flex; }
 
     /* Panneau de réglages */
     #settings-panel {
@@ -241,9 +263,9 @@
 
     #preview-canvas {
       display: block;
-      width: 200px !important;
-      height: 200px !important;
-      margin: 10px auto 0;
+      width: 170px !important;
+      height: 170px !important;
+      margin: 6px auto 0;
       background: transparent;
       cursor: zoom-in;
       border: 1px solid rgba(138,106,42,0.25);
@@ -768,13 +790,20 @@
   <!-- label-map conservé pour compat JS (updateCommandUI le met à jour) -->
   <div class="label-3d" id="label-map">Acte <span id="cmd-map-name-label">1</span></div>
 
-  <!-- HUD santé (fixé) -->
+  <!-- HUD santé + score (fixé) -->
   <div id="hud-neo">
     <div id="hud-health-dots"></div>
+    <div id="hud-score" style="display:none;font-family:Georgia,serif;font-style:italic;color:#f5d07066;font-size:11px;letter-spacing:1px;">
+      ✦ <span id="hud-score-val">0</span> pts
+    </div>
   </div>
 
   <div id="hud-health" style="display:none;"></div>
   <button id="btn-back-cmd" disabled style="display:none;"></button>
+
+  <!-- Bouton recentrer caméra (fixé sur la vue 3D) -->
+  <button id="btn-cam-recenter" style="display:none;"
+    title="Aligner la caméra avec le dernier vecteur">⊙</button>
 
   <!-- OVERLAY 2D — panneau de commandes -->
   <div id="overlay-2d">
@@ -815,8 +844,8 @@
 
       <!-- Zone deck + actions -->
       <div id="bottom-left">
-        <div id="exits-info" style="font-size:11px;color:#f5d070;font-family:Georgia,serif;font-style:italic;margin-bottom:8px;line-height:1.7;"></div>
-        <div style="font-size:10px;color:#a0785066;letter-spacing:2px;margin-bottom:6px;font-family:Georgia,serif;font-style:italic;">─── Parchemins de Vecteurs ───</div>
+        <div id="exits-info" style="font-size:11px;color:#f5d070;font-family:Georgia,serif;font-style:italic;margin-bottom:4px;line-height:1.5;"></div>
+        <div style="font-size:10px;color:#a0785066;letter-spacing:2px;margin-bottom:4px;font-family:Georgia,serif;font-style:italic;">─── Parchemins de Vecteurs ───</div>
         <div class="deck-area" id="deck-area"><span style="color:#a0785033;font-size:12px;font-style:italic;">Vide</span></div>
         <div class="math-actions" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
           <button class="btn-hacker" id="btn-combo">u&#x20D7;+v&#x20D7; Combo</button>
@@ -834,6 +863,7 @@
     <div class="go-title">⚠ SIGNAL PERDU</div>
     <div class="go-info" id="go-pos">Position finale : —</div>
     <div class="go-info" id="go-moves">Déplacements : —</div>
+    <div class="go-info" id="go-session-score" style="color:#cc444488;font-size:13px;margin-top:4px;"></div>
     <button class="btn-execute" id="btn-retry" style="max-width:260px;">RÉESSAYER</button>
     <button class="btn-hacker" id="btn-go-menu">MENU</button>
   </div>
@@ -843,6 +873,8 @@
     <div class="win-title">✓ VECTEUR VALIDÉ</div>
     <div class="win-info" id="win-moves">Déplacements : —</div>
     <div class="win-info" id="win-deck" style="font-size:11px;max-width:400px;word-break:break-all;"></div>
+    <div id="win-map-score" style="color:#f5d070;font-size:16px;font-weight:bold;margin:6px 0 2px;letter-spacing:1px;"></div>
+    <div id="win-session-score" style="color:#a07850;font-size:12px;letter-spacing:1px;margin-bottom:8px;"></div>
     <button class="btn-execute" id="btn-next-map" style="max-width:260px;">MAP SUIVANTE →</button>
     <button class="btn-hacker" id="btn-replay">REJOUER CETTE MAP</button>
     <button class="btn-hacker" id="btn-win-menu">MENU</button>

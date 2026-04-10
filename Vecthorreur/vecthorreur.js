@@ -2941,100 +2941,186 @@ function renderLoop(ts) {
     ctx.restore();
   }
 
-  // ── Lampe torche — cône directionnel ──
-  // La caméra est orbitale : le joueur est TOUJOURS au centre de l'écran (W/2, H/2).
-  // Tout point projeté le long de cam.f depuis le joueur donne aussi (W/2, H/2).
-  // → atan2(0,0) = 0 : projeter un point devant ne donne pas de direction utilisable.
-  //
-  // La direction correcte "devant sur le sol" en screen-space pour une caméra orbitale
-  // est TOUJOURS -PI/2 (vers le haut de l'écran = vers l'horizon), indépendamment de
-  // la rotation horizontale. Quand tu fais tourner la caméra, le CONTENU du cône change,
-  // pas sa direction sur l'écran — comme un vrai projecteur 3D.
-  const PIVOT_H = 1.0;
-  const lightPt = project(pp.x, pp.y, PIVOT_H);
-  if (lightPt) {
-    // Animations dynamiques indépendantes (fréquences différentes)
-    const t1 = ts * 0.0017;
-    const t2 = ts * 0.0031;
-    const t3 = ts * 0.0053;
-    // Scintillement d'intensité : battement lent + harmonique rapide
-    const flicker = 0.88 + 0.07 * Math.sin(t1) + 0.05 * Math.sin(t2 * 2.3);
-    // Légère dérive angulaire — main qui tremble (deux sinusoïdes déphasées)
-    const wobble  = 0.022 * Math.sin(t2) + 0.010 * Math.sin(t3 * 1.7);
-    // Légère variation de largeur du cône (respiration)
-    const coneBreath = 0.03 * Math.sin(t3 * 0.9);
+  // ── LAMPE TORCHE — vrai cône 3D depuis le bras droit ────────────
+  // Pointe = main droite (handWx, handWy, HAND_H).
+  // Base  = cercle 3D PERPENDICULAIRE à l'axe du faisceau :
+  //   axe droit  = (-sin L,  cos L, 0)    — horizontal
+  //   axe haut   = ( 0,      0,     1)    — vertical
+  // → le cercle a une composante verticale → cône visible de côté.
+  const HAND_H   = 0.75;
+  const HAND_OFF = 0.35;
 
-    const sx = lightPt.sx, sy = lightPt.sy;
+  const handWx = pp.x + cam.rx * HAND_OFF;
+  const handWy = pp.y + cam.ry * HAND_OFF;
+  const handScr = project(handWx, handWy, HAND_H);
 
-    // Direction stable : vers le haut de l'écran (-PI/2 = horizon/sol devant le joueur)
-    // + petite compensation de pitch pour inclinaison plus naturelle
-    const pitchLift = cam.pitch * 0.18;  // caméra plus haute → cône légèrement plus vertical
-    const coneAngle = -Math.PI / 2 + pitchLift + wobble;
+  if (handScr) {
+    const hsx = handScr.sx, hsy = handScr.sy;
 
-    const coneLen  = Math.max(W, H) * 2.0;
-    const halfCone = Math.PI / 5.5 + coneBreath;   // ~65° total, légèrement variable
+    const t1 = ts * 0.0017, t2 = ts * 0.0031, t3 = ts * 0.0053;
+    const flicker = 0.91 + 0.05 * Math.sin(t1) + 0.04 * Math.sin(t2 * 2.3);
+    const wobble  = 0.012 * Math.sin(t2) + 0.006 * Math.sin(t3 * 1.7);
 
-    // 1. Masque noir — tout sauf le cône (evenodd)
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(0, 0, W, H);
-    ctx.moveTo(sx, sy);
-    ctx.arc(sx, sy, coneLen, coneAngle + halfCone, coneAngle - halfCone, true);
-    ctx.closePath();
-    ctx.fillStyle = `rgba(0,0,0,${0.91 + 0.04 * (1 - flicker)})`;
-    ctx.fill('evenodd');
-    ctx.restore();
+    const lightDir = cam.angle + wobble;
+    const cl = Math.cos(lightDir), sl = Math.sin(lightDir);
 
-    // 2. Corps du faisceau — dégradé radial dans le cône
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(sx, sy);
-    ctx.arc(sx, sy, coneLen, coneAngle - halfCone, coneAngle + halfCone);
-    ctx.closePath();
-    ctx.clip();
+    const HALF_ANGLE = 0.28;   // ~16° demi-ouverture
+    const RANGE_IN   = 9;      // portée intérieure
+    const RANGE_OUT  = 11;     // portée pénombre
+    const CSEG       = 28;     // segments du cercle de base
 
-    ctx.globalCompositeOperation = 'screen';
+    // Centre de la base du cône = bout du faisceau
+    // Le faisceau part de (handWx, handWy, HAND_H) et descend vers le sol.
+    // Pente verticale : -HAND_H / RANGE_IN par unité de portée
+    const pitch_dz = -HAND_H / RANGE_IN;   // ≈ -0.083
 
-    // Dégradé principal chaud → froid
-    const beamGrad = ctx.createRadialGradient(sx, sy, 0, sx, sy, coneLen * 0.60);
-    beamGrad.addColorStop(0,    `rgba(255,245,200,${0.70 * flicker})`);
-    beamGrad.addColorStop(0.10, `rgba(240,210,140,${0.50 * flicker})`);
-    beamGrad.addColorStop(0.30, `rgba(180,145,75,${0.25 * flicker})`);
-    beamGrad.addColorStop(0.55, `rgba(80,55,20,${0.08 * flicker})`);
-    beamGrad.addColorStop(1,    'rgba(0,0,0,0)');
-    ctx.fillStyle = beamGrad;
-    ctx.fillRect(0, 0, W, H);
+    // Enveloppe convexe 2D (Jarvis march) — utilisée pour le masque cône
+    function convexHull2D(pts) {
+      if (pts.length <= 3) return pts;
+      let si = 0;
+      for (let i = 1; i < pts.length; i++)
+        if (pts[i].sx < pts[si].sx) si = i;
+      const hull = []; let cur = si;
+      do {
+        hull.push(pts[cur]);
+        let nxt = (cur + 1) % pts.length;
+        for (let i = 0; i < pts.length; i++) {
+          const cross = (pts[nxt].sx - pts[cur].sx) * (pts[i].sy - pts[cur].sy)
+                      - (pts[nxt].sy - pts[cur].sy) * (pts[i].sx - pts[cur].sx);
+          if (cross < 0) nxt = i;
+        }
+        cur = nxt;
+      } while (cur !== si && hull.length <= pts.length);
+      return hull;
+    }
 
-    // Rayon central intense (spot chaud au cœur du faisceau)
-    const spotAngle = coneAngle + 0.006 * Math.sin(t2 * 3.1); // micro-dérive du spot
-    const spotLen   = coneLen * 0.45;
-    const spx = sx + Math.cos(spotAngle) * spotLen * 0.3;
-    const spy = sy + Math.sin(spotAngle) * spotLen * 0.3;
-    const spotGrad  = ctx.createRadialGradient(spx, spy, 0, spx, spy, spotLen * 0.4);
-    spotGrad.addColorStop(0,   `rgba(255,255,230,${0.35 * flicker})`);
-    spotGrad.addColorStop(0.4, `rgba(200,170,90,${0.12 * flicker})`);
-    spotGrad.addColorStop(1,   'rgba(0,0,0,0)');
-    ctx.fillStyle = spotGrad;
-    ctx.fillRect(0, 0, W, H);
+    // Vrai cône 3D : cercle de base perpendiculaire à l'axe du faisceau.
+    // Axes du cercle :
+    //   right = (-sl, cl, 0)              → horizontal ⊥ au faisceau
+    //   up    = (-cl*pz, -sl*pz, 1)       → mostly vertical (pz < 0)
+    // Projeter le cercle complet puis prendre l'enveloppe convexe
+    // → silhouette correcte depuis TOUT angle de caméra.
+    function buildCone3D(range) {
+      const R   = range * Math.tan(HALF_ANGLE);
+      const bcx = handWx + cl * range;
+      const bcy = handWy + sl * range;
+      const bcz = HAND_H + pitch_dz * range;
+      const upx = -cl * pitch_dz;   // > 0
+      const upy = -sl * pitch_dz;   // > 0
+      const upz = 1.0;
 
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.restore();
+      const raw = [];
+      const tip = project(handWx, handWy, HAND_H);
+      if (tip) raw.push(tip);
 
-    // 3. Halo immédiat autour de la lampe (boîtier chaud)
-    ctx.save();
-    ctx.globalCompositeOperation = 'screen';
-    const nearR    = 75 + 8 * Math.sin(t1 * 2);
-    const nearGrad = ctx.createRadialGradient(sx, sy, 0, sx, sy, nearR);
-    nearGrad.addColorStop(0,   `rgba(255,225,130,${0.28 * flicker})`);
-    nearGrad.addColorStop(0.5, `rgba(120,80,25,${0.06})`);
-    nearGrad.addColorStop(1,   'rgba(0,0,0,0)');
-    ctx.fillStyle = nearGrad;
-    ctx.fillRect(sx - nearR - 10, sy - nearR - 10, (nearR + 10) * 2, (nearR + 10) * 2);
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.restore();
+      for (let i = 0; i < CSEG; i++) {
+        const a = (2 * Math.PI * i) / CSEG;
+        const ca = Math.cos(a), sa = Math.sin(a);
+        const wx = bcx + R * (ca * (-sl) + sa * upx);
+        const wy = bcy + R * (ca *  cl   + sa * upy);
+        const wz = Math.max(0.01, bcz + R * sa * upz);
+        const pt = project(wx, wy, wz);
+        if (pt) raw.push(pt);
+      }
+      return convexHull2D(raw);
+    }
 
-    // 4. Joueur PAR-DESSUS le masque
-    drawPlayer3D(pp, pal);
+    const inner = buildCone3D(RANGE_IN);
+    const outer = buildCone3D(RANGE_OUT);
+
+    // Spot centre (bout du faisceau intérieur)
+    const spotProj = project(
+      handWx + cl * RANGE_IN,
+      handWy + sl * RANGE_IN,
+      Math.max(0.01, HAND_H + pitch_dz * RANGE_IN));
+
+    if (inner.length >= 6 && spotProj) {
+      const scx = spotProj.sx, scy = spotProj.sy;
+
+      // ═══ PASS 1 — Obscurité totale hors cône ext (evenodd) ═══
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, W, H);
+      if (outer.length >= 6) {
+        ctx.moveTo(outer[0].sx, outer[0].sy);
+        for (let i = 1; i < outer.length; i++)
+          ctx.lineTo(outer[i].sx, outer[i].sy);
+        ctx.closePath();
+      }
+      ctx.fillStyle = 'rgba(0,0,0,0.93)';
+      ctx.fill('evenodd');
+      ctx.restore();
+
+      // ═══ PASS 2 — Pénombre (entre cône ext et int) ═══
+      if (outer.length >= 6) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(outer[0].sx, outer[0].sy);
+        for (let i = 1; i < outer.length; i++)
+          ctx.lineTo(outer[i].sx, outer[i].sy);
+        ctx.closePath();
+        ctx.moveTo(inner[inner.length - 1].sx, inner[inner.length - 1].sy);
+        for (let i = inner.length - 2; i >= 0; i--)
+          ctx.lineTo(inner[i].sx, inner[i].sy);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(0,0,0,0.45)';
+        ctx.fill('evenodd');
+        ctx.restore();
+      }
+
+      // ═══ PASS 3 — Lumière (gradient depuis la main) ═══
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(inner[0].sx, inner[0].sy);
+      for (let i = 1; i < inner.length; i++)
+        ctx.lineTo(inner[i].sx, inner[i].sy);
+      ctx.closePath();
+      ctx.clip();
+
+      const beamR = Math.max(80,
+        ...inner.map(p => Math.hypot(p.sx - hsx, p.sy - hsy)));
+
+      ctx.globalCompositeOperation = 'screen';
+
+      const beam = ctx.createRadialGradient(hsx, hsy, 0, hsx, hsy, beamR);
+      beam.addColorStop(0,    `rgba(255,248,220,${0.46 * flicker})`);
+      beam.addColorStop(0.08, `rgba(255,240,200,${0.38 * flicker})`);
+      beam.addColorStop(0.25, `rgba(240,210,150,${0.28 * flicker})`);
+      beam.addColorStop(0.45, `rgba(200,160,90,${0.16 * flicker})`);
+      beam.addColorStop(0.65, `rgba(140,95,40,${0.07 * flicker})`);
+      beam.addColorStop(0.85, `rgba(70,45,15,${0.02 * flicker})`);
+      beam.addColorStop(1,    'rgba(0,0,0,0)');
+      ctx.fillStyle = beam;
+      ctx.fillRect(0, 0, W, H);
+
+      // Hotspot au centre du spot
+      const hotR = beamR * 0.18;
+      const hot = ctx.createRadialGradient(scx, scy, 0, scx, scy, hotR);
+      hot.addColorStop(0,   `rgba(255,255,240,${0.13 * flicker})`);
+      hot.addColorStop(0.5, `rgba(220,190,110,${0.04 * flicker})`);
+      hot.addColorStop(1,   'rgba(0,0,0,0)');
+      ctx.fillStyle = hot;
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.restore();
+
+      // ═══ PASS 4 — Lueur autour de la main ═══
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      const nr = 35 + 4 * Math.sin(t1 * 2);
+      const near = ctx.createRadialGradient(hsx, hsy, 0, hsx, hsy, nr);
+      near.addColorStop(0,   `rgba(255,215,130,${0.10 * flicker})`);
+      near.addColorStop(0.5, `rgba(90,60,20,${0.025})`);
+      near.addColorStop(1,   'rgba(0,0,0,0)');
+      ctx.fillStyle = near;
+      ctx.fillRect(hsx - nr, hsy - nr, nr * 2, nr * 2);
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.restore();
+
+      // Joueur par-dessus le masque
+      drawPlayer3D(pp, pal);
+    }
   }
 
   // ── Threat indicator — bordure rouge pulsante quand le monstre est proche ──
@@ -3329,6 +3415,49 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') closeMapFullscreen();
+
+    // ── Enter (clavier principal + pavé numérique) ──
+    if (e.key === 'Enter') {
+      // Menu → Jouer
+      if (document.getElementById('screen-menu').style.display !== 'none' &&
+          document.getElementById('screen-menu').style.display !== '') {
+        e.preventDefault();
+        document.getElementById('btn-play').click();
+        return;
+      }
+      // Gameover → Réessayer
+      if (document.getElementById('screen-gameover').style.display === 'flex') {
+        e.preventDefault();
+        document.getElementById('btn-retry').click();
+        return;
+      }
+      // Win → Map suivante (si visible) sinon Rejouer
+      if (document.getElementById('screen-win').style.display === 'flex') {
+        e.preventDefault();
+        const btnNext = document.getElementById('btn-next-map');
+        if (btnNext && btnNext.style.display !== 'none') btnNext.click();
+        else document.getElementById('btn-replay').click();
+        return;
+      }
+      // Player-switch → À toi
+      if (document.getElementById('screen-player-switch').style.display === 'flex') {
+        e.preventDefault();
+        document.getElementById('btn-switch-play').click();
+        return;
+      }
+      // Results → Rejouer
+      if (document.getElementById('screen-results').style.display === 'flex') {
+        e.preventDefault();
+        document.getElementById('btn-results-replay').click();
+        return;
+      }
+      // En jeu (idle) → Invoquer le vecteur
+      if (gameState.mode === 'idle' || gameState.mode === 'command') {
+        e.preventDefault();
+        document.getElementById('btn-execute').click();
+        return;
+      }
+    }
   });
 
   // Panneau : fermer en cliquant à côté

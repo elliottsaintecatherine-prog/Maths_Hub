@@ -310,8 +310,7 @@
     #game-canvas {
       position: fixed;
       inset: 0;
-      width: 100% !important;
-      height: 100% !important;
+      /* Pas de width/height forcés — gérés par resizeCanvas() pour DPR Retina */
       display: none;
     }
 
@@ -702,7 +701,7 @@
 
   <!-- MENU -->
   <div class="screen" id="screen-menu">
-    <img src="assets/img/garde.png" id="menu-bg-img" alt="" onerror="this.style.display='none'">
+    <img src="assets/img/garde.svg" id="menu-bg-img" alt="" onerror="this.style.display='none'">
     <div id="menu-gradient"></div>
     <div class="menu-content">
       <div class="game-title">VectHorreur</div>
@@ -807,7 +806,7 @@
           <input type="number" class="scalar-input" id="scalar-input" value="2" step="0.5" placeholder="coeff">
           <button class="btn-hacker" id="btn-scalar">k&#xD7;u&#x20D7; Scalaire</button>
           <button class="btn-hacker" id="btn-pass" title="Piocher une nouvelle main (le monstre avance)">🃏 Piocher</button>
-          <button class="btn-hacker" id="btn-mute" style="margin-left:auto;">🕯 SON : ON</button>
+          <button class="btn-hacker" id="btn-mute" style="margin-left:auto;">♪ SON : ON</button>
         </div>
       </div>
     </div>

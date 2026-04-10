@@ -26,6 +26,7 @@ document.addEventListener('click', () => {
   SFX.ambiance.play().catch(() => {});
 }, { once: true });
 function playSound(key) {
+  if (globalMute) return;
   const s = SFX[key]; if (!s) return;
   s.currentTime = 0; s.play().catch(() => {});
 }
@@ -211,6 +212,8 @@ const MAPS = [
       { x1:-10, y1:-5, x2:-5, y2:15, color:"#1144aa", label:"COLONNE CORALLIENNE" },
       { x1:5, y1:-15, x2:10, y2:5, color:"#1144aa", label:"COLONNE CORALLIENNE" }
     ],
+    playerSpawn:  { x: 0, y: -18 },
+    monsterSpawn: { x: -15, y: 12 },
     deathZones: [{ x1:-4, y1:-2, x2:4, y2:2, color:"#ffffff22", label:"TOURBILLON ABYSSAL" }],
     safeZones: [], invertLogic: false
   },
@@ -234,6 +237,8 @@ const MAPS = [
       { x1:-18, y1:10, x2:-10, y2:15, color:"#3a3030", label:"SARCOPHAGE SCULPTÉ" },
       { x1:10, y1:-15, x2:18, y2:-10, color:"#3a3030", label:"SARCOPHAGE SCULPTÉ" }
     ],
+    playerSpawn:  { x: 0, y: -18 },
+    monsterSpawn: { x: -15, y: 17 },
     deathZones: [{ x1:-8, y1:-8, x2:8, y2:8, color:"#66000088", label:"PUITS MAUDIT" }],
     safeZones: [], invertLogic: false
   },
@@ -257,6 +262,8 @@ const MAPS = [
       { x1:-20, y1:0, x2:-3, y2:2, color:"#445566", label:"SAS HERMÉTIQUE" },
       { x1:3, y1:0, x2:20, y2:2, color:"#445566", label:"SAS HERMÉTIQUE" }
     ],
+    playerSpawn:  { x: 0, y: -18 },
+    monsterSpawn: { x: 0, y: 15 },
     deathZones: [], safeZones: [], invertLogic: false
   },
   {
@@ -276,6 +283,8 @@ const MAPS = [
       { x1:16, y1:14, x2:19, y2:18 }
     ],
     obstacles: [{ x1:-15, y1:10, x2:15, y2:11, color:"#cccccc00", label:"PASSAGE FANTÔME", flashOnContact: true }],
+    playerSpawn:  { x: 0, y: -18 },
+    monsterSpawn: { x: 0, y: 15 },
     deathZones: [
       { x1:-10, y1:5, x2:-8, y2:7, color:"#ff000077", label:"ZONE CORROMPUE" },
       { x1:5, y1:-12, x2:7, y2:-10, color:"#ff000077", label:"ZONE CORROMPUE" }
@@ -302,6 +311,8 @@ const MAPS = [
       { x1:-15, y1:-8, x2:5, y2:-6, color:"#1a4a1a", label:"RONCIER TOXIQUE" },
       { x1:-5, y1:6, x2:15, y2:8, color:"#1a4a1a", label:"RONCIER TOXIQUE" }
     ],
+    playerSpawn:  { x: 15, y: -18 },
+    monsterSpawn: { x: 15, y: 15 },
     deathZones: [{ x1:-12, y1:12, x2:-6, y2:18, color:"#88ff0044", label:"MARE D'ACIDE" }],
     safeZones: [], invertLogic: false
   },
@@ -326,6 +337,8 @@ const MAPS = [
       { x1:-10, y1:0, x2:0, y2:5, color:"#444466", label:"WAGON FANTÔME" },
       { x1:5, y1:-5, x2:20, y2:0, color:"#444466", label:"WAGON FANTÔME" }
     ],
+    playerSpawn:  { x: 10, y: -15 },
+    monsterSpawn: { x: -15, y: 15 },
     deathZones: [], safeZones: [], invertLogic: false
   },
   {
@@ -345,6 +358,8 @@ const MAPS = [
       { x1:-18, y1:14, x2:-10, y2:18 }
     ],
     obstacles: [{ x1:-6, y1:-15, x2:6, y2:-10, color:"#aaccee", label:"SÉRAC GLACÉ" }],
+    playerSpawn:  { x: 15, y: -18 },
+    monsterSpawn: { x: -15, y: 15 },
     deathZones: [
       { x1:-15, y1:-5, x2:0, y2:-3, color:"#88bbdd77", label:"CREVASSE BÉANTE" },
       { x1:0, y1:5, x2:15, y2:7, color:"#88bbdd77", label:"CREVASSE BÉANTE" }
@@ -372,6 +387,8 @@ const MAPS = [
       { x1:8, y1:-10, x2:10, y2:20, color:"#555544", label:"CLOISON DE BÉTON" },
       { x1:-8, y1:10, x2:0, y2:12, color:"#555544", label:"CLOISON DE BÉTON" }
     ],
+    playerSpawn:  { x: 0, y: -18 },
+    monsterSpawn: { x: 0, y: 15 },
     deathZones: [{ x1:-4, y1:-2, x2:4, y2:4, color:"#33333388", label:"PUITS D'ASCENSEUR" }],
     safeZones: [], invertLogic: false
   },
@@ -391,6 +408,8 @@ const MAPS = [
       { x1:-5, y1:15, x2:5, y2:20 },
       { x1:9, y1:1, x2:14, y2:4 }
     ],
+    playerSpawn:  { x: 0, y: -18 },
+    monsterSpawn: { x: 8, y: 2 },
     obstacles: [], deathZones: [],
     invertLogic: true,
     safeZones: [
@@ -490,7 +509,6 @@ const ROOMS = [
 // ═══════════════════════════════════════════════════
 const gameState = {
   mode: 'menu',
-  view: 'command',
   playerPos: { x: 0, y: -18 },
   monsterPos: { x: 0, y: 18 },
   pendingVector: { x: 0, y: 0 },
@@ -507,7 +525,6 @@ const gameState = {
   flashTimer: 0,          // ms remaining for flash effect
   lastFrameTime: 0,       // timestamp of last frame for delta time
   selectedMenuMap: 0,
-  animRunning: false,
   // Multiplayer
   gameMode: 'solo',      // 'solo' | 'multi'
   playerTurn: 1,         // 1 or 2
@@ -614,15 +631,19 @@ const cam = {
 };
 let camDragEnd = 0; // timestamp of last manual drag
 
-function updateCamera(pp, lv) {
+function updateCamera(pp, lv, dt) {
   // Auto-follow player direction only when not recently dragged manually
   const isManual = performance.now() < camDragEnd + 1800;
   if (!isManual && (lv.x !== 0 || lv.y !== 0)) cam.targetAngle = Math.atan2(lv.y, lv.x);
   let diff = cam.targetAngle - cam.angle;
   while (diff >  Math.PI) diff -= 2 * Math.PI;
   while (diff < -Math.PI) diff += 2 * Math.PI;
-  cam.angle += diff * 0.07;
-  cam.pitch += (cam.targetPitch - cam.pitch) * 0.1;
+  // Lerp frame-rate indépendant : équivalent à coeff fixe 0.07/0.10 à 60fps
+  const frameDt = dt || 16.67;
+  const angleAlpha = 1 - Math.pow(0.93, frameDt / 16.67);
+  const pitchAlpha = 1 - Math.pow(0.90, frameDt / 16.67);
+  cam.angle += diff * angleAlpha;
+  cam.pitch += (cam.targetPitch - cam.pitch) * pitchAlpha;
   const ca = Math.cos(cam.angle), sa = Math.sin(cam.angle);
   // Orbite sphérique autour du centre du joueur
   // elev = -pitch : elevation positive = caméra au-dessus
@@ -976,6 +997,23 @@ function drawPreview(canvasOverride, transform) {
     pctx.fillStyle = 'rgba(60,40,20,0.7)';
     pctx.fillRect(wx(obs.x1), wy(obs.y2), (obs.x2-obs.x1)*PS, (obs.y2-obs.y1)*PS);
   });
+  // Walls (brun foncé — plus épais que les obstacles)
+  if (map.walls) {
+    map.walls.forEach(wall => {
+      pctx.fillStyle = 'rgba(30,18,6,0.85)';
+      pctx.fillRect(wx(wall.x1), wy(wall.y2), (wall.x2-wall.x1)*PS, (wall.y2-wall.y1)*PS);
+    });
+  }
+  // Safe zones (vert — uniquement pour invertLogic maps comme la Fonderie)
+  if (map.invertLogic && map.safeZones) {
+    map.safeZones.forEach(sz => {
+      pctx.fillStyle = 'rgba(60,200,80,0.18)';
+      pctx.strokeStyle = 'rgba(60,200,80,0.5)';
+      pctx.lineWidth = 1;
+      pctx.fillRect(wx(sz.x1), wy(sz.y2), (sz.x2-sz.x1)*PS, (sz.y2-sz.y1)*PS);
+      pctx.strokeRect(wx(sz.x1), wy(sz.y2), (sz.x2-sz.x1)*PS, (sz.y2-sz.y1)*PS);
+    });
+  }
   // Death zones (rouge)
   map.deathZones.forEach(dz => {
     pctx.fillStyle = 'rgba(180,20,10,0.4)';
@@ -1090,10 +1128,9 @@ function checkPath(start, vec) {
       const inSafe = map.safeZones.some(sz => pt.x >= sz.x1 && pt.x <= sz.x2 && pt.y >= sz.y1 && pt.y <= sz.y2);
       if (!inSafe) return 'DEAD';
     }
-    if (i === N) {
-      for (const exit of map.exits) {
-        if (pt.x >= exit.x1 && pt.x <= exit.x2 && pt.y >= exit.y1 && pt.y <= exit.y2) return 'WIN';
-      }
+    // Vérifier les sorties à chaque étape (pas seulement la finale) — B15
+    for (const exit of map.exits) {
+      if (pt.x >= exit.x1 && pt.x <= exit.x2 && pt.y >= exit.y1 && pt.y <= exit.y2) return 'WIN';
     }
   }
   return 'OK';
@@ -1134,11 +1171,12 @@ function getMonsterNextStep() {
   const goalKey  = key(gx, gy);
   parent.set(startKey, -1);
   const queue = [[sx, sy]];
+  let head = 0; // Pointeur de tête — évite le O(n²) de shift()
   const DIRS = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
   let found = false;
 
-  outer: while (queue.length) {
-    const [cx, cy] = queue.shift();
+  outer: while (head < queue.length) {
+    const [cx, cy] = queue[head++];
     for (const [ddx, ddy] of DIRS) {
       const nx = cx+ddx, ny = cy+ddy;
       const nk = key(nx, ny);
@@ -1165,7 +1203,14 @@ async function monsterAutoMove() {
   const step = getMonsterNextStep();
   if (!step) return;
   const len = Math.sqrt(step.x**2 + step.y**2);
-  const moveDistance = 2 + Math.random() * 2; // 2-4 cases
+  // Utiliser la magnitude du dernier vecteur joueur pour la cohérence avec monsterMove()
+  const lastVec = gameState.lastVector;
+  const lastMag = Math.hypot(lastVec.x, lastVec.y);
+  const mapSpeed = MAPS[gameState.currentMap].monsterSpeed;
+  // Minimum 2, maximum 8 — comme monsterMove mais appliqué au mouvement auto
+  const moveDistance = lastMag > 0
+    ? Math.max(2, Math.min(Math.round(lastMag * mapSpeed), 8))
+    : 3; // fallback si pas encore de vecteur
   const moveVec = {
     x: Math.round((step.x / len) * moveDistance),
     y: Math.round((step.y / len) * moveDistance)
@@ -1510,11 +1555,45 @@ function updateHealthDisplay() {
   });
 }
 
+/**
+ * Décrémente la santé du joueur.
+ * @param {number} amount - Points de vie à retirer (1 = mur, 2 = zone de mort)
+ * @returns {boolean} true si le joueur est mort (health ≤ 0)
+ */
+function takeDamage(amount) {
+  gameState.health = Math.max(0, gameState.health - amount);
+  updateHealthDisplay();
+  // Flash screen rouge pour feedback
+  const canvas = document.getElementById('game-canvas');
+  if (canvas) {
+    canvas.style.boxShadow = '0 0 40px 20px rgba(220,30,30,0.7)';
+    setTimeout(() => { canvas.style.boxShadow = ''; }, 400);
+  }
+  return gameState.health <= 0;
+}
+
+/**
+ * Téléporte le joueur au spawn de la map courante (après une zone de mort survécue).
+ */
+function respawnPlayer() {
+  const map = MAPS[gameState.currentMap];
+  const spawn = map.playerSpawn || {x: 0, y: -18};
+  gameState.playerPos = {...spawn};
+  gameState.lastVector = {x: 0, y: 1};
+  setMessage(`💀 Zone mortelle ! -2 ❤ — Retour au spawn.`);
+  playSound('hit');
+}
+
 // ═══════════════════════════════════════════════════
 // SECTION 18 — EXECUTE VECTOR
 // ═══════════════════════════════════════════════════
 async function executeVector() {
   if (gameState.mode !== 'command' && gameState.mode !== 'idle') return;
+  // Exiger une carte sélectionnée si le deck n'est pas vide
+  if (gameState.deck.length > 0 && gameState.selectedDeck.length === 0) {
+    setMessage('⚠ Sélectionne un parchemin du deck avant d\'invoquer.');
+    return;
+  }
   const dx = parseInt(document.getElementById('inp-x').value) || 0;
   const dy = parseInt(document.getElementById('inp-y').value) || 0;
   if (dx === 0 && dy === 0) {
@@ -1522,7 +1601,7 @@ async function executeVector() {
     return;
   }
   const vec = {x: dx, y: dy};
-  // Consume the selected card(s) from hand
+  // Consume the selected card from hand
   if (gameState.selectedDeck.length === 1) {
     consumeCard(gameState.selectedDeck[0]);
   }
@@ -1559,7 +1638,9 @@ async function executeVector() {
     await animateMove(lastSafe, finalPos, 300, true);
     gameState.playerPos = {...finalPos};
     gameState.lastVector = vec;
-    setMessage('⚠ Repoussé par le mur !');
+    // Dégât mur : -1 vie
+    if (takeDamage(1)) { gameOver(); return; }
+    setMessage('⚠ Repoussé par le mur ! -1 ❤');
     const vecMag = Math.hypot(vec.x, vec.y);
     const pM = {...gameState.monsterPos};
     playSound('monster'); monsterMove(vecMag);
@@ -1581,7 +1662,18 @@ async function executeVector() {
   gameState.playerPos = {...endPos};
   gameState.lastVector = vec;
   if (result === 'WIN') { levelComplete(); return; }
-  if (result === 'DEAD') { gameOver(); return; }
+  if (result === 'DEAD') {
+    // Zone de mort : -2 vies ; respawn si survie
+    if (takeDamage(2)) { gameOver(); return; }
+    respawnPlayer();
+    gameState.mode = 'idle';
+    setAllDisabled(false);
+    document.getElementById('btn-back-cmd').disabled = false;
+    resetMonsterTimer();
+    addToDeck();
+    updateCommandUI(); openOverlay();
+    return;
+  }
   const prevMonster = {...gameState.monsterPos};
   playSound('monster');
   monsterMove(Math.hypot(vec.x, vec.y));
@@ -1638,14 +1730,22 @@ function executeCombo() {
       await animateMove(lastSafe, finalPos, 300, true);
       gameState.playerPos = {...finalPos};
       gameState.lastVector = v1;
-      setMessage('⚠ Repoussé par le mur !');
+      // Dégât mur v1 : -1 vie
+      if (takeDamage(1)) { gameOver(); return; }
+      setMessage('⚠ Repoussé par le mur ! -1 ❤');
     } else {
       await animateMove(startPos, mid, 600, true);
       gameState.playerPos = {...mid};
       gameState.lastVector = v1;
     }
     if (r1 === 'WIN') { levelComplete(); return; }
-    if (r1 === 'DEAD') { gameOver(); return; }
+    if (r1 === 'DEAD') {
+      if (takeDamage(2)) { gameOver(); return; }
+      respawnPlayer();
+      gameState.mode = 'idle'; setAllDisabled(false);
+      document.getElementById('btn-back-cmd').disabled = false;
+      resetMonsterTimer(); addToDeck(); updateCommandUI(); openOverlay(); return;
+    }
     // ── Second vector (only if first wasn't blocked) ──
     if (r1 !== 'BLOCKED') {
       gameState.pendingVector = v2;
@@ -1665,14 +1765,22 @@ function executeCombo() {
         await animateMove(ls2, fp2, 300, true);
         gameState.playerPos = {...fp2};
         gameState.lastVector = v2;
-        setMessage('⚠ Repoussé par le mur !');
+        // Dégât mur v2 : -1 vie
+        if (takeDamage(1)) { gameOver(); return; }
+        setMessage('⚠ Repoussé par le mur ! -1 ❤');
       } else {
         await animateMove({...gameState.playerPos}, end2, 400, true);
         gameState.playerPos = {...end2};
         gameState.lastVector = v2;
       }
       if (r2 === 'WIN') { levelComplete(); return; }
-      if (r2 === 'DEAD') { gameOver(); return; }
+      if (r2 === 'DEAD') {
+        if (takeDamage(2)) { gameOver(); return; }
+        respawnPlayer();
+        gameState.mode = 'idle'; setAllDisabled(false);
+        document.getElementById('btn-back-cmd').disabled = false;
+        resetMonsterTimer(); addToDeck(); updateCommandUI(); openOverlay(); return;
+      }
     }
     // Combo magnitude = sum of both vectors
     const comboMag = Math.hypot(v1.x, v1.y) + Math.hypot(v2.x, v2.y);
@@ -1709,10 +1817,10 @@ function executeScalar() {
   if (maxComp > 40) { setMessage('⚠ Coefficient trop grand — vecteur hors limites.'); return; }
   document.getElementById('inp-x').value = Math.round(scaled.x * 10) / 10;
   document.getElementById('inp-y').value = Math.round(scaled.y * 10) / 10;
-  gameState.selectedDeck = [];
+  // Ne pas effacer selectedDeck : la carte reste sélectionnée et sera consommée par executeVector()
   renderDeck();
   drawPreview();
-  setMessage(`× ${coeff} appliqué → (${scaled.x}, ${scaled.y}). Clique EXÉCUTER pour confirmer.`);
+  setMessage(`× ${coeff} appliqué → (${scaled.x}, ${scaled.y}). Clique EXÉCUTER pour invoquer et consommer la carte.`);
 }
 
 // ═══════════════════════════════════════════════════
@@ -2237,8 +2345,10 @@ function render3D(ts) {
 // SECTION 24 — COMMAND MODE (vue top-down, maps 1+)
 // ═══════════════════════════════════════════════════
 function renderCommandView(ts) {
-  // All maps render in 3D when overlay is open (command view)
-  render3D(ts);
+  // Map 0 (Manoir Blackwood) has full room/decor data → rich 2D renderer
+  // Maps 1-9 use generic top-down renderer (no room geometry defined)
+  if (gameState.currentMap === 0) { render3D(ts); return; }
+  renderTopDown(ts);
 }
 
 function renderTopDown(ts) {
@@ -2336,7 +2446,7 @@ function renderLoop(ts) {
   const DZ_H   = 0.22;  // death-zone slab
   const EXIT_H = 0.15;  // exit platform
 
-  updateCamera(pp, lv);
+  updateCamera(pp, lv, dt);
 
   // ── MANOIR DE LA TERREUR — RENDU ATMOSPHÉRIQUE ───────────────
   const farPt  = project(cam.x + cam.fx * 500, cam.y + cam.fy * 500, 0);

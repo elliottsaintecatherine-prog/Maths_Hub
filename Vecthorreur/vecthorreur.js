@@ -562,9 +562,9 @@ function resizeCanvas() {
   SCALE   = Math.min(W * 0.90 / (80 * 0.866), H * 0.90 / 42.2);
   ISO_CY  = H - 21.1 * SCALE;
 
-  // Preview canvas — taille fixe 160×160
+  // Preview canvas — taille fixe 200×200 (correspond au CSS)
   const pc = document.getElementById('preview-canvas');
-  if (pc) { pc.width = 160; pc.height = 160; }
+  if (pc) { pc.width = 200; pc.height = 200; }
 }
 window.addEventListener('resize', resizeCanvas);
 
@@ -2424,14 +2424,9 @@ function renderLoop(ts) {
   // Flash timer countdown (delta-time based, in ms)
   if (gameState.flashTimer > 0) gameState.flashTimer = Math.max(0, gameState.flashTimer - dt);
   if (gameState.mode === 'menu') { rafId = null; return; }
-  // ── Dispatch mode commande (overlay 2D ouvert) → vue top-down ───
-  if (overlayOpen) {
-    ctx.shadowBlur = 0;
-    renderCommandView(ts);
-    if (gameState.mode !== 'menu') rafId = requestAnimationFrame(renderLoop);
-    else rafId = null;
-    return;
-  }
+  // ── Overlay commande ouvert → mettre à jour la mini-carte live,
+  // puis continuer le rendu 3D normalement en fond (visible derrière le panneau)
+  if (overlayOpen) drawPreview();
   ctx.shadowBlur = 0;
   ctx.clearRect(0, 0, W, H);
 
@@ -2755,10 +2750,7 @@ function renderLoop(ts) {
         ctx.strokeRect(fcx - fw * 0.35, fcy - fh * 0.38, fw * 0.7, fh * 0.76);
         ctx.strokeStyle = isFlash ? '#6a2008' : '#2a1808';
         ctx.strokeRect(fcx - fw * 0.22, fcy - fh * 0.24, fw * 0.44, fh * 0.48);
-        // Poignées
-        ctx.fillStyle = isFlash ? '#aa5522' : '#7a5a2a';
-        ctx.beginPath(); ctx.arc(fcx - fw * 0.10, fcy + fh * 0.04, Math.max(1.5, fw * 0.04), 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(fcx + fw * 0.10, fcy + fh * 0.04, Math.max(1.5, fw * 0.04), 0, Math.PI*2); ctx.fill();
+        // Poignées (supprimées — trop grandes sur les gros objets)
         ctx.restore();
       }
       // Label flottant parchemin
@@ -3212,10 +3204,17 @@ document.addEventListener('DOMContentLoaded', () => {
   }, { passive: false });
   fsc.addEventListener('touchend', () => { lastPinchDist = null; }, { passive: true });
 
+  // Mini-carte + hint → ouvrent la carte plein écran
   document.getElementById('preview-canvas').addEventListener('click', e => {
     e.stopPropagation();
     openMapFullscreen();
   });
+  const previewHint = document.getElementById('preview-map-hint');
+  if (previewHint) previewHint.addEventListener('click', e => {
+    e.stopPropagation();
+    openMapFullscreen();
+  });
+  // Fermer la carte plein écran : clic ou Échap
   document.getElementById('map-fullscreen-overlay').addEventListener('click', () => {
     closeMapFullscreen();
   });

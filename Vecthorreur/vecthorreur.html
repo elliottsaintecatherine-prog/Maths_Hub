@@ -241,11 +241,27 @@
 
     #preview-canvas {
       display: block;
-      width: 160px !important;
-      height: 160px !important;
-      margin: 10px auto 4px;
+      width: 200px !important;
+      height: 200px !important;
+      margin: 10px auto 0;
       background: transparent;
-      cursor: pointer;
+      cursor: zoom-in;
+      border: 1px solid rgba(138,106,42,0.25);
+      border-radius: 4px;
+      transition: border-color 0.2s;
+    }
+    #preview-canvas:hover {
+      border-color: rgba(245,208,112,0.6);
+      box-shadow: 0 0 8px rgba(245,208,112,0.2);
+    }
+    #preview-map-hint {
+      text-align: center;
+      font-size: 10px;
+      color: rgba(200,168,130,0.45);
+      font-family: 'Courier New', monospace;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+      cursor: zoom-in;
     }
     #map-fullscreen-overlay {
       display: none;
@@ -794,7 +810,8 @@
       </div>
 
       <!-- Canvas 2D aperçu -->
-      <canvas id="preview-canvas"></canvas>
+      <canvas id="preview-canvas" title="Cliquer pour agrandir la carte"></canvas>
+      <div id="preview-map-hint" title="Cliquer pour agrandir la carte">🗺 Cliquer pour agrandir</div>
 
       <!-- Zone deck + actions -->
       <div id="bottom-left">
@@ -836,7 +853,8 @@
   <!-- Carte plein écran -->
   <div id="map-fullscreen-overlay">
     <canvas id="map-fs-canvas"></canvas>
-    <div id="map-fs-hint">[ clic ou Échap pour fermer ]</div>
+    <div id="map-fs-hint">[ clic ou Échap pour fermer · molette pour zoomer ]</div>
+    <button id="btn-close-map" onclick="event.stopPropagation();document.getElementById('map-fullscreen-overlay').classList.remove('open')" style="position:fixed;top:16px;right:20px;background:transparent;border:1px solid rgba(200,168,130,0.4);color:rgba(200,168,130,0.8);font-family:'Courier New',monospace;font-size:14px;padding:4px 12px;cursor:pointer;letter-spacing:2px;z-index:801;">✕ FERMER</button>
   </div>
 </body>
 </html>

@@ -14,22 +14,64 @@
       font-family: 'Courier New', monospace;
     }
 
-    /* ── Overlay 2D — panneau de commandes par-dessus la 3D ── */
+    /* ── Onglet invoke (bord gauche, pendant le jeu) ── */
+    #btn-invoke {
+      position: fixed;
+      left: 0; top: 50%;
+      transform: translateY(-50%);
+      z-index: 200;
+      background: rgba(10,6,3,0.93);
+      border: 1px solid #5a3d1a;
+      border-left: none;
+      border-radius: 0 5px 5px 0;
+      color: #c8a882;
+      font-family: Georgia, serif;
+      font-style: italic;
+      font-size: 10px;
+      letter-spacing: 2.5px;
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      padding: 18px 9px;
+      cursor: pointer;
+      display: none;
+      align-items: center; justify-content: center;
+      gap: 10px;
+      transition: left 0.22s ease-out, background 0.2s, border-color 0.2s, color 0.2s;
+      box-shadow: 3px 0 16px rgba(0,0,0,0.55);
+      line-height: 1;
+      user-select: none;
+    }
+    #btn-invoke.visible { display: flex; }
+    #btn-invoke.open { left: 290px; }
+    #btn-invoke:hover { background: rgba(28,16,6,0.97); border-color: #8a6a2a; color: #f5d070; }
+    #btn-invoke-glyph { font-size: 15px; font-style: normal; }
+
+    /* ── Overlay 2D — tiroir gauche ── */
     #overlay-2d {
       position: fixed; inset: 0; z-index: 100;
       display: none;
-      align-items: center; justify-content: center;
-      background: transparent;
+      align-items: stretch; justify-content: flex-start;
     }
 
+    /* Backdrop translucide (ferme le tiroir au clic extérieur) */
+    #overlay-backdrop {
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,0.22);
+      cursor: pointer;
+    }
+
+    /* Tiroir gauche */
     #panel-command {
-      position: relative;
-      background: rgba(12,7,4,0.97);
-      border: 1px solid #5a3d1a;
+      position: relative; z-index: 1;
+      width: 290px;
+      height: 100%;
+      background: rgba(8,5,3,0.97);
+      border-right: 1px solid #5a3d1a;
+      overflow-y: auto; overflow-x: hidden;
       padding: 12px;
-      max-width: 420px; width: 90%;
-      overflow: visible;
-      box-shadow: 0 0 40px rgba(0,0,0,0.8), 0 0 20px rgba(255,140,0,0.08);
+      flex-shrink: 0;
+      animation: slideInLeft 0.22s ease-out;
+      box-shadow: 4px 0 28px rgba(0,0,0,0.75), 2px 0 8px rgba(255,140,0,0.04);
     }
 
     #panel-command::before {
@@ -40,6 +82,23 @@
         rgba(90,61,26,0.05) 3px, rgba(90,61,26,0.05) 4px
       );
     }
+
+    @keyframes slideInLeft {
+      from { transform: translateX(-100%); }
+      to   { transform: translateX(0); }
+    }
+
+    /* ── Minimap coin haut-droit ── */
+    #minimap-corner {
+      position: fixed;
+      top: 44px; right: 12px;
+      z-index: 15;
+      display: none;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 3px;
+    }
+    #minimap-corner.visible { display: flex; }
 
     /* ── Panneau UI (dans le panel-command) ── */
     #ui-panel {
@@ -263,27 +322,25 @@
 
     #preview-canvas {
       display: block;
-      width: 170px !important;
-      height: 170px !important;
-      margin: 6px auto 0;
+      width: 130px !important;
+      height: 130px !important;
       background: transparent;
       cursor: zoom-in;
-      border: 1px solid rgba(138,106,42,0.25);
-      border-radius: 4px;
-      transition: border-color 0.2s;
+      border: 1px solid rgba(138,106,42,0.35);
+      border-radius: 3px;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
     #preview-canvas:hover {
-      border-color: rgba(245,208,112,0.6);
-      box-shadow: 0 0 8px rgba(245,208,112,0.2);
+      border-color: rgba(245,208,112,0.7);
+      box-shadow: 0 0 12px rgba(245,208,112,0.2);
     }
     #preview-map-hint {
-      text-align: center;
-      font-size: 10px;
-      color: rgba(200,168,130,0.45);
+      font-size: 9px;
+      color: rgba(200,168,130,0.4);
       font-family: 'Courier New', monospace;
       letter-spacing: 1px;
-      margin-bottom: 6px;
       cursor: zoom-in;
+      text-align: right;
     }
     #map-fullscreen-overlay {
       display: none;
@@ -701,6 +758,12 @@
   <!-- Engrenage (jeu uniquement) -->
   <button id="btn-gear" aria-label="Réglages">⚙</button>
 
+  <!-- Onglet invoke (bord gauche, jeu uniquement) -->
+  <button id="btn-invoke" aria-label="Ouvrir l'invocation">
+    <span id="btn-invoke-glyph">⚔</span>
+    INVOQUER
+  </button>
+
   <!-- Panneau de réglages -->
   <div id="settings-panel" aria-hidden="true">
     <div class="settings-title">
@@ -787,6 +850,12 @@
   <canvas id="game-canvas"></canvas>
   <div id="vec-overlay"></div>
 
+  <!-- Minimap coin haut-droit (jeu uniquement) -->
+  <div id="minimap-corner">
+    <canvas id="preview-canvas" title="Cliquer pour agrandir la carte"></canvas>
+    <div id="preview-map-hint">🗺 agrandir</div>
+  </div>
+
   <!-- label-map conservé pour compat JS (updateCommandUI le met à jour) -->
   <div class="label-3d" id="label-map">Acte <span id="cmd-map-name-label">1</span></div>
 
@@ -805,8 +874,9 @@
   <button id="btn-cam-recenter" style="display:none;"
     title="Aligner la caméra avec le dernier vecteur">⊙</button>
 
-  <!-- OVERLAY 2D — panneau de commandes -->
+  <!-- OVERLAY 2D — tiroir gauche -->
   <div id="overlay-2d">
+    <div id="overlay-backdrop"></div>
     <div id="panel-command">
       <div id="ui-panel">
         <div class="ui-panel-title">
@@ -837,10 +907,6 @@
         </div>
         <div id="message-zone" style="min-height:14px;margin-top:4px;"></div>
       </div>
-
-      <!-- Canvas 2D aperçu -->
-      <canvas id="preview-canvas" title="Cliquer pour agrandir la carte"></canvas>
-      <div id="preview-map-hint" title="Cliquer pour agrandir la carte">🗺 Cliquer pour agrandir</div>
 
       <!-- Zone deck + actions -->
       <div id="bottom-left">

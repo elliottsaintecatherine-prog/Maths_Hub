@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The House of Chance — Scolaris</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        /* === VARIABLES DE THEME (Faciles à modifier) === */
+        :root {
+            --bg-color: #0b0e14;
+            --card-color: #161b22;
+            --accent-color: #f5a623; /* Couleur Or/Néon */
+            --accent-hover: #e09612;
+            --text-color: #ffffff;
+            --text-muted: #8b949e;
+            --success-color: #2ecc71;
+            --error-color: #e74c3c;
+            --border-color: #30363d;
+            --border-radius: 12px;
+        }
+
+        /* === STYLES GLOBAUX === */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .casino-table {
+            background-color: var(--card-color);
+            width: 100%;
+            max-width: 550px;
+            padding: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.6);
+            border: 1px solid var(--border-color);
+        }
+
+        /* === EN-TÊTE === */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+
+        .btn-back {
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            text-decoration: none;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        .btn-back:hover {
+            color: var(--text-color);
+            border-color: var(--text-muted);
+        }
+
+        .bank {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--accent-color);
+        }
+
+        /* === ZONE DE QUESTION === */
+        .question-area {
+            background: rgba(255,255,255,0.03);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            min-height: 80px;
+            border-left: 4px solid var(--accent-color);
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        /* === FORMULAIRE === */
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px;
+            box-sizing: border-box;
+            background: #0d1117;
+            border: 1px solid var(--border-color);
+            color: white;
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        input:focus {
+            border-color: var(--accent-color);
+        }
+
+        .inputs-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 15px;
+        }
+
+        /* === BOUTON D'ACTION === */
+        button.btn-play {
+            width: 100%;
+            padding: 16px;
+            background-color: var(--accent-color);
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            font-weight: 800;
+            cursor: pointer;
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            transition: background 0.2s, transform 0.1s;
+        }
+        button.btn-play:hover { background-color: var(--accent-hover); }
+        button.btn-play:active { transform: scale(0.98); }
+        button.btn-play:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* === ANIMATION MACHINE === */
+        .visualizer {
+            height: 90px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 3.5rem;
+            margin: 25px 0;
+            background: #0d1117;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            letter-spacing: 15px;
+        }
+
+        .status-bar {
+            text-align: center;
+            font-weight: 800;
+            height: 24px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        /* === LOGS DU SYSTEME === */
+        .logs {
+            font-family: monospace;
+            font-size: 0.75rem;
+            background: #000;
+            padding: 12px;
+            border-radius: 6px;
+            height: 80px;
+            overflow-y: auto;
+            color: #58a6ff;
+            line-height: 1.6;
+        }
+
+        /* Animations */
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); filter: blur(0px); }
+            20% { transform: translate(-2px, 0px) rotate(-1deg); filter: blur(2px); }
+            40% { transform: translate(2px, 2px) rotate(1deg); filter: blur(0px); }
+            60% { transform: translate(-1px, -2px) rotate(0deg); filter: blur(2px); }
+            80% { transform: translate(2px, -1px) rotate(1deg); filter: blur(0px); }
+            100% { transform: translate(0px, 0px) rotate(0deg); filter: blur(0px); }
+        }
+        .anim-shake { animation: shake 0.15s infinite; }
+    </style>
+</head>
+<body>
+
+<div class="casino-table">
+    <div class="header">
+        <a href="index.html" class="btn-back">← Hub</a>
+        <div class="title-sub" style="font-size: 0.9rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">The House of Chance</div>
+        <div class="bank">💰 <span id="bank-val">1000</span> €</div>
+    </div>
+
+    <div class="question-area" id="question-text">
+        Connexion à la table en cours...
+    </div>
+
+    <div class="inputs-row">
+        <div class="input-group">
+            <label>Probabilité de l'événement (p)</label>
+            <input type="text" id="answer-input" placeholder="ex: 0.25 ou 1/4" autocomplete="off">
+        </div>
+        <div class="input-group">
+            <label>Mise (€)</label>
+            <input type="number" id="bet-input" value="50" min="10">
+        </div>
+    </div>
+
+    <button class="btn-play" id="play-btn" onclick="processTurn()">LANCER LE PARI</button>
+
+    <div class="visualizer" id="machine">🎰</div>
+
+    <div class="status-bar" id="status">En attente d'une mise...</div>
+
+    <div class="logs" id="game-logs">
+        > Connexion sécurisée établie.<br>
+        > Bienvenue dans la Maison du Hasard.<br>
+    </div>
+</div>
+
+<script>
+    // --- DONNÉES DU JEU ---
+    let bank = 1000;
+    let currentQuestion = null;
+    const symbols = ["🍒", "💎", "7️⃣", "💀", "🍀"];
+
+    // Base de données avec scénarios immersifs
+    const database = [
+        { q: "La roulette cybernétique comporte 36 numéros. Quelle est la probabilité que la bille tombe sur un nombre pair ?", a: 0.5 },
+        { q: "Tu as 3 tentatives pour hacker un coffre. Chaque essai a 1 chance sur 2 de réussir. Probabilité d'avoir exactement 3 succès (Loi Binomiale B(3, 0.5)) ?", a: 0.125 },
+        { q: "Le serveur VIP contient 5 clés d'accès : 2 corrompues et 3 valides. Tu en télécharges une au hasard. Probabilité de prendre une clé corrompue ?", a: 0.4 },
+        { q: "Le pare-feu du casino a une probabilité de 0.7 de détecter ton malware. Quelle est la probabilité que tu passes inaperçu (événement contraire) ?", a: 0.3 },
+        { q: "Le croupier holographique tire une carte dans un deck de 32. Quelle est la probabilité que ce soit un Pique (♠) ?", a: 0.25 },
+        { q: "Une machine à sous possède 2 rouleaux ayant chacun 50% de chance d'afficher un 7. Probabilité d'avoir un double 7 ?", a: 0.25 }
+    ];
+
+    // --- LOGIQUE ---
+
+    function generateQuestion() {
+        currentQuestion = database[Math.floor(Math.random() * database.length)];
+        document.getElementById('question-text').innerText = currentQuestion.q;
+        document.getElementById('answer-input').value = "";
+    }
+
+    function addLog(msg) {
+        const logDiv = document.getElementById('game-logs');
+        // Ajoute le nouveau log en haut
+        logDiv.innerHTML = `> ${msg}<br>` + logDiv.innerHTML;
+    }
+
+    function processTurn() {
+        const bet = parseInt(document.getElementById('bet-input').value);
+        const rawAns = document.getElementById('answer-input').value.replace(',', '.');
+        
+        // Validation simple de la réponse (gère les fractions comme 1/4)
+        let userAns;
+        try { 
+            userAns = eval(rawAns); 
+        } catch(e) { 
+            userAns = null; 
+        }
+
+        if (isNaN(bet) || bet <= 0) {
+            alert("Mise invalide");
+            return;
+        }
+        if (bet > bank) {
+            alert("Fonds insuffisants !");
+            return;
+        }
+
+        if (userAns === null || isNaN(userAns)) {
+            alert("Réponse mathématique invalide. Entre un nombre (ex: 0.5) ou une fraction (ex: 1/2).");
+            return;
+        }
+
+        // Début du tour
+        document.getElementById('play-btn').disabled = true;
+        bank -= bet;
+        updateUI();
+
+        // Tolérance d'erreur pour les arrondis (ex: 1/3 = 0.333...)
+        const isCorrect = Math.abs(userAns - currentQuestion.a) < 0.01;
+        let winChance = 0;
+        let payoutMult = 2; // Par défaut, on double la mise
+        let modeMsg = "";
+
+        if (!isCorrect) {
+            // RÈGLE : FAUX -> 5% de chance de gagner (La maison triche)
+            winChance = 0.05;
+            modeMsg = "MAUVAIS CALCUL : La maison triche (5% de chance de victoire).";
+            document.getElementById('status').style.color = "var(--error-color)";
+        } else {
+            // RÈGLE : JUSTE -> Aléatoire (50/50 OR Jackpot x10)
+            if (Math.random() < 0.5) {
+                winChance = 0.5;
+                modeMsg = "CALCUL EXACT : Mode Équitable activé (50% de chance de victoire).";
+            } else {
+                winChance = currentQuestion.a; // Garde la probabilité mathématique
+                payoutMult = 10;
+                modeMsg = `CALCUL EXACT : Mode JACKPOT activé (Gain x${payoutMult}).`;
+            }
+            document.getElementById('status').style.color = "var(--text-color)";
+        }
+
+        // Lancement de l'animation
+        const machine = document.getElementById('machine');
+        machine.innerText = "🎲🎲🎲";
+        machine.classList.add('anim-shake');
+        document.getElementById('status').innerText = "Analyse des algorithmes...";
+        addLog(`Mise de ${bet}€ confirmée. ${modeMsg}`);
+
+        setTimeout(() => {
+            machine.classList.remove('anim-shake');
+            
+            // Jet de dé caché pour la victoire
+            const success = Math.random() < winChance;
+
+            if (success) {
+                const gain = bet * payoutMult;
+                bank += gain;
+                machine.innerText = "💎💎💎";
+                document.getElementById('status').innerText = `RÉUSSITE ! +${gain}€`;
+                document.getElementById('status').style.color = "var(--success-color)";
+                addLog(`Résultat : JACKPOT ! (${(winChance*100).toFixed(1)}% de chance)`);
+            } else {
+                machine.innerText = "💀💀💀";
+                document.getElementById('status').innerText = "ÉCHEC DU PIRATAGE";
+                document.getElementById('status').style.color = "var(--error-color)";
+                addLog(`Résultat : ÉCHEC.`);
+            }
+
+            updateUI();
+            
+            // Délai avant de pouvoir rejouer
+            setTimeout(() => {
+                document.getElementById('play-btn').disabled = false;
+                document.getElementById('status').innerText = "En attente d'une mise...";
+                document.getElementById('status').style.color = "var(--text-color)";
+                generateQuestion();
+            }, 2500);
+
+        }, 1500); // Durée de l'animation : 1.5 secondes
+    }
+
+    function updateUI() {
+        document.getElementById('bank-val').innerText = bank;
+    }
+
+    // Initialisation
+    generateQuestion();
+</script>
+
+</body>
+</html>

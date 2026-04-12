@@ -67,6 +67,10 @@ function setMusicVolume(v) {
 function showGear(visible) {
   const gear = document.getElementById('btn-gear');
   gear.classList.toggle('visible', visible);
+  const invoke  = document.getElementById('btn-invoke');
+  const minimap = document.getElementById('minimap-corner');
+  if (invoke)  invoke.classList.toggle('visible', visible);
+  if (minimap) minimap.classList.toggle('visible', visible);
 }
 
 function openSettings() {
@@ -1549,12 +1553,16 @@ function toggleDeckSelect(i) {
 function openOverlay() {
   overlayOpen = true;
   document.getElementById('overlay-2d').style.display = 'flex';
+  const invoke = document.getElementById('btn-invoke');
+  if (invoke) invoke.classList.add('open');
   updateCommandUI();
   drawPreview();
 }
 function closeOverlay() {
   overlayOpen = false;
   document.getElementById('overlay-2d').style.display = 'none';
+  const invoke = document.getElementById('btn-invoke');
+  if (invoke) invoke.classList.remove('open');
   const fso = document.getElementById('map-fullscreen-overlay');
   if (fso) fso.classList.remove('open');
 }
@@ -2964,17 +2972,38 @@ function renderLoop(ts) {
     const lightDir = cam.angle + wobble;
     const cl = Math.cos(lightDir), sl = Math.sin(lightDir);
 
-    const HALF_ANGLE = 0.28;   // ~16° demi-ouverture
-    const RANGE_IN   = 9;      // portée intérieure
-    const RANGE_OUT  = 11;     // portée pénombre
-    const CSEG       = 28;     // segments du cercle de base
+    const RANGE_IN = 9, RANGE_OUT = 11, HALF_H = 0.22, CSEG = 24;
 
-    // Centre de la base du cône = bout du faisceau
-    // Le faisceau part de (handWx, handWy, HAND_H) et descend vers le sol.
-    // Pente verticale : -HAND_H / RANGE_IN par unité de portée
-    const pitch_dz = -HAND_H / RANGE_IN;   // ≈ -0.083
+    // Hauteur du centre du cercle au bout du faisceau (inversé / pitch)
+    //   pitch=-0.31 (défaut) → ~1.3   (cercle chevauche le sol et s'élève)
+    //   pitch=-0.55 (glisse haut → faisceau descend) → ~0.5
+    //   pitch=-0.10 (glisse bas  → faisceau monte)   → ~2.6
+    const centerZ = Math.max(0.3, (cam.pitch + 0.2) * 6);
 
-    // Enveloppe convexe 2D (Jarvis march) — utilisée pour le masque cône
+    // Cône réaliste : pointe=main, base=cercle vertical au bout du faisceau
+    // Le cercle est dans le plan (-sl, cl, 0) × (0, 0, 1)
+    // Le bas est clampé au sol → donne une forme naturelle de spot
+    function buildBeam(range) {
+      const pts = [];
+      const tip = project(handWx, handWy, HAND_H);
+      if (tip) pts.push(tip);
+
+      const cx = pp.x + cl * range;
+      const cy = pp.y + sl * range;
+      const R  = range * Math.tan(HALF_H);
+
+      for (let i = 0; i < CSEG; i++) {
+        const a  = (i / CSEG) * 2 * Math.PI;
+        const ca = Math.cos(a), sa = Math.sin(a);
+        const pt = project(
+          cx + R * ca * (-sl),
+          cy + R * ca * cl,
+          Math.max(0.01, centerZ + R * sa));
+        if (pt) pts.push(pt);
+      }
+      return convexHull2D(pts);
+    }
+
     function convexHull2D(pts) {
       if (pts.length <= 3) return pts;
       let si = 0;
@@ -2994,45 +3023,9 @@ function renderLoop(ts) {
       return hull;
     }
 
-    // Vrai cône 3D : cercle de base perpendiculaire à l'axe du faisceau.
-    // Axes du cercle :
-    //   right = (-sl, cl, 0)              → horizontal ⊥ au faisceau
-    //   up    = (-cl*pz, -sl*pz, 1)       → mostly vertical (pz < 0)
-    // Projeter le cercle complet puis prendre l'enveloppe convexe
-    // → silhouette correcte depuis TOUT angle de caméra.
-    function buildCone3D(range) {
-      const R   = range * Math.tan(HALF_ANGLE);
-      const bcx = handWx + cl * range;
-      const bcy = handWy + sl * range;
-      const bcz = HAND_H + pitch_dz * range;
-      const upx = -cl * pitch_dz;   // > 0
-      const upy = -sl * pitch_dz;   // > 0
-      const upz = 1.0;
-
-      const raw = [];
-      const tip = project(handWx, handWy, HAND_H);
-      if (tip) raw.push(tip);
-
-      for (let i = 0; i < CSEG; i++) {
-        const a = (2 * Math.PI * i) / CSEG;
-        const ca = Math.cos(a), sa = Math.sin(a);
-        const wx = bcx + R * (ca * (-sl) + sa * upx);
-        const wy = bcy + R * (ca *  cl   + sa * upy);
-        const wz = Math.max(0.01, bcz + R * sa * upz);
-        const pt = project(wx, wy, wz);
-        if (pt) raw.push(pt);
-      }
-      return convexHull2D(raw);
-    }
-
-    const inner = buildCone3D(RANGE_IN);
-    const outer = buildCone3D(RANGE_OUT);
-
-    // Spot centre (bout du faisceau intérieur)
-    const spotProj = project(
-      handWx + cl * RANGE_IN,
-      handWy + sl * RANGE_IN,
-      Math.max(0.01, HAND_H + pitch_dz * RANGE_IN));
+    const inner = buildBeam(RANGE_IN);
+    const outer = buildBeam(RANGE_OUT);
+    const spotProj = project(pp.x + cl * RANGE_IN, pp.y + sl * RANGE_IN, centerZ);
 
     if (inner.length >= 6 && spotProj) {
       const scx = spotProj.sx, scy = spotProj.sy;
@@ -3119,6 +3112,24 @@ function renderLoop(ts) {
       ctx.restore();
 
       // Joueur par-dessus le masque
+      drawPlayer3D(pp, pal);
+    } else {
+      // Cône non calculable → noir total + lueur main + joueur
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.93)';
+      ctx.fillRect(0, 0, W, H);
+      ctx.restore();
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      const nr = 35 + 4 * Math.sin(t1 * 2);
+      const near = ctx.createRadialGradient(hsx, hsy, 0, hsx, hsy, nr);
+      near.addColorStop(0,   `rgba(255,215,130,${0.10 * flicker})`);
+      near.addColorStop(0.5, `rgba(90,60,20,${0.025})`);
+      near.addColorStop(1,   'rgba(0,0,0,0)');
+      ctx.fillStyle = near;
+      ctx.fillRect(hsx - nr, hsy - nr, nr * 2, nr * 2);
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.restore();
       drawPlayer3D(pp, pal);
     }
   }
@@ -3209,9 +3220,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (_wasDrag) return;
     if (!overlayOpen) openOverlay();
   });
-  // Clic sur le fond de l'overlay (hors panel) → fermer l'overlay
-  document.getElementById('overlay-2d').addEventListener('click', e => {
-    if (e.target === document.getElementById('overlay-2d')) closeOverlay();
+  // Clic sur le backdrop (hors panel) → fermer le tiroir
+  document.getElementById('overlay-backdrop').addEventListener('click', () => {
+    closeOverlay();
   });
 
   // Recentrer caméra sur le dernier vecteur
@@ -3398,6 +3409,12 @@ document.addEventListener('DOMContentLoaded', () => {
     lastPinchDist = dist;
   }, { passive: false });
   fsc.addEventListener('touchend', () => { lastPinchDist = null; }, { passive: true });
+
+  // Onglet invoke (bord gauche) → ouvre/ferme le tiroir
+  document.getElementById('btn-invoke').onclick = e => {
+    e.stopPropagation();
+    if (overlayOpen) closeOverlay(); else openOverlay();
+  };
 
   // Mini-carte + hint → ouvrent la carte plein écran
   document.getElementById('preview-canvas').addEventListener('click', e => {

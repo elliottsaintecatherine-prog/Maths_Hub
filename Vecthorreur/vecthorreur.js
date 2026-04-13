@@ -1516,6 +1516,44 @@ function addToDeck(vec) {
   renderDeck();
 }
 
+function getCardGlyph(x, y) {
+  if (x === 0 && y === 0) return { glyph: '✦', arrow: '·', color: '#a07850' };
+  const norm = Math.sqrt(x * x + y * y);
+  const ax = Math.abs(x), ay = Math.abs(y);
+  let arrow;
+  if      (ax > ay * 2.5)      arrow = x > 0 ? '→' : '←';
+  else if (ay > ax * 2.5)      arrow = y > 0 ? '↓' : '↑';
+  else if (x > 0 && y < 0)     arrow = '↗';
+  else if (x > 0 && y > 0)     arrow = '↘';
+  else if (x < 0 && y < 0)     arrow = '↖';
+  else                          arrow = '↙';
+  if (norm > 10) return { glyph: '🔥', arrow, color: '#e06030' };
+  if (norm > 5)  return { glyph: '⚡', arrow, color: '#c8a050' };
+  return { glyph: '❄', arrow, color: '#7aaabb' };
+}
+
+function updateRitualDisplay() {
+  const el = document.getElementById('ritual-display');
+  if (!el) return;
+  const x = parseFloat(document.getElementById('inp-x').value) || 0;
+  const y = parseFloat(document.getElementById('inp-y').value) || 0;
+  if (x === 0 && y === 0) {
+    el.innerHTML = '<em style="color:rgba(160,120,80,0.4)">— en attente d\'un vecteur —</em>';
+    return;
+  }
+  const norm = Math.sqrt(x * x + y * y);
+  const { arrow } = getCardGlyph(x, y);
+  el.innerHTML = `‖u&#x20D7;‖ = √(${x}²+${y}²) = <strong>${norm.toFixed(2)}</strong> <span style="font-size:14px">${arrow}</span>`;
+}
+
+function adjustInput(id, delta) {
+  const el = document.getElementById(id);
+  const val = parseInt(el.value) || 0;
+  el.value = Math.max(-20, Math.min(20, val + delta));
+  drawPreview();
+  updateRitualDisplay();
+}
+
 function renderDeck() {
   const area = document.getElementById('deck-area');
   area.innerHTML = '';
@@ -1526,7 +1564,13 @@ function renderDeck() {
   gameState.deck.forEach((v, i) => {
     const btn = document.createElement('button');
     btn.className = 'btn-deck' + (gameState.selectedDeck.includes(i) ? ' selected' : '');
-    btn.textContent = `(${v.x},${v.y})`;
+    const norm = Math.sqrt(v.x * v.x + v.y * v.y);
+    const { glyph, arrow, color } = getCardGlyph(v.x, v.y);
+    btn.innerHTML =
+      `<span class="card-glyph">${glyph}</span>` +
+      `<span class="card-arrow" style="color:${color}">${arrow}</span>` +
+      `<span class="card-coords" style="color:${color}">(${v.x},${v.y})</span>` +
+      `<span class="card-norm">‖${norm.toFixed(1)}‖</span>`;
     btn.onclick = () => toggleDeckSelect(i);
     area.appendChild(btn);
   });
@@ -1541,6 +1585,7 @@ function toggleDeckSelect(i) {
     document.getElementById('inp-x').value = v.x;
     document.getElementById('inp-y').value = v.y;
     drawPreview();
+    updateRitualDisplay();
   }
   renderDeck();
 }
@@ -1660,6 +1705,8 @@ async function executeVector() {
     consumeCard(gameState.selectedDeck[0]);
   }
   playSound('execute');
+  const _panel = document.getElementById('panel-command');
+  if (_panel) { _panel.classList.add('ritual-cast'); setTimeout(() => _panel.classList.remove('ritual-cast'), 340); }
   gameState.flashObstacle = null;
   const result = checkPath(gameState.playerPos, vec);
   setMessage('');
@@ -1874,6 +1921,7 @@ function executeScalar() {
   // Ne pas effacer selectedDeck : la carte reste sélectionnée et sera consommée par executeVector()
   renderDeck();
   drawPreview();
+  updateRitualDisplay();
   setMessage(`× ${coeff} appliqué → (${scaled.x}, ${scaled.y}). Clique EXÉCUTER pour invoquer et consommer la carte.`);
 }
 
@@ -3239,8 +3287,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-mute').onclick = toggleMute;
 
   // Inputs preview
-  document.getElementById('inp-x').addEventListener('input', drawPreview);
-  document.getElementById('inp-y').addEventListener('input', drawPreview);
+  document.getElementById('inp-x').addEventListener('input', () => { drawPreview(); updateRitualDisplay(); });
+  document.getElementById('inp-y').addEventListener('input', () => { drawPreview(); updateRitualDisplay(); });
 
   // Execute
   document.getElementById('btn-execute').onclick = executeVector;

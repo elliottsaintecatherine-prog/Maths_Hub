@@ -89,6 +89,36 @@ a { text-decoration:none; color:inherit; }
 .ph-voleur { background:linear-gradient(150deg,#0b1a2e,#0d2d4a); }
 .ph-enigma { background:linear-gradient(150deg,#1a0b2e,#2d0d4a); }
 .ph-matrice{ background:linear-gradient(150deg,#1a2000,#2e3d00); }
+.ph-casino { background:linear-gradient(150deg,#2e1a00,#4a2d0d); }
+
+/* BALANCE NAVBAR */
+.nav-balance { font-size:13px; font-weight:700; color:#f5a623; padding:5px 12px; border:1px solid #f5a62333; border-radius:8px; white-space:nowrap; }
+
+/* BALANCE PROFILE BAR */
+.p-balance { font-size:12px; color:#f5a623; font-weight:700; margin-top:1px; }
+
+/* BOUTIQUE MODAL */
+.shop-overlay { position:fixed; inset:0; z-index:500; display:none; align-items:center; justify-content:center; }
+.shop-overlay.open { display:flex; }
+.shop-backdrop { position:absolute; inset:0; background:rgba(0,0,0,0.6); cursor:pointer; }
+.shop-panel { position:relative; z-index:1; background:var(--bg-card); border:1px solid var(--border); border-radius:16px; padding:24px; max-width:420px; width:92%; max-height:80vh; overflow-y:auto; }
+.shop-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; padding-bottom:12px; border-bottom:1px solid var(--border); }
+.shop-title { font-size:18px; font-weight:800; }
+.shop-bal { color:#f5a623; font-weight:700; font-size:14px; }
+.shop-close { background:none; border:none; color:var(--text-muted); font-size:20px; cursor:pointer; padding:0 4px; }
+.shop-close:hover { color:var(--text); }
+.shop-item { display:flex; align-items:center; gap:14px; padding:14px; border:1px solid var(--border); border-radius:10px; margin-bottom:10px; transition:border-color .15s; }
+.shop-item:hover { border-color:var(--border-2); }
+.shop-icon { font-size:30px; flex-shrink:0; }
+.shop-info { flex:1; min-width:0; }
+.shop-name { font-weight:700; font-size:14px; }
+.shop-desc { font-size:11px; color:var(--text-muted); margin-top:3px; line-height:1.4; }
+.shop-right { text-align:right; flex-shrink:0; }
+.shop-price { font-weight:800; color:#f5a623; font-size:13px; margin-bottom:6px; white-space:nowrap; }
+.shop-buy { background:#f5a623; color:#000; border:none; border-radius:6px; padding:6px 14px; font-weight:700; cursor:pointer; font-size:12px; font-family:inherit; transition:opacity .15s; }
+.shop-buy:hover { opacity:0.85; }
+.shop-buy:disabled { opacity:0.35; cursor:not-allowed; }
+.shop-msg { font-size:11px; margin-top:4px; min-height:16px; }
 .ph-vecth  { background:linear-gradient(150deg,#2e0a00,#4a1500); }
 .ph-music  { background:linear-gradient(150deg,#001a12,#00341f); }
 .ph-neural { background:linear-gradient(150deg,#0a0012,#1a0033); }
@@ -138,6 +168,8 @@ a { text-decoration:none; color:inherit; }
     <div class="nav-name">Scolaris</div>
   </div>
   <div class="nav-right">
+    <span class="nav-balance" id="nav-balance">💶 — €</span>
+    <button class="btn-icon" id="shop-btn" title="Boutique">🛒</button>
     <button class="btn-icon" id="secret-btn" title="Hub secret">🎵</button>
     <button class="btn-toggle" id="theme-btn" onclick="toggleTheme()">☀ Mode clair</button>
   </div>
@@ -153,6 +185,7 @@ a { text-decoration:none; color:inherit; }
       <div class="p-info">
         <div class="p-username" id="p-username">—</div>
         <div class="p-score" id="p-score">Chargement…</div>
+        <div class="p-balance" id="p-balance">💶 — €</div>
       </div>
       <div class="p-actions">
         <button class="btn-profile" onclick="location.href='profile.html'">Voir profil</button>
@@ -197,6 +230,20 @@ a { text-decoration:none; color:inherit; }
   </div>
 </main>
 
+<!-- BOUTIQUE -->
+<div class="shop-overlay" id="shop-overlay">
+  <div class="shop-backdrop" id="shop-backdrop"></div>
+  <div class="shop-panel">
+    <div class="shop-header">
+      <div class="shop-title">🛒 Boutique</div>
+      <div class="shop-bal" id="shop-balance">💶 — €</div>
+      <button class="shop-close" id="shop-close">✕</button>
+    </div>
+    <div id="shop-grid"></div>
+    <div class="shop-msg" id="shop-msg"></div>
+  </div>
+</div>
+
 <!-- FOOTER -->
 <footer class="footer">
   <a href="https://pay.lydia.me/l?t=elliotts4xau" target="_blank" class="donate-btn">☕ Soutenir le créateur</a>
@@ -216,6 +263,7 @@ const JEUX = [
   { id:"matrice",    titre:"La Matrice",             niveau:"Terminale", chapitre:"Vecteurs & Espace",      description:"Naviguez en 3D avec les équations paramétriques pour trouver la sortie.",                                    imageClass:"ph-matrice",icon:"📊",     fichier:"#",                                    disponible:false },
   { id:"studiomusic",titre:"Karaoké Studio",          niveau:"Bonus",     chapitre:"Coaching vocal",         description:"Chante en karaoké, détection de justesse en temps réel, harmonies IA et éditeur de notes.",               image:"La compagnie créole/La_compagnie_créole.png",     fichier:"La compagnie créole/chant.html",        disponible:true, secretOnly:true },
   { id:"neural_knockout",     titre:"Neural Knockout",   niveau:"Seconde",   chapitre:"Général", description:"Battez vous contre vos amis à un jeu de reflexe et montrez leur qui est le plus fort.", image:"neural_knockout/neural_knockout.png",       fichier:"neural_knockout/neural_knockout.html",  disponible:true  },
+  { id:"casino",              titre:"The House of Chance",niveau:"Terminale", chapitre:"Probabilités",           description:"Parie sur tes calculs de probabilités. Si tu maîtrises les maths, la maison ne gagne pas toujours.",        imageClass:"ph-casino", icon:"🎰",     fichier:"Casino/Casino.html",                     disponible:true  },
 
 ];
 
@@ -320,6 +368,64 @@ if (new URLSearchParams(location.search).get('hub') === 'secret') deverrouillerS
 
 <script type="module">
 import { supabase, signOut, getCurrentUser, getUserTotalScore } from './auth/supabase.js';
+import { getBalance, SHOP, buyItem, itemCount } from './economy.js';
+
+/* ── Économie : affichage solde ── */
+function refreshBalance() {
+  const b = getBalance().toLocaleString('fr-FR');
+  document.getElementById('nav-balance').textContent = `💶 ${b} €`;
+  document.getElementById('p-balance').textContent = `💶 ${b} €`;
+  const sb = document.getElementById('shop-balance');
+  if (sb) sb.textContent = `💶 ${b} €`;
+}
+
+/* ── Boutique ── */
+function renderShop() {
+  const grid = document.getElementById('shop-grid');
+  grid.innerHTML = '';
+  SHOP.forEach(item => {
+    const count = itemCount(item.id);
+    const div = document.createElement('div');
+    div.className = 'shop-item';
+    div.innerHTML =
+      `<div class="shop-icon">${item.icon}</div>` +
+      `<div class="shop-info"><div class="shop-name">${item.name}</div><div class="shop-desc">${item.desc}${count ? ` (possédé : ${count})` : ''}</div></div>` +
+      `<div class="shop-right"><div class="shop-price">💶 ${item.price} €</div><button class="shop-buy" data-id="${item.id}"${getBalance() < item.price ? ' disabled' : ''}>Acheter</button></div>`;
+    grid.appendChild(div);
+  });
+  grid.querySelectorAll('.shop-buy').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const res = buyItem(btn.dataset.id);
+      const msg = document.getElementById('shop-msg');
+      if (res.ok) {
+        msg.style.color = '#2ecc71';
+        msg.textContent = '✓ Achat effectué !';
+      } else {
+        msg.style.color = '#e74c3c';
+        msg.textContent = '✗ ' + res.msg;
+      }
+      refreshBalance();
+      renderShop();
+      setTimeout(() => { msg.textContent = ''; }, 2500);
+    });
+  });
+}
+
+function openShop() {
+  refreshBalance();
+  renderShop();
+  document.getElementById('shop-overlay').classList.add('open');
+}
+function closeShop() {
+  document.getElementById('shop-overlay').classList.remove('open');
+}
+
+document.getElementById('shop-btn').addEventListener('click', openShop);
+document.getElementById('shop-close').addEventListener('click', closeShop);
+document.getElementById('shop-backdrop').addEventListener('click', closeShop);
+
+window.addEventListener('scolaris-balance', refreshBalance);
+refreshBalance();
 
 /* ── Init : vérifie session, redirige si non connecté ── */
 async function init() {

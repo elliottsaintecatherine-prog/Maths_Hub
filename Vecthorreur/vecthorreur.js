@@ -1665,6 +1665,17 @@ function updateHealthDisplay() {
  * @returns {boolean} true si le joueur est mort (health ≤ 0)
  */
 function takeDamage(amount) {
+  // Bouclier Spectral (boutique Scolaris) : absorbe le coup
+  if (window._scolaris && window._scolaris.hasShield()) {
+    window._scolaris.useShield();
+    setMessage('🛡️ Bouclier Spectral activé — dégâts absorbés !');
+    const canvas = document.getElementById('game-canvas');
+    if (canvas) {
+      canvas.style.boxShadow = '0 0 40px 20px rgba(80,160,255,0.6)';
+      setTimeout(() => { canvas.style.boxShadow = ''; }, 500);
+    }
+    return false;
+  }
   gameState.health = Math.max(0, gameState.health - amount);
   updateHealthDisplay();
   // Flash screen rouge pour feedback

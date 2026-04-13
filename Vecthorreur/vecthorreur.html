@@ -1061,6 +1061,16 @@
 
   <script src="vecthorreur.js"></script>
 
+  <!-- Économie Scolaris — bouclier spectral -->
+  <script type="module">
+    import { useItem, itemCount } from '../economy.js';
+    // Expose au script principal via un objet global
+    window._scolaris = {
+      hasShield: () => itemCount('vecthorreur_shield') > 0,
+      useShield: () => useItem('vecthorreur_shield'),
+    };
+  </script>
+
   <!-- Carte plein écran -->
   <div id="map-fullscreen-overlay">
     <canvas id="map-fs-canvas"></canvas>

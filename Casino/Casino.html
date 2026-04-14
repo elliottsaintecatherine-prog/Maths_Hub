@@ -1,52 +1,110 @@
 <!DOCTYPE html>
-<html lang="fr" data-theme="dark">
+<html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>The House of Chance — Scolaris</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="casino.css">
 </head>
 <body>
 
-<div class="casino-table">
-  <div class="header">
-    <a href="../index.html" class="btn-back">← Hub</a>
-    <div class="title-sub">The House of Chance</div>
-    <div class="bank">💶 <span id="bank-val">—</span> €</div>
-  </div>
+  <!-- Vignette overlay -->
+  <div class="vignette"></div>
 
-  <div class="question-area" id="question-text">
-    Connexion à la table en cours...
-  </div>
-
-  <div id="feedback" class="feedback"></div>
-
-  <div class="inputs-row">
-    <div class="input-group">
-      <label>Probabilité de l'événement (décimal ou fraction)</label>
-      <input type="text" id="answer-input" placeholder="ex: 0.25 ou 1/4" autocomplete="off">
-      <div class="skip-hint">Laisse vide pour passer (malus)</div>
+  <!-- ── TOP BAR ──────────────────────────────── -->
+  <header class="top-bar">
+    <a href="../index.html" class="btn-back">← HUB</a>
+    <div class="game-title">THE HOUSE OF CHANCE</div>
+    <div class="balance-wrap" id="balance-wrap">
+      <span style="font-size:15px">💶</span>
+      <span class="balance-amount" id="bank-val">—</span>
+      <span class="balance-unit">€</span>
     </div>
-    <div class="input-group">
-      <label>Mise (€)</label>
-      <input type="number" id="bet-input" value="50" min="10">
+  </header>
+
+  <!-- ── CONTENU PRINCIPAL ─────────────────────── -->
+  <main class="game-wrap">
+
+    <!-- MISSION : question de probabilité -->
+    <section class="mission-card">
+      <div class="section-label">▸ MISSION EN COURS</div>
+      <div class="mission-text" id="question-text">
+        <span id="typewriter-target"></span><span class="cursor-blink" id="cursor"></span>
+      </div>
+    </section>
+
+    <!-- MACHINE À SOUS -->
+    <section class="machine-card">
+      <div class="payline"></div>
+
+      <div class="reels-row" id="machine">
+        <div class="reel" id="reel-0"><div class="reel-symbol">🎰</div></div>
+        <div class="reel-sep">◆</div>
+        <div class="reel" id="reel-1"><div class="reel-symbol">🎰</div></div>
+        <div class="reel-sep">◆</div>
+        <div class="reel" id="reel-2"><div class="reel-symbol">🎰</div></div>
+      </div>
+
+      <!-- Odds chips (apparaissent après réponse) -->
+      <div class="odds-row" id="odds-row">
+        <span class="odds-chip" id="odds-chance"></span>
+        <span class="odds-chip" id="odds-mult"></span>
+        <span class="odds-chip" id="odds-ev"></span>
+      </div>
+
+      <div class="machine-status" id="status">En attente d'une mise…</div>
+    </section>
+
+    <!-- CONTRÔLES -->
+    <section class="controls-card">
+
+      <!-- Feedback correct / faux -->
+      <div id="feedback" class="feedback"></div>
+
+      <div class="inputs-row">
+        <!-- Réponse -->
+        <div class="field">
+          <label>Probabilité calculée</label>
+          <input type="text" id="answer-input" placeholder="0.25 ou 1/4" autocomplete="off" spellcheck="false">
+          <div class="field-hint">Laisse vide pour jouer sans bonus (malus appliqué)</div>
+        </div>
+        <!-- Mise -->
+        <div class="field">
+          <label>Mise (€)</label>
+          <div class="bet-row">
+            <button class="bet-adj" id="bet-minus">−</button>
+            <input type="number" id="bet-input" value="50" min="10" step="10">
+            <button class="bet-adj" id="bet-plus">+</button>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-play" id="play-btn">⚡ LANCER LE PARI</button>
+
+    </section>
+
+    <!-- TERMINAL -->
+    <section class="terminal-card">
+      <div class="section-label terminal-label">▸ TERMINAL</div>
+      <div class="logs" id="game-logs">
+        <span class="log-ts">[00:00]</span>Connexion sécurisée établie.<br>
+        <span class="log-ts">[00:00]</span>Bienvenue dans la Maison du Hasard.<br>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ── OVERLAY RÉSULTAT ──────────────────────── -->
+  <div class="result-overlay" id="result-overlay">
+    <div class="result-card" id="result-card">
+      <div class="result-icon" id="result-icon"></div>
+      <div class="result-label" id="result-label"></div>
+      <div class="result-amount" id="result-amount"></div>
+      <div class="result-mode" id="result-mode"></div>
     </div>
   </div>
 
-  <button class="btn-play" id="play-btn">LANCER LE PARI</button>
-
-  <div class="visualizer" id="machine">🎰</div>
-
-  <div class="status-bar" id="status">En attente d'une mise...</div>
-
-  <div class="logs" id="game-logs">
-    > Connexion sécurisée établie.<br>
-    > Bienvenue dans la Maison du Hasard.<br>
-  </div>
-</div>
-
-<script type="module" src="casino.js"></script>
+  <script type="module" src="casino.js"></script>
 
 </body>
 </html>

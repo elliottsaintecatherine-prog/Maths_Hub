@@ -1,0 +1,254 @@
+/**
+ * shared.js — Utilitaires partagés entre tous les mini-jeux Casino
+ * ES Module — importer avec : import { ... } from './shared.js'
+ */
+
+import { getBalance as _getBalance, updateBalance as _updateBalance } from '../economy.js';
+
+/* ── Économie ─────────────────────────────────────────────────────── */
+
+export function getBalance() { return _getBalance(); }
+export function updateBalance(delta) { return _updateBalance(delta); }
+
+/* ── Helpers maths ────────────────────────────────────────────────── */
+
+export function randInt(a, b) {
+  return Math.floor(Math.random() * (b - a + 1)) + a;
+}
+
+export function pick(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+export function C(n, k) {
+  if (k < 0 || k > n) return 0;
+  if (k === 0 || k === n) return 1;
+  let res = 1;
+  for (let i = 0; i < k; i++) res = res * (n - i) / (i + 1);
+  return Math.round(res);
+}
+
+/** Arrondi à 6 chiffres significatifs */
+export function r6(x) {
+  if (x === 0) return 0;
+  const d = Math.ceil(Math.log10(Math.abs(x)));
+  const pow = Math.pow(10, 6 - d);
+  return Math.round(x * pow) / pow;
+}
+
+/* ── Parsing réponse ──────────────────────────────────────────────── */
+
+/** Accepte "0.25", "1/4", "0,5", "25%" */
+export function parseAnswer(str) {
+  if (typeof str !== 'string') return NaN;
+  str = str.trim().replace(',', '.');
+  if (str.includes('%')) return parseFloat(str) / 100;
+  if (str.includes('/')) {
+    const [num, den] = str.split('/').map(Number);
+    return den ? num / den : NaN;
+  }
+  return parseFloat(str);
+}
+
+/* ── UI — Typewriter ──────────────────────────────────────────────── */
+
+/**
+ * Écrit `text` caractère par caractère dans `targetEl`.
+ * `cursorEl` clignote pendant la frappe puis s'arrête.
+ * Retourne une Promise résolue à la fin.
+ */
+export function typeQuestion(targetEl, cursorEl, text, speed = 16) {
+  return new Promise(resolve => {
+    targetEl.textContent = '';
+    if (cursorEl) cursorEl.classList.add('typing');
+    let i = 0;
+    const tick = setInterval(() => {
+      targetEl.textContent += text[i++];
+      if (i >= text.length) {
+        clearInterval(tick);
+        if (cursorEl) cursorEl.classList.remove('typing');
+        resolve();
+      }
+    }, speed);
+  });
+}
+
+/* ── UI — Log horodaté ────────────────────────────────────────────── */
+
+/** Ajoute une ligne `[mm:ss] msg` dans `logsEl`, scroll en bas. */
+export function addLog(logsEl, startTime, msg) {
+  const elapsed = Math.floor((Date.now() - startTime) / 1000);
+  const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
+  const ss = String(elapsed % 60).padStart(2, '0');
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.textContent = `[${mm}:${ss}] ${msg}`;
+  logsEl.appendChild(line);
+  logsEl.scrollTop = logsEl.scrollHeight;
+}
+
+/* ── UI — Odds display ────────────────────────────────────────────── */
+
+export function showOdds(chanceEl, multEl, evEl, winChance, payoutMult) {
+  const ev = r6(winChance * payoutMult - (1 - winChance));
+  const pct = r6(winChance * 100);
+
+  if (chanceEl) { chanceEl.textContent = `${pct} %`; chanceEl.hidden = false; }
+  if (multEl)   { multEl.textContent   = `×${payoutMult}`; multEl.hidden = false; }
+  if (evEl) {
+    evEl.textContent = `EV ${ev >= 0 ? '+' : ''}${r6(ev * 100)} %`;
+    evEl.className = 'odds-chip ' + (ev >= 0 ? 'good' : ev > -0.15 ? 'info' : 'bad');
+    evEl.hidden = false;
+  }
+}
+
+export function hideOdds(chanceEl, multEl, evEl) {
+  [chanceEl, multEl, evEl].forEach(el => { if (el) el.hidden = true; });
+}
+
+/* ── UI — Ampoules ────────────────────────────────────────────────── */
+
+/**
+ * Génère les ampoules CSS autour de `frameEl` et les insère dans `containerEl`.
+ * Appelez après que `frameEl` est dans le DOM.
+ */
+export function buildBulbs(containerEl, frameEl) {
+  containerEl.innerHTML = '';
+  const COUNT = 24;
+  for (let i = 0; i < COUNT; i++) {
+    const b = document.createElement('span');
+    b.className = 'bulb' + (Math.random() < 0.2 ? ' off' : '');
+    b.style.setProperty('--i', i);
+    b.style.setProperty('--total', COUNT);
+    containerEl.appendChild(b);
+  }
+  // Animation de clignotement aléatoire
+  setInterval(() => {
+    const bulbs = containerEl.querySelectorAll('.bulb');
+    bulbs.forEach(b => {
+      if (Math.random() < 0.08) b.classList.toggle('off');
+    });
+  }, 400);
+}
+
+/* ── Générateurs de questions — Probabilités Terminale ───────────── */
+
+function makeUrne() {
+  const total = randInt(8, 20);
+  const rouge = randInt(2, total - 2);
+  const bleu  = total - rouge;
+  const tirage = randInt(1, Math.min(rouge, bleu));
+
+  const types = ['rouge', 'bleu'];
+  const cible = pick(types);
+  const nb    = cible === 'rouge' ? rouge : bleu;
+  const a     = r6(nb / total);
+
+  return {
+    q: `Une urne contient ${rouge} boule${rouge > 1 ? 's' : ''} rouge${rouge > 1 ? 's' : ''} et ${bleu} boule${bleu > 1 ? 's' : ''} bleue${bleu > 1 ? 's' : ''}. On tire une boule au hasard. Quelle est la probabilité d'obtenir une boule ${cible} ?`,
+    a,
+    hint: `${nb} boules ${cible}s sur ${total} au total → ${nb}/${total}`,
+    type: 'urne',
+  };
+}
+
+function makeUrne2() {
+  const total = randInt(10, 25);
+  const defect = randInt(1, Math.floor(total / 4));
+  const ok = total - defect;
+  const a = r6(ok / total);
+  return {
+    q: `Un lot contient ${total} pièces dont ${defect} défectueuse${defect > 1 ? 's' : ''}. On en prélève une au hasard. Quelle est la probabilité qu'elle soit conforme ?`,
+    a,
+    hint: `${ok} conformes sur ${total} → ${ok}/${total}`,
+    type: 'urne',
+  };
+}
+
+function makeComplement() {
+  const num = randInt(1, 8);
+  const den = randInt(num + 2, 12);
+  const pA  = r6(num / den);
+  const a   = r6(1 - pA);
+  return {
+    q: `On sait que P(A) = ${num}/${den}. Quelle est la probabilité de l'événement contraire Ā ?`,
+    a,
+    hint: `P(Ā) = 1 − P(A) = 1 − ${num}/${den}`,
+    type: 'complement',
+  };
+}
+
+function makeUnion() {
+  const den = randInt(8, 15);
+  const pA  = randInt(2, den - 3);
+  const pB  = randInt(2, den - 3);
+  const pAB = randInt(1, Math.min(pA, pB) - 1);
+  const a   = r6((pA + pB - pAB) / den);
+  return {
+    q: `Dans une expérience, P(A) = ${pA}/${den}, P(B) = ${pB}/${den} et P(A∩B) = ${pAB}/${den}. Calculez P(A∪B).`,
+    a,
+    hint: `P(A∪B) = P(A) + P(B) − P(A∩B) = (${pA} + ${pB} − ${pAB})/${den}`,
+    type: 'union',
+  };
+}
+
+function makeConditionnelle() {
+  const den  = randInt(10, 20);
+  const pAB  = randInt(2, Math.floor(den / 3));
+  const pB   = randInt(pAB + 1, Math.floor(den * 2 / 3));
+  const a    = r6(pAB / pB);
+  return {
+    q: `On sait que P(A∩B) = ${pAB}/${den} et P(B) = ${pB}/${den}. Calculez la probabilité conditionnelle P(A|B).`,
+    a,
+    hint: `P(A|B) = P(A∩B) / P(B) = (${pAB}/${den}) ÷ (${pB}/${den}) = ${pAB}/${pB}`,
+    type: 'conditionnelle',
+  };
+}
+
+function makeBinomiale() {
+  const n = randInt(4, 10);
+  const pNum = pick([1, 1, 2, 3]);
+  const pDen = pick([2, 3, 4, 5, 6]);
+  const p = pNum / pDen;
+  const k = randInt(0, Math.min(n, 4));
+  const a = r6(C(n, k) * Math.pow(p, k) * Math.pow(1 - p, n - k));
+  return {
+    q: `X suit une loi binomiale B(${n} ; ${pNum}/${pDen}). Calculez P(X = ${k}).`,
+    a,
+    hint: `P(X=${k}) = C(${n},${k}) × (${pNum}/${pDen})^${k} × (${pDen - pNum}/${pDen})^${n - k}`,
+    type: 'binomiale',
+  };
+}
+
+function makeBinomialeCumul() {
+  const n = randInt(5, 8);
+  const pNum = pick([1, 1, 2]);
+  const pDen = pick([3, 4, 5]);
+  const p = pNum / pDen;
+  const kMax = randInt(1, Math.min(n - 1, 3));
+  let a = 0;
+  for (let k = 0; k <= kMax; k++) {
+    a += C(n, k) * Math.pow(p, k) * Math.pow(1 - p, n - k);
+  }
+  a = r6(a);
+  return {
+    q: `X suit B(${n} ; ${pNum}/${pDen}). Calculez P(X ≤ ${kMax}) en arrondissant à 10⁻⁴.`,
+    a,
+    hint: `Somme P(X=k) pour k de 0 à ${kMax}, avec C(n,k) × p^k × (1−p)^(n−k)`,
+    type: 'binomiale',
+  };
+}
+
+export const QUESTION_GENERATORS = [
+  makeUrne,
+  makeUrne2,
+  makeComplement,
+  makeUnion,
+  makeConditionnelle,
+  makeBinomiale,
+  makeBinomialeCumul,
+];
+
+export function generateQuestion() {
+  return pick(QUESTION_GENERATORS)();
+}

@@ -1,0 +1,414 @@
+/* ══════════════════════════════════════════════════════════════════
+   style-vegas.css — Composants partagés thème Las Vegas Scolaris
+   Import dans chaque game.html : <link rel="stylesheet" href="../style-vegas.css">
+   ══════════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;600&display=swap');
+
+/* ── Variables ─────────────────────────────────────────────────── */
+
+:root {
+  --gold:        #f5a623;
+  --gold-dark:   #b8760a;
+  --gold-bright: #ffd370;
+  --gold-glow:   rgba(245, 166, 35, 0.55);
+
+  --felt:        #1a5c3a;
+  --felt-dark:   #103826;
+  --felt-light:  #22754a;
+
+  --cream:       #fdf8ec;
+  --cream-dim:   rgba(253, 248, 236, 0.72);
+
+  --red:         #c0392b;
+  --green-win:   #27ae60;
+
+  --card-bg:     rgba(12, 40, 22, 0.88);
+  --card-border: rgba(245, 166, 35, 0.55);
+
+  --font-title:  'Cinzel', serif;
+  --font-body:   'Inter', sans-serif;
+  --font-serif:  'Playfair Display', serif;
+}
+
+/* ── Reset minimal ─────────────────────────────────────────────── */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(34, 117, 74, 0.35) 0%, transparent 55%),
+    radial-gradient(ellipse at 70% 80%, rgba(16, 56, 38, 0.40) 0%, transparent 55%),
+    var(--felt-dark);
+  color: var(--cream);
+  font-family: var(--font-body);
+  overflow-x: hidden;
+}
+
+/* Texture feutre subtile */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(0, 0, 0, 0.04) 3px,
+      rgba(0, 0, 0, 0.04) 4px
+    );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Top bar ───────────────────────────────────────────────────── */
+
+.top-bar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 1.2rem;
+  background: rgba(10, 30, 18, 0.92);
+  border-bottom: 1px solid var(--card-border);
+  backdrop-filter: blur(8px);
+  gap: 1rem;
+}
+
+.top-bar-title {
+  font-family: var(--font-title);
+  font-size: 1.05rem;
+  color: var(--gold);
+  letter-spacing: 0.08em;
+  text-align: center;
+  flex: 1;
+}
+
+/* ── Bouton retour ─────────────────────────────────────────────── */
+
+.btn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.9rem;
+  background: transparent;
+  border: 1px solid var(--gold-dark);
+  border-radius: 999px;
+  color: var(--gold);
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.2s, border-color 0.2s;
+  white-space: nowrap;
+}
+
+.btn-back:hover {
+  background: rgba(245, 166, 35, 0.12);
+  border-color: var(--gold);
+}
+
+/* ── Badge solde ───────────────────────────────────────────────── */
+
+.balance-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.8rem;
+  background: rgba(245, 166, 35, 0.12);
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+  font-family: var(--font-title);
+  font-size: 0.9rem;
+  color: var(--gold-bright);
+  white-space: nowrap;
+  transition: color 0.3s, background 0.3s;
+}
+
+.balance-badge.gain {
+  color: var(--green-win);
+  background: rgba(39, 174, 96, 0.18);
+  border-color: rgba(39, 174, 96, 0.5);
+}
+
+.balance-badge.lose {
+  color: var(--red);
+  background: rgba(192, 57, 43, 0.18);
+  border-color: rgba(192, 57, 43, 0.5);
+}
+
+/* ── Vegas frame + ampoules ────────────────────────────────────── */
+
+.vegas-frame {
+  position: relative;
+  border: 2px solid var(--gold);
+  border-radius: 24px;
+  background: var(--card-bg);
+  box-shadow:
+    0 0 24px var(--gold-glow),
+    inset 0 0 32px rgba(0, 0, 0, 0.4);
+  padding: 1.5rem;
+}
+
+.bulbs-container {
+  position: absolute;
+  inset: -14px;
+  border-radius: 28px;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.bulb {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--gold-bright);
+  box-shadow: 0 0 6px 2px var(--gold-glow);
+  /* Positionnement circulaire calculé par JS via --i / --total */
+  --angle: calc(var(--i) / var(--total) * 360deg);
+  --r: 50%;
+  left: calc(50% + cos(var(--angle)) * var(--r) - 5px);
+  top:  calc(50% + sin(var(--angle)) * var(--r) - 5px);
+  transition: opacity 0.2s, box-shadow 0.2s;
+}
+
+.bulb.off {
+  background: rgba(245, 166, 35, 0.2);
+  box-shadow: none;
+}
+
+/* Jackpot : clignotement rapide de tout le cadre */
+@keyframes jackpot-pulse {
+  0%, 100% { box-shadow: 0 0 24px var(--gold-glow), inset 0 0 32px rgba(0,0,0,0.4); }
+  50%       { box-shadow: 0 0 60px var(--gold), 0 0 120px rgba(255,211,112,0.4), inset 0 0 32px rgba(0,0,0,0.4); }
+}
+
+.vegas-frame.jackpot {
+  animation: jackpot-pulse 0.3s ease-in-out infinite;
+}
+
+/* ── Question card ─────────────────────────────────────────────── */
+
+.question-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  padding: 1.25rem 1.5rem;
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: var(--cream);
+}
+
+.question-card .cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1.1em;
+  background: var(--gold);
+  vertical-align: middle;
+  margin-left: 2px;
+}
+
+.question-card .cursor.typing {
+  animation: blink 0.6s step-end infinite;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+/* ── Feedback ──────────────────────────────────────────────────── */
+
+.feedback {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 0.6rem 1rem;
+  border-radius: 10px;
+  margin-top: 0.5rem;
+}
+
+.feedback.correct {
+  background: rgba(39, 174, 96, 0.18);
+  border: 1px solid rgba(39, 174, 96, 0.5);
+  color: var(--green-win);
+}
+
+.feedback.wrong {
+  background: rgba(192, 57, 43, 0.18);
+  border: 1px solid rgba(192, 57, 43, 0.5);
+  color: var(--red);
+}
+
+/* ── Odds chips ────────────────────────────────────────────────── */
+
+.odds-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: var(--font-body);
+  letter-spacing: 0.04em;
+}
+
+.odds-chip.good {
+  background: rgba(39, 174, 96, 0.2);
+  border: 1px solid rgba(39, 174, 96, 0.5);
+  color: var(--green-win);
+}
+
+.odds-chip.bad {
+  background: rgba(192, 57, 43, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.5);
+  color: var(--red);
+}
+
+.odds-chip.info {
+  background: rgba(245, 166, 35, 0.15);
+  border: 1px solid var(--card-border);
+  color: var(--gold);
+}
+
+/* ── Bouton play ───────────────────────────────────────────────── */
+
+.btn-play {
+  display: block;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  background: linear-gradient(135deg, var(--gold-dark), var(--gold), var(--gold-dark));
+  background-size: 200% 100%;
+  border: none;
+  border-radius: 12px;
+  color: #1a0f00;
+  font-family: var(--font-title);
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: background-position 0.4s, transform 0.15s, box-shadow 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-play::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.25) 50%, transparent 100%);
+  transform: translateX(-100%);
+  transition: transform 0.5s;
+}
+
+.btn-play:hover {
+  background-position: 100% 0;
+  box-shadow: 0 4px 20px var(--gold-glow);
+  transform: translateY(-1px);
+}
+
+.btn-play:hover::after {
+  transform: translateX(100%);
+}
+
+.btn-play:active {
+  transform: translateY(0);
+}
+
+.btn-play:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ── Result overlay ────────────────────────────────────────────── */
+
+.result-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 26, 18, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 1rem;
+}
+
+.result-card {
+  background: var(--card-bg);
+  border-radius: 24px;
+  padding: 2.5rem 2rem;
+  text-align: center;
+  max-width: 380px;
+  width: 100%;
+  box-shadow: 0 8px 48px rgba(0, 0, 0, 0.6);
+}
+
+.result-card.win {
+  border: 2px solid var(--gold);
+  box-shadow: 0 0 40px var(--gold-glow), 0 8px 48px rgba(0, 0, 0, 0.6);
+}
+
+.result-card.lose {
+  border: 2px solid rgba(192, 57, 43, 0.6);
+}
+
+.result-card .result-title {
+  font-family: var(--font-title);
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
+}
+
+.result-card.win  .result-title { color: var(--gold-bright); }
+.result-card.lose .result-title { color: var(--red); }
+
+.result-card .result-amount {
+  font-family: var(--font-serif);
+  font-size: 1.1rem;
+  color: var(--cream-dim);
+  margin-bottom: 1.5rem;
+}
+
+/* ── Terminal / logs ───────────────────────────────────────────── */
+
+.terminal-card {
+  background: rgba(6, 20, 12, 0.9);
+  border: 1px solid rgba(245, 166, 35, 0.25);
+  border-radius: 12px;
+  padding: 1rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.82rem;
+}
+
+.logs {
+  max-height: 160px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gold-dark) transparent;
+}
+
+.log-line {
+  color: rgba(253, 248, 236, 0.65);
+  line-height: 1.4;
+}
+
+.log-line:last-child {
+  color: var(--gold);
+}
+
+/* ── Perspective 3D base ───────────────────────────────────────── */
+
+.perspective-wrap {
+  perspective: 600px;
+}

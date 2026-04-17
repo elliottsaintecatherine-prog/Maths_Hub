@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The House of Chance</title>
+  <link rel="stylesheet" href="style-vegas.css">
+  <style>
+    .hub-wrap {
+      max-width: 860px;
+      margin: 3rem auto;
+      padding: 0 1.2rem 3rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hub-subtitle {
+      text-align: center;
+      font-family: var(--font-serif);
+      font-style: italic;
+      color: var(--cream-dim);
+      font-size: 0.92rem;
+      margin-bottom: 2.2rem;
+      letter-spacing: 0.04em;
+    }
+
+    .games-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.4rem;
+    }
+
+    @media (max-width: 600px) {
+      .games-grid { grid-template-columns: 1fr; }
+    }
+
+    .game-tile {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 2rem 1.2rem 1.6rem;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      text-decoration: none;
+      color: var(--cream);
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
+      cursor: pointer;
+    }
+
+    .game-tile:hover {
+      transform: translateY(-8px) rotateX(3deg);
+      box-shadow: 0 12px 40px var(--gold-glow), 0 0 0 1px var(--gold);
+      border-color: var(--gold);
+    }
+
+    .tile-icon {
+      font-size: 3.8rem;
+      line-height: 1;
+      filter: drop-shadow(0 0 12px rgba(245, 166, 35, 0.5));
+    }
+
+    .tile-title {
+      font-family: var(--font-title);
+      font-size: 1.05rem;
+      color: var(--gold);
+      letter-spacing: 0.06em;
+      text-align: center;
+    }
+
+    .tile-sub {
+      font-size: 0.75rem;
+      color: var(--cream-dim);
+      font-family: var(--font-body);
+      text-align: center;
+      letter-spacing: 0.05em;
+    }
+
+    .tile-badge {
+      position: absolute;
+      top: 0.7rem;
+      right: 0.7rem;
+      padding: 0.18rem 0.55rem;
+      border-radius: 999px;
+      font-size: 0.62rem;
+      font-weight: 700;
+      font-family: var(--font-body);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: rgba(245, 166, 35, 0.18);
+      border: 1px solid var(--card-border);
+      color: var(--gold-bright);
+    }
+
+    .tile-felt {
+      position: absolute;
+      inset: 0;
+      border-radius: 20px;
+      background: radial-gradient(ellipse at 50% 110%, rgba(26, 92, 58, 0.45) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hub-frame-inner {
+      padding: 2rem 1.8rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="top-bar">
+    <a href="../index.html" class="btn-back">← Maths Hub</a>
+    <span class="top-bar-title">THE HOUSE OF CHANCE</span>
+    <span class="balance-badge" id="balance">🪙 <span id="bal-val">—</span></span>
+  </header>
+
+  <div class="hub-wrap">
+    <div class="vegas-frame">
+      <div class="bulbs-container" id="bulbs"></div>
+      <div class="hub-frame-inner">
+        <p class="hub-subtitle">Maîtrise les probabilités — et que la chance soit avec toi.</p>
+        <div class="games-grid" id="games-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { getBalance, buildBulbs } from './shared.js';
+
+    /* ── Config jeux ── */
+    const GAMES = [
+      { icon: '🎰', title: 'Machine à Sous', href: 'machines-a-sous/index.html', badge: 'BÊTA' },
+      { icon: '🃏', title: 'Blackjack',       href: 'blackjack/index.html',      badge: null  },
+      { icon: '🎡', title: 'Roulette',         href: 'roulette/index.html',       badge: 'NOUVEAU' },
+    ];
+
+    /* ── Build tiles ── */
+    const grid = document.getElementById('games-grid');
+    GAMES.forEach(({ icon, title, href, badge }) => {
+      const a = document.createElement('a');
+      a.className = 'game-tile perspective-wrap';
+      a.href = href;
+      a.innerHTML = `
+        <div class="tile-felt"></div>
+        ${badge ? `<span class="tile-badge">${badge}</span>` : ''}
+        <span class="tile-icon">${icon}</span>
+        <span class="tile-title">${title}</span>
+        <span class="tile-sub">Probabilités · Terminale</span>
+      `;
+      grid.appendChild(a);
+    });
+
+    /* ── Ampoules ── */
+    buildBulbs(document.getElementById('bulbs'), document.querySelector('.vegas-frame'));
+
+    /* ── Solde ── */
+    const balEl = document.getElementById('bal-val');
+    const badgeEl = document.getElementById('balance');
+
+    function refreshBalance() {
+      const b = getBalance();
+      balEl.textContent = `${b} €`;
+    }
+
+    refreshBalance();
+    window.addEventListener('scolaris-balance', refreshBalance);
+  </script>
+
+</body>
+</html>

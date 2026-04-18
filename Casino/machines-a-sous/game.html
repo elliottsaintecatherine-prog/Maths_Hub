@@ -199,6 +199,17 @@
     .machine-status.ok   { color: #4ade80; }
     .machine-status.fail { color: #f87171; }
 
+    /* ── Bonus accumulé ── */
+    .bonus-display {
+      text-align: center; font-family: var(--font-title);
+      font-size: 12px; letter-spacing: 2px;
+      color: rgba(245,166,35,0.30); transition: color 0.4s, text-shadow 0.4s;
+    }
+    .bonus-display.active {
+      color: var(--gold);
+      text-shadow: 0 0 10px var(--gold-glow);
+    }
+
     /* ── Odds ── */
     .odds-zone {
       display: flex; justify-content: center; gap: 10px;
@@ -325,6 +336,7 @@
           </div>
 
           <div class="machine-status" id="status">En attente d'une mise…</div>
+          <div class="bonus-display" id="bonus-display">✦ Bonus ×1.00</div>
 
           <div class="odds-zone">
             <span class="odds-chip" id="odds-chance"></span>
@@ -362,7 +374,7 @@
     import {
       getBalance, updateBalance,
       parseAnswer, typeQuestion, addLog, buildBulbs,
-      generateQuestion, r6,
+      generateDynamicQuestion, generateGaussianBonusMultiplier, getCasinoLevel, r6,
       TRAIN_MODE, setTrainMode, loadTrainMode,
       SessionStats, recordAnswer, getStats,
       formatFeedback, animateBalance, triggerStreak,
@@ -386,12 +398,14 @@
     root.style.setProperty('--felt',        pal.felt);
     root.style.setProperty('--card-border', pal.glow);
     document.getElementById('casino-name').textContent = pal.name.toUpperCase();
+    const difficulty = getCasinoLevel(mode);
 
     /* ── Refs & état ── */
     const $ = id => document.getElementById(id);
     const START = Date.now();
     const logsEl = $('game-logs');
     let currentQ = null;
+    let bonusMultipliers = [];
 
     /* ── Reels ── */
     const SYMBOLS = ['🍒','🍋','🍇','🔔','⭐','💎','7️⃣','🎱'];
@@ -461,6 +475,17 @@
       bar.classList.toggle('streak-hi', streak >= 3);
     }
 
+    /* ── Bonus accumulé ── */
+    function getBonusAccumulé() {
+      return 1 + bonusMultipliers.reduce((a, b) => a + b, 0);
+    }
+    function updateBonusUI() {
+      const acc = getBonusAccumulé();
+      const el = $('bonus-display');
+      el.textContent = `✦ Bonus ×${acc.toFixed(2)}`;
+      el.className = 'bonus-display' + (acc > 1 ? ' active' : '');
+    }
+
     /* ── Train mode ── */
     function applyTrainUI() {
       $('train-toggle').classList.toggle('active', TRAIN_MODE.active);
@@ -511,7 +536,7 @@
 
     /* ── Nouvelle question ── */
     function newQuestion() {
-      currentQ = generateQuestion();
+      currentQ = generateDynamicQuestion(difficulty);
       typeQuestion($('typewriter-target'), null, currentQ.q);
       $('answer-input').value = '';
       $('feedback').className = 'feedback'; $('feedback').innerHTML = '';
@@ -538,23 +563,24 @@
 
       if (!skipped) { recordAnswer(isCorrect); updateStatsBar(); }
 
-      let winChance, payoutMult, modeMsg;
+      if (isCorrect) {
+        const M = generateGaussianBonusMultiplier(bonusMultipliers.length, difficulty);
+        bonusMultipliers.push(M);
+        updateBonusUI();
+      }
+      const bonusAccumulé = getBonusAccumulé();
+
+      let winChance, modeMsg;
 
       if (!isCorrect) {
-        winChance = 0.125; payoutMult = 2;
-        modeMsg = skipped ? 'Sans réponse — malus actif' : 'Mauvais calcul — la maison triche';
+        winChance = 0.125;
+        modeMsg = skipped ? 'Sans réponse — bonus ×1.00' : 'Mauvais calcul — odds réduits';
         $('status').className   = 'machine-status fail';
         $('status').textContent = skipped ? 'SANS RÉPONSE — ODDS RÉDUITS' : 'MAUVAIS CALCUL — LA MAISON TRICHE';
         showCroupierMsg('faux');
       } else {
-        if (Math.random() < 0.5) {
-          winChance = 0.5; payoutMult = 2;
-          modeMsg = 'Mode Équitable · 50% · ×2';
-        } else {
-          winChance  = Math.max(0.05, currentQ.a);
-          payoutMult = Math.max(2, Math.round(1 / winChance));
-          modeMsg = `Mode Jackpot · ${(winChance*100).toFixed(1)}% · ×${payoutMult}`;
-        }
+        winChance = 0.5;
+        modeMsg = `Calcul exact · 50% · bonus ×${bonusAccumulé.toFixed(2)}`;
         $('status').className   = 'machine-status ok';
         $('status').textContent = 'CALCUL EXACT — BONNE CHANCE !';
         showCroupierMsg('correct');
@@ -569,17 +595,18 @@
         return;
       }
 
-      displayOdds(winChance, payoutMult);
+      const finalMult = parseFloat((3.5 * bonusAccumulé).toFixed(2));
+      displayOdds(winChance, finalMult);
       addLog(logsEl, START, `Mise : ${bet} 🪙 — ${modeMsg}`);
 
       await spinReels();
 
       const won  = Math.random() < winChance;
-      const gain = bet * payoutMult;
+      const gain = Math.round(bet * 3.5 * bonusAccumulé);
 
       if (won) {
         updateBalance(gain); updateBankUI(gain);
-        addLog(logsEl, START, `VICTOIRE ! +${gain} 🪙 (${(winChance*100).toFixed(1)}%)`);
+        addLog(logsEl, START, `VICTOIRE ! +${gain} 🪙 (bonus ×${bonusAccumulé.toFixed(2)})`);
         triggerJackpot();
         showCroupierMsg('jackpot');
       } else {

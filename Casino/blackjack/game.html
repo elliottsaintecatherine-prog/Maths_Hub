@@ -133,6 +133,19 @@
       cursor: pointer; transition: opacity 0.2s;
     }
     #confirm-btn:hover { opacity: 0.85; }
+    #skip-btn {
+      padding: 0 14px; border-radius: 10px; border: 1px solid rgba(253,248,236,0.25);
+      background: transparent; color: var(--cream-dim);
+      font-family: var(--font-title); font-size: 0.85rem; font-weight: 700;
+      cursor: pointer; transition: opacity 0.2s;
+    }
+    #skip-btn:hover { opacity: 0.7; }
+    #mult-display {
+      margin-top: 8px; padding: 6px 12px; text-align: center; border-radius: 8px;
+      background: rgba(245,166,35,0.08); border: 1px solid rgba(245,166,35,0.25);
+      font-family: var(--font-title); font-size: 11px; letter-spacing: 2px;
+      color: var(--gold); text-shadow: 0 0 10px var(--gold-glow);
+    }
 
     /* ── Result overlay ── */
     .result-overlay { opacity: 0; pointer-events: none; transition: opacity 0.3s; }
@@ -210,7 +223,7 @@
           <!-- Question zone -->
           <div id="q-zone" hidden>
             <div class="q-header">
-              <span class="q-card-label">✦ Réponds pour recevoir ta carte ✦</span>
+              <span class="q-card-label" id="q-card-label">✦ Réponds pour un bonus — optionnel ✦</span>
               <span id="timer"></span>
             </div>
             <div class="question-card" style="padding:1rem 1.2rem">
@@ -219,9 +232,13 @@
             <div class="feedback" id="q-fb"></div>
             <div class="ans-row">
               <input type="text" id="ans-in" placeholder="Ex : 0.25  ou  1/4  ou  25%" autocomplete="off">
+              <button id="skip-btn">Passer</button>
               <button id="confirm-btn">OK</button>
             </div>
           </div>
+
+          <!-- Multiplicateur accumulé -->
+          <div id="mult-display" hidden>✦ Multiplicateur bonus accumulé : ×<span id="mult-val">0</span></div>
 
           <!-- Hit / Stand -->
           <div class="actions-row">
@@ -254,10 +271,11 @@
 
   <script type="module">
     import {
-      getBalance, updateBalance, parseAnswer, typeQuestion, addLog, buildBulbs, generateQuestion,
+      getBalance, updateBalance, parseAnswer, typeQuestion, addLog, buildBulbs,
       TRAIN_MODE, setTrainMode, loadTrainMode,
       SessionStats, recordAnswer, getStats,
       formatFeedback, animateBalance, triggerStreak,
+      generateDynamicQuestion, generateGaussianBonusMultiplier, getCasinoLevel,
     } from '../shared.js';
 
     // ── Variant ──
@@ -268,6 +286,10 @@
     const DEAL_MS = FAST ? 300 : 700;
     const TITLES  = { classique:'BLACKJACK CLASSIQUE', fast:'BLACKJACK EXPRESS', highroller:'HIGH ROLLER' };
     $('game-title').textContent = TITLES[V] || 'BLACKJACK';
+
+    // ── Casino level ──
+    const casinoId   = new URLSearchParams(location.search).get('mode') || 'luxor';
+    const difficulty = getCasinoLevel(casinoId);
 
     // ── Deck ──
     const SUITS = ['♠','♥','♦','♣'];
@@ -285,8 +307,21 @@
 
     // ── State ──
     let deck=[], player=[], dealer=[], bet=0, phase='bet', pending=null, q=null;
+    let bonusMultipliers=[], bonusIndex=0, qContext=null;
     function $(id) { return document.getElementById(id); }
     const T = Date.now();
+
+    // ── Bonus helpers ──
+    function getMTotal() {
+      if (!bonusMultipliers.length) return 0;
+      return Math.round(bonusMultipliers.reduce((s,m) => s+m, 0) * 100) / 100;
+    }
+    function updateMultDisplay() {
+      const total = getMTotal();
+      const el = $('mult-display');
+      if (total > 0) { $('mult-val').textContent = total; el.hidden = false; }
+      else { el.hidden = true; }
+    }
 
     // ── Card DOM ──
     function mkCard(card, down=false) {
@@ -322,23 +357,76 @@
     function stopTimer() { clearInterval(timerIv); $('timer').style.display='none'; }
 
     // ── Question ──
-    async function showQ() {
-      q = generateQuestion();
+    async function showQ(context = 'hit') {
+      qContext = context;
+      q = generateDynamicQuestion(difficulty);
+      const labels = {
+        start: '✦ Bonus avant de jouer — optionnel ✦',
+        hit:   '✦ Réponds pour un bonus — optionnel ✦',
+        stand: '✦ Bonus avant de passer — optionnel ✦',
+      };
+      $('q-card-label').textContent = labels[context] || labels.hit;
       $('q-zone').hidden = false; $('ans-in').value=''; $('q-fb').className='feedback';
       startTimer();
       if (FAST) $('q-text').textContent = q.q;
       else await typeQuestion($('q-text'), null, q.q);
     }
 
+    // ── Continue après question (répondue ou passée) ──
+    async function continueAfterQ(ok, wasSkipped = false) {
+      const ctx = qContext;
+      qContext = null;
+
+      if (ctx === 'start') {
+        $('hit-btn').disabled = $('stand-btn').disabled = false;
+
+      } else if (ctx === 'hit') {
+        let card = pending;
+        pending = null;
+
+        if (!ok && !wasSkipped && Math.random() < 0.5) {
+          const need = 22 - hv(player);
+          const busters = deck.filter(c => rv(c.r) >= need);
+          if (busters.length) {
+            deck.unshift(card);
+            const i = deck.findIndex(c => rv(c.r) >= need);
+            card = deck.splice(i, 1)[0];
+            addLog($('logs'),T,'⚠ Pénalité — carte qui bust piochée !');
+          }
+        }
+
+        player.push(card); phase='play'; renderHands(); animLast('player-zone');
+        const pv = hv(player);
+        if (pv > 21) {
+          addLog($('logs'),T,`Bust ! Total : ${pv}`);
+          await new Promise(r=>setTimeout(r, FAST?150:400));
+          endRound('bust'); return;
+        }
+        if (pv === 21) { endRound('stand'); return; }
+        $('hit-btn').disabled = $('stand-btn').disabled = false;
+
+      } else if (ctx === 'stand') {
+        phase='dealer'; renderHands();
+        while (hv(dealer) < 17) {
+          await new Promise(r=>setTimeout(r, DEAL_MS));
+          dealer.push(deck.pop()); renderHands(); animLast('dealer-zone');
+        }
+        await new Promise(r=>setTimeout(r, DEAL_MS/2));
+        endRound('stand');
+      }
+    }
+
     // ── Start round ──
     function startRound() {
       deck=mkDeck(); player=[deck.pop(),deck.pop()]; dealer=[deck.pop(),deck.pop()];
+      bonusMultipliers=[]; bonusIndex=0; updateMultDisplay();
       phase='play'; renderHands();
       $('q-zone').hidden=true;
-      $('hit-btn').disabled=$('stand-btn').disabled=false;
+      $('hit-btn').disabled=$('stand-btn').disabled=true;
       $('bet-sec').hidden=true; $('game-sec').hidden=false;
       addLog($('logs'),T,`Partie — mise ${bet} 🪙`);
-      if (hv(player)===21) { phase='done'; setTimeout(()=>endRound('bj'), DEAL_MS); }
+      if (hv(player)===21) { phase='done'; setTimeout(()=>endRound('bj'), DEAL_MS); return; }
+      showQ('start');
     }
 
     // ── HIT ──
@@ -346,11 +434,27 @@
       if (phase!=='play') return;
       phase='question'; $('hit-btn').disabled=$('stand-btn').disabled=true;
       pending = deck.pop();
-      await showQ();
+      await showQ('hit');
+    }
+
+    // ── STAND ──
+    async function doStand() {
+      if (phase!=='play') return;
+      phase='question'; $('hit-btn').disabled=$('stand-btn').disabled=true;
+      await showQ('stand');
+    }
+
+    // ── Passer ──
+    async function skipQ() {
+      stopTimer();
+      $('q-zone').hidden = true;
+      $('q-fb').className = 'feedback';
+      await continueAfterQ(false, true);
     }
 
     // ── Submit answer ──
     async function submit() {
+      if (!q) return;
       const ua = parseAnswer($('ans-in').value);
       const ok = !isNaN(ua) && Math.abs(ua - q.a) < 0.015;
       const fb = $('q-fb');
@@ -361,42 +465,16 @@
       if (ok) triggerStreak(SessionStats.streak);
       stopTimer();
 
-      let card = pending;
-      if (!ok && Math.random() < 0.5) {
-        const need = 22 - hv(player);
-        const busters = deck.filter(c => rv(c.r) >= need);
-        if (busters.length) {
-          deck.unshift(pending);
-          const i = deck.findIndex(c => rv(c.r) >= need);
-          card = deck.splice(i, 1)[0];
-          addLog($('logs'),T,'⚠ Pénalité — carte qui bust piochée !');
-        }
+      if (ok) {
+        const m = generateGaussianBonusMultiplier(bonusIndex++, difficulty);
+        bonusMultipliers.push(m);
+        updateMultDisplay();
+        addLog($('logs'),T,`✦ Bonus ×${m} ajouté — total : ×${getMTotal()}`);
       }
 
       await new Promise(r=>setTimeout(r, FAST ? 200 : 800));
       $('q-zone').hidden = true;
-      player.push(card); phase='play'; renderHands(); animLast('player-zone');
-
-      const pv = hv(player);
-      if (pv > 21) {
-        addLog($('logs'),T,`Bust ! Total : ${pv}`);
-        await new Promise(r=>setTimeout(r, FAST?150:400));
-        endRound('bust'); return;
-      }
-      if (pv === 21) { endRound('stand'); return; }
-      $('hit-btn').disabled=$('stand-btn').disabled=false;
-    }
-
-    // ── STAND — dealer plays ──
-    async function doStand() {
-      phase='dealer'; $('hit-btn').disabled=$('stand-btn').disabled=true;
-      renderHands();
-      while (hv(dealer) < 17) {
-        await new Promise(r=>setTimeout(r, DEAL_MS));
-        dealer.push(deck.pop()); renderHands(); animLast('dealer-zone');
-      }
-      await new Promise(r=>setTimeout(r, DEAL_MS/2));
-      endRound('stand');
+      await continueAfterQ(ok, false);
     }
 
     // ── End round ──
@@ -405,17 +483,19 @@
       const pv=hv(player), dv=hv(dealer);
       let won, msg;
       if      (reason==='bust')  { won=false; msg='Bust — la maison gagne.'; }
-      else if (reason==='bj')    { won=true;  msg=`Blackjack naturel ! ×${HR?4:2}`; }
+      else if (reason==='bj')    { won=true;  msg='Blackjack naturel !'; }
       else if (dv > 21)          { won=true;  msg='Croupier bust — vous gagnez !'; }
       else if (pv > dv)          { won=true;  msg=`${pv} > ${dv} — victoire !`; }
       else if (pv === dv)        { won=null;  msg=`Égalité (${pv}).`; }
       else                       { won=false; msg=`${dv} > ${pv} — défaite.`; }
 
-      const mult  = reason==='bj' ? (HR?4:2) : 2;
-      const delta = won ? bet*(mult-1) : won===null ? 0 : -bet;
+      const mTotal = getMTotal();
+      const factor = mTotal > 0 ? mTotal : 1;
+      const delta  = won ? Math.round(bet * 3.5 * factor) : won===null ? 0 : -bet;
+
       if (!TRAIN_MODE.active) { updateBalance(delta); bankUI(delta); }
       if (won) showCroupierMsg(reason === 'bj' ? 'jackpot' : 'correct');
-      addLog($('logs'),T, msg + (won ? ` +${Math.abs(delta)} 🪙` : won===null ? '' : ` −${bet} 🪙`));
+      addLog($('logs'),T, msg + (won ? ` +${Math.abs(delta)} 🪙` + (mTotal > 0 ? ` (×${factor})` : '') : won===null ? '' : ` −${bet} 🪙`));
 
       $('result-card').className = 'result-card ' + (won?'win':won===null?'push':'lose');
       $('r-icon').textContent    = won?'🏆':won===null?'🤝':'💀';
@@ -423,7 +503,7 @@
       $('r-amount').textContent  = won ? `+${Math.abs(delta).toLocaleString('fr-FR')} 🪙`
                                  : won===null ? 'Mise remboursée'
                                  : `−${bet.toLocaleString('fr-FR')} 🪙`;
-      $('r-msg').textContent = msg;
+      $('r-msg').textContent = msg + (mTotal > 0 && won ? ` | ×${factor} bonus` : '');
       $('result-ov').classList.add('show');
       setTimeout(()=>$('result-ov').classList.remove('show'), 2500);
       setTimeout(()=>{
@@ -499,6 +579,7 @@
     $('hit-btn').addEventListener('click', doHit);
     $('stand-btn').addEventListener('click', doStand);
     $('confirm-btn').addEventListener('click', submit);
+    $('skip-btn').addEventListener('click', skipQ);
     $('ans-in').addEventListener('keydown', e=>{ if(e.key==='Enter') submit(); });
     $('bet-minus').addEventListener('click', ()=>{
       $('bet-in').value = Math.max(MIN_BET, (+$('bet-in').value||MIN_BET) - 25);

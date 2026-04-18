@@ -399,3 +399,89 @@ export const ROULETTE_QUESTION_GENERATORS = [
 export function generateRouletteQuestion() {
   return pick(ROULETTE_QUESTION_GENERATORS)();
 }
+
+/* ── Classification des casinos ──────────────────────────────────── */
+
+export const CASINO_LEVELS = {
+  luxor:    { difficulty: 'facile',    label: 'Luxor',           multiplierRange: [2, 4] },
+  mgm:      { difficulty: 'moyen',     label: 'MGM Grand',       multiplierRange: [4, 6] },
+  caesar:   { difficulty: 'moyen',     label: "Caesar's Palace", multiplierRange: [4, 6] },
+  bellagio: { difficulty: 'difficile', label: 'Bellagio',        multiplierRange: [6, 8] },
+};
+
+export function getCasinoLevel(casinoId) {
+  return (CASINO_LEVELS[casinoId] || CASINO_LEVELS.luxor).difficulty;
+}
+
+/* ── Questions dynamiques par difficulté ─────────────────────────── */
+
+function makeBinomialeDifficile() {
+  const n    = randInt(8, 15);
+  const pNum = pick([1, 2, 3]);
+  const pDen = pick([5, 6, 7, 8]);
+  const p    = pNum / pDen;
+  const kMax = randInt(2, Math.min(n - 1, 5));
+  let a = 0;
+  for (let k = 0; k <= kMax; k++) {
+    a += C(n, k) * Math.pow(p, k) * Math.pow(1 - p, n - k);
+  }
+  a = r6(a);
+  return {
+    q:    `X suit B(${n} ; ${pNum}/${pDen}). Calculez P(X ≤ ${kMax}) en arrondissant à 10⁻⁴.`,
+    a,
+    hint: `∑ C(${n},k)×(${pNum}/${pDen})^k×(${pDen - pNum}/${pDen})^(${n}−k) pour k=0 à ${kMax}`,
+    type: 'binomiale',
+  };
+}
+
+function makeConditionnelleDifficile() {
+  const den = randInt(15, 30);
+  const pAB = randInt(3, Math.floor(den / 4));
+  const pB  = randInt(pAB + 2, Math.floor(den * 3 / 5));
+  const pA  = randInt(pAB + 1, Math.floor(den * 3 / 5));
+  const a   = r6(pAB / pB);
+  return {
+    q:    `P(A) = ${pA}/${den}, P(B) = ${pB}/${den}, P(A∩B) = ${pAB}/${den}. Calculez P(A|B), puis déterminez si A et B sont indépendants (donnez P(A|B)).`,
+    a,
+    hint: `P(A|B) = P(A∩B)/P(B) = ${pAB}/${pB}. Indépendance : P(A|B) = P(A) ?`,
+    type: 'conditionnelle',
+  };
+}
+
+const GENERATORS_BY_DIFFICULTY = {
+  facile:    [makeUrne, makeUrne2, makeComplement],
+  moyen:     [makeUnion, makeConditionnelle, makeBinomiale],
+  difficile: [makeBinomialeDifficile, makeConditionnelleDifficile, makeBinomialeCumul],
+};
+
+export function generateDynamicQuestion(difficulty = 'moyen') {
+  const pool = GENERATORS_BY_DIFFICULTY[difficulty] || GENERATORS_BY_DIFFICULTY.moyen;
+  const q    = pick(pool)();
+  return { ...q, difficulty };
+}
+
+/* ── Multiplicateurs gaussiens (Box-Muller) ──────────────────────── */
+
+function boxMuller() {
+  let u;
+  do { u = Math.random(); } while (u === 0);
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * Math.random());
+}
+
+// Paramètres σ par difficulté (mu varie selon le contexte)
+const GAUSS_SIGMA = { facile: 0.30, moyen: 0.30, difficile: 0.60 };
+
+// Progression Blackjack (0-indexé) : bonusIndex 0→2.5, 1→3.5, 2+→4.5
+const BJ_PROGRESSION = [
+  { mu: 2.5, min: 2, max: 3 },
+  { mu: 3.5, min: 3, max: 4 },
+  { mu: 4.5, min: 4, max: 5 },
+];
+
+export function generateGaussianBonusMultiplier(bonusIndex = 0, difficulty = 'moyen') {
+  const sigma  = GAUSS_SIGMA[difficulty] || GAUSS_SIGMA.moyen;
+  const band   = BJ_PROGRESSION[Math.min(bonusIndex, BJ_PROGRESSION.length - 1)];
+  const raw    = band.mu + sigma * boxMuller();
+  const clamped = Math.min(band.max, Math.max(band.min, raw));
+  return Math.round(clamped * 100) / 100;
+}

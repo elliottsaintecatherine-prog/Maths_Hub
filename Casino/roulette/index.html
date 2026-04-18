@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roulette — Choisir une Variante</title>
+  <link rel="stylesheet" href="../style-vegas.css">
+  <style>
+    .hub-wrap {
+      max-width: 860px;
+      margin: 3rem auto;
+      padding: 0 1.2rem 3rem;
+      position: relative;
+      z-index: 1;
+    }
+    .hub-subtitle {
+      text-align: center;
+      font-family: var(--font-serif);
+      font-style: italic;
+      color: var(--cream-dim);
+      font-size: 0.92rem;
+      margin-bottom: 2.4rem;
+      letter-spacing: 0.04em;
+    }
+    .variants-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.4rem;
+    }
+    @media (max-width: 600px) { .variants-grid { grid-template-columns: 1fr; } }
+
+    .variant-tile {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 2.2rem 1.2rem 1.8rem;
+      border-radius: 20px;
+      border: 1px solid;
+      text-decoration: none;
+      color: var(--cream);
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.25s, box-shadow 0.25s;
+    }
+    .variant-tile:hover { transform: translateY(-8px) rotateX(3deg); }
+
+    .tile-deco {
+      position: absolute;
+      inset: 0;
+      opacity: 0.07;
+      font-size: 7rem;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 0.6rem;
+      pointer-events: none;
+      filter: blur(1px);
+      line-height: 1;
+    }
+    .tile-icon  { font-size: 3.4rem; line-height: 1; position: relative; }
+    .tile-title {
+      font-family: var(--font-title);
+      font-size: 1.05rem;
+      letter-spacing: 0.08em;
+      text-align: center;
+      position: relative;
+    }
+    .tile-sub {
+      font-size: 0.74rem;
+      color: var(--cream-dim);
+      font-family: var(--font-body);
+      text-align: center;
+      letter-spacing: 0.04em;
+      position: relative;
+    }
+    .tile-edge {
+      position: relative;
+      margin-top: 0.3rem;
+      padding: 0.2rem 0.7rem;
+      border-radius: 999px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      font-family: var(--font-body);
+      letter-spacing: 0.08em;
+    }
+    .tile-badge {
+      position: absolute;
+      top: 0.7rem; right: 0.7rem;
+      padding: 0.18rem 0.55rem;
+      border-radius: 999px;
+      font-size: 0.62rem;
+      font-weight: 700;
+      font-family: var(--font-body);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: rgba(39,174,96,0.2);
+      border: 1px solid rgba(39,174,96,0.5);
+      color: #4ade80;
+    }
+    .hub-frame-inner { padding: 2rem 1.8rem; }
+  </style>
+</head>
+<body>
+
+  <header class="top-bar">
+    <a href="../index.html" class="btn-back">← Casino</a>
+    <span class="top-bar-title">ROULETTE</span>
+    <span></span>
+  </header>
+
+  <div class="hub-wrap">
+    <div class="vegas-frame">
+      <div class="bulbs-container" id="bulbs"></div>
+      <div class="hub-frame-inner">
+        <p class="hub-subtitle">Connais tes probabilités — avant que la roue décide.</p>
+        <div class="variants-grid" id="grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { buildBulbs } from '../shared.js';
+
+    const VARIANTS = [
+      {
+        id: 'euro', icon: '🎡', deco: '🇪🇺',
+        title: 'Européenne',
+        sub: '37 numéros (0–36) · House edge 2.7%',
+        edge: { text: 'Edge 2.7%', bg: 'rgba(39,174,96,0.15)', border: 'rgba(39,174,96,0.4)', color: '#4ade80' },
+        bg: 'rgba(10,37,20,0.94)', border: 'rgba(39,174,96,0.55)',
+        badge: 'CLASSIQUE',
+      },
+      {
+        id: 'american', icon: '🎰', deco: '🇺🇸',
+        title: 'Américaine',
+        sub: '38 numéros (0, 00, 1–36) · House edge 5.3%',
+        edge: { text: 'Edge 5.3%', bg: 'rgba(192,57,43,0.15)', border: 'rgba(192,57,43,0.4)', color: '#f87171' },
+        bg: 'rgba(35,8,8,0.94)', border: 'rgba(192,57,43,0.55)',
+        badge: null,
+      },
+      {
+        id: 'scolaris', icon: '📐', deco: '⚗️',
+        title: 'Scolaris',
+        sub: 'Rouge / Noir / Vert · variante pédago',
+        edge: { text: 'Pédago', bg: 'rgba(245,166,35,0.12)', border: 'rgba(245,166,35,0.35)', color: 'var(--gold)' },
+        bg: 'rgba(10,25,40,0.94)', border: 'rgba(245,166,35,0.55)',
+        badge: 'NOUVEAU',
+      },
+    ];
+
+    const grid = document.getElementById('grid');
+    VARIANTS.forEach(v => {
+      const a = document.createElement('a');
+      a.className = 'variant-tile';
+      a.href = `game.html?variant=${v.id}`;
+      a.style.cssText = `background:${v.bg}; border-color:${v.border};`;
+      a.addEventListener('mouseenter', () => a.style.boxShadow = `0 12px 40px ${v.border}`);
+      a.addEventListener('mouseleave', () => a.style.boxShadow = '');
+      a.innerHTML = `
+        <div class="tile-deco">${v.deco}</div>
+        ${v.badge ? `<span class="tile-badge">${v.badge}</span>` : ''}
+        <span class="tile-icon">${v.icon}</span>
+        <span class="tile-title">${v.title}</span>
+        <span class="tile-sub">${v.sub}</span>
+        <span class="tile-edge" style="background:${v.edge.bg};border:1px solid ${v.edge.border};color:${v.edge.color}">${v.edge.text}</span>
+      `;
+      grid.appendChild(a);
+    });
+
+    buildBulbs(document.getElementById('bulbs'), document.querySelector('.vegas-frame'));
+  </script>
+
+</body>
+</html>

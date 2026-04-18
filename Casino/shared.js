@@ -252,3 +252,53 @@ export const QUESTION_GENERATORS = [
 export function generateQuestion() {
   return pick(QUESTION_GENERATORS)();
 }
+
+/* ── Générateurs de questions — Roulette ─────────────────────────── */
+
+function makeRougeEuro() {
+  return {
+    q: 'Sur une roulette européenne (37 numéros : 0 à 36), quelle est la probabilité que la bille tombe sur une case rouge ?',
+    a: r6(18 / 37),
+    hint: '18 cases rouges sur 37 → 18/37',
+    type: 'roulette',
+  };
+}
+
+function makeZeroAmerican() {
+  return {
+    q: "Sur une roulette américaine (38 numéros : 0, 00 et 1 à 36), quelle est la probabilité d'obtenir zéro (0 ou 00) ?",
+    a: r6(2 / 38),
+    hint: '2 cases zéro (0 et 00) sur 38 → 2/38 = 1/19',
+    type: 'roulette',
+  };
+}
+
+function makePairRouge() {
+  return {
+    q: 'Sur une roulette européenne, quelle est la probabilité d\'obtenir un numéro à la fois pair et rouge ?',
+    a: r6(8 / 37),
+    hint: '8 numéros pairs et rouges (12,14,16,18,30,32,34,36) sur 37 → 8/37',
+    type: 'roulette',
+  };
+}
+
+function makeNumeroExact() {
+  const n = Math.floor(Math.random() * 37);
+  return {
+    q: `Sur une roulette européenne, quelle est la probabilité que la bille s'arrête exactement sur le numéro ${n} ?`,
+    a: r6(1 / 37),
+    hint: '1 numéro sur 37 → 1/37',
+    type: 'roulette',
+  };
+}
+
+export const ROULETTE_QUESTION_GENERATORS = [
+  makeRougeEuro,
+  makeZeroAmerican,
+  makePairRouge,
+  makeNumeroExact,
+];
+
+export function generateRouletteQuestion() {
+  return pick(ROULETTE_QUESTION_GENERATORS)();
+}

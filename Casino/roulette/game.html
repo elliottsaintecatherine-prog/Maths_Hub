@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Roulette</title>
+  <link rel="stylesheet" href="../style-vegas.css">
+  <style>
+    .wrap { max-width: 680px; margin: 20px auto 40px; padding: 0 12px; position: relative; z-index: 1; }
+    #frame { padding: 0; }
+    .game-inner { padding: 0 20px 20px; }
+    .top-bar { border-radius: 22px 22px 0 0; }
+    .game-title { font-family: var(--font-title); font-size: clamp(12px,3vw,17px); font-weight: 900; letter-spacing: 3px; color: var(--gold); text-align: center; }
+    .game-sub   { font-size: 9px; letter-spacing: 4px; color: var(--cream-dim); text-align: center; }
+
+    /* ── Layout ── */
+    .roulette-layout {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 16px;
+      align-items: start;
+      margin-top: 16px;
+    }
+    @media (max-width: 480px) {
+      .roulette-layout { grid-template-columns: 1fr; }
+    }
+
+    /* ── Wheel ── */
+    .wheel-container {
+      position: relative;
+      width: 220px; height: 220px;
+      flex-shrink: 0;
+    }
+    #wheel {
+      width: 100%; height: 100%;
+      border-radius: 50%;
+      border: 5px solid var(--gold);
+      box-shadow: 0 0 28px var(--gold-glow), inset 0 0 30px rgba(0,0,0,0.5);
+      will-change: transform;
+    }
+    #wheel::after {
+      content: '';
+      position: absolute;
+      inset: 12px;
+      border-radius: 50%;
+      border: 2px solid rgba(245,166,35,0.25);
+      pointer-events: none;
+    }
+    #wheel-num {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 62px; height: 62px;
+      background: radial-gradient(circle, #111, #060606);
+      border-radius: 50%;
+      border: 3px solid var(--gold);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-size: 20px; font-weight: 900;
+      color: var(--gold);
+      z-index: 5;
+      box-shadow: 0 0 16px rgba(0,0,0,0.9);
+    }
+    .needle {
+      position: absolute;
+      top: -4px; left: 50%;
+      transform: translateX(-50%);
+      width: 0; height: 0;
+      border-left: 7px solid transparent;
+      border-right: 7px solid transparent;
+      border-top: 22px solid var(--gold);
+      filter: drop-shadow(0 0 4px var(--gold-glow));
+      z-index: 10;
+    }
+
+    /* ── Bet panel ── */
+    .bet-panel { display: flex; flex-direction: column; gap: 10px; }
+
+    .bet-types { display: flex; flex-direction: column; gap: 6px; }
+    .bet-type {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid rgba(253,248,236,0.12);
+      background: rgba(0,0,0,0.25);
+      color: var(--cream); cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      text-align: left; font-family: var(--font-body);
+    }
+    .bet-type:hover { border-color: rgba(253,248,236,0.3); }
+    .bet-type.active {
+      border-color: var(--gold);
+      background: rgba(245,166,35,0.12);
+      box-shadow: 0 0 0 2px var(--gold-glow);
+    }
+    .bt-swatch { width: 20px; height: 20px; border-radius: 4px; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.15); }
+    .bt-label  { flex: 1; font-size: 14px; font-weight: 600; }
+    .bt-odds   { font-family: var(--font-title); font-size: 11px; letter-spacing: 1px; color: var(--gold); opacity: 0.8; }
+
+    .section-label { font-family: var(--font-title); font-size: 9px; letter-spacing: 3px; color: rgba(245,166,35,0.6); margin-bottom: 6px; }
+
+    /* ── Bet amount ── */
+    .bet-row {
+      display: flex; align-items: stretch; height: 44px;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid rgba(253,248,236,0.15); border-radius: 10px; overflow: hidden;
+    }
+    .bet-row:focus-within { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-glow); }
+    .bet-adj {
+      width: 40px; background: rgba(245,166,35,0.07); border: none;
+      color: var(--cream-dim); font-size: 20px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, color 0.15s;
+    }
+    .bet-adj:hover { background: rgba(245,166,35,0.18); color: var(--gold); }
+    .bet-row input {
+      flex: 1; background: transparent; border: none;
+      color: var(--cream); font-size: 15px; font-family: var(--font-body);
+      text-align: center; outline: none; -moz-appearance: textfield;
+    }
+    .bet-row input::-webkit-inner-spin-button,
+    .bet-row input::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+    /* ── Question zone ── */
+    #q-zone { margin-top: 12px; }
+    .q-label { font-family: var(--font-title); font-size: 9px; letter-spacing: 3px; color: var(--gold); opacity: 0.7; margin-bottom: 8px; }
+    #q-text  { font-family: var(--font-serif); font-size: 13px; line-height: 1.7; color: var(--cream); }
+    .ans-row { display: flex; gap: 8px; margin-top: 10px; }
+    .ans-row input {
+      flex: 1; padding: 11px 14px;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid rgba(253,248,236,0.15); border-radius: 10px;
+      color: var(--cream); font-size: 15px; font-family: var(--font-body);
+      outline: none; transition: border-color 0.2s;
+    }
+    .ans-row input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-glow); }
+    .ans-row input::placeholder { color: rgba(253,248,236,0.22); }
+    #confirm-btn {
+      padding: 0 18px; border-radius: 10px; border: none;
+      background: var(--gold); color: #1a0f00;
+      font-family: var(--font-title); font-weight: 900; font-size: 0.9rem;
+      cursor: pointer; transition: opacity 0.2s;
+    }
+    #confirm-btn:hover { opacity: 0.85; }
+
+    /* ── Recall box ── */
+    #recall {
+      background: rgba(245,166,35,0.07);
+      border: 1px solid rgba(245,166,35,0.28);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 11.5px;
+      font-family: var(--font-body);
+      color: var(--gold);
+      font-style: italic;
+      margin-top: 10px;
+      letter-spacing: 0.3px;
+    }
+
+    /* ── Result overlay ── */
+    .result-overlay { opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+    .result-overlay.show { opacity: 1; pointer-events: auto; }
+    .result-title { font-family: var(--font-title); font-size: 1.8rem; margin-bottom: 6px; }
+    .result-card.win  .result-title { color: var(--gold-bright); }
+    .result-card.lose .result-title { color: var(--red); }
+    #r-amount { font-family: var(--font-title); font-size: 2.2rem; font-weight: 900; margin: 4px 0 8px; }
+    .result-card.win  #r-amount { color: var(--gold); text-shadow: 0 0 20px var(--gold-glow); }
+    .result-card.lose #r-amount { color: #f87171; }
+    #r-icon { font-size: 52px; margin-bottom: 10px; }
+    #r-msg  { font-size: 11px; color: rgba(253,248,236,0.45); letter-spacing: 0.3px; }
+  </style>
+</head>
+<body>
+
+  <div class="wrap">
+    <div class="vegas-frame" id="frame">
+      <div class="bulbs-container" id="bulbs"></div>
+
+      <header class="top-bar">
+        <a href="index.html" class="btn-back">← Roulette</a>
+        <div>
+          <div class="game-title" id="game-title">ROULETTE</div>
+          <div class="game-sub">Probabilités · Terminale</div>
+        </div>
+        <div class="balance-badge" id="bank-badge">🪙&nbsp;<span id="bank-val">—</span></div>
+      </header>
+
+      <div class="game-inner">
+
+        <div class="roulette-layout">
+
+          <!-- WHEEL -->
+          <div class="wheel-container">
+            <div id="wheel"></div>
+            <div id="wheel-num">?</div>
+            <div class="needle"></div>
+          </div>
+
+          <!-- BET PANEL -->
+          <div class="bet-panel">
+            <div>
+              <div class="section-label">Type de pari</div>
+              <div class="bet-types">
+                <button class="bet-type" data-type="rouge">
+                  <span class="bt-swatch" style="background:#c0392b"></span>
+                  <span class="bt-label">Rouge</span>
+                  <span class="bt-odds">×2</span>
+                </button>
+                <button class="bet-type" data-type="noir">
+                  <span class="bt-swatch" style="background:#222"></span>
+                  <span class="bt-label">Noir</span>
+                  <span class="bt-odds">×2</span>
+                </button>
+                <button class="bet-type" data-type="zero">
+                  <span class="bt-swatch" style="background:#16a34a"></span>
+                  <span class="bt-label" id="zero-label">Zéro</span>
+                  <span class="bt-odds">×17</span>
+                </button>
+              </div>
+            </div>
+            <div>
+              <div class="section-label">Mise 🪙</div>
+              <div class="bet-row">
+                <button class="bet-adj" id="bet-minus">−</button>
+                <input type="number" id="bet-in" value="50" min="10">
+                <button class="bet-adj" id="bet-plus">+</button>
+              </div>
+            </div>
+            <button class="btn-play" id="spin-btn">🎡 &nbsp;Lancer la roue&nbsp; 🎡</button>
+          </div>
+
+        </div><!-- /.roulette-layout -->
+
+        <!-- QUESTION ZONE -->
+        <div id="q-zone" hidden>
+          <div class="q-label">✦ Calcule avant que la roue tourne ✦</div>
+          <div class="question-card" style="padding:1rem 1.2rem">
+            <span id="q-text"></span>
+          </div>
+          <div class="feedback" id="q-fb"></div>
+          <div class="ans-row">
+            <input type="text" id="ans-in" placeholder="Ex : 0.486  ou  18/37  ou  48.6%" autocomplete="off">
+            <button id="confirm-btn">OK</button>
+          </div>
+        </div>
+
+        <!-- PEDAGOGICAL RECALL -->
+        <div id="recall" hidden></div>
+
+        <!-- LOGS -->
+        <div class="terminal-card" style="margin-top:12px">
+          <div class="logs" id="logs"></div>
+        </div>
+
+      </div><!-- /.game-inner -->
+    </div><!-- /#frame -->
+  </div>
+
+  <!-- RESULT OVERLAY -->
+  <div class="result-overlay" id="result-ov">
+    <div class="result-card" id="result-card">
+      <div id="r-icon"></div>
+      <div class="result-title" id="r-title"></div>
+      <div id="r-amount"></div>
+      <div id="r-msg"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { getBalance, updateBalance, parseAnswer, typeQuestion, addLog, buildBulbs, generateRouletteQuestion } from '../shared.js';
+
+    // ── Variant ──
+    const V    = new URLSearchParams(location.search).get('variant') || 'euro';
+    const IS_AM = V === 'american';
+    const IS_SC = V === 'scolaris';
+
+    // ── Wheel slots ──
+    const RED_SET  = new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
+    const EURO_SL  = [0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
+    const AMER_SL  = [0,28,9,26,30,11,7,20,32,17,5,22,34,15,3,24,36,13,1,37,27,10,25,29,12,8,19,31,18,6,21,33,16,4,23,35,14,2];
+    const SCO_SL   = Array.from({length:37}, (_,i) => i===36 ? 'G' : i%2===0 ? 'R' : 'N');
+    const SLOTS    = IS_AM ? AMER_SL : IS_SC ? SCO_SL : EURO_SL;
+    const N        = SLOTS.length;
+
+    const slotCol = s => s===0||s===37||s==='G' ? '#16a34a' : RED_SET.has(s)||s==='R' ? '#c0392b' : '#111';
+    const slotLbl = s => s===37 ? '00' : s==='R' ? 'R' : s==='N' ? 'N' : s==='G' ? '0' : String(s);
+    const betOf   = s => s===0||s===37||s==='G' ? 'zero' : RED_SET.has(s)||s==='R' ? 'rouge' : 'noir';
+
+    // ── Build wheel conic-gradient ──
+    function buildWheel() {
+      const d = 360 / N;
+      const parts = SLOTS.map((s,i) => `${slotCol(s)} ${(i*d).toFixed(2)}deg ${((i+1)*d).toFixed(2)}deg`);
+      $('wheel').style.background = `conic-gradient(from ${(-d/2).toFixed(2)}deg, ${parts.join(',')})`;
+    }
+
+    // ── State ──
+    let betType=null, betAmt=0, q=null, spinning=false, totalRot=0;
+    const $ = id => document.getElementById(id);
+    const T = Date.now();
+
+    // ── Bet selection ──
+    function selectBet(type) {
+      betType = type;
+      document.querySelectorAll('.bet-type').forEach(b => b.classList.toggle('active', b.dataset.type === type));
+    }
+
+    // ── Question ──
+    async function showQ() {
+      q = generateRouletteQuestion();
+      $('q-zone').hidden = false; $('ans-in').value = ''; $('q-fb').className = 'feedback';
+      await typeQuestion($('q-text'), null, q.q);
+    }
+
+    async function submit() {
+      const ua = parseAnswer($('ans-in').value);
+      const ok = !isNaN(ua) && Math.abs(ua - q.a) < 0.015;
+      $('q-fb').className = 'feedback ' + (ok ? 'correct' : 'wrong');
+      $('q-fb').innerHTML = ok
+        ? '✓ Exact — vos odds sont normaux !'
+        : `✗ Attendu : <strong>${q.hint}</strong> — biais défavorable…`;
+      await new Promise(r => setTimeout(r, 800));
+      $('q-zone').hidden = true;
+      doSpin(ok);
+    }
+
+    // ── Spin ──
+    async function doSpin(correct) {
+      spinning = true; $('spin-btn').disabled = true; $('recall').hidden = true;
+
+      const losing = SLOTS.map((_,i) => i).filter(i => betOf(SLOTS[i]) !== betType);
+      let idx;
+      if (!correct && Math.random() < 0.875) {
+        idx = losing[Math.floor(Math.random() * losing.length)];
+      } else {
+        idx = Math.floor(Math.random() * N);
+      }
+
+      const slotDeg  = 360 / N;
+      const fromTop  = (360 - idx * slotDeg) % 360 || 360;
+      const cur      = totalRot % 360;
+      const diff     = (fromTop - cur + 360) % 360 || 360;
+      totalRot      += (5 + Math.floor(Math.random() * 4)) * 360 + diff;
+
+      const wh = $('wheel');
+      wh.style.transition = 'transform 3.2s cubic-bezier(0.17,0.67,0.12,0.99)';
+      wh.style.transform  = `rotate(${totalRot}deg)`;
+
+      await new Promise(r => setTimeout(r, 3300));
+      wh.style.transition = 'none';
+
+      const slot = SLOTS[idx];
+      const numEl = $('wheel-num');
+      numEl.textContent = slotLbl(slot);
+      numEl.style.color = slotCol(slot) === '#111' ? '#fff' : slotCol(slot);
+
+      const won  = betOf(slot) === betType;
+      const mult = betType === 'zero' ? 17 : 2;
+      const delta = won ? betAmt * (mult - 1) : -betAmt;
+      updateBalance(delta); bankUI(delta);
+      addLog($('logs'), T, `${slotLbl(slot)} — ${won ? `✓ +${betAmt*(mult-1)} 🪙` : `✗ −${betAmt} 🪙`}`);
+
+      showRecall();
+      $('result-card').className = 'result-card ' + (won ? 'win' : 'lose');
+      $('r-icon').textContent    = won ? '🏆' : '💀';
+      $('r-title').textContent   = won ? 'VICTOIRE !' : 'DÉFAITE';
+      $('r-amount').textContent  = won
+        ? `+${(betAmt*(mult-1)).toLocaleString('fr-FR')} 🪙`
+        : `−${betAmt.toLocaleString('fr-FR')} 🪙`;
+      $('r-msg').textContent = `${slotLbl(slot)} · Mise ×${mult} · ${correct ? 'Odds normaux' : 'Biais défavorable'}`;
+      $('result-ov').classList.add('show');
+      setTimeout(() => $('result-ov').classList.remove('show'), 2500);
+
+      spinning = false; $('spin-btn').disabled = false;
+    }
+
+    // ── Pédago recall ──
+    function showRecall() {
+      const msgs = {
+        euro: {
+          rouge: 'P(rouge) = 18/37 ≈ 0.486 (pas 0.5 !) — la maison garde 1/37 ≈ 2.7%',
+          noir:  'P(noir)  = 18/37 ≈ 0.486 — house edge 2.7% : le 0 rend la parité impossible',
+          zero:  'P(zéro)  =  1/37 ≈ 0.027 — gain ×17 → EV = 17/37 − 36/37 ≈ −0.514',
+        },
+        american: {
+          rouge: 'P(rouge) = 18/38 ≈ 0.474 — house edge 5.3% (0 et 00 sont tous les deux perdants)',
+          noir:  'P(noir)  = 18/38 ≈ 0.474 — house edge 5.3%',
+          zero:  'P(zéro)  =  2/38 ≈ 0.053 — deux cases (0 et 00) doublent l\'avantage maison',
+        },
+        scolaris: {
+          rouge: 'P(rouge) = 18/37 ≈ 0.486 (pas 0.5 !) — le 0 vert crée l\'avantage maison',
+          noir:  'P(noir)  = 18/37 ≈ 0.486 — identique au rouge, l\'équité n\'est pas exacte',
+          zero:  'P(vert)  =  1/37 ≈ 0.027 — c\'est la seule case qui brise la parité',
+        },
+      };
+      $('recall').textContent = 'Rappel — ' + (msgs[V]?.[betType] || '');
+      $('recall').hidden = false;
+    }
+
+    // ── Bank UI ──
+    function bankUI(delta) {
+      $('bank-val').textContent = getBalance().toLocaleString('fr-FR') + ' 🪙';
+      if (delta === undefined) return;
+      const b = $('bank-badge'); b.classList.remove('gain','lose'); void b.offsetWidth;
+      if (delta !== 0) b.classList.add(delta > 0 ? 'gain' : 'lose');
+      setTimeout(() => b.classList.remove('gain','lose'), 900);
+    }
+
+    // ── Init ──
+    buildWheel(); bankUI();
+    const TITLES = { euro:'ROULETTE EUROPÉENNE', american:'ROULETTE AMÉRICAINE', scolaris:'ROULETTE SCOLARIS' };
+    $('game-title').textContent = TITLES[V] || 'ROULETTE';
+    if (IS_SC) $('zero-label').textContent = 'Vert';
+    buildBulbs($('bulbs'), $('frame'));
+    window.addEventListener('resize', () => buildBulbs($('bulbs'), $('frame')));
+    window.addEventListener('scolaris-balance', () => bankUI());
+
+    // ── Events ──
+    $('spin-btn').addEventListener('click', async () => {
+      if (spinning) return;
+      const bet = +$('bet-in').value;
+      if (!betType)               { addLog($('logs'),T,'⚠ Choisissez Rouge, Noir ou Zéro'); return; }
+      if (isNaN(bet) || bet < 10) { addLog($('logs'),T,'⚠ Mise min : 10 🪙');              return; }
+      if (bet > getBalance())     { addLog($('logs'),T,'⚠ Solde insuffisant');              return; }
+      betAmt = bet; updateBalance(-bet); bankUI(-bet);
+      await showQ();
+    });
+    $('confirm-btn').addEventListener('click', submit);
+    $('ans-in').addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
+    $('bet-minus').addEventListener('click', () => { $('bet-in').value = Math.max(10, (+$('bet-in').value||50) - 25); });
+    $('bet-plus').addEventListener('click',  () => { $('bet-in').value = Math.min(getBalance(), (+$('bet-in').value||50) + 25); });
+    document.querySelectorAll('.bet-type').forEach(b => b.addEventListener('click', () => selectBet(b.dataset.type)));
+  </script>
+
+</body>
+</html>

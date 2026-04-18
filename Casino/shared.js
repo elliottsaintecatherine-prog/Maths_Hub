@@ -10,6 +10,40 @@ import { getBalance as _getBalance, updateBalance as _updateBalance } from '../e
 export function getBalance() { return _getBalance(); }
 export function updateBalance(delta) { return _updateBalance(delta); }
 
+/* ── Mode Entraînement ────────────────────────────────────────────── */
+
+export const TRAIN_MODE = { active: false };
+
+export function setTrainMode(active) {
+  TRAIN_MODE.active = active;
+  if (typeof window !== 'undefined') {
+    sessionStorage.setItem('casino-train-mode', active ? '1' : '0');
+  }
+}
+
+export function loadTrainMode() {
+  if (typeof window !== 'undefined') {
+    TRAIN_MODE.active = sessionStorage.getItem('casino-train-mode') === '1';
+  }
+}
+
+/* ── Session Stats ────────────────────────────────────────────────── */
+
+export const SessionStats = { correct: 0, total: 0, streak: 0, maxStreak: 0 };
+
+export function recordAnswer(isCorrect) {
+  SessionStats.total++;
+  if (isCorrect) {
+    SessionStats.correct++;
+    SessionStats.streak++;
+    SessionStats.maxStreak = Math.max(SessionStats.maxStreak, SessionStats.streak);
+  } else {
+    SessionStats.streak = 0;
+  }
+}
+
+export function getStats() { return { ...SessionStats }; }
+
 /* ── Helpers maths ────────────────────────────────────────────────── */
 
 export function randInt(a, b) {
@@ -52,11 +86,6 @@ export function parseAnswer(str) {
 
 /* ── UI — Typewriter ──────────────────────────────────────────────── */
 
-/**
- * Écrit `text` caractère par caractère dans `targetEl`.
- * `cursorEl` clignote pendant la frappe puis s'arrête.
- * Retourne une Promise résolue à la fin.
- */
 export function typeQuestion(targetEl, cursorEl, text, speed = 16) {
   return new Promise(resolve => {
     targetEl.textContent = '';
@@ -75,7 +104,6 @@ export function typeQuestion(targetEl, cursorEl, text, speed = 16) {
 
 /* ── UI — Log horodaté ────────────────────────────────────────────── */
 
-/** Ajoute une ligne `[mm:ss] msg` dans `logsEl`, scroll en bas. */
 export function addLog(logsEl, startTime, msg) {
   const elapsed = Math.floor((Date.now() - startTime) / 1000);
   const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
@@ -89,9 +117,10 @@ export function addLog(logsEl, startTime, msg) {
 
 /* ── UI — Odds display ────────────────────────────────────────────── */
 
-export function showOdds(chanceEl, multEl, evEl, winChance, payoutMult) {
-  const ev = r6(winChance * payoutMult - (1 - winChance));
+export function showOdds(chanceEl, multEl, evEl, winChance, payoutMult, evExplEl = null) {
+  const ev  = r6(winChance * payoutMult - (1 - winChance));
   const pct = r6(winChance * 100);
+  const evN = winChance * payoutMult;
 
   if (chanceEl) { chanceEl.textContent = `${pct} %`; chanceEl.hidden = false; }
   if (multEl)   { multEl.textContent   = `×${payoutMult}`; multEl.hidden = false; }
@@ -100,18 +129,87 @@ export function showOdds(chanceEl, multEl, evEl, winChance, payoutMult) {
     evEl.className = 'odds-chip ' + (ev >= 0 ? 'good' : ev > -0.15 ? 'info' : 'bad');
     evEl.hidden = false;
   }
+  if (evExplEl) {
+    let msg;
+    if (evN >= 0.98) {
+      msg = 'E ≈ 1.0 → tu récupères en moyenne ta mise (jeu équitable)';
+    } else {
+      msg = `E ≈ ${evN.toFixed(2)} → la maison reprend ${((1 - evN) * 100).toFixed(0)}% de ta mise en moyenne`;
+    }
+    evExplEl.textContent = msg;
+    evExplEl.hidden = false;
+  }
 }
 
-export function hideOdds(chanceEl, multEl, evEl) {
-  [chanceEl, multEl, evEl].forEach(el => { if (el) el.hidden = true; });
+export function hideOdds(chanceEl, multEl, evEl, evExplEl = null) {
+  [chanceEl, multEl, evEl, evExplEl].forEach(el => { if (el) el.hidden = true; });
+}
+
+/* ── UI — Feedback enrichi ────────────────────────────────────────── */
+
+const TYPE_FORMULAS = {
+  urne:           'Favorables ÷ Total possibles',
+  urne2:          'Conformes ÷ Total',
+  complement:     'P(Ā) = 1 − P(A)',
+  union:          'P(A∪B) = P(A) + P(B) − P(A∩B)',
+  conditionnelle: 'P(A∩B) ÷ P(B)',
+  binomiale:      'C(n,k) × p^k × (1−p)^(n−k)',
+  roulette:       'Favorables ÷ Total numéros',
+  des:            'Cas favorables ÷ Total cas',
+  cartes:         'Favorables ÷ Total cartes',
+};
+
+export function formatFeedback(correct, q) {
+  if (correct) {
+    const msgs = [
+      '✓ Exact — la probabilité est maîtrisée.',
+      '✓ Bien calculé ! Le raisonnement est solide.',
+      '✓ Parfait — les dieux du casino vous sourient.',
+    ];
+    return msgs[Math.floor(Math.random() * msgs.length)];
+  }
+  const formula = TYPE_FORMULAS[q.type] || '';
+  const lines = [
+    `✗ Attendu : ${q.a.toFixed(4)}`,
+    `Méthode : ${q.hint}`,
+    formula ? `Formule : ${formula}` : null,
+  ].filter(Boolean);
+  return lines.join('\n');
+}
+
+/* ── UI — Comptage animé des jetons ──────────────────────────────── */
+
+export function animateBalance(el, from, to, duration = 600) {
+  const start = performance.now();
+  const diff  = to - from;
+  function tick(now) {
+    const t      = Math.min(1, (now - start) / duration);
+    const eased  = 1 - Math.pow(1 - t, 3);
+    el.textContent = Math.round(from + diff * eased).toLocaleString('fr-FR') + ' 🪙';
+    if (t < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+/* ── UI — Overlay série de victoires ─────────────────────────────── */
+
+export function triggerStreak(n) {
+  if (n < 3) return;
+  let el = document.getElementById('streak-overlay');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'streak-overlay';
+    el.className = 'streak-overlay';
+    document.body.appendChild(el);
+  }
+  el.textContent = `🔥 ×${n}`;
+  el.classList.remove('streak-flash');
+  void el.offsetWidth;
+  el.classList.add('streak-flash');
 }
 
 /* ── UI — Ampoules ────────────────────────────────────────────────── */
 
-/**
- * Génère les ampoules CSS autour de `frameEl` et les insère dans `containerEl`.
- * Appelez après que `frameEl` est dans le DOM.
- */
 export function buildBulbs(containerEl, frameEl) {
   containerEl.innerHTML = '';
   const COUNT = 24;
@@ -122,7 +220,6 @@ export function buildBulbs(containerEl, frameEl) {
     b.style.setProperty('--total', COUNT);
     containerEl.appendChild(b);
   }
-  // Animation de clignotement aléatoire
   setInterval(() => {
     const bulbs = containerEl.querySelectorAll('.bulb');
     bulbs.forEach(b => {

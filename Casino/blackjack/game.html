@@ -144,6 +144,12 @@
     .result-card.lose #r-amount { color: #f87171; }
     .result-card.push #r-amount { color: var(--cream-dim); }
     #r-msg { font-size: 11px; color: rgba(253,248,236,0.45); margin-top: 6px; letter-spacing: 0.5px; }
+
+    @media (max-width: 480px) {
+      .card { width: 44px; height: 64px; }
+      .cr { font-size: 13px; } .cs { font-size: 10px; }
+      .result-card { padding: 2rem 1.2rem; }
+    }
   </style>
 </head>
 <body>
@@ -154,14 +160,21 @@
 
       <header class="top-bar">
         <a href="index.html" class="btn-back">← Blackjack</a>
-        <div>
+        <div style="text-align:center">
           <div class="game-title" id="game-title">BLACKJACK</div>
           <div class="game-sub">Probabilités · Terminale</div>
+          <span class="train-badge" id="train-badge" hidden>📚 ENTRAÎNEMENT</span>
         </div>
-        <div class="balance-badge" id="bank-badge">🪙&nbsp;<span id="bank-val">—</span></div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <button class="btn-train" id="train-toggle" title="Mode Entraînement">📚</button>
+          <div class="balance-badge" id="bank-badge">🪙&nbsp;<span id="bank-val">—</span></div>
+        </div>
       </header>
 
       <div class="game-inner">
+
+        <!-- CROUPIER -->
+        <div class="croupier-msg" id="croupier-msg"></div>
 
         <!-- TABLE -->
         <div class="table-persp">
@@ -222,6 +235,9 @@
           <div class="logs" id="logs"></div>
         </div>
 
+        <!-- STATS -->
+        <div class="stats-bar" id="stats-bar">Session : 0/0 correctes | Série : 0 ✓</div>
+
       </div><!-- /.game-inner -->
     </div><!-- /#frame -->
   </div>
@@ -237,7 +253,12 @@
   </div>
 
   <script type="module">
-    import { getBalance, updateBalance, parseAnswer, typeQuestion, addLog, buildBulbs, generateQuestion } from '../shared.js';
+    import {
+      getBalance, updateBalance, parseAnswer, typeQuestion, addLog, buildBulbs, generateQuestion,
+      TRAIN_MODE, setTrainMode, loadTrainMode,
+      SessionStats, recordAnswer, getStats,
+      formatFeedback, animateBalance, triggerStreak,
+    } from '../shared.js';
 
     // ── Variant ──
     const V       = new URLSearchParams(location.search).get('variant') || 'classique';
@@ -334,9 +355,10 @@
       const ok = !isNaN(ua) && Math.abs(ua - q.a) < 0.015;
       const fb = $('q-fb');
       fb.className = 'feedback ' + (ok ? 'correct' : 'wrong');
-      fb.innerHTML = ok
-        ? '✓ Calcul exact — la carte t\'appartient !'
-        : `✗ Attendu : <strong>${q.hint}</strong> ≈ <strong>${q.a.toFixed(4)}</strong> — biais défavorable…`;
+      fb.innerHTML = formatFeedback(ok, q).replace(/\n/g, '<br>');
+      recordAnswer(ok); updateStatsBar();
+      showCroupierMsg(ok ? 'correct' : 'faux');
+      if (ok) triggerStreak(SessionStats.streak);
       stopTimer();
 
       let card = pending;
@@ -391,7 +413,8 @@
 
       const mult  = reason==='bj' ? (HR?4:2) : 2;
       const delta = won ? bet*(mult-1) : won===null ? 0 : -bet;
-      updateBalance(delta); bankUI(delta);
+      if (!TRAIN_MODE.active) { updateBalance(delta); bankUI(delta); }
+      if (won) showCroupierMsg(reason === 'bj' ? 'jackpot' : 'correct');
       addLog($('logs'),T, msg + (won ? ` +${Math.abs(delta)} 🪙` : won===null ? '' : ` −${bet} 🪙`));
 
       $('result-card').className = 'result-card ' + (won?'win':won===null?'push':'lose');
@@ -411,26 +434,67 @@
 
     // ── Bank UI ──
     function bankUI(delta) {
-      $('bank-val').textContent = getBalance().toLocaleString('fr-FR') + ' 🪙';
-      if (delta===undefined) return;
-      const b=$('bank-badge'); b.classList.remove('gain','lose'); void b.offsetWidth;
-      if (delta!==0) b.classList.add(delta>0?'gain':'lose');
-      setTimeout(()=>b.classList.remove('gain','lose'), 900);
+      const current = getBalance();
+      const el = $('bank-val');
+      if (delta !== undefined) {
+        animateBalance(el, current - delta, current);
+        const b = $('bank-badge'); b.classList.remove('gain','lose'); void b.offsetWidth;
+        if (delta !== 0) b.classList.add(delta > 0 ? 'gain' : 'lose');
+        setTimeout(() => b.classList.remove('gain','lose'), 900);
+      } else {
+        el.textContent = current.toLocaleString('fr-FR') + ' 🪙';
+      }
     }
 
+    // ── Croupier ──
+    const CROUPIER_MSGS = {
+      correct: ['Impressionnant.', 'La maison respecte.', 'Bien joué.'],
+      faux:    ['Le calcul était pourtant simple…', 'La maison prend sa part.'],
+      jackpot: ['Ce soir, la chance est avec vous.', 'Rarissime !'],
+    };
+    function showCroupierMsg(state) {
+      const pool = CROUPIER_MSGS[state] || [];
+      if (!pool.length) return;
+      const el = $('croupier-msg');
+      el.textContent = pool[Math.floor(Math.random() * pool.length)];
+      el.classList.add('show');
+      setTimeout(() => { el.classList.remove('show'); el.textContent = ''; }, 2000);
+    }
+
+    // ── Stats ──
+    function updateStatsBar() {
+      const { correct, total, streak } = getStats();
+      const bar = $('stats-bar');
+      bar.textContent = `Session : ${correct}/${total} correctes | Série : ${streak} ✓`;
+      bar.classList.toggle('streak-hi', streak >= 3);
+    }
+
+    // ── Train mode ──
+    function applyTrainUI() {
+      $('train-toggle').classList.toggle('active', TRAIN_MODE.active);
+      $('train-badge').hidden = !TRAIN_MODE.active;
+      $('deal-btn').textContent = TRAIN_MODE.active ? '📚  Distribuer (entraînement)  📚' : '🃏 \u00a0Distribuer\u00a0 🃏';
+    }
+    function toggleTrainMode() { setTrainMode(!TRAIN_MODE.active); applyTrainUI(); }
+
     // ── Init ──
+    loadTrainMode();
+    applyTrainUI();
     bankUI();
+    updateStatsBar();
     $('bet-in').value = $('bet-in').min = MIN_BET;
     $('game-sec').hidden = true;
     buildBulbs($('bulbs'), $('frame'));
     window.addEventListener('resize', ()=>buildBulbs($('bulbs'),$('frame')));
     window.addEventListener('scolaris-balance', ()=>bankUI());
 
+    $('train-toggle').addEventListener('click', toggleTrainMode);
     $('deal-btn').addEventListener('click', ()=>{
       bet = +$('bet-in').value;
       if (isNaN(bet)||bet<MIN_BET) { addLog($('logs'),T,`⚠ Mise min : ${MIN_BET} 🪙`); return; }
-      if (bet>getBalance())        { addLog($('logs'),T,'⚠ Solde insuffisant');          return; }
-      updateBalance(-bet); bankUI(-bet); startRound();
+      if (!TRAIN_MODE.active && bet>getBalance()) { addLog($('logs'),T,'⚠ Solde insuffisant'); return; }
+      if (!TRAIN_MODE.active) { updateBalance(-bet); bankUI(-bet); }
+      startRound();
     });
     $('hit-btn').addEventListener('click', doHit);
     $('stand-btn').addEventListener('click', doStand);

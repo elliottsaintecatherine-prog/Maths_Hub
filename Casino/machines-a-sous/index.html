@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Machines à Sous — Choisir un Casino</title>
+  <link rel="stylesheet" href="../style-vegas.css">
+  <style>
+    .hub-wrap {
+      max-width: 900px;
+      margin: 3rem auto;
+      padding: 0 1.2rem 3rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hub-subtitle {
+      text-align: center;
+      font-family: var(--font-serif);
+      font-style: italic;
+      color: var(--cream-dim);
+      font-size: 0.92rem;
+      margin-bottom: 2.2rem;
+      letter-spacing: 0.04em;
+    }
+
+    .casinos-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.4rem;
+    }
+
+    @media (max-width: 560px) {
+      .casinos-grid { grid-template-columns: 1fr; }
+    }
+
+    .casino-tile {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      padding: 2rem 1.5rem 1.75rem;
+      border-radius: 20px;
+      border: 1px solid;
+      text-decoration: none;
+      color: var(--cream);
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.25s, box-shadow 0.25s;
+    }
+
+    .casino-tile:hover {
+      transform: translateY(-8px);
+    }
+
+    .tile-deco {
+      position: absolute;
+      inset: 0;
+      opacity: 0.08;
+      font-size: 9rem;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 0.5rem;
+      pointer-events: none;
+      line-height: 1;
+      filter: blur(1px);
+    }
+
+    .tile-name {
+      font-family: var(--font-title);
+      font-size: 1.4rem;
+      letter-spacing: 0.1em;
+      position: relative;
+    }
+
+    .tile-desc {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: 0.85rem;
+      opacity: 0.8;
+      position: relative;
+    }
+
+    .tile-cta {
+      margin-top: 0.8rem;
+      display: inline-block;
+      font-family: var(--font-body);
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      padding: 0.35rem 0.9rem;
+      border-radius: 999px;
+      border: 1px solid;
+      position: relative;
+      transition: background 0.2s;
+    }
+
+    .hub-frame-inner { padding: 2rem 1.8rem; }
+  </style>
+</head>
+<body>
+
+  <header class="top-bar">
+    <a href="../index.html" class="btn-back">← Casino</a>
+    <span class="top-bar-title">MACHINES À SOUS</span>
+    <span></span>
+  </header>
+
+  <div class="hub-wrap">
+    <div class="vegas-frame">
+      <div class="bulbs-container" id="bulbs"></div>
+      <div class="hub-frame-inner">
+        <p class="hub-subtitle">Choisis ton casino — même jeu, ambiance unique.</p>
+        <div class="casinos-grid" id="casinos-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { buildBulbs } from '../shared.js';
+
+    const CASINOS = [
+      {
+        id: 'mgm',
+        name: 'MGM Grand',
+        desc: 'Vegas classique des années 60, néons et velours bleu nuit',
+        deco: '🦁',
+        bg:     'rgba(10, 37, 64, 0.92)',
+        border: 'rgba(245, 166, 35, 0.6)',
+        glow:   'rgba(245, 166, 35, 0.45)',
+        cta:    '#f5a623',
+      },
+      {
+        id: 'caesar',
+        name: "Caesar's Palace",
+        desc: 'Colonnes romaines, pourpre impérial et or chaud',
+        deco: '🏛️',
+        bg:     'rgba(42, 0, 72, 0.92)',
+        border: 'rgba(220, 160, 60, 0.65)',
+        glow:   'rgba(180, 80, 255, 0.45)',
+        cta:    '#dc9f3c',
+      },
+      {
+        id: 'bellagio',
+        name: 'Bellagio',
+        desc: 'Fontaines dansantes, cristal et élégance blanche',
+        deco: '💎',
+        bg:     'rgba(8, 28, 50, 0.92)',
+        border: 'rgba(180, 220, 255, 0.55)',
+        glow:   'rgba(150, 210, 255, 0.40)',
+        cta:    '#b4dcff',
+      },
+      {
+        id: 'luxor',
+        name: 'Luxor',
+        desc: 'Pyramide noire, hiéroglyphes dorés et mystère égyptien',
+        deco: '🔺',
+        bg:     'rgba(8, 8, 8, 0.95)',
+        border: 'rgba(245, 166, 35, 0.50)',
+        glow:   'rgba(245, 166, 35, 0.35)',
+        cta:    '#f5a623',
+      },
+    ];
+
+    const grid = document.getElementById('casinos-grid');
+
+    CASINOS.forEach(c => {
+      const a = document.createElement('a');
+      a.className = 'casino-tile';
+      a.href = `game.html?mode=${c.id}`;
+      a.style.cssText = `background:${c.bg}; border-color:${c.border};`;
+      a.addEventListener('mouseenter', () => {
+        a.style.boxShadow = `0 16px 48px ${c.glow}, 0 0 0 1px ${c.border}`;
+      });
+      a.addEventListener('mouseleave', () => { a.style.boxShadow = ''; });
+
+      a.innerHTML = `
+        <div class="tile-deco">${c.deco}</div>
+        <span class="tile-name">${c.name}</span>
+        <span class="tile-desc">${c.desc}</span>
+        <span class="tile-cta" style="border-color:${c.cta}; color:${c.cta};">JOUER →</span>
+      `;
+      grid.appendChild(a);
+    });
+
+    buildBulbs(document.getElementById('bulbs'), document.querySelector('.vegas-frame'));
+  </script>
+
+</body>
+</html>

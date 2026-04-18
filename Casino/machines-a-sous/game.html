@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Machine à Sous</title>
+  <link rel="stylesheet" href="../style-vegas.css">
+  <style>
+    .table-wrap {
+      max-width: 680px;
+      margin: 20px auto 40px;
+      padding: 0 12px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── Frame sans padding (top-bar pleine largeur) ── */
+    #frame { padding: 0; }
+    .game-inner { padding: 0 20px 20px; }
+
+    .top-bar { border-radius: 22px 22px 0 0; }
+
+    /* ── Titre casino dans la top bar ── */
+    .casino-title {
+      font-family: var(--font-title);
+      font-size: clamp(13px, 3vw, 18px);
+      font-weight: 900;
+      letter-spacing: 3px;
+      color: var(--gold);
+      text-align: center;
+      line-height: 1.2;
+    }
+    .casino-subtitle {
+      font-size: 9px;
+      letter-spacing: 4px;
+      color: var(--cream-dim);
+      text-align: center;
+    }
+
+    /* ── Reels ── */
+    .reels-wrap {
+      display: flex;
+      align-items: stretch;
+      height: 130px;
+      margin: 16px 0 0;
+      background: radial-gradient(ellipse at 50% 0%, rgba(245,166,35,0.08) 0%, transparent 70%), rgba(0,0,0,0.28);
+      border-radius: 14px;
+      border: 1px solid rgba(245,166,35,0.18);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .reel {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-right: 1px solid rgba(245,166,35,0.12);
+      position: relative;
+    }
+    .reel:last-child { border-right: none; }
+
+    .reel::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 50% 0%, rgba(245,166,35,0.07) 0%, transparent 65%);
+    }
+
+    .reel-face {
+      font-size: 52px;
+      line-height: 1;
+      user-select: none;
+      z-index: 1;
+      filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5));
+    }
+
+    .reel-face.spinning {
+      animation: reel-blur 0.09s linear infinite;
+      filter: blur(3px);
+    }
+
+    @keyframes reel-blur {
+      0%   { transform: translateY(-10px) scale(0.88); }
+      50%  { transform: translateY(10px)  scale(1.10); }
+      100% { transform: translateY(-10px) scale(0.88); }
+    }
+
+    .reel-face.land {
+      animation: reel-land 0.48s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+
+    @keyframes reel-land {
+      0%   { transform: scale(1.55); filter: blur(5px); }
+      55%  { transform: scale(0.88); filter: blur(0); }
+      80%  { transform: scale(1.07); }
+      100% { transform: scale(1);    }
+    }
+
+    .reels-label {
+      position: absolute;
+      top: 7px; right: 10px;
+      font-family: var(--font-title);
+      font-size: 9px; letter-spacing: 2px;
+      color: rgba(245,166,35,0.4);
+    }
+
+    /* ── Question ── */
+    .question-card { margin-top: 14px; }
+    .card-label {
+      font-family: var(--font-title);
+      font-size: 9px; letter-spacing: 3px; text-transform: uppercase;
+      color: var(--gold); opacity: 0.6; margin-bottom: 10px;
+    }
+    .question-text {
+      font-family: var(--font-serif);
+      font-size: 14px; line-height: 1.75;
+      color: var(--cream); min-height: 52px;
+    }
+    .cursor-blink {
+      display: inline-block;
+      width: 2px; height: 16px;
+      background: var(--gold);
+      margin-left: 3px; vertical-align: middle;
+      animation: blink 0.9s step-end infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    /* ── Contrôles ── */
+    .controls-zone { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+
+    .inputs-row { display: grid; grid-template-columns: 1fr 200px; gap: 12px; }
+    @media (max-width: 480px) {
+      .inputs-row { grid-template-columns: 1fr; }
+      .table-wrap { margin: 8px auto 20px; }
+    }
+
+    .field-label {
+      font-family: var(--font-title); font-size: 9px;
+      letter-spacing: 2.5px; text-transform: uppercase;
+      color: rgba(245,166,35,0.6); margin-bottom: 7px; display: block;
+    }
+
+    .answer-input {
+      width: 100%; padding: 13px 16px;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid rgba(253,248,236,0.15); border-radius: 10px;
+      color: var(--cream); font-size: 16px; font-family: var(--font-body);
+      outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .answer-input::placeholder { color: rgba(253,248,236,0.22); }
+    .answer-input:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px var(--gold-glow);
+    }
+
+    .chip-label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 7px; }
+    .chip-presets { display: flex; gap: 5px; }
+    .chip-btn {
+      font-size: 10px; font-weight: 700; font-family: var(--font-body);
+      background: rgba(245,166,35,0.1); border: 1px solid rgba(245,166,35,0.3);
+      color: var(--gold); border-radius: 20px; padding: 3px 9px; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .chip-btn:hover { background: rgba(245,166,35,0.25); }
+
+    .bet-row {
+      display: flex; align-items: stretch; height: 46px;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid rgba(253,248,236,0.15); border-radius: 10px; overflow: hidden;
+    }
+    .bet-row:focus-within { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-glow); }
+    .bet-adj {
+      width: 42px; background: rgba(245,166,35,0.07); border: none;
+      color: var(--cream-dim); font-size: 22px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, color 0.15s;
+    }
+    .bet-adj:hover { background: rgba(245,166,35,0.18); color: var(--gold); }
+    .bet-row input[type="number"] {
+      flex: 1; background: transparent; border: none;
+      color: var(--cream); font-size: 16px; font-family: var(--font-body);
+      text-align: center; outline: none; -moz-appearance: textfield;
+    }
+    .bet-row input::-webkit-inner-spin-button,
+    .bet-row input::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+    /* ── Status ── */
+    .machine-status {
+      text-align: center; font-size: 11px; letter-spacing: 2px;
+      font-family: var(--font-title); text-transform: uppercase;
+      color: rgba(253,248,236,0.35); min-height: 16px; transition: color 0.3s;
+    }
+    .machine-status.ok   { color: #4ade80; }
+    .machine-status.fail { color: #f87171; }
+
+    /* ── Odds ── */
+    .odds-zone {
+      display: flex; justify-content: center; gap: 10px;
+      flex-wrap: wrap; align-items: center; min-height: 28px;
+    }
+    .odds-chip { opacity: 0; transition: opacity 0.3s; }
+    .odds-chip.show { opacity: 1; }
+
+    .ev-explain {
+      width: 100%; text-align: center;
+      font-size: 11px; font-family: var(--font-body);
+      color: rgba(253,248,236,0.40); margin-top: 2px;
+      font-style: italic; display: none;
+    }
+    .ev-explain.show { display: block; }
+
+    /* ── Jackpot text ── */
+    .jackpot-text {
+      display: none;
+      position: fixed; top: 18%; left: 50%; transform: translateX(-50%);
+      z-index: 1000; pointer-events: none;
+      font-family: var(--font-title);
+      font-size: clamp(48px, 12vw, 96px);
+      font-weight: 900; letter-spacing: 8px; white-space: nowrap;
+      color: var(--gold);
+      text-shadow: 0 0 40px var(--gold-bright), 0 0 80px var(--gold-glow), 0 4px 0 var(--gold-dark);
+    }
+    .jackpot-text.show {
+      display: block;
+      animation: jackpot-pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+    @keyframes jackpot-pop {
+      0%   { transform: translateX(-50%) scale(0.3) rotate(-8deg); opacity: 0; }
+      60%  { transform: translateX(-50%) scale(1.1) rotate(2deg);  opacity: 1; }
+      100% { transform: translateX(-50%) scale(1)   rotate(0deg);  opacity: 1; }
+    }
+
+    /* ── Result overlay extras ── */
+    .result-icon   { font-size: 64px; line-height: 1; margin-bottom: 14px; }
+    .result-label  {
+      font-family: var(--font-title); font-size: 11px;
+      letter-spacing: 5px; text-transform: uppercase;
+      opacity: 0.65; margin-bottom: 10px;
+    }
+    .result-amount {
+      font-family: var(--font-title); font-size: 3rem;
+      font-weight: 900; line-height: 1; margin-bottom: 8px;
+    }
+    .result-card.win  .result-amount { color: var(--gold); text-shadow: 0 0 30px var(--gold-glow); }
+    .result-card.lose .result-amount { color: #f87171; }
+    .result-mode { font-size: 11px; color: rgba(253,248,236,0.42); margin-top: 10px; letter-spacing: 0.5px; }
+  </style>
+</head>
+<body>
+
+  <div class="jackpot-text" id="jackpot-text">✦ JACKPOT ✦</div>
+
+  <div class="table-wrap">
+    <div class="vegas-frame" id="frame">
+      <div class="bulbs-container" id="bulbs"></div>
+
+      <header class="top-bar">
+        <a href="index.html" class="btn-back">← Choix Casino</a>
+        <div>
+          <div class="casino-title" id="casino-name">MACHINE À SOUS</div>
+          <div class="casino-subtitle">Probabilités · Terminale</div>
+        </div>
+        <div class="balance-badge" id="balance-wrap">
+          🪙&nbsp;<span id="bank-val">—</span>
+        </div>
+      </header>
+
+      <div class="game-inner">
+
+        <!-- REELS -->
+        <div class="reels-wrap">
+          <div class="reel"><span class="reel-face" id="face-0">🎰</span></div>
+          <div class="reel"><span class="reel-face" id="face-1">🎰</span></div>
+          <div class="reel"><span class="reel-face" id="face-2">🎰</span></div>
+          <span class="reels-label">🎰 Machine à Sous</span>
+        </div>
+
+        <!-- QUESTION -->
+        <div class="question-card">
+          <div class="card-label">✦ Mission du soir ✦</div>
+          <div class="question-text">
+            <span id="typewriter-target"></span><span class="cursor-blink"></span>
+          </div>
+        </div>
+
+        <!-- CONTRÔLES -->
+        <div class="controls-zone">
+          <div class="feedback" id="feedback"></div>
+
+          <div class="inputs-row">
+            <div>
+              <span class="field-label">Votre réponse</span>
+              <input type="text" class="answer-input" id="answer-input"
+                     placeholder="Ex : 0.25  ou  1/4  ou  25%" autocomplete="off">
+            </div>
+            <div>
+              <div class="chip-label-row">
+                <span class="field-label">Mise 🪙</span>
+                <div class="chip-presets">
+                  <button class="chip-btn" data-bet="25">25</button>
+                  <button class="chip-btn" data-bet="50">50</button>
+                  <button class="chip-btn" data-bet="100">100</button>
+                  <button class="chip-btn" data-bet="200">200</button>
+                </div>
+              </div>
+              <div class="bet-row">
+                <button class="bet-adj" id="bet-minus">−</button>
+                <input type="number" id="bet-input" value="50" min="10">
+                <button class="bet-adj" id="bet-plus">+</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="machine-status" id="status">En attente d'une mise…</div>
+
+          <div class="odds-zone">
+            <span class="odds-chip" id="odds-chance"></span>
+            <span class="odds-chip" id="odds-mult"></span>
+            <span class="odds-chip" id="odds-ev"></span>
+            <div class="ev-explain" id="ev-explain"></div>
+          </div>
+
+          <button class="btn-play" id="play-btn">🪙 &nbsp;Faire Tourner&nbsp; 🪙</button>
+        </div>
+
+        <!-- LOGS -->
+        <div class="terminal-card" style="margin-top:14px">
+          <div class="logs" id="game-logs"></div>
+        </div>
+
+      </div><!-- /.game-inner -->
+    </div><!-- /#frame -->
+  </div>
+
+  <!-- RESULT OVERLAY -->
+  <div class="result-overlay" id="result-overlay">
+    <div class="result-card" id="result-card">
+      <div class="result-icon"   id="result-icon"></div>
+      <div class="result-label"  id="result-label"></div>
+      <div class="result-amount" id="result-amount"></div>
+      <div class="result-mode"   id="result-mode"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import {
+      getBalance, updateBalance,
+      parseAnswer, typeQuestion, addLog, buildBulbs,
+      generateQuestion, r6,
+    } from '../shared.js';
+
+    /* ── Palette par ?mode ── */
+    const PALETTES = {
+      mgm:     { bg:'#0a2540', accent:'#f5a623', felt:'#0e3560', glow:'rgba(245,166,35,0.5)',  name:'MGM Grand'       },
+      caesar:  { bg:'#1a003a', accent:'#ffcc00', felt:'#2d0060', glow:'rgba(255,204,0,0.5)',   name:"Caesar's Palace" },
+      bellagio:{ bg:'#081c32', accent:'#c9a84c', felt:'#0d3a5a', glow:'rgba(201,168,76,0.5)',  name:'Bellagio'        },
+      luxor:   { bg:'#0a0a0a', accent:'#d4af37', felt:'#1a0a00', glow:'rgba(212,175,55,0.5)',  name:'Luxor'           },
+    };
+    const mode = new URLSearchParams(location.search).get('mode') || 'mgm';
+    const pal  = PALETTES[mode] || PALETTES.mgm;
+    const root = document.documentElement;
+    root.style.setProperty('--gold',        pal.accent);
+    root.style.setProperty('--gold-bright', pal.accent);
+    root.style.setProperty('--gold-dark',   pal.bg);
+    root.style.setProperty('--gold-glow',   pal.glow);
+    root.style.setProperty('--felt-dark',   pal.bg);
+    root.style.setProperty('--felt',        pal.felt);
+    root.style.setProperty('--card-border', pal.glow);
+    document.getElementById('casino-name').textContent = pal.name.toUpperCase();
+
+    /* ── Refs & état ── */
+    const $ = id => document.getElementById(id);
+    const START = Date.now();
+    const logsEl = $('game-logs');
+    let currentQ = null;
+
+    /* ── Reels ── */
+    const SYMBOLS = ['🍒','🍋','🍇','🔔','⭐','💎','7️⃣','🎱'];
+
+    function spinReels() {
+      return new Promise(resolve => {
+        const faces = [0,1,2].map(i => $(`face-${i}`));
+        const ivs = faces.map(f => {
+          f.classList.add('spinning');
+          return setInterval(() => { f.textContent = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]; }, 80);
+        });
+        [700, 980, 1260].forEach((t, i) => setTimeout(() => {
+          clearInterval(ivs[i]);
+          const f = faces[i];
+          f.classList.remove('spinning');
+          f.textContent = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+          f.classList.add('land');
+          setTimeout(() => f.classList.remove('land'), 500);
+          if (i === 2) setTimeout(resolve, 350);
+        }, t));
+      });
+    }
+
+    /* ── Odds ── */
+    const EV_HINT = ev =>
+      ev < 0.99 ? `E = ${ev.toFixed(2)} → la maison garde ${((1-ev)*100).toFixed(0)}% en moyenne`
+    : ev < 1.01 ? `E = ${ev.toFixed(2)} → jeu équitable : tu récupères ta mise en moyenne`
+    :             `E = ${ev.toFixed(2)} → avantage joueur (+${((ev-1)*100).toFixed(0)}% en moyenne)`;
+
+    function displayOdds(winChance, payoutMult) {
+      const ev = r6(winChance * payoutMult);
+      [
+        { id:'odds-chance', text:`${(winChance*100).toFixed(1)}% victoire`, cls: winChance>=0.4?'good':'bad' },
+        { id:'odds-mult',   text:`gain ×${payoutMult}`,                     cls: payoutMult>=5?'good':'info' },
+        { id:'odds-ev',     text:`EV ${ev>=1?'+':''}${((ev-1)*100).toFixed(0)}%`, cls: ev>=1?'good':ev>=0.85?'info':'bad' },
+      ].forEach(c => { const e=$(c.id); e.textContent=c.text; e.className=`odds-chip show ${c.cls}`; });
+      const evEl = $('ev-explain');
+      evEl.textContent = EV_HINT(ev);
+      evEl.className = 'ev-explain show';
+    }
+
+    function clearOdds() {
+      ['odds-chance','odds-mult','odds-ev'].forEach(id => { $(id).className='odds-chip'; $(id).textContent=''; });
+      $('ev-explain').className = 'ev-explain';
+    }
+
+    /* ── Feedback avec formule ── */
+    function showFeedback(correct, q) {
+      const fb = $('feedback');
+      fb.className = 'feedback show ' + (correct ? 'correct' : 'wrong');
+      fb.innerHTML = correct
+        ? '✓ Calcul parfait — les dieux du casino vous sourient.'
+        : `✗ Attendu : <strong>${q.hint}</strong> = <strong>${q.a.toFixed(4)}</strong>`;
+    }
+
+    /* ── Balance ── */
+    function updateBankUI(delta) {
+      $('bank-val').textContent = getBalance().toLocaleString('fr-FR') + ' 🪙';
+      if (delta === undefined) return;
+      const b = $('balance-wrap');
+      b.classList.remove('gain','lose'); void b.offsetWidth;
+      b.classList.add(delta > 0 ? 'gain' : 'lose');
+      setTimeout(() => b.classList.remove('gain','lose'), 900);
+    }
+
+    /* ── Result overlay ── */
+    function showResult(won, amount, msg) {
+      $('result-card').className = `result-card ${won?'win':'lose'}`;
+      $('result-icon').textContent   = won ? '🏆' : '💀';
+      $('result-label').textContent  = won ? 'VICTOIRE !' : 'LA MAISON GAGNE';
+      $('result-amount').textContent = won ? `+${amount.toLocaleString('fr-FR')} 🪙` : `−${amount.toLocaleString('fr-FR')} 🪙`;
+      $('result-mode').textContent   = msg;
+      $('result-overlay').classList.add('show');
+      setTimeout(() => $('result-overlay').classList.remove('show'), 2400);
+    }
+
+    /* ── Jackpot ── */
+    function triggerJackpot() {
+      const f=$('frame'), j=$('jackpot-text');
+      f.classList.add('jackpot'); j.classList.add('show');
+      setTimeout(() => { f.classList.remove('jackpot'); j.classList.remove('show'); }, 2200);
+    }
+
+    /* ── Nouvelle question ── */
+    function newQuestion() {
+      currentQ = generateQuestion();
+      typeQuestion($('typewriter-target'), null, currentQ.q);
+      $('answer-input').value = '';
+      $('feedback').className = 'feedback'; $('feedback').innerHTML = '';
+      clearOdds();
+      $('status').className = 'machine-status';
+      $('status').textContent = "En attente d'une mise…";
+    }
+
+    /* ── Tour de jeu ── */
+    async function processTurn() {
+      const bet     = parseInt($('bet-input').value);
+      const rawAns  = $('answer-input').value;
+      const userAns = parseAnswer(rawAns);
+      const balance = getBalance();
+
+      if (isNaN(bet) || bet < 10) { addLog(logsEl, START, '⚠ Mise invalide (minimum 10).'); return; }
+      if (bet > balance)           { addLog(logsEl, START, '⚠ Jetons insuffisants !');       return; }
+
+      $('play-btn').disabled = true;
+      updateBalance(-bet); updateBankUI(-bet);
+
+      const skipped   = !rawAns.trim();
+      const isCorrect = !skipped && !isNaN(userAns) && Math.abs(userAns - currentQ.a) < 0.015;
+
+      let winChance, payoutMult, modeMsg;
+
+      if (!isCorrect) {
+        winChance = 0.125; payoutMult = 2;
+        modeMsg = skipped ? 'Sans réponse — malus actif' : 'Mauvais calcul — la maison triche';
+        $('status').className   = 'machine-status fail';
+        $('status').textContent = skipped ? 'SANS RÉPONSE — ODDS RÉDUITS' : 'MAUVAIS CALCUL — LA MAISON TRICHE';
+        showFeedback(false, currentQ);
+      } else {
+        if (Math.random() < 0.5) {
+          winChance = 0.5; payoutMult = 2;
+          modeMsg = 'Mode Équitable · 50% · ×2';
+        } else {
+          winChance  = Math.max(0.05, currentQ.a);
+          payoutMult = Math.max(2, Math.round(1 / winChance));
+          modeMsg = `Mode Jackpot · ${(winChance*100).toFixed(1)}% · ×${payoutMult}`;
+        }
+        $('status').className   = 'machine-status ok';
+        $('status').textContent = 'CALCUL EXACT — BONNE CHANCE !';
+        showFeedback(true, currentQ);
+      }
+
+      displayOdds(winChance, payoutMult);
+      addLog(logsEl, START, `Mise : ${bet} 🪙 — ${modeMsg}`);
+
+      await spinReels();
+
+      const won  = Math.random() < winChance;
+      const gain = bet * payoutMult;
+
+      if (won) {
+        updateBalance(gain); updateBankUI(gain);
+        addLog(logsEl, START, `VICTOIRE ! +${gain} 🪙 (${(winChance*100).toFixed(1)}%)`);
+        triggerJackpot();
+      } else {
+        addLog(logsEl, START, `ÉCHEC. −${bet} 🪙`);
+      }
+
+      showResult(won, won ? gain : bet, modeMsg);
+      setTimeout(() => {
+        $('play-btn').disabled = false;
+        newQuestion();
+        buildBulbs($('bulbs'), $('frame'));
+      }, 2500);
+    }
+
+    /* ── Init ── */
+    updateBankUI();
+    newQuestion();
+    requestAnimationFrame(() => requestAnimationFrame(() => buildBulbs($('bulbs'), $('frame'))));
+    window.addEventListener('resize', () => buildBulbs($('bulbs'), $('frame')));
+    window.addEventListener('scolaris-balance', () => updateBankUI());
+
+    $('play-btn').addEventListener('click', processTurn);
+    $('answer-input').addEventListener('keydown', e => { if (e.key === 'Enter') processTurn(); });
+    $('bet-minus').addEventListener('click', () => {
+      const el = $('bet-input');
+      el.value = Math.max(10, (parseInt(el.value)||50) - 25);
+    });
+    $('bet-plus').addEventListener('click', () => {
+      const el = $('bet-input');
+      el.value = Math.min(getBalance(), (parseInt(el.value)||50) + 25);
+    });
+    document.querySelectorAll('.chip-btn').forEach(btn =>
+      btn.addEventListener('click', () => {
+        $('bet-input').value = Math.min(getBalance(), parseInt(btn.dataset.bet));
+      })
+    );
+  </script>
+</body>
+</html>

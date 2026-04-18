@@ -340,6 +340,14 @@ body::before {
   justify-content: center;
   z-index: 200;
   padding: 1rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.result-overlay.show {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .result-card {

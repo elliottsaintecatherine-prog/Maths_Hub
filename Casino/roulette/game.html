@@ -341,6 +341,9 @@
       $('wheel').style.background = `conic-gradient(from ${(-d/2).toFixed(2)}deg, ${parts.join(',')})`;
     }
 
+    // ── Payout par type de pari (retour total, mise incluse) ──
+    const PAYOUT = { rouge: 2, noir: 2, zero: 17 };
+
     // ── State ──
     let betType=null, betAmt=0, q=null, spinning=false, totalRot=0;
     let bonusMultipliers = [];
@@ -435,8 +438,8 @@
 
       const won  = betOf(slot) === betType;
       const bonusAccumulé = getBonusAccumulé();
-      const gain  = Math.round(betAmt * 3.5 * bonusAccumulé);
-      const delta = won ? gain : -betAmt;
+      const gain  = won ? Math.round(betAmt * PAYOUT[betType] * bonusAccumulé) : 0;
+      const delta = won ? gain : 0;
       if (!TRAIN_MODE.active) { updateBalance(delta); bankUI(delta); }
       showCroupierMsg(won ? (bonusAccumulé >= 5 ? 'jackpot' : 'correct') : 'faux');
       addLog($('logs'), T, `${slotLbl(slot)} — ${won ? `✓ +${gain} 🪙 (bonus ×${bonusAccumulé.toFixed(2)})` : `✗ −${betAmt} 🪙`}`);
@@ -448,7 +451,7 @@
       $('r-amount').textContent  = won
         ? `+${gain.toLocaleString('fr-FR')} 🪙`
         : `−${betAmt.toLocaleString('fr-FR')} 🪙`;
-      $('r-msg').textContent = `${slotLbl(slot)} · ×${(3.5 * bonusAccumulé).toFixed(2)} · ${correct ? 'Odds normaux' : 'Biais défavorable'}`;
+      $('r-msg').textContent = `${slotLbl(slot)} · ×${(PAYOUT[betType] * bonusAccumulé).toFixed(2)} · ${correct ? 'Odds normaux' : 'Biais défavorable'}`;
       $('result-ov').classList.add('show');
       setTimeout(() => $('result-ov').classList.remove('show'), 2500);
 

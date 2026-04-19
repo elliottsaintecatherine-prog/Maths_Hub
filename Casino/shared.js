@@ -210,7 +210,13 @@ export function triggerStreak(n) {
 
 /* ── UI — Ampoules ────────────────────────────────────────────────── */
 
+let _bulbsInterval = null;
+
 export function buildBulbs(containerEl, frameEl) {
+  if (_bulbsInterval !== null) {
+    clearInterval(_bulbsInterval);
+    _bulbsInterval = null;
+  }
   containerEl.innerHTML = '';
   const COUNT = 24;
   for (let i = 0; i < COUNT; i++) {
@@ -220,7 +226,7 @@ export function buildBulbs(containerEl, frameEl) {
     b.style.setProperty('--total', COUNT);
     containerEl.appendChild(b);
   }
-  setInterval(() => {
+  _bulbsInterval = setInterval(() => {
     const bulbs = containerEl.querySelectorAll('.bulb');
     bulbs.forEach(b => {
       if (Math.random() < 0.08) b.classList.toggle('off');

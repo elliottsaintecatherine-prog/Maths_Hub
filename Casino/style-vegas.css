@@ -380,8 +380,6 @@ body::before {
 
 .result-card .result-amount {
   font-family: var(--font-serif);
-  font-size: 1.1rem;
-  color: var(--cream-dim);
   margin-bottom: 1.5rem;
 }
 

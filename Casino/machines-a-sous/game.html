@@ -209,6 +209,14 @@
       color: var(--gold);
       text-shadow: 0 0 10px var(--gold-glow);
     }
+    .bonus-display.capped {
+      color: #ff4444;
+      text-shadow: 0 0 10px rgba(255,68,68,0.6);
+      animation: pulse-cap 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse-cap {
+      0%, 100% { opacity: 1; } 50% { opacity: 0.6; }
+    }
 
     /* ── Odds ── */
     .odds-zone {
@@ -374,10 +382,11 @@
     import {
       getBalance, updateBalance,
       parseAnswer, typeQuestion, addLog, buildBulbs,
-      generateDynamicQuestion, generateGaussianBonusMultiplier, getCasinoLevel, r6,
+      generateDynamicQuestion, generateGaussianBonusMultiplier, getCasinoLevel, CASINO_LEVELS, r6,
       TRAIN_MODE, setTrainMode, loadTrainMode,
       SessionStats, recordAnswer, getStats,
       formatFeedback, animateBalance, triggerStreak,
+      BONUS_CAP,
     } from '../shared.js';
 
     /* ── Palette par ?mode ── */
@@ -398,7 +407,8 @@
     root.style.setProperty('--felt',        pal.felt);
     root.style.setProperty('--card-border', pal.glow);
     document.getElementById('casino-name').textContent = pal.name.toUpperCase();
-    const difficulty = getCasinoLevel(mode);
+    const difficulty  = getCasinoLevel(mode);
+    const casinoRange = (CASINO_LEVELS[mode] || CASINO_LEVELS.luxor).multiplierRange;
 
     /* ── Refs & état ── */
     const $ = id => document.getElementById(id);
@@ -477,13 +487,14 @@
 
     /* ── Bonus accumulé ── */
     function getBonusAccumulé() {
-      return 1 + bonusMultipliers.reduce((a, b) => a + b, 0);
+      return Math.min(1 + bonusMultipliers.reduce((a, b) => a + b, 0), BONUS_CAP);
     }
     function updateBonusUI() {
       const acc = getBonusAccumulé();
+      const capped = acc >= BONUS_CAP;
       const el = $('bonus-display');
-      el.textContent = `✦ Bonus ×${acc.toFixed(2)}`;
-      el.className = 'bonus-display' + (acc > 1 ? ' active' : '');
+      el.textContent = capped ? `✦ Bonus ×${acc.toFixed(2)} — max atteint` : `✦ Bonus ×${acc.toFixed(2)}`;
+      el.className = 'bonus-display' + (acc > 1 ? ' active' : '') + (capped ? ' capped' : '');
     }
 
     /* ── Train mode ── */
@@ -564,7 +575,7 @@
       if (!skipped) { recordAnswer(isCorrect); updateStatsBar(); }
 
       if (isCorrect) {
-        const M = generateGaussianBonusMultiplier(bonusMultipliers.length, difficulty);
+        const M = generateGaussianBonusMultiplier(0, difficulty, casinoRange);
         bonusMultipliers.push(M);
         updateBonusUI();
       }

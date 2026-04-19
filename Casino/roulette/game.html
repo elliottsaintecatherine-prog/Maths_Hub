@@ -153,6 +153,14 @@
       color: var(--gold);
       text-shadow: 0 0 10px var(--gold-glow);
     }
+    .bonus-display.capped {
+      color: #ff4444;
+      text-shadow: 0 0 10px rgba(255,68,68,0.6);
+      animation: pulse-cap 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse-cap {
+      0%, 100% { opacity: 1; } 50% { opacity: 0.6; }
+    }
 
     /* ── Recall box ── */
     #recall {
@@ -299,10 +307,11 @@
   <script type="module">
     import {
       getBalance, updateBalance, parseAnswer, typeQuestion, addLog, buildBulbs, generateRouletteQuestion,
-      generateGaussianBonusMultiplier,
+      generateGaussianBonusMultiplier, CASINO_LEVELS,
       TRAIN_MODE, setTrainMode, loadTrainMode,
       SessionStats, recordAnswer, getStats,
       formatFeedback, animateBalance, triggerStreak,
+      BONUS_CAP,
     } from '../shared.js';
 
     // ── Variant ──
@@ -310,7 +319,8 @@
     const IS_AM = V === 'american';
     const IS_SC = V === 'scolaris';
     const DIFF_MAP = { euro: 'facile', american: 'moyen', scolaris: 'difficile' };
-    const difficulty = DIFF_MAP[V] || 'moyen';
+    const difficulty    = DIFF_MAP[V] || 'moyen';
+    const rouletteRange = Object.values(CASINO_LEVELS).find(l => l.difficulty === difficulty)?.multiplierRange || [2, 4];
 
     // ── Wheel slots ──
     const RED_SET  = new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
@@ -339,13 +349,14 @@
 
     // ── Bonus helpers ──
     function getBonusAccumulé() {
-      return 1 + bonusMultipliers.reduce((a, b) => a + b, 0);
+      return Math.min(1 + bonusMultipliers.reduce((a, b) => a + b, 0), BONUS_CAP);
     }
     function updateBonusUI() {
       const acc = getBonusAccumulé();
+      const capped = acc >= BONUS_CAP;
       const el = $('bonus-display');
-      el.textContent = `✦ Bonus ×${acc.toFixed(2)}`;
-      el.className = 'bonus-display' + (acc > 1 ? ' active' : '');
+      el.textContent = capped ? `✦ Bonus ×${acc.toFixed(2)} — max atteint` : `✦ Bonus ×${acc.toFixed(2)}`;
+      el.className = 'bonus-display' + (acc > 1 ? ' active' : '') + (capped ? ' capped' : '');
     }
 
     // ── Bet selection ──
@@ -378,7 +389,7 @@
       }
 
       if (ok) {
-        const M = generateGaussianBonusMultiplier(bonusMultipliers.length, difficulty);
+        const M = generateGaussianBonusMultiplier(0, difficulty, rouletteRange);
         bonusMultipliers.push(M);
         updateBonusUI();
         triggerStreak(SessionStats.streak);
@@ -395,7 +406,10 @@
 
       const losing = SLOTS.map((_,i) => i).filter(i => betOf(SLOTS[i]) !== betType);
       let idx;
-      if (!correct && Math.random() < 0.875) {
+      // EV incorrect avant (0.875) : 0.125×2 - 0.875 = -0.625× mise (trop punitif).
+      // EV incorrect après (0.65)  : 0.35×2  - 0.65  = +0.05× mise (douce, élève pas écrasé).
+      // EV correct inchangée       : 0.5×2   - 0.5   = +0.50× mise.
+      if (!correct && Math.random() < 0.65) {
         idx = losing[Math.floor(Math.random() * losing.length)];
       } else {
         idx = Math.floor(Math.random() * N);

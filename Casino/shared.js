@@ -468,6 +468,11 @@ function boxMuller() {
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * Math.random());
 }
 
+// Plafond bonus Slots/Roulette — EV neutre impossible (P=0.5, ×3.5 → EV=0 exige CAP≈0.29).
+// Contrainte pratique : payout max = 3.5 × CAP ≤ 50× mise (norme casino).
+// → CAP = floor(50/3.5) = 14. Au-delà, les gains deviennent pédagogiquement déséquilibrés.
+export const BONUS_CAP = 14;
+
 // Paramètres σ par difficulté (mu varie selon le contexte)
 const GAUSS_SIGMA = { facile: 0.30, moyen: 0.30, difficile: 0.60 };
 
@@ -478,10 +483,19 @@ const BJ_PROGRESSION = [
   { mu: 4.5, min: 4, max: 5 },
 ];
 
-export function generateGaussianBonusMultiplier(bonusIndex = 0, difficulty = 'moyen') {
-  const sigma  = GAUSS_SIGMA[difficulty] || GAUSS_SIGMA.moyen;
-  const band   = BJ_PROGRESSION[Math.min(bonusIndex, BJ_PROGRESSION.length - 1)];
-  const raw    = band.mu + sigma * boxMuller();
-  const clamped = Math.min(band.max, Math.max(band.min, raw));
+// range: [min, max] pour Slots/Roulette (plage fixe par casino).
+// Sans range → BJ_PROGRESSION (Blackjack, index de progression).
+export function generateGaussianBonusMultiplier(bonusIndex = 0, difficulty = 'moyen', range = null) {
+  const sigma = GAUSS_SIGMA[difficulty] || GAUSS_SIGMA.moyen;
+  let min, max, mu;
+  if (range) {
+    [min, max] = range;
+    mu = (min + max) / 2;
+  } else {
+    const band = BJ_PROGRESSION[Math.min(bonusIndex, BJ_PROGRESSION.length - 1)];
+    ({ mu, min, max } = band);
+  }
+  const raw     = mu + sigma * boxMuller();
+  const clamped = Math.min(max, Math.max(min, raw));
   return Math.round(clamped * 100) / 100;
 }

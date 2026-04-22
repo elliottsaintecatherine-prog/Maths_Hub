@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zombie Café</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { background: #1a1a1a; height: 100%; overflow: hidden; }
+    body { display: flex; justify-content: center; align-items: center; }
+    #game { box-shadow: 0 0 40px #000; }
+  </style>
+</head>
+<body>
+  <div id="game"></div>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+  <script type="module">
+    import MenuScene from './src/scenes/MenuScene.js';
+    import GameScene from './src/scenes/GameScene.js';
+    import RaidScene from './src/scenes/RaidScene.js';
+
+    const config = {
+      type: Phaser.AUTO,
+      parent: 'game',
+      width: 960,
+      height: 640,
+      backgroundColor: '#2d2d2d',
+      pixelArt: true,
+      scene: [MenuScene, GameScene, RaidScene],
+    };
+
+    new Phaser.Game(config);
+  </script>
+</body>
+</html>

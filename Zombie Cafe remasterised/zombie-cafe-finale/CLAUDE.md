@@ -38,12 +38,12 @@ Ordre d'exécution : 1a → 1b → 1c → 2a → 2b → 2c → 6a → 6b → 6c 
 
 | ID | Titre | Status |
 |---|---|---|
-| 1a | Données : types de clients + stats | [ ] |
-| 1b | Infection : popup + toxines + noms aléatoires | [ ] |
-| 1c | Frigo | [ ] |
-| 2a | Énergie : perte + récupération + barre | [ ] |
-| 2b | Patience : seuil d'attaque + fuite clients | [ ] |
-| 2c | Focus : daydreaming + repos | [ ] |
+| 1a | Données : types de clients + stats | [x] |
+| 1b | Infection : popup + toxines + noms aléatoires | [x] |
+| 1c | Frigo | [x] |
+| 2a | Énergie : perte + récupération + barre | [x] |
+| 2b | Patience : seuil d'attaque + fuite clients | [x] |
+| 2c | Focus : daydreaming + repos | [x] |
 | 6a | Données recettes (5 cookbooks) + cuisson | [ ] |
 | 6b | Flux comptoir/frigo + commandes + pourboires | [ ] |
 | 6c | Évier + cycle assiettes sales | [ ] |
@@ -73,49 +73,59 @@ Ordre d'exécution : 1a → 1b → 1c → 2a → 2b → 2c → 6a → 6b → 6c 
 
 ## PROCHAINE ACTION
 
-**Prompt 1a — Données : types de clients et stats zombies**
+**Prompt 6a — Données recettes et mécanique de cuisson**
 
-Lis tous les fichiers dans src/ et leurs dépendances. Implémente UNIQUEMENT ce qui suit, sans modifier le reste. Aucun emoji dans le code — utilise des formes géométriques (rectangles, cercles, polygones Phaser) ou du texte.
+Implémente UNIQUEMENT les données des recettes et la mécanique de cuisson sur les fourneaux.
 
-Crée `src/data/clientTypes.js` avec les 6 types de clients du vrai jeu :
+DONNÉES dans src/data/recipes.js :
+9 types de recettes (une constante RECIPE_TYPES) + 10 plats débloquables :
 
-```js
-const CLIENT_TYPES = {
-  CONSTRUCTION_WORKER: {
-    id: 'construction_worker', label: 'Construction Worker',
-    energy: 150, tipRating: 3, speed: 4, atkStrength: 8, patience: 7, focus: 6
-  },
-  TEENAGER: {
-    id: 'teenager', label: 'Teenager',
-    energy: 80, tipRating: 6, speed: 9, atkStrength: 3, patience: 3, focus: 4
-  },
-  OFFICE_WORKER: {
-    id: 'office_worker', label: 'Office Worker',
-    energy: 100, tipRating: 5, speed: 6, atkStrength: 5, patience: 6, focus: 7
-  },
-  SUPERMODEL: {
-    id: 'supermodel', label: 'Supermodel',
-    energy: 70, tipRating: 12, speed: 8, atkStrength: 2, patience: 4, focus: 5
-  },
-  FIRE_CHIEF: {
-    id: 'fire_chief', label: 'Fire Chief',
-    energy: 120, tipRating: 4, speed: 6, atkStrength: 7, patience: 8, focus: 8
-  },
-  CELEBRITY: {
-    id: 'celebrity', label: 'Celebrity',
-    energy: 90, tipRating: 11, speed: 7, atkStrength: 3, patience: 2, focus: 3
-  }
+Types :
+- quick: { cookTime: 60, portions: 2, pricePerPortion: 8, xp: 5, burnIn: 120 }
+- veryQuick: { cookTime: 30, portions: 1, pricePerPortion: 5, xp: 2, burnIn: 60 }
+- fresh: { cookTime: 180, portions: 4, pricePerPortion: 15, xp: 12, burnIn: 300 }
+- frozen: { cookTime: 120, portions: 6, pricePerPortion: 10, xp: 8, burnIn: Infinity }
+- bulk: { cookTime: 480, portions: 12, pricePerPortion: 6, xp: 10, burnIn: null }
+- fancy: { cookTime: 900, portions: 3, pricePerPortion: 40, xp: 30, minLevel: 3 }
+- veryFancy: { cookTime: 1800, portions: 4, pricePerPortion: 80, xp: 60, minLevel: 6 }
+- spicy: { cookTime: 300, portions: 5, pricePerPortion: 18, xp: 15, clientSatisfaction: +10% }
+- verySpicy: { cookTime: 600, portions: 8, pricePerPortion: 25, xp: 22, minLevel: 4 }
+
+COOKBOOKS (fidèle au jeu — simplifié à 5 livres) :
+Chaque recette appartient à un cookbook. Structure :
+const COOKBOOKS = {
+  standard: { label: 'Cuisine Standard', icon: 'brown' },
+  tiki: { label: 'Cuisine Tiki', icon: 'green', minLevel: 3 },
+  raid: { label: 'Livre des Raids', icon: 'red', raidOnly: true },
+  feast: { label: 'Grand Festin', icon: 'gold', minLevel: 5 },
+  seasonal: { label: 'Spécial Saison', icon: 'orange', minLevel: 4 }
 };
-export default CLIENT_TYPES;
-```
 
-Crée `src/data/zombieStats.js` :
-- Fonction `createZombieFromClient(clientType)` : retourne un objet zombie avec toutes les stats
-  copiées du client + champs : `energyCurrent` (= energy max), `state: 'idle'`, `reanimationEnd: null`
-- Fonction `infectionCost(clientType)` : `Math.max(3, Math.min(80, Math.round((somme6stats / 54) * 80)))`
+Plats (id, label, type, cookbook, minLevel) :
+- 'brain_tartare' : Cerveau Tartare, quick, standard, 1
+- 'gloomy_soup' : Soupe Glauque, frozen, standard, 1
+- 'rib_jelly' : Côtes en Gelée, fresh, standard, 2
+- 'fried_fingers' : Doigts Frits, veryQuick, standard, 2
+- 'nauseating_steak' : Steak Nauséabond, spicy, standard, 3
+- 'tiki_brain_skewer' : Brochette de Cerveau Tiki, spicy, tiki, 3
+- 'coco_bones_drink' : Boisson Os-Coco, veryQuick, tiki, 3
+- 'putrid_lasagna' : Lasagnes Putrides, bulk, seasonal, 4
+- 'breaded_eyes' : Yeux Panés, verySpicy, seasonal, 4
+- 'zombified_foie_gras' : Foie Gras Zombifié, fancy, feast, 5
+- 'macabre_feast' : Festin Macabre, veryFancy, feast, 6
+- 'raid_special_brain_stew' : Ragoût de Cerveau Volé, fancy, raid, null (débloqué en raidant)
+- 'raid_special_rare' : Plat Rare Volé, veryFancy, raid, null (débloqué en raidant)
 
-Affiche dans GameScene un tableau de debug temporaire (coin haut droit, texte blanc 12px)
-listant les 6 types avec leurs stats pour vérifier que les données sont correctes.
-Ce tableau sera supprimé au Prompt 7a.
+MÉCANIQUE DE CUISSON :
+- Clic sur un fourneau libre → liste des recettes débloquées (niveau >= minLevel)
+  → Liste : rectangle gris, items texte, grisé si niveau insuffisant
+- Sélection d'une recette → cuisson démarre :
+  → Barre de progression sur le fourneau (rectangle vert qui avance)
+  → Texte minuterie compte à rebours au-dessus du fourneau
+- Fin de cuisson : son simulé (à brancher au Prompt 9c), état 'ready'
+- BRÛLURE : si non récupéré dans burnIn secondes après fin :
+  → État 'burned', rectangle noir fumant
+  → Clic + 2 sec d'animation pour nettoyer (nettoyage = clic maintenu ou double-clic)
+- Frozen : jamais brûlé | Fresh : brûle en 300 sec après cuisson
 
-À la fin : coche [x] le prompt 1a dans CLAUDE.md et copie le texte du **Prompt 1b** dans la section PROCHAINE ACTION.
+À la fin : coche [x] le prompt 6a dans CLAUDE.md et copie le texte du **Prompt 6b** dans la section PROCHAINE ACTION.

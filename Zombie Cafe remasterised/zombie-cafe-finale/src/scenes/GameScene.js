@@ -1,6 +1,15 @@
 import CLIENT_TYPES from '../data/clientTypes.js';
 import { infectionCost, createZombieFromClient } from '../data/zombieStats.js';
 import { getRandomZombieName } from '../data/zombieNames.js';
+import {
+  RECIPE_TYPES,
+  COOKBOOKS,
+  COOKBOOK_COLORS,
+  DISHES,
+  isDishUnlocked,
+  getSelectableDishes,
+  getBurnIn
+} from '../data/recipes.js';
 
 const CLIENT_COLORS = {
   construction_worker: 0x888888,
@@ -23,6 +32,14 @@ const CHAIR_POSITIONS = [
 const STAFF_ZONE = { x: 80, y: 200 };
 const STAFF_SPACING = 44;
 
+const STOVE_POSITIONS = [
+  { x: 260, y: 560 },
+  { x: 340, y: 560 }
+];
+const STOVE_W = 60;
+const STOVE_H = 60;
+const CLEAN_DURATION_MS = 2000;
+
 export default class GameScene extends Phaser.Scene {
   constructor() { super('GameScene'); }
 
@@ -42,18 +59,23 @@ export default class GameScene extends Phaser.Scene {
 
     this.toxines = 10;
     this.rating = 5;
+    this.playerLevel = 3;
     this.clients = [];
     this.staff = [];
     this.staffCount = 0;
     this.activePopup = null;
     this.activeEnergyUI = null;
     this.activeActionPopup = null;
+    this.activeRecipeList = null;
 
     this.fridgeContents = [];
     this.fridgeCapacity = 5;
 
+    this.stoves = [];
+
     this.createToxinesHUD();
     this.createFridge();
+    this.createStoves();
     this.createRestZone();
     this.createDebugClientTable();
 
@@ -77,6 +99,9 @@ export default class GameScene extends Phaser.Scene {
       if (this.activeActionPopup && (!targets || targets.length === 0)) {
         this.closeActionPopup();
       }
+      if (this.activeRecipeList && (!targets || targets.length === 0)) {
+        this.closeRecipeList();
+      }
     });
   }
 
@@ -89,6 +114,7 @@ export default class GameScene extends Phaser.Scene {
     }
     if (this.activeEnergyUI) this.refreshEnergyUI();
     if (this.activeActionPopup) this.refreshActionPopup();
+    this.updateStoves();
   }
 
   updateZombieDaydream(zombie) {
@@ -794,5 +820,361 @@ export default class GameScene extends Phaser.Scene {
     }
 
     this.debugClientText = this.add.text(x, y, lines.join('\n'), style).setOrigin(1, 0);
+  }
+
+  createStoves() {
+    for (const pos of STOVE_POSITIONS) {
+      this.stoves.push(this.createSingleStove(pos.x, pos.y));
+    }
+  }
+
+  createSingleStove(x, y) {
+    const body = this.add.rectangle(x, y, STOVE_W, STOVE_H, 0x555555);
+    body.setStrokeStyle(2, 0xffffff, 1);
+    body.setInteractive({ useHandCursor: true });
+
+    const burners = this.add.graphics();
+    burners.setDepth(body.depth + 1);
+
+    const stove = {
+      x, y,
+      body,
+      burners,
+      state: 'idle',
+      dish: null,
+      cookStart: null,
+      cookEnd: null,
+      burnAt: null,
+      progressBg: null,
+      progressBar: null,
+      timerText: null,
+      readyMark: null,
+      smoke: null,
+      cleanBg: null,
+      cleanBar: null,
+      cleanStart: null,
+      cleanPointerId: null
+    };
+
+    this.drawStoveBurners(stove, 0x222222);
+
+    body.on('pointerdown', (pointer, lx, ly, ev) => {
+      this.handleStovePointerDown(stove, pointer);
+      if (ev && ev.stopPropagation) ev.stopPropagation();
+    });
+    body.on('pointerup', (pointer) => {
+      this.handleStovePointerUp(stove, pointer);
+    });
+    body.on('pointerout', (pointer) => {
+      this.handleStovePointerUp(stove, pointer);
+    });
+
+    return stove;
+  }
+
+  drawStoveBurners(stove, color) {
+    stove.burners.clear();
+    stove.burners.fillStyle(color, 1);
+    stove.burners.lineStyle(1, 0x000000, 1);
+    const offsets = [[-14, -14], [14, -14], [-14, 14], [14, 14]];
+    for (const [ox, oy] of offsets) {
+      stove.burners.fillCircle(stove.x + ox, stove.y + oy, 6);
+      stove.burners.strokeCircle(stove.x + ox, stove.y + oy, 6);
+    }
+  }
+
+  handleStovePointerDown(stove, pointer) {
+    if (stove.state === 'idle') {
+      this.openRecipeList(stove);
+    } else if (stove.state === 'ready') {
+      this.collectCookedDish(stove);
+    } else if (stove.state === 'burned') {
+      this.startCleaning(stove, pointer);
+    }
+  }
+
+  handleStovePointerUp(stove, pointer) {
+    if (stove.state !== 'burned') return;
+    if (stove.cleanPointerId === null) return;
+    if (pointer && pointer.id !== undefined && pointer.id !== stove.cleanPointerId) return;
+    this.cancelCleaning(stove);
+  }
+
+  openRecipeList(stove) {
+    this.closeRecipeList();
+    const { width, height } = this.scale;
+    const popupW = 360;
+    const popupH = 420;
+
+    const container = this.add.container(width / 2, height / 2);
+    container.setDepth(120);
+
+    const bg = this.add.rectangle(0, 0, popupW, popupH, 0x2a2a2a);
+    bg.setStrokeStyle(2, 0xffffff, 1);
+    bg.setInteractive();
+    container.add(bg);
+
+    const title = this.add.text(0, -popupH / 2 + 18, 'Recettes', {
+      fontFamily: 'monospace', fontSize: '16px', color: '#ffffff'
+    }).setOrigin(0.5, 0);
+    container.add(title);
+
+    const levelTxt = this.add.text(-popupW / 2 + 14, -popupH / 2 + 18, `Niv. ${this.playerLevel}`, {
+      fontFamily: 'monospace', fontSize: '12px', color: '#cccccc'
+    }).setOrigin(0, 0);
+    container.add(levelTxt);
+
+    const closeBg = this.add.rectangle(popupW / 2 - 20, -popupH / 2 + 20, 28, 24, 0x555555);
+    closeBg.setStrokeStyle(1, 0xffffff, 1);
+    closeBg.setInteractive({ useHandCursor: true });
+    const closeTxt = this.add.text(popupW / 2 - 20, -popupH / 2 + 20, 'X', {
+      fontFamily: 'monospace', fontSize: '14px', color: '#ffffff'
+    }).setOrigin(0.5);
+    closeBg.on('pointerdown', (pointer, lx, ly, ev) => {
+      this.closeRecipeList();
+      if (ev && ev.stopPropagation) ev.stopPropagation();
+    });
+    container.add([closeBg, closeTxt]);
+
+    const dishes = getSelectableDishes(this.playerLevel);
+    let yRow = -popupH / 2 + 52;
+    for (const dish of dishes) {
+      const type = RECIPE_TYPES[dish.type];
+      const unlocked = isDishUnlocked(dish, this.playerLevel);
+      const cookbook = COOKBOOKS[dish.cookbook];
+      const iconColor = COOKBOOK_COLORS[cookbook.icon] || 0xffffff;
+
+      const rowBg = this.add.rectangle(0, yRow, popupW - 20, 26, unlocked ? 0x3a3a3a : 0x242424);
+      rowBg.setStrokeStyle(1, unlocked ? 0xffffff : 0x555555, 1);
+      container.add(rowBg);
+
+      const icon = this.add.rectangle(-popupW / 2 + 22, yRow, 10, 10, iconColor);
+      icon.setStrokeStyle(1, 0xffffff, 0.8);
+      container.add(icon);
+
+      const labelColor = unlocked ? '#ffffff' : '#666666';
+      const info = `${dish.label}  [${type.cookTime}s, ${type.portions}x${type.pricePerPortion}$, xp ${type.xp}]`;
+      const rowTxt = this.add.text(-popupW / 2 + 36, yRow, info, {
+        fontFamily: 'monospace', fontSize: '11px', color: labelColor
+      }).setOrigin(0, 0.5);
+      container.add(rowTxt);
+
+      if (!unlocked) {
+        const lockTxt = this.add.text(popupW / 2 - 20, yRow, `Niv. ${dish.minLevel || '?'}`, {
+          fontFamily: 'monospace', fontSize: '10px', color: '#ef4444'
+        }).setOrigin(1, 0.5);
+        container.add(lockTxt);
+      } else {
+        rowBg.setInteractive({ useHandCursor: true });
+        rowBg.on('pointerover', () => rowBg.setFillStyle(0x4a4a4a));
+        rowBg.on('pointerout', () => rowBg.setFillStyle(0x3a3a3a));
+        rowBg.on('pointerdown', (pointer, lx, ly, ev) => {
+          this.closeRecipeList();
+          this.startCooking(stove, dish);
+          if (ev && ev.stopPropagation) ev.stopPropagation();
+        });
+      }
+
+      yRow += 28;
+    }
+
+    this.activeRecipeList = container;
+  }
+
+  closeRecipeList() {
+    if (this.activeRecipeList) {
+      this.activeRecipeList.destroy();
+      this.activeRecipeList = null;
+    }
+  }
+
+  startCooking(stove, dish) {
+    const type = RECIPE_TYPES[dish.type];
+    if (!type) return;
+    stove.state = 'cooking';
+    stove.dish = dish;
+    stove.cookStart = Date.now();
+    stove.cookEnd = stove.cookStart + type.cookTime * 1000;
+    stove.burnAt = null;
+
+    this.drawStoveBurners(stove, 0xff6a00);
+
+    const barY = stove.y + STOVE_H / 2 + 10;
+    stove.progressBg = this.add.rectangle(stove.x, barY, STOVE_W, 6, 0x333333);
+    stove.progressBg.setStrokeStyle(1, 0xffffff, 1);
+    stove.progressBar = this.add.rectangle(stove.x - STOVE_W / 2, barY, 0, 6, 0x22c55e);
+    stove.progressBar.setOrigin(0, 0.5);
+
+    const timerY = stove.y - STOVE_H / 2 - 12;
+    stove.timerText = this.add.text(stove.x, timerY, '', {
+      fontFamily: 'monospace', fontSize: '11px', color: '#ffffff',
+      backgroundColor: '#000000', padding: { x: 4, y: 2 }
+    }).setOrigin(0.5);
+  }
+
+  updateStoves() {
+    const now = Date.now();
+    for (const stove of this.stoves) {
+      if (stove.state === 'cooking') {
+        const type = RECIPE_TYPES[stove.dish.type];
+        const totalMs = type.cookTime * 1000;
+        const elapsed = now - stove.cookStart;
+        const ratio = Math.max(0, Math.min(1, elapsed / totalMs));
+        if (stove.progressBar) stove.progressBar.width = STOVE_W * ratio;
+        const remaining = Math.max(0, Math.ceil((stove.cookEnd - now) / 1000));
+        if (stove.timerText) stove.timerText.setText(`${remaining}s`);
+        if (now >= stove.cookEnd) this.finishCooking(stove);
+      } else if (stove.state === 'ready') {
+        if (stove.burnAt !== null && now >= stove.burnAt) {
+          this.burnStove(stove);
+        } else if (stove.timerText) {
+          if (stove.burnAt !== null) {
+            const rem = Math.max(0, Math.ceil((stove.burnAt - now) / 1000));
+            stove.timerText.setText(`Prêt (${rem}s)`);
+          } else {
+            stove.timerText.setText('Prêt');
+          }
+        }
+      } else if (stove.state === 'burned') {
+        if (stove.smoke) {
+          stove.smoke.alpha = 0.55 + 0.25 * Math.sin(now / 250);
+        }
+        if (stove.cleanStart !== null) {
+          const elapsed = now - stove.cleanStart;
+          const ratio = Math.max(0, Math.min(1, elapsed / CLEAN_DURATION_MS));
+          if (stove.cleanBar) stove.cleanBar.width = STOVE_W * ratio;
+          if (ratio >= 1) {
+            this.resetStove(stove);
+          }
+        }
+      }
+    }
+  }
+
+  finishCooking(stove) {
+    const dish = stove.dish;
+    stove.state = 'ready';
+
+    this.drawStoveBurners(stove, 0x222222);
+
+    if (stove.progressBar) {
+      stove.progressBar.width = STOVE_W;
+      stove.progressBar.fillColor = 0xffd700;
+    }
+
+    const burnIn = getBurnIn(dish);
+    if (typeof burnIn !== 'number' || !isFinite(burnIn)) {
+      stove.burnAt = null;
+    } else {
+      stove.burnAt = Date.now() + burnIn * 1000;
+    }
+
+    stove.readyMark = this.add.circle(stove.x, stove.y - 2, 14, 0xffd700, 0);
+    stove.readyMark.setStrokeStyle(2, 0xffd700, 1);
+    this.tweens.add({
+      targets: stove.readyMark,
+      alpha: { from: 0.2, to: 0.9 },
+      duration: 500,
+      yoyo: true,
+      repeat: -1
+    });
+
+    const flash = this.add.rectangle(stove.x, stove.y, STOVE_W + 10, STOVE_H + 10, 0xffffff, 0.8);
+    this.tweens.add({
+      targets: flash,
+      alpha: 0,
+      duration: 350,
+      onComplete: () => flash.destroy()
+    });
+  }
+
+  collectCookedDish(stove) {
+    const dish = stove.dish;
+    if (!dish) { this.resetStove(stove); return; }
+    const added = this.addToFridge({ id: dish.id, name: dish.label });
+    if (!added) {
+      const msg = this.add.text(stove.x, stove.y - STOVE_H / 2 - 30, 'Frigo plein', {
+        fontFamily: 'monospace', fontSize: '11px', color: '#ef4444',
+        backgroundColor: '#000000', padding: { x: 4, y: 2 }
+      }).setOrigin(0.5).setDepth(310);
+      this.time.delayedCall(1500, () => msg.destroy());
+      return;
+    }
+    this.resetStove(stove);
+  }
+
+  burnStove(stove) {
+    stove.state = 'burned';
+    stove.burnAt = null;
+
+    if (stove.progressBar) { stove.progressBar.destroy(); stove.progressBar = null; }
+    if (stove.progressBg) { stove.progressBg.destroy(); stove.progressBg = null; }
+    if (stove.readyMark) {
+      this.tweens.killTweensOf(stove.readyMark);
+      stove.readyMark.destroy();
+      stove.readyMark = null;
+    }
+
+    stove.smoke = this.add.rectangle(stove.x, stove.y, STOVE_W - 8, STOVE_H - 8, 0x111111, 0.8);
+    stove.smoke.setStrokeStyle(1, 0x333333, 1);
+
+    this.drawStoveBurners(stove, 0x111111);
+
+    if (stove.timerText) {
+      stove.timerText.setText('Brûlé');
+      stove.timerText.setColor('#ef4444');
+    }
+  }
+
+  startCleaning(stove, pointer) {
+    if (stove.cleanStart !== null) return;
+    stove.cleanStart = Date.now();
+    stove.cleanPointerId = (pointer && pointer.id !== undefined) ? pointer.id : 0;
+
+    const barY = stove.y + STOVE_H / 2 + 10;
+    stove.cleanBg = this.add.rectangle(stove.x, barY, STOVE_W, 6, 0x333333);
+    stove.cleanBg.setStrokeStyle(1, 0xffffff, 1);
+    stove.cleanBar = this.add.rectangle(stove.x - STOVE_W / 2, barY, 0, 6, 0x3b82f6);
+    stove.cleanBar.setOrigin(0, 0.5);
+
+    if (stove.timerText) {
+      stove.timerText.setText('Nettoyage...');
+      stove.timerText.setColor('#3b82f6');
+    }
+  }
+
+  cancelCleaning(stove) {
+    stove.cleanStart = null;
+    stove.cleanPointerId = null;
+    if (stove.cleanBar) { stove.cleanBar.destroy(); stove.cleanBar = null; }
+    if (stove.cleanBg) { stove.cleanBg.destroy(); stove.cleanBg = null; }
+    if (stove.timerText) {
+      stove.timerText.setText('Brûlé');
+      stove.timerText.setColor('#ef4444');
+    }
+  }
+
+  resetStove(stove) {
+    stove.state = 'idle';
+    stove.dish = null;
+    stove.cookStart = null;
+    stove.cookEnd = null;
+    stove.burnAt = null;
+    stove.cleanStart = null;
+    stove.cleanPointerId = null;
+
+    if (stove.progressBar) { stove.progressBar.destroy(); stove.progressBar = null; }
+    if (stove.progressBg) { stove.progressBg.destroy(); stove.progressBg = null; }
+    if (stove.timerText) { stove.timerText.destroy(); stove.timerText = null; }
+    if (stove.readyMark) {
+      this.tweens.killTweensOf(stove.readyMark);
+      stove.readyMark.destroy();
+      stove.readyMark = null;
+    }
+    if (stove.smoke) { stove.smoke.destroy(); stove.smoke = null; }
+    if (stove.cleanBar) { stove.cleanBar.destroy(); stove.cleanBar = null; }
+    if (stove.cleanBg) { stove.cleanBg.destroy(); stove.cleanBg = null; }
+
+    this.drawStoveBurners(stove, 0x222222);
   }
 }

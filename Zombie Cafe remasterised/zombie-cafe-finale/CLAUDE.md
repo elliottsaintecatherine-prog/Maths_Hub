@@ -44,7 +44,7 @@ Ordre d'exécution : 1a → 1b → 1c → 2a → 2b → 2c → 6a → 6b → 6c 
 | 2a | Énergie : perte + récupération + barre | [x] |
 | 2b | Patience : seuil d'attaque + fuite clients | [x] |
 | 2c | Focus : daydreaming + repos | [x] |
-| 6a | Données recettes (5 cookbooks) + cuisson | [ ] |
+| 6a | Données recettes (5 cookbooks) + cuisson | [x] |
 | 6b | Flux comptoir/frigo + commandes + pourboires | [ ] |
 | 6c | Évier + cycle assiettes sales | [ ] |
 | 6d | Cookbook UI (consultation recettes) | [ ] |
@@ -73,59 +73,58 @@ Ordre d'exécution : 1a → 1b → 1c → 2a → 2b → 2c → 6a → 6b → 6c 
 
 ## PROCHAINE ACTION
 
-**Prompt 6a — Données recettes et mécanique de cuisson**
+**Prompt 6b — Flux comptoir / frigo et commandes des clients**
 
-Implémente UNIQUEMENT les données des recettes et la mécanique de cuisson sur les fourneaux.
+Implémente UNIQUEMENT le flux de service : comptoir, frigo, commandes clients.
 
-DONNÉES dans src/data/recipes.js :
-9 types de recettes (une constante RECIPE_TYPES) + 10 plats débloquables :
+STRUCTURE EXISTANTE À RESPECTER (ne pas recréer) :
+- this.staff[] existe déjà — chaque zombie a : { id, label, name, energy, tipRating, speed,
+  atkStrength, patience, focus, energyCurrent, state, reanimationEnd, circle }
+- this.clients[] existe déjà — chaque client a : { circle, clientType, chairIndex, infected }
+- this.toxines et this.activePopup existent
+- Les états zombie possibles déjà utilisés : 'idle', 'working', 'resting', 'reanimating'
+- Utilise state 'serving' pour un zombie en train de servir (nouveau, à ajouter ici)
 
-Types :
-- quick: { cookTime: 60, portions: 2, pricePerPortion: 8, xp: 5, burnIn: 120 }
-- veryQuick: { cookTime: 30, portions: 1, pricePerPortion: 5, xp: 2, burnIn: 60 }
-- fresh: { cookTime: 180, portions: 4, pricePerPortion: 15, xp: 12, burnIn: 300 }
-- frozen: { cookTime: 120, portions: 6, pricePerPortion: 10, xp: 8, burnIn: Infinity }
-- bulk: { cookTime: 480, portions: 12, pricePerPortion: 6, xp: 10, burnIn: null }
-- fancy: { cookTime: 900, portions: 3, pricePerPortion: 40, xp: 30, minLevel: 3 }
-- veryFancy: { cookTime: 1800, portions: 4, pricePerPortion: 80, xp: 60, minLevel: 6 }
-- spicy: { cookTime: 300, portions: 5, pricePerPortion: 18, xp: 15, clientSatisfaction: +10% }
-- verySpicy: { cookTime: 600, portions: 8, pricePerPortion: 25, xp: 22, minLevel: 4 }
+FLUX PLAT CUIT → SERVICE :
+1. Fourneau 'ready' : le plat va au comptoir (si place libre — 1 emplacement par défaut)
+2. Si comptoir plein : va au frigo (Prompt 1c)
+3. Si frigo plein aussi : cuisson bloquée — fourneau affiche "Complet" en rouge, ne peut pas démarrer
 
-COOKBOOKS (fidèle au jeu — simplifié à 5 livres) :
-Chaque recette appartient à un cookbook. Structure :
-const COOKBOOKS = {
-  standard: { label: 'Cuisine Standard', icon: 'brown' },
-  tiki: { label: 'Cuisine Tiki', icon: 'green', minLevel: 3 },
-  raid: { label: 'Livre des Raids', icon: 'red', raidOnly: true },
-  feast: { label: 'Grand Festin', icon: 'gold', minLevel: 5 },
-  seasonal: { label: 'Spécial Saison', icon: 'orange', minLevel: 4 }
-};
+COMPTOIR :
+- Rectangle bois clair 80x30 au centre de la scène
+- Affiche le plat présent (nom court, texte blanc 11px)
+- Un zombie disponible (état 'idle') prend le plat automatiquement pour servir un client
 
-Plats (id, label, type, cookbook, minLevel) :
-- 'brain_tartare' : Cerveau Tartare, quick, standard, 1
-- 'gloomy_soup' : Soupe Glauque, frozen, standard, 1
-- 'rib_jelly' : Côtes en Gelée, fresh, standard, 2
-- 'fried_fingers' : Doigts Frits, veryQuick, standard, 2
-- 'nauseating_steak' : Steak Nauséabond, spicy, standard, 3
-- 'tiki_brain_skewer' : Brochette de Cerveau Tiki, spicy, tiki, 3
-- 'coco_bones_drink' : Boisson Os-Coco, veryQuick, tiki, 3
-- 'putrid_lasagna' : Lasagnes Putrides, bulk, seasonal, 4
-- 'breaded_eyes' : Yeux Panés, verySpicy, seasonal, 4
-- 'zombified_foie_gras' : Foie Gras Zombifié, fancy, feast, 5
-- 'macabre_feast' : Festin Macabre, veryFancy, feast, 6
-- 'raid_special_brain_stew' : Ragoût de Cerveau Volé, fancy, raid, null (débloqué en raidant)
-- 'raid_special_rare' : Plat Rare Volé, veryFancy, raid, null (débloqué en raidant)
+COMMANDES DES CLIENTS :
+- À l'arrivée, chaque client commande un type de recette aléatoire parmi les débloquées
+- Clients de type 'supermodel' et 'celebrity' commandent uniquement des recettes fancy/veryFancy
+- Bulle de commande au-dessus du client :
+  → Rectangle blanc arrondi 50x30 avec queue triangulaire pointant vers le bas
+  → Texte : nom court du plat demandé (12px noir)
 
-MÉCANIQUE DE CUISSON :
-- Clic sur un fourneau libre → liste des recettes débloquées (niveau >= minLevel)
-  → Liste : rectangle gris, items texte, grisé si niveau insuffisant
-- Sélection d'une recette → cuisson démarre :
-  → Barre de progression sur le fourneau (rectangle vert qui avance)
-  → Texte minuterie compte à rebours au-dessus du fourneau
-- Fin de cuisson : son simulé (à brancher au Prompt 9c), état 'ready'
-- BRÛLURE : si non récupéré dans burnIn secondes après fin :
-  → État 'burned', rectangle noir fumant
-  → Clic + 2 sec d'animation pour nettoyer (nettoyage = clic maintenu ou double-clic)
-- Frozen : jamais brûlé | Fresh : brûle en 300 sec après cuisson
+LOGIQUE DE SERVICE :
+- Un zombie serveur prend le plat du comptoir en priorité, du frigo en second
+- Va au client, dépose le plat (tween 0.5 sec)
+- Client satisfait : bulle de paiement (rectangle doré 40x24, texte "+X or")
+  → L'or s'ajoute au total, +XP selon la recette
+- Client non satisfait (plat différent ou attente trop longue) :
+  → Bulle de mécontentement (rectangle rouge 30x20 avec "!")
+  → Rating -0.1, client repart
 
-À la fin : coche [x] le prompt 6a dans CLAUDE.md et copie le texte du **Prompt 6b** dans la section PROCHAINE ACTION.
+POURBOIRES (formule exacte du vrai jeu) :
+- Temps d'attente (arrivée → service) stocké par client
+- Si attente > 30 secondes : PAS de pourboire (règle stricte du vrai jeu)
+- Si attente ≤ 30 sec : pourboire = prix_plat / (50 - 4.5 * tipRating)
+  → tipRating 10 → tip ≈ prix/5 (excellent)
+  → tipRating 5 → tip ≈ prix/27 (moyen)
+  → tipRating 1 → tip ≈ prix/45 (faible)
+- Arrondir au sup, min 1 or si applicable
+- Affiche le tip en or supplémentaire à côté du paiement principal
+
+PATIENCE D'ATTENTE :
+- Chaque client attend au max 60 secondes avant de repartir mécontent
+- Un timer (barre grise fine) s'écoule sous la bulle de commande
+- À 30 sec : la barre passe de grise à orange (signal "plus de tip")
+- À 60 sec : le client part mécontent, rating -0.1
+
+À la fin : coche [x] le prompt 6b dans CLAUDE.md et copie le texte du **Prompt 6c** dans la section PROCHAINE ACTION.

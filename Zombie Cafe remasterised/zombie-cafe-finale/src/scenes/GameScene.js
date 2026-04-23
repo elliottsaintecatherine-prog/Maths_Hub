@@ -47,6 +47,15 @@ const CLIENT_MAX_WAIT_MS = 60000;
 const CLIENT_NO_TIP_AFTER_MS = 30000;
 const FANCY_TYPES = ['fancy', 'veryFancy'];
 
+const SINK_CAPACITY = 8;
+const SINK_W = 60;
+const SINK_H = 40;
+const SINK_X = 440;
+const SINK_Y = 560;
+const EATING_DURATION_MS = 10000;
+const WASH_DURATION_MS = 5000;
+const REST_ENERGY_RATIO = 0.3;
+
 function shortDishName(label) {
   if (!label) return '';
   return label.length > 12 ? label.slice(0, 11) + '…' : label;
@@ -90,11 +99,16 @@ export default class GameScene extends Phaser.Scene {
 
     this.stoves = [];
 
+    this.sinkContents = [];
+    this.sinkCapacity = SINK_CAPACITY;
+    this.tablesDirty = [];
+
     this.createToxinesHUD();
     this.createGoldHUD();
     this.createFridge();
     this.createCounter();
     this.createStoves();
+    this.createSink();
     this.createRestZone();
     this.createDebugClientTable();
 
@@ -135,7 +149,11 @@ export default class GameScene extends Phaser.Scene {
     if (this.activeActionPopup) this.refreshActionPopup();
     this.updateStoves();
     this.updateClientsWaiting();
+    this.updateEatingClients();
+    this.updateSink();
     this.trySendServer();
+    this.trySendCleanup();
+    this.tryAutoRest();
   }
 
   updateZombieDaydream(zombie) {
@@ -232,6 +250,7 @@ export default class GameScene extends Phaser.Scene {
     } else if (zombie.state === 'resting') {
       zombie.energyCurrent += (zombie.energy / 180) * dt;
       if (zombie.energyCurrent > zombie.energy) zombie.energyCurrent = zombie.energy;
+      if (zombie.energyCurrent >= zombie.energy) zombie.state = 'idle';
     }
   }
 
@@ -595,11 +614,15 @@ export default class GameScene extends Phaser.Scene {
 
   spawnClient() {
     const occupied = new Set(this.clients.map(c => c.chairIndex));
+    const dirtyChairs = new Set(this.tablesDirty.map(p => p.chairIndex));
     let chairIndex = -1;
     for (let i = 0; i < CHAIR_POSITIONS.length; i++) {
-      if (!occupied.has(i)) { chairIndex = i; break; }
+      if (!occupied.has(i) && !dirtyChairs.has(i)) { chairIndex = i; break; }
     }
-    if (chairIndex === -1) return;
+    if (chairIndex === -1) {
+      this.spawnUnhappyNoChair();
+      return;
+    }
 
     const keys = Object.keys(CLIENT_TYPES);
     const typeKey = keys[Math.floor(Math.random() * keys.length)];
@@ -709,6 +732,47 @@ export default class GameScene extends Phaser.Scene {
     });
   }
 
+  spawnUnhappyNoChair() {
+    const { width } = this.scale;
+    const entranceX = width - 40;
+    const entranceY = 230;
+    const circle = this.add.circle(width + 30, entranceY, 18, 0xaaaaaa);
+    circle.setStrokeStyle(2, 0xffffff, 1);
+
+    this.tweens.add({
+      targets: circle,
+      x: entranceX,
+      duration: 700,
+      onComplete: () => {
+        const bubble = this.add.container(circle.x, circle.y - 40);
+        bubble.setDepth(160);
+        const rect = this.add.rectangle(0, 0, 30, 20, 0xef4444);
+        rect.setStrokeStyle(1, 0x000000, 1);
+        const txt = this.add.text(0, 0, '!', {
+          fontFamily: 'monospace', fontSize: '14px', color: '#ffffff'
+        }).setOrigin(0.5);
+        bubble.add([rect, txt]);
+
+        this.time.delayedCall(600, () => {
+          this.tweens.add({
+            targets: circle,
+            x: width + 40,
+            duration: 1200,
+            onComplete: () => circle.destroy()
+          });
+          this.tweens.add({
+            targets: bubble,
+            x: width + 40,
+            duration: 1200,
+            onComplete: () => bubble.destroy()
+          });
+        });
+
+        this.rating = Math.max(0, this.rating - 0.1);
+      }
+    });
+  }
+
   showUnhappyBubble(client) {
     const bubble = this.add.container(client.circle.x, client.circle.y - 40);
     bubble.setDepth(160);
@@ -791,10 +855,24 @@ export default class GameScene extends Phaser.Scene {
     if (zombie.state === 'serving') zombie.state = 'idle';
     client.beingServed = false;
     client.served = true;
+    client.dishReceived = dish;
+    client.eatingStart = Date.now();
 
-    const now = Date.now();
-    const waited = now - client.arrivalTime;
-    const type = RECIPE_TYPES[dish.type];
+    this.destroyOrderBubble(client);
+    this.createEatingBubble(client);
+
+    this.time.delayedCall(EATING_DURATION_MS, () => {
+      if (!this.clients.includes(client)) return;
+      this.finishEating(client);
+    });
+  }
+
+  finishEating(client) {
+    this.destroyEatingBubble(client);
+
+    const dish = client.dishReceived;
+    const waited = (client.eatingStart || Date.now()) - client.arrivalTime;
+    const type = dish ? RECIPE_TYPES[dish.type] : null;
     const price = type ? type.pricePerPortion * type.portions : 0;
     const xpGain = type ? type.xp : 0;
 
@@ -809,7 +887,7 @@ export default class GameScene extends Phaser.Scene {
     this.updateGoldHUD();
 
     this.showPaymentBubble(client, price, tip);
-    this.destroyOrderBubble(client);
+    this.createDirtyPlate(client);
 
     this.time.delayedCall(1500, () => {
       if (!this.clients.includes(client)) return;
@@ -826,6 +904,182 @@ export default class GameScene extends Phaser.Scene {
         }
       });
     });
+  }
+
+  createEatingBubble(client) {
+    if (client.eatingBubble) return;
+    const bubble = this.add.container(client.circle.x, client.circle.y - 40);
+    bubble.setDepth(140);
+    const rect = this.add.rectangle(0, 0, 30, 18, 0xffffff);
+    rect.setStrokeStyle(1, 0x000000, 1);
+    const tail = this.add.triangle(0, 12, -4, 0, 4, 0, 0, 6, 0xffffff);
+    tail.setStrokeStyle(1, 0x000000, 1);
+    const txt = this.add.text(0, 0, '...', {
+      fontFamily: 'monospace', fontSize: '14px', color: '#000000'
+    }).setOrigin(0.5);
+    bubble.add([rect, tail, txt]);
+    client.eatingBubble = bubble;
+  }
+
+  destroyEatingBubble(client) {
+    if (client.eatingBubble) {
+      client.eatingBubble.destroy();
+      client.eatingBubble = null;
+    }
+  }
+
+  updateEatingClients() {
+    for (const client of this.clients) {
+      if (!client.served || client.fleeing) continue;
+      if (client.eatingBubble) {
+        client.eatingBubble.x = client.circle.x;
+        client.eatingBubble.y = client.circle.y - 40;
+      }
+    }
+  }
+
+  createDirtyPlate(client) {
+    if (client.chairIndex === undefined || client.chairIndex < 0) return;
+    const pos = CHAIR_POSITIONS[client.chairIndex];
+    if (!pos) return;
+    const px = pos.x - 6;
+    const py = pos.y + 20;
+    const circle = this.add.circle(px, py, 8, 0x888888);
+    circle.setStrokeStyle(1, 0x444444, 1);
+    circle.setDepth(50);
+    const exclam = this.add.text(px, py, '!', {
+      fontFamily: 'monospace', fontSize: '10px', color: '#555555'
+    }).setOrigin(0.5);
+    exclam.setDepth(51);
+    const plate = {
+      chairIndex: client.chairIndex,
+      x: px,
+      y: py,
+      circle,
+      exclam,
+      pickingZombie: null
+    };
+    this.tablesDirty.push(plate);
+  }
+
+  trySendCleanup() {
+    if (this.tablesDirty.length === 0) return;
+    if (this.sinkContents.length >= this.sinkCapacity) return;
+    const idleZombie = this.staff.find(z =>
+      z.state === 'idle' && !z.attacking && !z.serving && !z.cleaning
+    );
+    if (!idleZombie) return;
+    const plate = this.tablesDirty.find(p => !p.pickingZombie);
+    if (!plate) return;
+    this.startZombieCleanup(idleZombie, plate);
+  }
+
+  startZombieCleanup(zombie, plate) {
+    zombie.state = 'cleaning';
+    zombie.cleaning = true;
+    plate.pickingZombie = zombie;
+    this.tweens.killTweensOf(zombie.circle);
+    this.tweens.add({
+      targets: zombie.circle,
+      x: plate.x + 20,
+      y: plate.y,
+      duration: 500,
+      onComplete: () => {
+        this.onPickupDirtyPlate(zombie, plate);
+      }
+    });
+  }
+
+  onPickupDirtyPlate(zombie, plate) {
+    if (plate.circle) { plate.circle.destroy(); plate.circle = null; }
+    if (plate.exclam) { plate.exclam.destroy(); plate.exclam = null; }
+    this.tablesDirty = this.tablesDirty.filter(p => p !== plate);
+
+    zombie.carriedPlate = this.add.circle(zombie.circle.x, zombie.circle.y - 14, 5, 0x888888);
+    zombie.carriedPlate.setStrokeStyle(1, 0x444444, 1);
+    zombie.carriedPlate.setDepth(120);
+
+    this.tweens.add({
+      targets: zombie.circle,
+      x: this.sinkX,
+      y: this.sinkY - 30,
+      duration: 800,
+      onUpdate: () => {
+        if (zombie.carriedPlate) {
+          zombie.carriedPlate.x = zombie.circle.x;
+          zombie.carriedPlate.y = zombie.circle.y - 14;
+        }
+      },
+      onComplete: () => {
+        this.depositInSink(zombie);
+      }
+    });
+  }
+
+  depositInSink(zombie) {
+    if (zombie.carriedPlate) {
+      zombie.carriedPlate.destroy();
+      zombie.carriedPlate = null;
+    }
+
+    const slotIndex = this.sinkContents.length;
+    const cols = 4;
+    const col = slotIndex % cols;
+    const row = Math.floor(slotIndex / cols);
+    const offsetX = (col - 1.5) * 12;
+    const offsetY = (row - 0.5) * 12;
+    const visual = this.add.circle(this.sinkX + offsetX, this.sinkY + offsetY, 5, 0x888888);
+    visual.setStrokeStyle(1, 0x444444, 1);
+    visual.setDepth(45);
+
+    const plateInSink = {
+      washStart: Date.now(),
+      visual
+    };
+    this.sinkContents.push(plateInSink);
+    this.updateSinkCounter();
+
+    zombie.cleaning = false;
+    if (zombie.state === 'cleaning') zombie.state = 'idle';
+  }
+
+  updateSink() {
+    if (this.sinkContents.length === 0) return;
+    const now = Date.now();
+    const toRemove = [];
+    for (const plate of this.sinkContents) {
+      if (now - plate.washStart >= WASH_DURATION_MS) {
+        toRemove.push(plate);
+      }
+    }
+    if (toRemove.length === 0) return;
+    for (const plate of toRemove) {
+      if (plate.visual) plate.visual.destroy();
+    }
+    this.sinkContents = this.sinkContents.filter(p => !toRemove.includes(p));
+    this.repositionSinkPlates();
+    this.updateSinkCounter();
+  }
+
+  repositionSinkPlates() {
+    const cols = 4;
+    for (let i = 0; i < this.sinkContents.length; i++) {
+      const plate = this.sinkContents[i];
+      if (!plate.visual) continue;
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      plate.visual.x = this.sinkX + (col - 1.5) * 12;
+      plate.visual.y = this.sinkY + (row - 0.5) * 12;
+    }
+  }
+
+  tryAutoRest() {
+    for (const z of this.staff) {
+      if (z.state !== 'idle' || z.attacking || z.serving || z.cleaning) continue;
+      if (z.energyCurrent < z.energy * REST_ENERGY_RATIO) {
+        this.sendZombieToRest(z);
+      }
+    }
   }
 
   showPaymentBubble(client, price, tip) {
@@ -1100,6 +1354,38 @@ export default class GameScene extends Phaser.Scene {
       this.fridgeTestBtnText.setText('Ajouter plat (test)');
       this.fridgeTestBtnText.setColor('#ffffff');
     }
+  }
+
+  createSink() {
+    this.sinkX = SINK_X;
+    this.sinkY = SINK_Y;
+
+    this.sinkSprite = this.add.rectangle(SINK_X, SINK_Y, SINK_W, SINK_H, 0xb0b0b0);
+    this.sinkSprite.setStrokeStyle(2, 0xffffff, 1);
+
+    const innerW = SINK_W - 10;
+    const innerH = SINK_H - 10;
+    this.sinkBasin = this.add.rectangle(SINK_X, SINK_Y, innerW, innerH, 0x707070);
+    this.sinkBasin.setStrokeStyle(1, 0x333333, 1);
+
+    const tapX = SINK_X;
+    const tapY = SINK_Y - SINK_H / 2 - 4;
+    this.sinkTap = this.add.rectangle(tapX, tapY, 6, 8, 0x888888);
+    this.sinkTap.setStrokeStyle(1, 0x333333, 1);
+
+    const counterY = SINK_Y - SINK_H / 2 - 18;
+    this.sinkCounterBg = this.add.rectangle(SINK_X, counterY, 70, 18, 0x000000, 0.6);
+    this.sinkCounterBg.setStrokeStyle(1, 0xffffff, 0.6);
+    this.sinkCounterText = this.add.text(SINK_X, counterY, `Évier : 0/${this.sinkCapacity}`, {
+      fontFamily: 'monospace', fontSize: '12px', color: '#ffffff'
+    }).setOrigin(0.5);
+  }
+
+  updateSinkCounter() {
+    if (!this.sinkCounterText) return;
+    this.sinkCounterText.setText(`Évier : ${this.sinkContents.length}/${this.sinkCapacity}`);
+    const saturated = this.sinkContents.length >= this.sinkCapacity;
+    this.sinkCounterText.setColor(saturated ? '#ef4444' : '#ffffff');
   }
 
   createDebugClientTable() {

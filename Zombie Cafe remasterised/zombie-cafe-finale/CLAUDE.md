@@ -46,7 +46,7 @@ Ordre d'exécution : 1a → 1b → 1c → 2a → 2b → 2c → 6a → 6b → 6c 
 | 2c | Focus : daydreaming + repos | [x] |
 | 6a | Données recettes (5 cookbooks) + cuisson | [x] |
 | 6b | Flux comptoir/frigo + commandes + pourboires | [x] |
-| 6c | Évier + cycle assiettes sales | [ ] |
+| 6c | Évier + cycle assiettes sales | [x] |
 | 6d | Cookbook UI (consultation recettes) | [ ] |
 | 3a | Grille iso + algorithme A* | [ ] |
 | 3b | Mouvement entités + z-sort + debug | [ ] |
@@ -73,37 +73,39 @@ Ordre d'exécution : 1a → 1b → 1c → 2a → 2b → 2c → 6a → 6b → 6c 
 
 ## PROCHAINE ACTION
 
-**Prompt 6c — Évier et cycle des assiettes sales**
+**Prompt 6d — Cookbook UI (interface de consultation des recettes)**
 
-Implémente UNIQUEMENT le cycle des assiettes sales avec un évier (fidèle au vrai jeu).
+Implémente UNIQUEMENT l'interface Cookbook dans src/ui/Cookbook.js.
 
-ÉVIER :
-- Nouvel objet dans la cuisine : rectangle gris métallique 60x40 (ou sprite si dispo)
-- Placé près des fourneaux (coin cuisine, position fixe pour l'instant)
-- Affiche un compteur au-dessus : "Évier : X/8" (8 assiettes sales max avant saturation)
+BOUTON COOKBOOK :
+- Rectangle marron foncé "Cookbook" (120x36) dans la barre du bas
+- Clic → ouvre le panneau cookbook (container Phaser)
 
-CYCLE COMPLET DU SERVICE :
-1. Plat servi au client → client mange pendant 10 secondes (animation simple : bulle "..." au-dessus)
-2. Après 10 sec : le client paye + génère UNE assiette sale (stockée sur la table du client)
-3. Assiette sale visible sur la table : petit cercle gris 8px avec "!" gris
-4. Un zombie 'idle' va à la table, prend l'assiette (tween) → va à l'évier → dépose
-5. Une fois l'assiette à l'évier : décompte 5 sec (simulation du lavage) puis disparaît
+PANNEAU COOKBOOK :
+- Rectangle beige 560x420 centré, bord marron foncé 4px (effet livre)
+- Titre en haut : "Livre de Cuisine" (texte marron foncé 20px)
+- Sidebar gauche (largeur 140) : liste des 5 cookbooks
+  → Chaque entrée : rectangle 130x36, icône couleur du cookbook + nom
+  → Cookbook verrouillé (minLevel > niveau actuel) : grisé + cadenas (texte "Niv X")
+  → Cookbook actif : bord orange
+- Zone principale droite (largeur 400) : liste des plats du cookbook sélectionné
 
-SATURATION DE L'ÉVIER :
-- Si évier plein (8/8) : les nouvelles assiettes restent sur les tables
-- Les chaises avec une assiette sale non ramassée ne peuvent pas être utilisées par un nouveau client
-- Impact : clients qui arrivent et ne trouvent pas de chaise → repartent mécontents
+FICHE DE RECETTE (zone droite) :
+Pour chaque plat du cookbook sélectionné :
+- Ligne 80px de haut : icône plat (rectangle 60x60 couleur selon type) + infos texte :
+  → Nom du plat (16px gras)
+  → Type (ex: "Fancy — 15min cuisson")
+  → Portions : X | Prix/portion : Y or | XP : Z
+  → Niveau requis : "Niv X" si minLevel existe
+- Plat débloqué : affichage normal
+- Plat verrouillé (niveau ou raid) : grisé, texte barré, indice "Volable en raid" ou "Niv X requis"
+- Séparateur entre plats : ligne marron clair 1px
 
-PRIORITÉ DES ZOMBIES :
-Ordre de priorité (du plus urgent au moins urgent) :
-1. Attaquer si seuil de patience atteint (P2b)
-2. Servir un client (prendre plat du comptoir → client)
-3. Ramasser une assiette sale (table → évier)
-4. Aller sur le tapis de repos si énergie < 30%
-5. Sinon, idle
+BOUTON FERMER :
+- Rectangle marron clair "Fermer" (100x32) en bas du panneau
 
-IMPORTANT :
-- L'évier n'a pas besoin d'être acheté (ajouté par défaut)
-- Exposer sinkContents[], tablesDirty[] dans GameScene
+STATS DE COLLECTION :
+- Petit texte en bas à droite du panneau : "Recettes débloquées : X/Y"
+- Montre la progression totale toutes recettes confondues
 
-À la fin : coche [x] le prompt 6c dans CLAUDE.md et copie le texte du **Prompt 6d** dans la section PROCHAINE ACTION.
+À la fin : coche [x] le prompt 6d dans CLAUDE.md et copie le texte du **Prompt 3a** dans la section PROCHAINE ACTION.

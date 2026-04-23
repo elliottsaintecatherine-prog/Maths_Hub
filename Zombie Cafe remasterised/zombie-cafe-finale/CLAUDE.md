@@ -45,7 +45,7 @@ Ordre d'exécution : 1a → 1b → 1c → 2a → 2b → 2c → 6a → 6b → 6c 
 | 2b | Patience : seuil d'attaque + fuite clients | [x] |
 | 2c | Focus : daydreaming + repos | [x] |
 | 6a | Données recettes (5 cookbooks) + cuisson | [x] |
-| 6b | Flux comptoir/frigo + commandes + pourboires | [ ] |
+| 6b | Flux comptoir/frigo + commandes + pourboires | [x] |
 | 6c | Évier + cycle assiettes sales | [ ] |
 | 6d | Cookbook UI (consultation recettes) | [ ] |
 | 3a | Grille iso + algorithme A* | [ ] |
@@ -73,58 +73,37 @@ Ordre d'exécution : 1a → 1b → 1c → 2a → 2b → 2c → 6a → 6b → 6c 
 
 ## PROCHAINE ACTION
 
-**Prompt 6b — Flux comptoir / frigo et commandes des clients**
+**Prompt 6c — Évier et cycle des assiettes sales**
 
-Implémente UNIQUEMENT le flux de service : comptoir, frigo, commandes clients.
+Implémente UNIQUEMENT le cycle des assiettes sales avec un évier (fidèle au vrai jeu).
 
-STRUCTURE EXISTANTE À RESPECTER (ne pas recréer) :
-- this.staff[] existe déjà — chaque zombie a : { id, label, name, energy, tipRating, speed,
-  atkStrength, patience, focus, energyCurrent, state, reanimationEnd, circle }
-- this.clients[] existe déjà — chaque client a : { circle, clientType, chairIndex, infected }
-- this.toxines et this.activePopup existent
-- Les états zombie possibles déjà utilisés : 'idle', 'working', 'resting', 'reanimating'
-- Utilise state 'serving' pour un zombie en train de servir (nouveau, à ajouter ici)
+ÉVIER :
+- Nouvel objet dans la cuisine : rectangle gris métallique 60x40 (ou sprite si dispo)
+- Placé près des fourneaux (coin cuisine, position fixe pour l'instant)
+- Affiche un compteur au-dessus : "Évier : X/8" (8 assiettes sales max avant saturation)
 
-FLUX PLAT CUIT → SERVICE :
-1. Fourneau 'ready' : le plat va au comptoir (si place libre — 1 emplacement par défaut)
-2. Si comptoir plein : va au frigo (Prompt 1c)
-3. Si frigo plein aussi : cuisson bloquée — fourneau affiche "Complet" en rouge, ne peut pas démarrer
+CYCLE COMPLET DU SERVICE :
+1. Plat servi au client → client mange pendant 10 secondes (animation simple : bulle "..." au-dessus)
+2. Après 10 sec : le client paye + génère UNE assiette sale (stockée sur la table du client)
+3. Assiette sale visible sur la table : petit cercle gris 8px avec "!" gris
+4. Un zombie 'idle' va à la table, prend l'assiette (tween) → va à l'évier → dépose
+5. Une fois l'assiette à l'évier : décompte 5 sec (simulation du lavage) puis disparaît
 
-COMPTOIR :
-- Rectangle bois clair 80x30 au centre de la scène
-- Affiche le plat présent (nom court, texte blanc 11px)
-- Un zombie disponible (état 'idle') prend le plat automatiquement pour servir un client
+SATURATION DE L'ÉVIER :
+- Si évier plein (8/8) : les nouvelles assiettes restent sur les tables
+- Les chaises avec une assiette sale non ramassée ne peuvent pas être utilisées par un nouveau client
+- Impact : clients qui arrivent et ne trouvent pas de chaise → repartent mécontents
 
-COMMANDES DES CLIENTS :
-- À l'arrivée, chaque client commande un type de recette aléatoire parmi les débloquées
-- Clients de type 'supermodel' et 'celebrity' commandent uniquement des recettes fancy/veryFancy
-- Bulle de commande au-dessus du client :
-  → Rectangle blanc arrondi 50x30 avec queue triangulaire pointant vers le bas
-  → Texte : nom court du plat demandé (12px noir)
+PRIORITÉ DES ZOMBIES :
+Ordre de priorité (du plus urgent au moins urgent) :
+1. Attaquer si seuil de patience atteint (P2b)
+2. Servir un client (prendre plat du comptoir → client)
+3. Ramasser une assiette sale (table → évier)
+4. Aller sur le tapis de repos si énergie < 30%
+5. Sinon, idle
 
-LOGIQUE DE SERVICE :
-- Un zombie serveur prend le plat du comptoir en priorité, du frigo en second
-- Va au client, dépose le plat (tween 0.5 sec)
-- Client satisfait : bulle de paiement (rectangle doré 40x24, texte "+X or")
-  → L'or s'ajoute au total, +XP selon la recette
-- Client non satisfait (plat différent ou attente trop longue) :
-  → Bulle de mécontentement (rectangle rouge 30x20 avec "!")
-  → Rating -0.1, client repart
+IMPORTANT :
+- L'évier n'a pas besoin d'être acheté (ajouté par défaut)
+- Exposer sinkContents[], tablesDirty[] dans GameScene
 
-POURBOIRES (formule exacte du vrai jeu) :
-- Temps d'attente (arrivée → service) stocké par client
-- Si attente > 30 secondes : PAS de pourboire (règle stricte du vrai jeu)
-- Si attente ≤ 30 sec : pourboire = prix_plat / (50 - 4.5 * tipRating)
-  → tipRating 10 → tip ≈ prix/5 (excellent)
-  → tipRating 5 → tip ≈ prix/27 (moyen)
-  → tipRating 1 → tip ≈ prix/45 (faible)
-- Arrondir au sup, min 1 or si applicable
-- Affiche le tip en or supplémentaire à côté du paiement principal
-
-PATIENCE D'ATTENTE :
-- Chaque client attend au max 60 secondes avant de repartir mécontent
-- Un timer (barre grise fine) s'écoule sous la bulle de commande
-- À 30 sec : la barre passe de grise à orange (signal "plus de tip")
-- À 60 sec : le client part mécontent, rating -0.1
-
-À la fin : coche [x] le prompt 6b dans CLAUDE.md et copie le texte du **Prompt 6c** dans la section PROCHAINE ACTION.
+À la fin : coche [x] le prompt 6c dans CLAUDE.md et copie le texte du **Prompt 6d** dans la section PROCHAINE ACTION.

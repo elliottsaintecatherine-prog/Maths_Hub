@@ -40,6 +40,18 @@ const STOVE_W = 60;
 const STOVE_H = 60;
 const CLEAN_DURATION_MS = 2000;
 
+const COUNTER_CAPACITY = 1;
+const COUNTER_W = 80;
+const COUNTER_H = 30;
+const CLIENT_MAX_WAIT_MS = 60000;
+const CLIENT_NO_TIP_AFTER_MS = 30000;
+const FANCY_TYPES = ['fancy', 'veryFancy'];
+
+function shortDishName(label) {
+  if (!label) return '';
+  return label.length > 12 ? label.slice(0, 11) + '…' : label;
+}
+
 export default class GameScene extends Phaser.Scene {
   constructor() { super('GameScene'); }
 
@@ -71,10 +83,17 @@ export default class GameScene extends Phaser.Scene {
     this.fridgeContents = [];
     this.fridgeCapacity = 5;
 
+    this.gold = 0;
+    this.xp = 0;
+    this.counterContents = [];
+    this.counterCapacity = COUNTER_CAPACITY;
+
     this.stoves = [];
 
     this.createToxinesHUD();
+    this.createGoldHUD();
     this.createFridge();
+    this.createCounter();
     this.createStoves();
     this.createRestZone();
     this.createDebugClientTable();
@@ -115,6 +134,8 @@ export default class GameScene extends Phaser.Scene {
     if (this.activeEnergyUI) this.refreshEnergyUI();
     if (this.activeActionPopup) this.refreshActionPopup();
     this.updateStoves();
+    this.updateClientsWaiting();
+    this.trySendServer();
   }
 
   updateZombieDaydream(zombie) {
@@ -313,6 +334,7 @@ export default class GameScene extends Phaser.Scene {
 
         this.time.delayedCall(200, () => {
           flash.destroy();
+          this.destroyOrderBubble(target);
           target.circle.destroy();
           this.clients = this.clients.filter(c => c !== target);
 
@@ -331,6 +353,7 @@ export default class GameScene extends Phaser.Scene {
 
   makeClientFlee(client) {
     client.fleeing = true;
+    this.destroyOrderBubble(client);
     client.circle.disableInteractive();
 
     const bubble = this.add.container(client.circle.x, client.circle.y - 30);
@@ -592,11 +615,285 @@ export default class GameScene extends Phaser.Scene {
       circle,
       clientType,
       chairIndex,
-      infected: false
+      infected: false,
+      arrivalTime: Date.now(),
+      orderDish: null,
+      served: false,
+      beingServed: false,
+      orderBubble: null,
+      patienceBg: null,
+      patienceBar: null
     };
+    client.orderDish = this.pickClientOrderDish(clientType);
     this.clients.push(client);
 
+    if (client.orderDish) this.createOrderBubble(client);
+
     circle.on('pointerdown', () => this.openClientPopup(client));
+  }
+
+  pickClientOrderDish(clientType) {
+    const selectable = getSelectableDishes(this.playerLevel).filter(d => isDishUnlocked(d, this.playerLevel));
+    if (selectable.length === 0) return null;
+    const isFancyOnly = clientType.id === 'supermodel' || clientType.id === 'celebrity';
+    let pool = selectable;
+    if (isFancyOnly) {
+      const fancy = selectable.filter(d => FANCY_TYPES.includes(d.type));
+      if (fancy.length > 0) pool = fancy;
+    }
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  createOrderBubble(client) {
+    const c = client.circle;
+    const container = this.add.container(c.x, c.y - 40);
+    container.setDepth(140);
+
+    const rect = this.add.rectangle(0, 0, 50, 30, 0xffffff);
+    rect.setStrokeStyle(1, 0x000000, 1);
+    const tail = this.add.triangle(0, 18, -5, 0, 5, 0, 0, 8, 0xffffff);
+    tail.setStrokeStyle(1, 0x000000, 1);
+    const txt = this.add.text(0, 0, shortDishName(client.orderDish.label), {
+      fontFamily: 'monospace', fontSize: '12px', color: '#000000'
+    }).setOrigin(0.5);
+    container.add([rect, tail, txt]);
+
+    const barY = 22;
+    const barBg = this.add.rectangle(0, barY, 48, 3, 0x888888);
+    const barFg = this.add.rectangle(-24, barY, 48, 3, 0x888888);
+    barFg.setOrigin(0, 0.5);
+    container.add([barBg, barFg]);
+
+    client.orderBubble = container;
+    client.patienceBg = barBg;
+    client.patienceBar = barFg;
+  }
+
+  updateClientsWaiting() {
+    const now = Date.now();
+    const toRemove = [];
+    for (const client of this.clients) {
+      if (client.infected || client.fleeing || client.served) continue;
+      if (client.orderBubble) {
+        client.orderBubble.x = client.circle.x;
+        client.orderBubble.y = client.circle.y - 40;
+      }
+      const waited = now - client.arrivalTime;
+      if (client.patienceBar) {
+        const ratio = Math.max(0, Math.min(1, 1 - waited / CLIENT_MAX_WAIT_MS));
+        client.patienceBar.width = 48 * ratio;
+        client.patienceBar.fillColor = waited >= CLIENT_NO_TIP_AFTER_MS ? 0xfb923c : 0x888888;
+      }
+      if (waited >= CLIENT_MAX_WAIT_MS && !client.beingServed) {
+        toRemove.push(client);
+      }
+    }
+    for (const c of toRemove) this.clientLeavesUnhappy(c);
+  }
+
+  clientLeavesUnhappy(client) {
+    this.rating = Math.max(0, this.rating - 0.1);
+    this.showUnhappyBubble(client);
+    this.destroyOrderBubble(client);
+    client.fleeing = true;
+    client.circle.disableInteractive();
+    const { width } = this.scale;
+    this.tweens.add({
+      targets: client.circle,
+      x: width + 30,
+      duration: 2000,
+      onComplete: () => {
+        client.circle.destroy();
+        this.clients = this.clients.filter(c => c !== client);
+      }
+    });
+  }
+
+  showUnhappyBubble(client) {
+    const bubble = this.add.container(client.circle.x, client.circle.y - 40);
+    bubble.setDepth(160);
+    const rect = this.add.rectangle(0, 0, 30, 20, 0xef4444);
+    rect.setStrokeStyle(1, 0x000000, 1);
+    const txt = this.add.text(0, 0, '!', {
+      fontFamily: 'monospace', fontSize: '14px', color: '#ffffff'
+    }).setOrigin(0.5);
+    bubble.add([rect, txt]);
+    this.time.delayedCall(1500, () => bubble.destroy());
+  }
+
+  destroyOrderBubble(client) {
+    if (client.orderBubble) {
+      client.orderBubble.destroy();
+      client.orderBubble = null;
+      client.patienceBg = null;
+      client.patienceBar = null;
+    }
+  }
+
+  trySendServer() {
+    if (this.counterContents.length === 0 && this.fridgeContents.length === 0) return;
+    const idleZombie = this.staff.find(z => z.state === 'idle' && !z.attacking && !z.serving);
+    if (!idleZombie) return;
+
+    let source = null;
+    let dish = null;
+    for (const d of this.counterContents) {
+      const match = this.findWaitingClientFor(d);
+      if (match) { source = 'counter'; dish = d; this.counterContents = this.counterContents.filter(x => x !== d); break; }
+    }
+    if (!dish) {
+      for (const d of this.fridgeContents) {
+        const match = this.findWaitingClientFor(d);
+        if (match) { source = 'fridge'; dish = d; this.fridgeContents = this.fridgeContents.filter(x => x !== d); break; }
+      }
+    }
+    if (!dish) return;
+
+    this.updateCounterDisplay();
+    this.updateFridgeCounter();
+
+    const client = this.findWaitingClientFor(dish);
+    if (!client) {
+      if (source === 'counter') this.counterContents.push(dish);
+      else this.fridgeContents.push(dish);
+      this.updateCounterDisplay();
+      this.updateFridgeCounter();
+      return;
+    }
+    this.serveClient(idleZombie, dish, client);
+  }
+
+  findWaitingClientFor(dish) {
+    return this.clients.find(c =>
+      !c.infected && !c.fleeing && !c.served && !c.beingServed &&
+      c.orderDish && c.orderDish.id === dish.id
+    );
+  }
+
+  serveClient(zombie, dish, client) {
+    zombie.state = 'serving';
+    zombie.serving = true;
+    client.beingServed = true;
+    this.tweens.killTweensOf(zombie.circle);
+    this.tweens.add({
+      targets: zombie.circle,
+      x: client.circle.x - 30,
+      y: client.circle.y,
+      duration: 500,
+      onComplete: () => {
+        this.onDishDelivered(zombie, dish, client);
+      }
+    });
+  }
+
+  onDishDelivered(zombie, dish, client) {
+    zombie.serving = false;
+    if (zombie.state === 'serving') zombie.state = 'idle';
+    client.beingServed = false;
+    client.served = true;
+
+    const now = Date.now();
+    const waited = now - client.arrivalTime;
+    const type = RECIPE_TYPES[dish.type];
+    const price = type ? type.pricePerPortion * type.portions : 0;
+    const xpGain = type ? type.xp : 0;
+
+    let tip = 0;
+    if (waited <= CLIENT_NO_TIP_AFTER_MS) {
+      const denom = 50 - 4.5 * client.clientType.tipRating;
+      if (denom > 0) tip = Math.max(1, Math.ceil(price / denom));
+    }
+
+    this.gold += price + tip;
+    this.xp += xpGain;
+    this.updateGoldHUD();
+
+    this.showPaymentBubble(client, price, tip);
+    this.destroyOrderBubble(client);
+
+    this.time.delayedCall(1500, () => {
+      if (!this.clients.includes(client)) return;
+      client.fleeing = true;
+      client.circle.disableInteractive();
+      const { width } = this.scale;
+      this.tweens.add({
+        targets: client.circle,
+        x: width + 30,
+        duration: 2000,
+        onComplete: () => {
+          client.circle.destroy();
+          this.clients = this.clients.filter(c => c !== client);
+        }
+      });
+    });
+  }
+
+  showPaymentBubble(client, price, tip) {
+    const bubble = this.add.container(client.circle.x, client.circle.y - 40);
+    bubble.setDepth(160);
+    const rect = this.add.rectangle(0, 0, 40, 24, 0xffd700);
+    rect.setStrokeStyle(1, 0x000000, 1);
+    const txt = this.add.text(0, 0, `+${price} or`, {
+      fontFamily: 'monospace', fontSize: '11px', color: '#000000'
+    }).setOrigin(0.5);
+    bubble.add([rect, txt]);
+    if (tip > 0) {
+      const tipRect = this.add.rectangle(30, 0, 34, 20, 0xffe58a);
+      tipRect.setStrokeStyle(1, 0x000000, 1);
+      const tipTxt = this.add.text(30, 0, `+${tip}`, {
+        fontFamily: 'monospace', fontSize: '10px', color: '#000000'
+      }).setOrigin(0.5);
+      bubble.add([tipRect, tipTxt]);
+    }
+    this.tweens.add({
+      targets: bubble,
+      y: bubble.y - 20,
+      alpha: 0,
+      duration: 1500,
+      onComplete: () => bubble.destroy()
+    });
+  }
+
+  createCounter() {
+    const { width } = this.scale;
+    const cx = width / 2;
+    const cy = 460;
+    this.counterX = cx;
+    this.counterY = cy;
+    this.counterSprite = this.add.rectangle(cx, cy, COUNTER_W, COUNTER_H, 0xd2a679);
+    this.counterSprite.setStrokeStyle(2, 0xffffff, 1);
+    this.counterDishText = this.add.text(cx, cy, '', {
+      fontFamily: 'monospace', fontSize: '11px', color: '#ffffff'
+    }).setOrigin(0.5);
+    this.counterLabel = this.add.text(cx, cy - COUNTER_H / 2 - 10, 'Comptoir', {
+      fontFamily: 'monospace', fontSize: '10px', color: '#cccccc'
+    }).setOrigin(0.5);
+  }
+
+  addToCounter(dish) {
+    if (this.counterContents.length >= this.counterCapacity) return false;
+    this.counterContents.push(dish);
+    this.updateCounterDisplay();
+    return true;
+  }
+
+  updateCounterDisplay() {
+    if (!this.counterDishText) return;
+    if (this.counterContents.length === 0) {
+      this.counterDishText.setText('');
+    } else {
+      this.counterDishText.setText(shortDishName(this.counterContents[0].name));
+    }
+  }
+
+  createGoldHUD() {
+    this.goldText = this.add.text(80, 60, `Or : 0`, {
+      fontFamily: 'monospace', fontSize: '14px', color: '#ffd700'
+    }).setOrigin(0, 0.5);
+  }
+
+  updateGoldHUD() {
+    if (this.goldText) this.goldText.setText(`Or : ${this.gold}`);
   }
 
   openClientPopup(client) {
@@ -684,6 +981,7 @@ export default class GameScene extends Phaser.Scene {
 
   performInfection(client) {
     client.infected = true;
+    this.destroyOrderBubble(client);
     client.circle.disableInteractive();
     const { width, height } = this.scale;
 
@@ -991,6 +1289,15 @@ export default class GameScene extends Phaser.Scene {
   startCooking(stove, dish) {
     const type = RECIPE_TYPES[dish.type];
     if (!type) return;
+    if (this.counterContents.length >= this.counterCapacity &&
+        this.fridgeContents.length >= this.fridgeCapacity) {
+      const msg = this.add.text(stove.x, stove.y - STOVE_H / 2 - 30, 'Complet', {
+        fontFamily: 'monospace', fontSize: '11px', color: '#ef4444',
+        backgroundColor: '#000000', padding: { x: 4, y: 2 }
+      }).setOrigin(0.5).setDepth(310);
+      this.time.delayedCall(1500, () => msg.destroy());
+      return;
+    }
     stove.state = 'cooking';
     stove.dish = dish;
     stove.cookStart = Date.now();
@@ -1091,9 +1398,11 @@ export default class GameScene extends Phaser.Scene {
   collectCookedDish(stove) {
     const dish = stove.dish;
     if (!dish) { this.resetStove(stove); return; }
-    const added = this.addToFridge({ id: dish.id, name: dish.label });
+    const payload = { id: dish.id, name: dish.label };
+    let added = this.addToCounter(payload);
+    if (!added) added = this.addToFridge(payload);
     if (!added) {
-      const msg = this.add.text(stove.x, stove.y - STOVE_H / 2 - 30, 'Frigo plein', {
+      const msg = this.add.text(stove.x, stove.y - STOVE_H / 2 - 30, 'Complet', {
         fontFamily: 'monospace', fontSize: '11px', color: '#ef4444',
         backgroundColor: '#000000', padding: { x: 4, y: 2 }
       }).setOrigin(0.5).setDepth(310);

@@ -23,15 +23,15 @@ const CLIENT_COLORS = {
 };
 
 const CHAIR_POSITIONS = [
-  { x: 420, y: 280 },
-  { x: 520, y: 280 },
-  { x: 620, y: 280 },
-  { x: 420, y: 380 },
-  { x: 520, y: 380 },
-  { x: 620, y: 380 }
+  { col: 8, row: 5 },
+  { col: 10, row: 5 },
+  { col: 12, row: 5 },
+  { col: 8, row: 7 },
+  { col: 10, row: 7 },
+  { col: 12, row: 7 }
 ];
 
-const STAFF_ZONE = { x: 80, y: 200 };
+const STAFF_ZONE = { col: 2, row: 3 };
 const STAFF_SPACING = 44;
 
 const STOVE_POSITIONS = [
@@ -124,6 +124,15 @@ export default class GameScene extends Phaser.Scene {
       `isoToScreen(5,5) = (${isoTest.x}, ${isoTest.y})\nscreenToIso(480,260) = (${screenTest.col}, ${screenTest.row})`,
       { fontFamily: 'monospace', fontSize: '12px', color: '#ffffff', align: 'right' }
     ).setOrigin(1, 0).setDepth(500);
+
+    const pathMain = this.pathfinding.findPath(1, 1, 18, 12);
+    console.log('[Pathfinding] findPath(1,1,18,12) length=', pathMain.length, 'first=', pathMain[0], 'last=', pathMain[pathMain.length - 1]);
+    const pathSame = this.pathfinding.findPath(5, 5, 5, 5);
+    console.log('[Pathfinding] findPath(5,5,5,5) =', pathSame);
+    const pathBlocked = this.pathfinding.findPath(0, 0, 5, 5);
+    console.log('[Pathfinding] findPath(0,0,5,5) length=', pathBlocked.length, '(attendu 0)');
+    const pathValid = this.pathfinding.findPath(2, 2, 18, 12);
+    console.log('[Pathfinding] findPath(2,2,18,12) length=', pathValid.length, 'first=', pathValid[0], 'last=', pathValid[pathValid.length - 1]);
 
     this.spawnClient();
     this.spawnTimer = this.time.addEvent({
@@ -641,7 +650,8 @@ export default class GameScene extends Phaser.Scene {
     const typeKey = keys[Math.floor(Math.random() * keys.length)];
     const clientType = CLIENT_TYPES[typeKey];
     const color = CLIENT_COLORS[clientType.id] || 0xffffff;
-    const pos = CHAIR_POSITIONS[chairIndex];
+    const chairData = CHAIR_POSITIONS[chairIndex];
+    const pos = this.pathfinding.isoToScreen(chairData.col, chairData.row);
 
     const circle = this.add.circle(pos.x, pos.y, 18, color);
     circle.setStrokeStyle(2, 0xffffff, 1);
@@ -953,8 +963,9 @@ export default class GameScene extends Phaser.Scene {
 
   createDirtyPlate(client) {
     if (client.chairIndex === undefined || client.chairIndex < 0) return;
-    const pos = CHAIR_POSITIONS[client.chairIndex];
-    if (!pos) return;
+    const chairData = CHAIR_POSITIONS[client.chairIndex];
+    if (!chairData) return;
+    const pos = this.pathfinding.isoToScreen(chairData.col, chairData.row);
     const px = pos.x - 6;
     const py = pos.y + 20;
     const circle = this.add.circle(px, py, 8, 0x888888);
@@ -1265,8 +1276,9 @@ export default class GameScene extends Phaser.Scene {
     client.circle.setFillStyle(0x22c55e);
 
     this.time.delayedCall(500, () => {
-      const targetX = STAFF_ZONE.x;
-      const targetY = STAFF_ZONE.y + this.staffCount * STAFF_SPACING;
+      const staffPos = this.pathfinding.isoToScreen(STAFF_ZONE.col, STAFF_ZONE.row);
+      const targetX = staffPos.x;
+      const targetY = staffPos.y + this.staffCount * STAFF_SPACING;
       this.staffCount++;
 
       this.tweens.add({
@@ -1784,5 +1796,49 @@ export default class GameScene extends Phaser.Scene {
     if (stove.cleanBg) { stove.cleanBg.destroy(); stove.cleanBg = null; }
 
     this.drawStoveBurners(stove, 0x222222);
+  }
+
+  moveEntityTo(entity, targetCol, targetRow) {
+    if (!entity || !entity.circle) return;
+
+    let startCol, startRow;
+    if (entity.col !== undefined && entity.row !== undefined) {
+      startCol = entity.col;
+      startRow = entity.row;
+    } else {
+      const cur = this.pathfinding.screenToIso(entity.circle.x, entity.circle.y);
+      startCol = cur.col;
+      startRow = cur.row;
+      entity.col = startCol;
+      entity.row = startRow;
+    }
+
+    entity.targetCol = targetCol;
+    entity.targetRow = targetRow;
+    entity.path = [];
+    entity.pathIndex = 0;
+
+    const attemptPath = (attemptsLeft) => {
+      const path = this.pathfinding.findPath(startCol, startRow, targetCol, targetRow);
+      if (path && path.length > 0) {
+        entity.path = path;
+        entity.pathIndex = 0;
+        return;
+      }
+      if (attemptsLeft > 0) {
+        this.time.delayedCall(150, () => attemptPath(attemptsLeft - 1));
+        return;
+      }
+      console.warn('moveEntityTo : chemin introuvable, teleport vers', targetCol, targetRow);
+      const tp = this.pathfinding.isoToScreen(targetCol, targetRow);
+      entity.circle.x = tp.x;
+      entity.circle.y = tp.y;
+      entity.col = targetCol;
+      entity.row = targetRow;
+      entity.path = [];
+      entity.pathIndex = 0;
+    };
+
+    attemptPath(3);
   }
 }

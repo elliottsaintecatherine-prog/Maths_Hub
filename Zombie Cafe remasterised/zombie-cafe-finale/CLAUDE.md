@@ -34,25 +34,24 @@ zombie-cafe-finale/
 
 ## ÉTAT DU PROJET
 
-**GROUPE COURANT : 3a5 → 3a6 → 3a7** (A* part 2 — enchaîner dans la même conversation)
+**GROUPE COURANT : 3b4 → 3b5 → 3b6 → 3b7** (Update + debug — enchaîner dans la même conversation)
 
 Quand tu termines un micro-prompt du groupe courant : coche [x], passe au suivant du groupe automatiquement (sans attendre confirmation), update PROCHAINE ACTION avec le suivant du groupe. Quand tout le groupe est [x], mets à jour GROUPE COURANT avec le groupe suivant et arrête (l'utilisateur ouvrira une nouvelle conversation).
 
 Groupes restants (dans l'ordre) :
-1. ✦ 3a5→3a7 (A* part 2) ← COURANT
-2. 3b1→3b3 (Migration iso)
-3. 3b4→3b7 (Update + debug)
-4. 4a1→4a3 (Carte raids)
-5. 4b1→4b5 (Combat raid)
-6. 4c1→4c3 (Fin raid)
-7. 5a1→5a3 + 5b1→5b4 (Shop + placement)
-8. 5c1→5c4 (Déco/Expansion)
-9. 5d1→5d4 (Tombstones)
-10. 7a1→7a5 (XP + staff)
-11. 7b1→7b4 + 7c1→7c2 (Rating + Locker ext)
-12. 8a1→8a4 + 8b1→8b4 (Save + hors-ligne)
-13. 9a1→9a3 + 9b1→9b5 + 9c1→9c4 (Menu + Tutoriel + Audio)
-14. 9d1→9d5 (HUD final)
+1. 3b1→3b3 (Migration iso) ✓ TERMINÉ
+2. ✦ 3b4→3b7 (Update + debug) ← COURANT
+3. 4a1→4a3 (Carte raids)
+4. 4b1→4b5 (Combat raid)
+5. 4c1→4c3 (Fin raid)
+6. 5a1→5a3 + 5b1→5b4 (Shop + placement)
+7. 5c1→5c4 (Déco/Expansion)
+8. 5d1→5d4 (Tombstones)
+9. 7a1→7a5 (XP + staff)
+10. 7b1→7b4 + 7c1→7c2 (Rating + Locker ext)
+11. 8a1→8a4 + 8b1→8b4 (Save + hors-ligne)
+12. 9a1→9a3 + 9b1→9b5 + 9c1→9c4 (Menu + Tutoriel + Audio)
+13. 9d1→9d5 (HUD final)
 
 Ordre d'exécution complet (micro-prompts) :
 1a → 1b → 1c → 2a → 2b → 2c → 6a → 6b → 6c →
@@ -91,12 +90,12 @@ Ordre d'exécution complet (micro-prompts) :
 | 3a2 | Conversion iso ↔ screen | [x] |
 | 3a3 | A* : structure open/closed lists | [x] |
 | 3a4 | A* : heuristique Chebyshev + f = g+h | [x] |
-| 3a5 | A* : expansion voisins + diagonales | [ ] |
-| 3a6 | A* : backtrack chemin + cas limites | [ ] |
-| 3a7 | Test integration GameScene | [ ] |
-| 3b1 | Migration CHAIR_POSITIONS en iso | [ ] |
-| 3b2 | Migration STAFF_ZONE + tweens infection | [ ] |
-| 3b3 | moveEntityTo : pathfinding + waypoints | [ ] |
+| 3a5 | A* : expansion voisins + diagonales | [x] |
+| 3a6 | A* : backtrack chemin + cas limites | [x] |
+| 3a7 | Test integration GameScene | [x] |
+| 3b1 | Migration CHAIR_POSITIONS en iso | [x] |
+| 3b2 | Migration STAFF_ZONE + tweens infection | [x] |
+| 3b3 | moveEntityTo : pathfinding + waypoints | [x] |
 | 3b4 | Update loop : waypoint traversal | [ ] |
 | 3b5 | Collision entités : wait + recalc | [ ] |
 | 3b6 | Z-sorting par screenY | [ ] |
@@ -186,22 +185,27 @@ Ordre d'exécution complet (micro-prompts) :
 
 ## PROCHAINE ACTION
 
-**Prompt 3a5 — A* : expansion voisins + diagonales (1.5h)**
+**Prompt 3b4 — Update loop : waypoint traversal (1.5h)**
 
-Implémente UNIQUEMENT l'expansion des 8 voisins dans findPath().
+Implémente UNIQUEMENT la traversée des waypoints dans la boucle update() de GameScene, à partir de l'entity.path stocké par moveEntityTo (3b3).
 
-VOISINS (8 directions) :
-- Tableau : [[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]]
-- Coût : orthogonal (dx===0 || dy===0) = 1, diagonal = Math.SQRT2 (~1.414)
+UPDATE LOOP — déplacement waypoint :
+- Pour chaque entité possédant un entity.path non-vide et entity.pathIndex < path.length :
+  - Calculer la position screen du waypoint courant : this.pathfinding.isoToScreen(path[pathIndex].col, path[pathIndex].row)
+  - Avancer entity.circle.x/y vers ce point selon une vitesse en pixels/seconde (speed * 8 px/sec, où speed est entity.speed ou défaut 1)
+  - Utiliser delta (ms écoulés depuis dernière frame) pour multiplier la vitesse correctement
+  - Si distance restante <= step : snap à la position exacte du waypoint, set entity.col / entity.row au waypoint, incrémenter entity.pathIndex
+  - Si entity.pathIndex >= path.length : arrivée atteinte → entity.path = [], entity.pathIndex = 0, déclencher entity.onArrive si défini
 
-EXPANSION (à l'intérieur de la boucle while, après ajout au closed set) :
-- Pour chaque voisin (nCol, nRow) :
-  → Ignorer si hors limites ou non walkable ou dans closed set
-  → Si diagonale : interdire si les deux cases orthogonales sont bloquées
-    (évite "corner cutting") : !isWalkable(col+dx, row) && !isWalkable(col, row+dy) → skip
-  → Calculer gNew = current.g + cost
-  → Si déjà dans open list avec g <= gNew → skip
-  → Sinon créer/maj node { col, row, g: gNew, h: heuristic(...), f: g+h, parent: current }, push dans open
+INTÉGRATION :
+- Centraliser la logique dans une méthode updateEntityMovement(entity, delta) appelée depuis update()
+- Itérer sur this.clients ET this.staff dans update()
+- Ne pas casser les tweens existants (infection, cleanup, etc.) : ne déplacer que les entités avec un entity.path non-vide
 
-Toujours pas de backtrack (vient au 3a6). findPath retourne encore [] à la fin.
-À la fin : coche [x] le prompt 3a5 dans CLAUDE.md et copie le texte du **Prompt 3a6** dans PROCHAINE ACTION.
+TESTS :
+- Lancer moveEntityTo sur un client : il avance visuellement waypoint après waypoint
+- Vitesse cohérente entre entités
+- Arrivée : entity.path vide, entity reste sur la case finale
+- Vérifier console : pas d'erreur
+
+À la fin : coche [x] le prompt 3b4 dans CLAUDE.md et copie le texte du **Prompt 3b5** dans PROCHAINE ACTION.

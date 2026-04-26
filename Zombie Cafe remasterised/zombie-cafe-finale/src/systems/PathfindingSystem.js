@@ -82,15 +82,75 @@ export default class PathfindingSystem {
       parent: null
     });
 
+    const NEIGHBORS = [[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]];
+
+    let iterations = 0;
     while (open.length > 0) {
+      if (open.length > 1000 || iterations > 10000) break;
+      iterations++;
+
       open.sort((a, b) => a.f - b.f);
       const current = open.shift();
 
       if (current.col === endCol && current.row === endRow) {
-        break;
+        const path = [];
+        let node = current;
+        while (node) {
+          path.unshift({ col: node.col, row: node.row });
+          node = node.parent;
+        }
+        return path;
       }
 
       closed.add(`${current.col},${current.row}`);
+
+      for (let i = 0; i < NEIGHBORS.length; i++) {
+        const dx = NEIGHBORS[i][0];
+        const dy = NEIGHBORS[i][1];
+        const nCol = current.col + dx;
+        const nRow = current.row + dy;
+
+        if (!this.isInBounds(nCol, nRow)) continue;
+        if (!this.isWalkable(nCol, nRow)) continue;
+        if (closed.has(`${nCol},${nRow}`)) continue;
+
+        const isDiagonal = (dx !== 0 && dy !== 0);
+
+        if (isDiagonal) {
+          if (!this.isWalkable(current.col + dx, current.row) && !this.isWalkable(current.col, current.row + dy)) continue;
+        }
+
+        const cost = isDiagonal ? Math.SQRT2 : 1;
+        const gNew = current.g + cost;
+
+        let existing = null;
+        for (let j = 0; j < open.length; j++) {
+          if (open[j].col === nCol && open[j].row === nRow) {
+            existing = open[j];
+            break;
+          }
+        }
+
+        if (existing && existing.g <= gNew) continue;
+
+        const h = this.heuristic(nCol, nRow, endCol, endRow);
+
+        if (existing) {
+          existing.g = gNew;
+          existing.h = h;
+          existing.f = gNew + h;
+          existing.parent = current;
+        } else {
+          open.push({
+            col: nCol,
+            row: nRow,
+            g: gNew,
+            h: h,
+            f: gNew + h,
+            parent: current
+          });
+        }
+      }
     }
 
     return [];

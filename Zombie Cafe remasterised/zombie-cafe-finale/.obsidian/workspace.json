@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "CLAUDE-split-plan.md",
+                "file": "CLAUDE.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "CLAUDE-split-plan"
+              "title": "CLAUDE"
             }
           }
         ]
@@ -185,13 +185,13 @@
   },
   "active": "0b4ca2ee0e2186cd",
   "lastOpenFiles": [
+    "CLAUDE-split-plan.md",
     "CLAUDE.md.tmp.13784.1777213332461",
     "CLAUDE.md.tmp.13784.1777213288753",
     "src/systems/PathfindingSystem.js",
     "CLAUDE.md",
     "src/ui/Cookbook.js.tmp.5204.1777189445558",
     "src/ui/Cookbook.js",
-    "CLAUDE-split-plan.md",
     "CLAUDE.md.tmp.11084.1777144803937",
     "assets/images/furniture/107.png",
     "assets/images/furniture/104.png",

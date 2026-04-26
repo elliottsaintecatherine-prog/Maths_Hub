@@ -30,18 +30,29 @@ zombie-cafe-finale/
 5. Après chaque modification : vérifier l'absence d'erreur console
 6. À la fin : mettre à jour la section ÉTAT ci-dessous et copier le prochain prompt dans PROCHAINE ACTION
 
+## VÉRIFICATION (IMPORTANT — éviter les tokens perdus)
+Le preview navigateur (`preview_start` + chrome) **ne fonctionne presque jamais** dans cette session : chrome reste bloqué sur `chrome-error://chromewebdata/` et refuse toute navigation/fetch ultérieure. **NE PAS perdre de tokens à essayer plusieurs fois**.
+
+Approche par défaut pour vérifier de la logique de jeu (algorithmes, state machines, calculs) :
+- Écrire un script Python `test_<id_prompt>.py` à la racine de `zombie-cafe-finale/` qui réimplémente la fonction modifiée et exerce 4-6 scénarios avec `assert`
+- Lancer : `cd "<projet>" && PYTHONIOENCODING=utf-8 python test_<id>.py`
+- Pas d'emojis ni de caractères Unicode bloquants dans les `print` (ou exporter `PYTHONIOENCODING=utf-8`)
+- Exemple de référence : [test_collision_3b5.py](test_collision_3b5.py) — simule `updateEntityMovement` + `isCaseOccupied` (6 scénarios, ~150 lignes)
+
+Quand tenter le preview malgré tout : changements purement visuels/UI où la logique ne peut pas être trace simplement (animations, layouts, couleurs). Une seule tentative ; si chrome-error → basculer immédiatement sur simulation Python ou validation statique par relecture.
+
 ---
 
 ## ÉTAT DU PROJET
 
-**GROUPE COURANT : 3b4 → 3b5 → 3b6 → 3b7** (Update + debug — enchaîner dans la même conversation)
+**GROUPE COURANT : 4a1 → 4a2 → 4a3** (Carte raids — enchaîner dans la même conversation)
 
 Quand tu termines un micro-prompt du groupe courant : coche [x], passe au suivant du groupe automatiquement (sans attendre confirmation), update PROCHAINE ACTION avec le suivant du groupe. Quand tout le groupe est [x], mets à jour GROUPE COURANT avec le groupe suivant et arrête (l'utilisateur ouvrira une nouvelle conversation).
 
 Groupes restants (dans l'ordre) :
 1. 3b1→3b3 (Migration iso) ✓ TERMINÉ
-2. ✦ 3b4→3b7 (Update + debug) ← COURANT
-3. 4a1→4a3 (Carte raids)
+2. 3b4→3b7 (Update + debug) ✓ TERMINÉ
+3. ✦ 4a1→4a3 (Carte raids) ← COURANT
 4. 4b1→4b5 (Combat raid)
 5. 4c1→4c3 (Fin raid)
 6. 5a1→5a3 + 5b1→5b4 (Shop + placement)
@@ -97,9 +108,9 @@ Ordre d'exécution complet (micro-prompts) :
 | 3b2 | Migration STAFF_ZONE + tweens infection | [x] |
 | 3b3 | moveEntityTo : pathfinding + waypoints | [x] |
 | 3b4 | Update loop : waypoint traversal | [x] |
-| 3b5 | Collision entités : wait + recalc | [ ] |
-| 3b6 | Z-sorting par screenY | [ ] |
-| 3b7 | Mode debug (touche D) | [ ] |
+| 3b5 | Collision entités : wait + recalc | [x] |
+| 3b6 | Z-sorting par screenY | [x] |
+| 3b7 | Mode debug (touche D) | [x] |
 | 4a1 | Bouton Carte + overlay RaidMapScene | [ ] |
 | 4a2 | Affichage cafés (joueur + 4 ennemis) | [ ] |
 | 4a3 | Écran préparation : sélection + lancement | [ ] |
@@ -185,21 +196,18 @@ Ordre d'exécution complet (micro-prompts) :
 
 ## PROCHAINE ACTION
 
-**Prompt 3b5 — Collision entités : wait + recalc (1.5h)**
+**Prompt 4a1 — Bouton Carte + overlay RaidMapScene (1h)**
 
-Implémente UNIQUEMENT la détection de collision entre entités et le recalcul de chemin.
+Implémente UNIQUEMENT le bouton et l'overlay de la carte des raids.
 
-DÉTECTION :
-- Avant d'avancer vers le prochain waypoint : vérifier si une autre entité occupe cette case (col,row)
-- Méthode helper : isCaseOccupied(col, row, excludeEntity) qui parcourt toutes les entités
+BOUTON CARTE :
+- Rectangle vert foncé (#1E5C2E) "Carte" (120x36) en bas de l'écran (barre HUD)
+- Clic → ouvre l'overlay RaidMap (visible=true)
 
-RÉACTION :
-- Si occupée : entity.waitUntil = time + 500 (attendre 0.5 sec)
-- Tant que time < waitUntil : ne pas avancer
-- Quand temps écoulé : ré-appeler moveEntityTo(entity, targetCol, targetRow) (recalc chemin)
-- Si la case est libérée avant la fin du timer : reprendre le chemin existant (skip recalc)
+OVERLAY :
+- Soit nouvelle scène RaidMapScene (this.scene.launch('RaidMapScene')), soit container Phaser
+- Fond : rectangle plein écran gris foncé (#222222) alpha 0.85
+- Bouton X (rectangle gris 32x32) en haut à droite : ferme l'overlay
 
-LIMITE :
-- Compteur entity.collisionRetries : si > 5 → téléporte (évite blocage infini)
-
-À la fin : coche [x] le prompt 3b5 dans CLAUDE.md et copie le texte du **Prompt 3b6** dans PROCHAINE ACTION.
+PAS de cafés ennemis ni de préparation dans ce prompt — juste structure ouverture/fermeture.
+À la fin : coche [x] le prompt 4a1 dans CLAUDE.md et copie le texte du Prompt 4a2 dans PROCHAINE ACTION.

@@ -158,6 +158,31 @@ export default class GameScene extends Phaser.Scene {
         this.closeRecipeList();
       }
     });
+
+    this.debugMode = false;
+    this.debugContainer = this.add.container(0, 0);
+    this.debugContainer.setDepth(1000);
+    this.debugTilesGraphics = this.add.graphics();
+    this.debugPathsGraphics = this.add.graphics();
+    this.debugContainer.add(this.debugTilesGraphics);
+    this.debugContainer.add(this.debugPathsGraphics);
+
+    const dbgX = 10;
+    const dbgY = this.scale.height - 10;
+    this.debugInfoBg = this.add.rectangle(dbgX, dbgY, 220, 20, 0x000000, 0.5);
+    this.debugInfoBg.setOrigin(0, 1);
+    this.debugInfoText = this.add.text(dbgX + 6, dbgY - 4, 'Entités: 0 | Chemin max: 0 cases', {
+      fontFamily: 'monospace', fontSize: '12px', color: '#ffffff'
+    }).setOrigin(0, 1);
+    this.debugContainer.add(this.debugInfoBg);
+    this.debugContainer.add(this.debugInfoText);
+
+    this.debugContainer.setVisible(false);
+
+    this.input.keyboard.on('keydown-D', () => {
+      this.debugMode = !this.debugMode;
+      this.debugContainer.setVisible(this.debugMode);
+    });
   }
 
   update(time, delta) {
@@ -180,6 +205,78 @@ export default class GameScene extends Phaser.Scene {
     this.trySendServer();
     this.trySendCleanup();
     this.tryAutoRest();
+    this.updateZSort();
+    if (this.debugMode) this.updateDebugOverlay();
+  }
+
+  updateDebugOverlay() {
+    if (!this.debugTilesGraphics || !this.debugPathsGraphics) return;
+    this.debugTilesGraphics.clear();
+    this.debugPathsGraphics.clear();
+
+    const cols = this.pathfinding.cols;
+    const rows = this.pathfinding.rows;
+    for (let c = 0; c < cols; c++) {
+      for (let r = 0; r < rows; r++) {
+        const walkable = this.pathfinding.isWalkable(c, r);
+        const pos = this.pathfinding.isoToScreen(c, r);
+        const color = walkable ? 0x00ff00 : 0xff0000;
+        const alpha = walkable ? 0.3 : 0.4;
+        this.debugTilesGraphics.fillStyle(color, alpha);
+        this.debugTilesGraphics.beginPath();
+        this.debugTilesGraphics.moveTo(pos.x, pos.y - 16);
+        this.debugTilesGraphics.lineTo(pos.x + 32, pos.y);
+        this.debugTilesGraphics.lineTo(pos.x, pos.y + 16);
+        this.debugTilesGraphics.lineTo(pos.x - 32, pos.y);
+        this.debugTilesGraphics.closePath();
+        this.debugTilesGraphics.fillPath();
+      }
+    }
+
+    let maxPath = 0;
+    let entityCount = 0;
+    this.debugPathsGraphics.lineStyle(2, 0xffff00, 1);
+    const drawPath = (entity) => {
+      if (!entity || !entity.circle) return;
+      entityCount++;
+      if (!entity.path || entity.path.length === 0) return;
+      if (entity.path.length > maxPath) maxPath = entity.path.length;
+      this.debugPathsGraphics.beginPath();
+      this.debugPathsGraphics.moveTo(entity.circle.x, entity.circle.y);
+      for (const wp of entity.path) {
+        const pos = this.pathfinding.isoToScreen(wp.col, wp.row);
+        this.debugPathsGraphics.lineTo(pos.x, pos.y);
+      }
+      this.debugPathsGraphics.strokePath();
+    };
+    for (const z of this.staff) drawPath(z);
+    for (const c of this.clients) drawPath(c);
+
+    if (this.debugInfoText) {
+      this.debugInfoText.setText(`Entités: ${entityCount} | Chemin max: ${maxPath} cases`);
+    }
+  }
+
+  updateZSort() {
+    for (const client of this.clients) {
+      if (client.circle && client.circle.active) {
+        client.circle.setDepth(client.circle.y);
+      }
+    }
+    for (const zombie of this.staff) {
+      if (zombie.circle && zombie.circle.active) {
+        zombie.circle.setDepth(zombie.circle.y);
+      }
+    }
+    for (const stove of this.stoves) {
+      if (stove.body) {
+        stove.body.setDepth(stove.body.y);
+        if (stove.burners) stove.burners.setDepth(stove.body.y + 1);
+      }
+    }
+    if (this.fridgeSprite) this.fridgeSprite.setDepth(this.fridgeSprite.y);
+    if (this.counterSprite) this.counterSprite.setDepth(this.counterSprite.y);
+    if (this.sinkSprite) this.sinkSprite.setDepth(this.sinkSprite.y);
   }
 
   updateEntityMovement(entity, delta) {
@@ -197,6 +294,43 @@ export default class GameScene extends Phaser.Scene {
     }
 
     const waypoint = entity.path[entity.pathIndex];
+    const now = this.time.now;
+
+    const isSelfCase = (waypoint.col === entity.col && waypoint.row === entity.row);
+    if (!isSelfCase) {
+      const occupied = this.isCaseOccupied(waypoint.col, waypoint.row, entity);
+      if (occupied) {
+        if (!entity.waitUntil) {
+          entity.waitUntil = now + 500;
+          return;
+        }
+        if (now < entity.waitUntil) {
+          return;
+        }
+        entity.waitUntil = 0;
+        entity.collisionRetries = (entity.collisionRetries || 0) + 1;
+        if (entity.collisionRetries > 5) {
+          const tc = (entity.targetCol !== undefined) ? entity.targetCol : waypoint.col;
+          const tr = (entity.targetRow !== undefined) ? entity.targetRow : waypoint.row;
+          const tp = this.pathfinding.isoToScreen(tc, tr);
+          entity.circle.x = tp.x;
+          entity.circle.y = tp.y;
+          entity.col = tc;
+          entity.row = tr;
+          entity.path = [];
+          entity.pathIndex = 0;
+          entity.collisionRetries = 0;
+          const cb = entity.onArrive;
+          entity.onArrive = null;
+          if (typeof cb === 'function') cb();
+          return;
+        }
+        this.moveEntityTo(entity, entity.targetCol, entity.targetRow);
+        return;
+      }
+      if (entity.waitUntil) entity.waitUntil = 0;
+    }
+
     const target = this.pathfinding.isoToScreen(waypoint.col, waypoint.row);
 
     const dx = target.x - entity.circle.x;
@@ -212,6 +346,7 @@ export default class GameScene extends Phaser.Scene {
       entity.col = waypoint.col;
       entity.row = waypoint.row;
       entity.pathIndex++;
+      if (!isSelfCase) entity.collisionRetries = 0;
       if (entity.pathIndex >= entity.path.length) {
         const cb = entity.onArrive;
         entity.path = [];
@@ -224,6 +359,20 @@ export default class GameScene extends Phaser.Scene {
       entity.circle.x += dx * ratio;
       entity.circle.y += dy * ratio;
     }
+  }
+
+  isCaseOccupied(col, row, excludeEntity) {
+    for (const c of this.clients) {
+      if (c === excludeEntity) continue;
+      if (!c.circle || !c.circle.active) continue;
+      if (c.col === col && c.row === row) return true;
+    }
+    for (const s of this.staff) {
+      if (s === excludeEntity) continue;
+      if (!s.circle || !s.circle.active) continue;
+      if (s.col === col && s.row === row) return true;
+    }
+    return false;
   }
 
   updateZombieDaydream(zombie) {

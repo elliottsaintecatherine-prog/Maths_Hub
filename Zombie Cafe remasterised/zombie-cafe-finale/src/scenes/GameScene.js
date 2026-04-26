@@ -80,7 +80,7 @@ export default class GameScene extends Phaser.Scene {
       fontFamily: 'monospace', fontSize: '24px', color: '#ffffff',
     }).setOrigin(0.5);
 
-    this.toxines = 10;
+    this.toxines = 1000;
     this.rating = 5;
     this.playerLevel = 3;
     this.clients = [];

@@ -162,7 +162,11 @@ export default class GameScene extends Phaser.Scene {
 
   update(time, delta) {
     const dt = delta / 1000;
+    for (const client of this.clients) {
+      this.updateEntityMovement(client, delta);
+    }
     for (const zombie of this.staff) {
+      this.updateEntityMovement(zombie, delta);
       this.updateZombieEnergy(zombie, dt);
       this.updateZombieDaydream(zombie);
       this.updateZombieVisuals(zombie);
@@ -176,6 +180,50 @@ export default class GameScene extends Phaser.Scene {
     this.trySendServer();
     this.trySendCleanup();
     this.tryAutoRest();
+  }
+
+  updateEntityMovement(entity, delta) {
+    if (!entity || !entity.circle) return;
+    if (!entity.path || entity.path.length === 0) return;
+    if (entity.pathIndex === undefined) entity.pathIndex = 0;
+
+    if (entity.pathIndex >= entity.path.length) {
+      const cb = entity.onArrive;
+      entity.path = [];
+      entity.pathIndex = 0;
+      entity.onArrive = null;
+      if (typeof cb === 'function') cb();
+      return;
+    }
+
+    const waypoint = entity.path[entity.pathIndex];
+    const target = this.pathfinding.isoToScreen(waypoint.col, waypoint.row);
+
+    const dx = target.x - entity.circle.x;
+    const dy = target.y - entity.circle.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    const speed = (typeof entity.speed === 'number' && entity.speed > 0) ? entity.speed : 1;
+    const step = speed * 8 * (delta / 1000);
+
+    if (distance <= step) {
+      entity.circle.x = target.x;
+      entity.circle.y = target.y;
+      entity.col = waypoint.col;
+      entity.row = waypoint.row;
+      entity.pathIndex++;
+      if (entity.pathIndex >= entity.path.length) {
+        const cb = entity.onArrive;
+        entity.path = [];
+        entity.pathIndex = 0;
+        entity.onArrive = null;
+        if (typeof cb === 'function') cb();
+      }
+    } else {
+      const ratio = step / distance;
+      entity.circle.x += dx * ratio;
+      entity.circle.y += dy * ratio;
+    }
   }
 
   updateZombieDaydream(zombie) {

@@ -96,7 +96,7 @@ Ordre d'exécution complet (micro-prompts) :
 | 3b1 | Migration CHAIR_POSITIONS en iso | [x] |
 | 3b2 | Migration STAFF_ZONE + tweens infection | [x] |
 | 3b3 | moveEntityTo : pathfinding + waypoints | [x] |
-| 3b4 | Update loop : waypoint traversal | [ ] |
+| 3b4 | Update loop : waypoint traversal | [x] |
 | 3b5 | Collision entités : wait + recalc | [ ] |
 | 3b6 | Z-sorting par screenY | [ ] |
 | 3b7 | Mode debug (touche D) | [ ] |
@@ -185,27 +185,21 @@ Ordre d'exécution complet (micro-prompts) :
 
 ## PROCHAINE ACTION
 
-**Prompt 3b4 — Update loop : waypoint traversal (1.5h)**
+**Prompt 3b5 — Collision entités : wait + recalc (1.5h)**
 
-Implémente UNIQUEMENT la traversée des waypoints dans la boucle update() de GameScene, à partir de l'entity.path stocké par moveEntityTo (3b3).
+Implémente UNIQUEMENT la détection de collision entre entités et le recalcul de chemin.
 
-UPDATE LOOP — déplacement waypoint :
-- Pour chaque entité possédant un entity.path non-vide et entity.pathIndex < path.length :
-  - Calculer la position screen du waypoint courant : this.pathfinding.isoToScreen(path[pathIndex].col, path[pathIndex].row)
-  - Avancer entity.circle.x/y vers ce point selon une vitesse en pixels/seconde (speed * 8 px/sec, où speed est entity.speed ou défaut 1)
-  - Utiliser delta (ms écoulés depuis dernière frame) pour multiplier la vitesse correctement
-  - Si distance restante <= step : snap à la position exacte du waypoint, set entity.col / entity.row au waypoint, incrémenter entity.pathIndex
-  - Si entity.pathIndex >= path.length : arrivée atteinte → entity.path = [], entity.pathIndex = 0, déclencher entity.onArrive si défini
+DÉTECTION :
+- Avant d'avancer vers le prochain waypoint : vérifier si une autre entité occupe cette case (col,row)
+- Méthode helper : isCaseOccupied(col, row, excludeEntity) qui parcourt toutes les entités
 
-INTÉGRATION :
-- Centraliser la logique dans une méthode updateEntityMovement(entity, delta) appelée depuis update()
-- Itérer sur this.clients ET this.staff dans update()
-- Ne pas casser les tweens existants (infection, cleanup, etc.) : ne déplacer que les entités avec un entity.path non-vide
+RÉACTION :
+- Si occupée : entity.waitUntil = time + 500 (attendre 0.5 sec)
+- Tant que time < waitUntil : ne pas avancer
+- Quand temps écoulé : ré-appeler moveEntityTo(entity, targetCol, targetRow) (recalc chemin)
+- Si la case est libérée avant la fin du timer : reprendre le chemin existant (skip recalc)
 
-TESTS :
-- Lancer moveEntityTo sur un client : il avance visuellement waypoint après waypoint
-- Vitesse cohérente entre entités
-- Arrivée : entity.path vide, entity reste sur la case finale
-- Vérifier console : pas d'erreur
+LIMITE :
+- Compteur entity.collisionRetries : si > 5 → téléporte (évite blocage infini)
 
-À la fin : coche [x] le prompt 3b4 dans CLAUDE.md et copie le texte du **Prompt 3b5** dans PROCHAINE ACTION.
+À la fin : coche [x] le prompt 3b5 dans CLAUDE.md et copie le texte du **Prompt 3b6** dans PROCHAINE ACTION.

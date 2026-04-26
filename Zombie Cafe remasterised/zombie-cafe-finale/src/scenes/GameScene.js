@@ -11,6 +11,7 @@ import {
   getBurnIn
 } from '../data/recipes.js';
 import Cookbook from '../ui/Cookbook.js';
+import PathfindingSystem from '../systems/PathfindingSystem.js';
 
 const CLIENT_COLORS = {
   construction_worker: 0x888888,
@@ -113,6 +114,16 @@ export default class GameScene extends Phaser.Scene {
     this.createRestZone();
     this.createDebugClientTable();
     this.cookbook = new Cookbook(this);
+
+    this.pathfinding = new PathfindingSystem(this);
+    const isoTest = this.pathfinding.isoToScreen(5, 5);
+    const screenTest = this.pathfinding.screenToIso(480, 260);
+    this.add.text(
+      width - 10,
+      10,
+      `isoToScreen(5,5) = (${isoTest.x}, ${isoTest.y})\nscreenToIso(480,260) = (${screenTest.col}, ${screenTest.row})`,
+      { fontFamily: 'monospace', fontSize: '12px', color: '#ffffff', align: 'right' }
+    ).setOrigin(1, 0).setDepth(500);
 
     this.spawnClient();
     this.spawnTimer = this.time.addEvent({

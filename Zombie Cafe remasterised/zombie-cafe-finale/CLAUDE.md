@@ -34,7 +34,44 @@ zombie-cafe-finale/
 
 ## ÉTAT DU PROJET
 
-Ordre d'exécution : 1a → 1b → 1c → 2a → 2b → 2c → 6a → 6b → 6c → 6d → 3a → 3b → 4a → 4b → 4c → 5a → 5b → 5c → 5d → 7a → 7b → 7c → 8a → 8b → 9a → 9b → 9c → 9d
+**GROUPE COURANT : 3a1 → 3a2 → 3a3 → 3a4** (A* part 1 — enchaîner dans la même conversation)
+
+Quand tu termines un micro-prompt du groupe courant : coche [x], passe au suivant du groupe automatiquement (sans attendre confirmation), update PROCHAINE ACTION avec le suivant du groupe. Quand tout le groupe est [x], mets à jour GROUPE COURANT avec le groupe suivant et arrête (l'utilisateur ouvrira une nouvelle conversation).
+
+Groupes restants (dans l'ordre) :
+1. ✦ 3a1→3a4 (A* part 1) ← COURANT
+2. 3a5→3a7 (A* part 2)
+3. 3b1→3b3 (Migration iso)
+4. 3b4→3b7 (Update + debug)
+5. 4a1→4a3 (Carte raids)
+6. 4b1→4b5 (Combat raid)
+7. 4c1→4c3 (Fin raid)
+8. 5a1→5a3 + 5b1→5b4 (Shop + placement)
+9. 5c1→5c4 (Déco/Expansion)
+10. 5d1→5d4 (Tombstones)
+11. 7a1→7a5 (XP + staff)
+12. 7b1→7b4 + 7c1→7c2 (Rating + Locker ext)
+13. 8a1→8a4 + 8b1→8b4 (Save + hors-ligne)
+14. 9a1→9a3 + 9b1→9b5 + 9c1→9c4 (Menu + Tutoriel + Audio)
+15. 9d1→9d5 (HUD final)
+
+Ordre d'exécution complet (micro-prompts) :
+1a → 1b → 1c → 2a → 2b → 2c → 6a → 6b → 6c →
+**6d1 → 6d2 → 6d3 → 6d4** →
+3a1 → 3a2 → 3a3 → 3a4 → 3a5 → 3a6 → 3a7 →
+3b1 → 3b2 → 3b3 → 3b4 → 3b5 → 3b6 → 3b7 →
+4a1 → 4a2 → 4a3 →
+4b1 → 4b2 → 4b3 → 4b4 → 4b5 →
+4c1 → 4c2 → 4c3 →
+5a1 → 5a2 → 5a3 → 5b1 → 5b2 → 5b3 → 5b4 →
+5c1 → 5c2 → 5c3 → 5c4 →
+5d1 → 5d2 → 5d3 → 5d4 →
+7a1 → 7a2 → 7a3 → 7a4 → 7a5 →
+7b1 → 7b2 → 7b3 → 7b4 → 7c1 → 7c2 →
+8a1 → 8a2 → 8a3 → 8a4 → 8b1 → 8b2 → 8b3 → 8b4 →
+9a1 → 9a2 → 9a3 → 9b1 → 9b2 → 9b3 → 9b4 → 9b5 →
+9c1 → 9c2 → 9c3 → 9c4 →
+9d1 → 9d2 → 9d3 → 9d4 → 9d5
 
 | ID | Titre | Status |
 |---|---|---|
@@ -47,9 +84,86 @@ Ordre d'exécution : 1a → 1b → 1c → 2a → 2b → 2c → 6a → 6b → 6c 
 | 6a | Données recettes (5 cookbooks) + cuisson | [x] |
 | 6b | Flux comptoir/frigo + commandes + pourboires | [x] |
 | 6c | Évier + cycle assiettes sales | [x] |
-| 6d | Cookbook UI (consultation recettes) | [ ] |
-| 3a | Grille iso + algorithme A* | [ ] |
-| 3b | Mouvement entités + z-sort + debug | [ ] |
+| 6d1 | Cookbook : bouton + panneau + sidebar | [x] |
+| 6d2 | Cookbook : zone recettes (fiches plats) | [x] |
+| 6d3 | Cookbook : verrouillage + indices | [x] |
+| 6d4 | Cookbook : compteur + fermeture + HUD | [x] |
+| 3a1 | PathfindingSystem : grille 20x14 + setBlocked | [ ] |
+| 3a2 | Conversion iso ↔ screen | [ ] |
+| 3a3 | A* : structure open/closed lists | [ ] |
+| 3a4 | A* : heuristique Chebyshev + f = g+h | [ ] |
+| 3a5 | A* : expansion voisins + diagonales | [ ] |
+| 3a6 | A* : backtrack chemin + cas limites | [ ] |
+| 3a7 | Test integration GameScene | [ ] |
+| 3b1 | Migration CHAIR_POSITIONS en iso | [ ] |
+| 3b2 | Migration STAFF_ZONE + tweens infection | [ ] |
+| 3b3 | moveEntityTo : pathfinding + waypoints | [ ] |
+| 3b4 | Update loop : waypoint traversal | [ ] |
+| 3b5 | Collision entités : wait + recalc | [ ] |
+| 3b6 | Z-sorting par screenY | [ ] |
+| 3b7 | Mode debug (touche D) | [ ] |
+| 4a1 | Bouton Carte + overlay RaidMapScene | [ ] |
+| 4a2 | Affichage cafés (joueur + 4 ennemis) | [ ] |
+| 4a3 | Écran préparation : sélection + lancement | [ ] |
+| 4b1 | RaidScene : init + spawn ennemis/boss | [ ] |
+| 4b2 | Layout raid : positions + barres énergie | [ ] |
+| 4b3 | Sélection + tween attaque | [ ] |
+| 4b4 | Calcul dégâts + riposte + mort | [ ] |
+| 4b5 | Clients ennemis + bouton Retraite | [ ] |
+| 4c1 | Conditions victoire/défaite | [ ] |
+| 4c2 | Popup résultat : victoire | [ ] |
+| 4c3 | Popup défaite + cooldowns | [ ] |
+| 5a1 | Bouton Shop + panneau 520x400 | [ ] |
+| 5a2 | Onglet Cuisine : items + achat | [ ] |
+| 5a3 | Onglet Salle : items + lancement placement | [ ] |
+| 5b1 | Fantôme meuble + snap grille iso | [ ] |
+| 5b2 | Validation placement : vert/rouge | [ ] |
+| 5b3 | Placement effectif + setBlocked | [ ] |
+| 5b4 | Annulation + remboursement | [ ] |
+| 5c1 | Onglet Déco : 4 items | [ ] |
+| 5c2 | Onglet Expansion : agrandir grille | [ ] |
+| 5c3 | Bouton Éditer + popup meuble | [ ] |
+| 5c4 | Vendre + règles de vente | [ ] |
+| 5d1 | 5e onglet Tombstones : items + prix Toxines | [ ] |
+| 5d2 | Achat + placement comme meuble | [ ] |
+| 5d3 | Boosts actifs + icons HUD | [ ] |
+| 5d4 | Expiration + recharge | [ ] |
+| 7a1 | Formule XP + barre progression | [ ] |
+| 7a2 | Gains XP (cuisson, service, infection) | [ ] |
+| 7a3 | Level-up : popup + déblocages | [ ] |
+| 7a4 | Capacité staff par niveau | [ ] |
+| 7a5 | Meat Locker base (5 crochets) | [ ] |
+| 7b1 | Affichage étoiles (0-5) | [ ] |
+| 7b2 | Modifications rating (clients, zombies) | [ ] |
+| 7b3 | Impact rating sur spawn clients | [ ] |
+| 7b4 | Bonus stars + objectifs | [ ] |
+| 7c1 | Bouton Étendre Meat Locker | [ ] |
+| 7c2 | Visuel crochets + max 100 | [ ] |
+| 8a1 | SaveSystem : sérialisation gameState | [ ] |
+| 8a2 | Données complètes sauvegardées | [ ] |
+| 8a3 | Chargement + validation version | [ ] |
+| 8a4 | Auto-save 15s + events majeurs | [ ] |
+| 8b1 | Calcul gains hors-ligne | [ ] |
+| 8b2 | Popup hors-ligne | [ ] |
+| 8b3 | Menu Options : volume + reset save | [ ] |
+| 8b4 | Export/Import JSON save | [ ] |
+| 9a1 | Titre + silhouettes zombies | [ ] |
+| 9a2 | Boutons Nouvelle / Continuer / Options | [ ] |
+| 9a3 | Sous-titre + branding | [ ] |
+| 9b1 | Chef narrateur + spotlight | [ ] |
+| 9b2 | Étapes 1-3 (fourneau → comptoir) | [ ] |
+| 9b3 | Étapes 4-5 (client → paiement) | [ ] |
+| 9b4 | Étapes 6-7 (infection → fin) | [ ] |
+| 9b5 | Bouton Passer + état persistent | [ ] |
+| 9c1 | Musique boucle synthétisée | [ ] |
+| 9c2 | SFX base (cookStart/Done, satisfied, infect, attack) | [ ] |
+| 9c3 | SFX suite (levelUp, raidStart, uiClick) | [ ] |
+| 9c4 | Volume global + branchements events | [ ] |
+| 9d1 | HUD top : étoiles + or/toxines + barre XP | [ ] |
+| 9d2 | HUD bottom : 5 boutons | [ ] |
+| 9d3 | Notifications toast | [ ] |
+| 9d4 | Bulles clients | [ ] |
+| 9d5 | Particules or + finalisation v1.0 | [ ] |
 | 4a | Carte raids + préparation | [ ] |
 | 4b | Scène de raid : combat manuel | [ ] |
 | 4c | Victoire/défaite + butin + cooldowns | [ ] |
@@ -73,39 +187,25 @@ Ordre d'exécution : 1a → 1b → 1c → 2a → 2b → 2c → 6a → 6b → 6c 
 
 ## PROCHAINE ACTION
 
-**Prompt 6d — Cookbook UI (interface de consultation des recettes)**
+**Prompt 3a1 — PathfindingSystem : grille 20x14 + setBlocked (1.5h)**
 
-Implémente UNIQUEMENT l'interface Cookbook dans src/ui/Cookbook.js.
+Implémente UNIQUEMENT la classe PathfindingSystem dans src/systems/PathfindingSystem.js
+sans algorithme A* (vient au 3a3+).
 
-BOUTON COOKBOOK :
-- Rectangle marron foncé "Cookbook" (120x36) dans la barre du bas
-- Clic → ouvre le panneau cookbook (container Phaser)
+GRILLE :
+- Matrice 2D de booléens : grid[col][row] = true (walkable) ou false (bloqué)
+- Taille : 20 colonnes x 14 rangées (constantes COLS=20, ROWS=14)
+- Initialisation : tout walkable sauf les bords (col 0, col 19, row 0, row 13)
+- Cases bloquées initiales selon layout actuel :
+  → Comptoir (2x1 au centre-haut)
+  → Fourneaux (2x1 en bas)
+  → Frigo (1x1 bas gauche)
 
-PANNEAU COOKBOOK :
-- Rectangle beige 560x420 centré, bord marron foncé 4px (effet livre)
-- Titre en haut : "Livre de Cuisine" (texte marron foncé 20px)
-- Sidebar gauche (largeur 140) : liste des 5 cookbooks
-  → Chaque entrée : rectangle 130x36, icône couleur du cookbook + nom
-  → Cookbook verrouillé (minLevel > niveau actuel) : grisé + cadenas (texte "Niv X")
-  → Cookbook actif : bord orange
-- Zone principale droite (largeur 400) : liste des plats du cookbook sélectionné
+MÉTHODES :
+- constructor(scene) : initialise la grille
+- setBlocked(col, row, blocked) : met grid[col][row] = !blocked, retourne true si OK, false si hors limites
+- isWalkable(col, row) : retourne true si dans la grille ET walkable
+- isInBounds(col, row) : check des limites
 
-FICHE DE RECETTE (zone droite) :
-Pour chaque plat du cookbook sélectionné :
-- Ligne 80px de haut : icône plat (rectangle 60x60 couleur selon type) + infos texte :
-  → Nom du plat (16px gras)
-  → Type (ex: "Fancy — 15min cuisson")
-  → Portions : X | Prix/portion : Y or | XP : Z
-  → Niveau requis : "Niv X" si minLevel existe
-- Plat débloqué : affichage normal
-- Plat verrouillé (niveau ou raid) : grisé, texte barré, indice "Volable en raid" ou "Niv X requis"
-- Séparateur entre plats : ligne marron clair 1px
-
-BOUTON FERMER :
-- Rectangle marron clair "Fermer" (100x32) en bas du panneau
-
-STATS DE COLLECTION :
-- Petit texte en bas à droite du panneau : "Recettes débloquées : X/Y"
-- Montre la progression totale toutes recettes confondues
-
-À la fin : coche [x] le prompt 6d dans CLAUDE.md et copie le texte du **Prompt 3a** dans la section PROCHAINE ACTION.
+Exporte la classe par défaut. Pas de A*, pas d'iso conversion (prochains prompts).
+À la fin : coche [x] le prompt 3a1 dans CLAUDE.md et copie le texte du **Prompt 3a2** dans PROCHAINE ACTION.

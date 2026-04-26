@@ -10,6 +10,7 @@ import {
   getSelectableDishes,
   getBurnIn
 } from '../data/recipes.js';
+import Cookbook from '../ui/Cookbook.js';
 
 const CLIENT_COLORS = {
   construction_worker: 0x888888,
@@ -111,6 +112,7 @@ export default class GameScene extends Phaser.Scene {
     this.createSink();
     this.createRestZone();
     this.createDebugClientTable();
+    this.cookbook = new Cookbook(this);
 
     this.spawnClient();
     this.spawnTimer = this.time.addEvent({

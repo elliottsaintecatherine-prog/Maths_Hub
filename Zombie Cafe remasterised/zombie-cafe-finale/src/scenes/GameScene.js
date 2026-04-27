@@ -114,6 +114,9 @@ export default class GameScene extends Phaser.Scene {
     this.createRestZone();
     this.createDebugClientTable();
     this.cookbook = new Cookbook(this);
+    this.createCarteButton();
+
+    this.enemyCafes = this.generateEnemyCafes();
 
     this.pathfinding = new PathfindingSystem(this);
     const isoTest = this.pathfinding.isoToScreen(5, 5);
@@ -1369,6 +1372,48 @@ export default class GameScene extends Phaser.Scene {
 
   updateGoldHUD() {
     if (this.goldText) this.goldText.setText(`Or : ${this.gold}`);
+  }
+
+  createCarteButton() {
+    const { height } = this.scale;
+    const btnW = 120;
+    const btnH = 36;
+    const btnX = 12 + 120 + 8 + btnW / 2;
+    const btnY = height - btnH / 2 - 6;
+
+    this.carteButtonBg = this.add.rectangle(btnX, btnY, btnW, btnH, 0x1E5C2E);
+    this.carteButtonBg.setStrokeStyle(2, 0xffffff, 1);
+    this.carteButtonBg.setInteractive({ useHandCursor: true });
+    this.carteButtonBg.setDepth(50);
+
+    this.carteButtonText = this.add.text(btnX, btnY, 'Carte', {
+      fontFamily: 'monospace', fontSize: '14px', color: '#ffffff'
+    }).setOrigin(0.5);
+    this.carteButtonText.setDepth(51);
+
+    this.carteButtonBg.on('pointerdown', (pointer, lx, ly, ev) => {
+      if (this.scene.isActive('RaidMapScene')) {
+        this.scene.bringToTop('RaidMapScene');
+      } else {
+        this.scene.launch('RaidMapScene');
+      }
+      if (ev && ev.stopPropagation) ev.stopPropagation();
+    });
+  }
+
+  generateEnemyCafes() {
+    const names = ['Café des Rampants', 'La Cantine Putride', 'Le Festin Mort', 'Bistrot Pourri'];
+    const cafes = [];
+    for (let i = 0; i < names.length; i++) {
+      const offset = Phaser.Math.Between(-2, 2);
+      const level = Phaser.Math.Clamp((this.playerLevel || 1) + offset, 1, 5);
+      cafes.push({
+        name: names[i],
+        level: level,
+        closedUntil: 0
+      });
+    }
+    return cafes;
   }
 
   openClientPopup(client) {

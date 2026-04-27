@@ -45,15 +45,15 @@ Quand tenter le preview malgré tout : changements purement visuels/UI où la lo
 
 ## ÉTAT DU PROJET
 
-**GROUPE COURANT : 4a1 → 4a2 → 4a3** (Carte raids — enchaîner dans la même conversation)
+**GROUPE COURANT : 4b1 → 4b2 → 4b3 → 4b4 → 4b5** (Combat raid — enchaîner dans la même conversation)
 
 Quand tu termines un micro-prompt du groupe courant : coche [x], passe au suivant du groupe automatiquement (sans attendre confirmation), update PROCHAINE ACTION avec le suivant du groupe. Quand tout le groupe est [x], mets à jour GROUPE COURANT avec le groupe suivant et arrête (l'utilisateur ouvrira une nouvelle conversation).
 
 Groupes restants (dans l'ordre) :
 1. 3b1→3b3 (Migration iso) ✓ TERMINÉ
 2. 3b4→3b7 (Update + debug) ✓ TERMINÉ
-3. ✦ 4a1→4a3 (Carte raids) ← COURANT
-4. 4b1→4b5 (Combat raid)
+3. 4a1→4a3 (Carte raids) ✓ TERMINÉ
+4. ✦ 4b1→4b5 (Combat raid) ← COURANT
 5. 4c1→4c3 (Fin raid)
 6. 5a1→5a3 + 5b1→5b4 (Shop + placement)
 7. 5c1→5c4 (Déco/Expansion)
@@ -111,9 +111,9 @@ Ordre d'exécution complet (micro-prompts) :
 | 3b5 | Collision entités : wait + recalc | [x] |
 | 3b6 | Z-sorting par screenY | [x] |
 | 3b7 | Mode debug (touche D) | [x] |
-| 4a1 | Bouton Carte + overlay RaidMapScene | [ ] |
-| 4a2 | Affichage cafés (joueur + 4 ennemis) | [ ] |
-| 4a3 | Écran préparation : sélection + lancement | [ ] |
+| 4a1 | Bouton Carte + overlay RaidMapScene | [x] |
+| 4a2 | Affichage cafés (joueur + 4 ennemis) | [x] |
+| 4a3 | Écran préparation : sélection + lancement | [x] |
 | 4b1 | RaidScene : init + spawn ennemis/boss | [ ] |
 | 4b2 | Layout raid : positions + barres énergie | [ ] |
 | 4b3 | Sélection + tween attaque | [ ] |
@@ -196,18 +196,19 @@ Ordre d'exécution complet (micro-prompts) :
 
 ## PROCHAINE ACTION
 
-**Prompt 4a1 — Bouton Carte + overlay RaidMapScene (1h)**
+**Prompt 4b1 — RaidScene : init + spawn ennemis/boss (1.5h)**
 
-Implémente UNIQUEMENT le bouton et l'overlay de la carte des raids.
+Implémente UNIQUEMENT l'initialisation de RaidScene dans src/scenes/RaidScene.js.
 
-BOUTON CARTE :
-- Rectangle vert foncé (#1E5C2E) "Carte" (120x36) en bas de l'écran (barre HUD)
-- Clic → ouvre l'overlay RaidMap (visible=true)
+INIT :
+- RaidScene reçoit (init data) : alliés sélectionnés + données café ennemi
+- Génère 3 à 6 zombies ennemis (stats aléatoires dans les plages des 6 types clients)
+- Génère 1 Raid Boss : cercle rouge plus grand (rayon 24 vs 16), énergie 200, atkStrength élevé
+- Génère 2 à 4 clients ennemis (cercles beiges) — placement table viendra au 4b2
 
-OVERLAY :
-- Soit nouvelle scène RaidMapScene (this.scene.launch('RaidMapScene')), soit container Phaser
-- Fond : rectangle plein écran gris foncé (#222222) alpha 0.85
-- Bouton X (rectangle gris 32x32) en haut à droite : ferme l'overlay
+DONNÉES :
+- this.allies = [...zombies alliés], this.enemies = [...zombies ennemis], this.boss = {...}, this.clients = [...]
+- Chaque entité a : x, y, energyCurrent, atkStrength, type, alive
 
-PAS de cafés ennemis ni de préparation dans ce prompt — juste structure ouverture/fermeture.
-À la fin : coche [x] le prompt 4a1 dans CLAUDE.md et copie le texte du Prompt 4a2 dans PROCHAINE ACTION.
+PAS de positionnement détaillé ni de combat (4b2+).
+À la fin : coche [x] le prompt 4b1 dans CLAUDE.md et copie le texte du Prompt 4b2 dans PROCHAINE ACTION.

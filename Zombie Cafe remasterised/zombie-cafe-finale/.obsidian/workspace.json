@@ -183,8 +183,10 @@
       "bases:Créer une nouvelle base": false
     }
   },
-  "active": "0b4ca2ee0e2186cd",
+  "active": "cc7ba0870110e530",
   "lastOpenFiles": [
+    "test_4a3.py",
+    "CLAUDE.md.tmp.1220.1777275057931",
     "ESTIMATION_OPTIMISEE.md",
     "CLAUDE-split-plan.md",
     "CLAUDE.md",
@@ -197,7 +199,6 @@
     "test_zsort_3b6.py.tmp.1524.1777233042215",
     "CLAUDE.md.tmp.13784.1777213332461",
     "CLAUDE.md.tmp.13784.1777213288753",
-    "src/systems/PathfindingSystem.js",
     "assets/images/furniture/107.png",
     "assets/images/furniture/104.png",
     "assets/images/furniture/103.png",

@@ -18,6 +18,7 @@
     import MenuScene from './src/scenes/MenuScene.js';
     import GameScene from './src/scenes/GameScene.js';
     import RaidScene from './src/scenes/RaidScene.js';
+    import RaidMapScene from './src/scenes/RaidMapScene.js';
 
     const config = {
       type: Phaser.AUTO,
@@ -26,7 +27,7 @@
       height: 640,
       backgroundColor: '#2d2d2d',
       pixelArt: true,
-      scene: [MenuScene, GameScene, RaidScene],
+      scene: [MenuScene, GameScene, RaidScene, RaidMapScene],
     };
 
     new Phaser.Game(config);

@@ -45,7 +45,7 @@ Quand tenter le preview malgré tout : changements purement visuels/UI où la lo
 
 ## ÉTAT DU PROJET
 
-**GROUPE COURANT : 4b1 → 4b2 → 4b3 → 4b4 → 4b5** (Combat raid — enchaîner dans la même conversation)
+**GROUPE COURANT : 4c1 → 4c2 → 4c3** (Fin raid — enchaîner dans la même conversation)
 
 Quand tu termines un micro-prompt du groupe courant : coche [x], passe au suivant du groupe automatiquement (sans attendre confirmation), update PROCHAINE ACTION avec le suivant du groupe. Quand tout le groupe est [x], mets à jour GROUPE COURANT avec le groupe suivant et arrête (l'utilisateur ouvrira une nouvelle conversation).
 
@@ -53,8 +53,8 @@ Groupes restants (dans l'ordre) :
 1. 3b1→3b3 (Migration iso) ✓ TERMINÉ
 2. 3b4→3b7 (Update + debug) ✓ TERMINÉ
 3. 4a1→4a3 (Carte raids) ✓ TERMINÉ
-4. ✦ 4b1→4b5 (Combat raid) ← COURANT
-5. 4c1→4c3 (Fin raid)
+4. 4b1→4b5 (Combat raid) ✓ TERMINÉ
+5. ✦ 4c1→4c3 (Fin raid) ← COURANT
 6. 5a1→5a3 + 5b1→5b4 (Shop + placement)
 7. 5c1→5c4 (Déco/Expansion)
 8. 5d1→5d4 (Tombstones)
@@ -114,11 +114,11 @@ Ordre d'exécution complet (micro-prompts) :
 | 4a1 | Bouton Carte + overlay RaidMapScene | [x] |
 | 4a2 | Affichage cafés (joueur + 4 ennemis) | [x] |
 | 4a3 | Écran préparation : sélection + lancement | [x] |
-| 4b1 | RaidScene : init + spawn ennemis/boss | [ ] |
-| 4b2 | Layout raid : positions + barres énergie | [ ] |
-| 4b3 | Sélection + tween attaque | [ ] |
-| 4b4 | Calcul dégâts + riposte + mort | [ ] |
-| 4b5 | Clients ennemis + bouton Retraite | [ ] |
+| 4b1 | RaidScene : init + spawn ennemis/boss | [x] |
+| 4b2 | Layout raid : positions + barres énergie | [x] |
+| 4b3 | Sélection + tween attaque | [x] |
+| 4b4 | Calcul dégâts + riposte + mort | [x] |
+| 4b5 | Clients ennemis + bouton Retraite | [x] |
 | 4c1 | Conditions victoire/défaite | [ ] |
 | 4c2 | Popup résultat : victoire | [ ] |
 | 4c3 | Popup défaite + cooldowns | [ ] |
@@ -196,19 +196,18 @@ Ordre d'exécution complet (micro-prompts) :
 
 ## PROCHAINE ACTION
 
-**Prompt 4b1 — RaidScene : init + spawn ennemis/boss (1.5h)**
+**Prompt 4c1 — Conditions victoire/défaite (1h)**
 
-Implémente UNIQUEMENT l'initialisation de RaidScene dans src/scenes/RaidScene.js.
+Implémente UNIQUEMENT la détection de fin de raid (victoire / défaite).
 
-INIT :
-- RaidScene reçoit (init data) : alliés sélectionnés + données café ennemi
-- Génère 3 à 6 zombies ennemis (stats aléatoires dans les plages des 6 types clients)
-- Génère 1 Raid Boss : cercle rouge plus grand (rayon 24 vs 16), énergie 200, atkStrength élevé
-- Génère 2 à 4 clients ennemis (cercles beiges) — placement table viendra au 4b2
+VÉRIFICATION (à chaque mort dans 4b4) :
+- VICTOIRE : this.boss.alive === false → endRaid('victory')
+- DÉFAITE : this.allies.every(a => a.state === 'dead_in_raid') → endRaid('defeat')
 
-DONNÉES :
-- this.allies = [...zombies alliés], this.enemies = [...zombies ennemis], this.boss = {...}, this.clients = [...]
-- Chaque entité a : x, y, energyCurrent, atkStrength, type, alive
+MÉTHODE endRaid(result) :
+- Stocke this.raidResult = result
+- Stoppe les inputs (désactive les clics sur entités)
+- Pour ce prompt : log console "Raid result: [victory/defeat]"
+- Popup de résultat au 4c2/4c3
 
-PAS de positionnement détaillé ni de combat (4b2+).
-À la fin : coche [x] le prompt 4b1 dans CLAUDE.md et copie le texte du Prompt 4b2 dans PROCHAINE ACTION.
+À la fin : coche [x] le prompt 4c1 dans CLAUDE.md et copie le texte du Prompt 4c2 dans PROCHAINE ACTION.

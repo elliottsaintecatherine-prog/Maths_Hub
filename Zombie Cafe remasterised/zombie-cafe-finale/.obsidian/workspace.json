@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "CLAUDE-split-plan.md",
+                "file": "CLAUDE.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "CLAUDE-split-plan"
+              "title": "CLAUDE"
             }
           }
         ]
@@ -183,22 +183,23 @@
       "bases:Créer une nouvelle base": false
     }
   },
-  "active": "cc7ba0870110e530",
+  "active": "0b4ca2ee0e2186cd",
   "lastOpenFiles": [
+    "CLAUDE.md.tmp.15960.1777392461987",
+    "test_4c3.py",
+    "Sans titre.md",
+    "CLAUDE.md",
+    "CLAUDE-split-plan.md",
+    "ESTIMATION_OPTIMISEE.md",
     "CLAUDE.md.tmp.12492.1777323372330",
     "test_4b5.py",
-    "CLAUDE.md",
     "test_4a3.py",
     "CLAUDE.md.tmp.1220.1777275057931",
-    "ESTIMATION_OPTIMISEE.md",
-    "CLAUDE-split-plan.md",
     "ESTIMATION_OPTIMISEE.md.tmp.1524.1777233729503",
     "CLAUDE.md.tmp.1524.1777233416580",
     "test_debug_3b7.py",
     "src/scenes/GameScene.js.tmp.1524.1777233327989",
     "CLAUDE.md.tmp.1524.1777233071599",
-    "test_zsort_3b6.py",
-    "test_zsort_3b6.py.tmp.1524.1777233042215",
     "assets/images/furniture/107.png",
     "assets/images/furniture/104.png",
     "assets/images/furniture/103.png",

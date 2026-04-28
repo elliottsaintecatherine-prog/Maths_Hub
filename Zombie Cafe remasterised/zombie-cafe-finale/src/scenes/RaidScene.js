@@ -134,6 +134,27 @@ const RETREAT_BTN_Y = 10;
 const COLOR_RETREAT_BG = 0xffffff;
 const COLOR_RETREAT_TEXT = '#000000';
 
+const COLOR_VICTORY = 0x33cc33;
+const COLOR_VICTORY_TEXT = '#33cc33';
+const COLOR_GOLD_TEXT = '#ffcc33';
+const COLOR_POPUP_BG = 0xf4e8c8;
+const COLOR_POPUP_BORDER = 0x33cc33;
+const COLOR_RECIPE_TEXT = '#222222';
+const POPUP_W = 400;
+const POPUP_H = 260;
+const POPUP_DEPTH = 1000;
+const GOLD_VICTORY_BONUS = 50;
+const VICTORY_RECIPES = ['Cerveau grillé', 'Os crouton', 'Soupe rouge', 'Bras tartare'];
+const RETURN_BTN_W = 140;
+const RETURN_BTN_H = 40;
+
+const COLOR_DEFEAT = 0xcc3333;
+const COLOR_DEFEAT_TEXT = '#cc3333';
+const COLOR_DEFEAT_BORDER = 0xcc3333;
+const GOLD_CONSOLATION = 10;
+const REANIM_DURATION_MS = 60 * 60 * 1000;
+const CAFE_CLOSED_MS = 30 * 60 * 1000;
+
 export default class RaidScene extends Phaser.Scene {
   constructor() { super('RaidScene'); }
 
@@ -186,6 +207,7 @@ export default class RaidScene extends Phaser.Scene {
     this.selectedAlly = null;
     this.attackInProgress = false;
     this.tempGold = 0;
+    this.raidResult = null;
 
     this.allies.forEach(a => this._drawEntity(a, COLOR_ALLY));
     this.enemies.forEach(e => this._drawEntity(e, COLOR_ENEMY));
@@ -402,6 +424,10 @@ export default class RaidScene extends Phaser.Scene {
     }
     const idx = this.enemies.indexOf(enemy);
     if (idx >= 0) this.enemies.splice(idx, 1);
+
+    if (this.boss && this.boss.alive === false) {
+      this.endRaid('victory');
+    }
   }
 
   _killAlly(ally) {
@@ -420,6 +446,153 @@ export default class RaidScene extends Phaser.Scene {
       }
       this.selectedAlly = null;
     }
+
+    if (this.allies.every(a => a.state === 'dead_in_raid')) {
+      this.endRaid('defeat');
+    }
+  }
+
+  endRaid(result) {
+    if (this.raidResult) return;
+    this.raidResult = result;
+
+    this.allies.forEach(a => {
+      if (a.sprite) a.sprite.disableInteractive();
+    });
+    this.enemies.forEach(e => {
+      if (e.sprite) e.sprite.disableInteractive();
+    });
+    this.clients.forEach(c => {
+      if (c.sprite) c.sprite.disableInteractive();
+    });
+    if (this.boss && this.boss.sprite) this.boss.sprite.disableInteractive();
+
+    console.log(`Raid result: ${result}`);
+
+    if (result === 'victory') {
+      this._showVictoryPopup();
+    } else if (result === 'defeat') {
+      this._applyDefeatCooldowns();
+      this._showDefeatPopup();
+    }
+  }
+
+  _applyDefeatCooldowns() {
+    const now = Date.now();
+    const reanimEndAt = now + REANIM_DURATION_MS;
+    const cafeReopenAt = now + CAFE_CLOSED_MS;
+    this.allies.forEach(a => { a.reanimEndAt = reanimEndAt; });
+    this.cafeReopenAt = cafeReopenAt;
+    this.defeatCooldowns = { reanimEndAt, cafeReopenAt };
+  }
+
+  _showVictoryPopup() {
+    const { width, height } = this.scale;
+    const cx = width / 2;
+    const cy = height / 2;
+
+    this.victoryPopup = [];
+
+    const border = this.add.rectangle(cx, cy, POPUP_W + 8, POPUP_H + 8, COLOR_POPUP_BORDER);
+    border.setDepth(POPUP_DEPTH);
+    this.victoryPopup.push(border);
+
+    const bg = this.add.rectangle(cx, cy, POPUP_W, POPUP_H, COLOR_POPUP_BG);
+    bg.setDepth(POPUP_DEPTH + 1);
+    this.victoryPopup.push(bg);
+
+    const title = this.add.text(cx, cy - POPUP_H / 2 + 30, 'Victoire !', {
+      fontFamily: 'monospace', fontSize: '24px', color: COLOR_VICTORY_TEXT, fontStyle: 'bold'
+    }).setOrigin(0.5, 0.5).setDepth(POPUP_DEPTH + 2);
+    this.victoryPopup.push(title);
+
+    const goldGained = this.tempGold + GOLD_VICTORY_BONUS;
+    this.victoryGold = goldGained;
+    const goldText = this.add.text(cx, cy - 40, `+ ${goldGained} or`, {
+      fontFamily: 'monospace', fontSize: '18px', color: COLOR_GOLD_TEXT, fontStyle: 'bold'
+    }).setOrigin(0.5, 0.5).setDepth(POPUP_DEPTH + 2);
+    this.victoryPopup.push(goldText);
+
+    const recipe = VICTORY_RECIPES[randInt(0, VICTORY_RECIPES.length - 1)];
+    this.victoryRecipe = recipe;
+    const recipeText = this.add.text(cx, cy, `Recette volée : ${recipe}`, {
+      fontFamily: 'monospace', fontSize: '14px', color: COLOR_RECIPE_TEXT
+    }).setOrigin(0.5, 0.5).setDepth(POPUP_DEPTH + 2);
+    this.victoryPopup.push(recipeText);
+
+    const unlockText = this.add.text(cx, cy + 28, 'Débloquée !', {
+      fontFamily: 'monospace', fontSize: '14px', color: COLOR_VICTORY_TEXT, fontStyle: 'bold'
+    }).setOrigin(0.5, 0.5).setDepth(POPUP_DEPTH + 2);
+    this.victoryPopup.push(unlockText);
+
+    const btnY = cy + POPUP_H / 2 - 35;
+    const btn = this.add.rectangle(cx, btnY, RETURN_BTN_W, RETURN_BTN_H, COLOR_VICTORY);
+    btn.setDepth(POPUP_DEPTH + 2);
+    this.victoryPopup.push(btn);
+
+    const btnLabel = this.add.text(cx, btnY, 'Rentrer', {
+      fontFamily: 'monospace', fontSize: '16px', color: '#ffffff', fontStyle: 'bold'
+    }).setOrigin(0.5, 0.5).setDepth(POPUP_DEPTH + 3);
+    this.victoryPopup.push(btnLabel);
+
+    btn.setInteractive(
+      new Phaser.Geom.Rectangle(-RETURN_BTN_W / 2, -RETURN_BTN_H / 2, RETURN_BTN_W, RETURN_BTN_H),
+      Phaser.Geom.Rectangle.Contains
+    );
+    btn.on('pointerdown', () => this.scene.stop());
+  }
+
+  _showDefeatPopup() {
+    const { width, height } = this.scale;
+    const cx = width / 2;
+    const cy = height / 2;
+
+    this.defeatPopup = [];
+
+    const border = this.add.rectangle(cx, cy, POPUP_W + 8, POPUP_H + 8, COLOR_DEFEAT_BORDER);
+    border.setDepth(POPUP_DEPTH);
+    this.defeatPopup.push(border);
+
+    const bg = this.add.rectangle(cx, cy, POPUP_W, POPUP_H, COLOR_POPUP_BG);
+    bg.setDepth(POPUP_DEPTH + 1);
+    this.defeatPopup.push(bg);
+
+    const title = this.add.text(cx, cy - POPUP_H / 2 + 30, 'Défaite', {
+      fontFamily: 'monospace', fontSize: '24px', color: COLOR_DEFEAT_TEXT, fontStyle: 'bold'
+    }).setOrigin(0.5, 0.5).setDepth(POPUP_DEPTH + 2);
+    this.defeatPopup.push(title);
+
+    this.defeatGold = GOLD_CONSOLATION;
+    const goldText = this.add.text(cx, cy - 40, `+ ${GOLD_CONSOLATION} or (consolation)`, {
+      fontFamily: 'monospace', fontSize: '16px', color: COLOR_GOLD_TEXT, fontStyle: 'bold'
+    }).setOrigin(0.5, 0.5).setDepth(POPUP_DEPTH + 2);
+    this.defeatPopup.push(goldText);
+
+    const reanimText = this.add.text(cx, cy, 'Zombies en réanimation : 60 min', {
+      fontFamily: 'monospace', fontSize: '13px', color: COLOR_DEFEAT_TEXT
+    }).setOrigin(0.5, 0.5).setDepth(POPUP_DEPTH + 2);
+    this.defeatPopup.push(reanimText);
+
+    const closedText = this.add.text(cx, cy + 24, 'Café fermé : 30 min', {
+      fontFamily: 'monospace', fontSize: '13px', color: COLOR_DEFEAT_TEXT
+    }).setOrigin(0.5, 0.5).setDepth(POPUP_DEPTH + 2);
+    this.defeatPopup.push(closedText);
+
+    const btnY = cy + POPUP_H / 2 - 35;
+    const btn = this.add.rectangle(cx, btnY, RETURN_BTN_W, RETURN_BTN_H, COLOR_DEFEAT);
+    btn.setDepth(POPUP_DEPTH + 2);
+    this.defeatPopup.push(btn);
+
+    const btnLabel = this.add.text(cx, btnY, 'Rentrer', {
+      fontFamily: 'monospace', fontSize: '16px', color: '#ffffff', fontStyle: 'bold'
+    }).setOrigin(0.5, 0.5).setDepth(POPUP_DEPTH + 3);
+    this.defeatPopup.push(btnLabel);
+
+    btn.setInteractive(
+      new Phaser.Geom.Rectangle(-RETURN_BTN_W / 2, -RETURN_BTN_H / 2, RETURN_BTN_W, RETURN_BTN_H),
+      Phaser.Geom.Rectangle.Contains
+    );
+    btn.on('pointerdown', () => this.scene.stop());
   }
 
   _setEntityVisualPosition(e, x, y) {

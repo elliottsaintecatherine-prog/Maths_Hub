@@ -58,6 +58,14 @@ const EATING_DURATION_MS = 10000;
 const WASH_DURATION_MS = 5000;
 const REST_ENERGY_RATIO = 0.3;
 
+const COLOR_SHOP_BG = 0xf4e8c8;
+const COLOR_SHOP_BORDER = 0x6b4423;
+const COLOR_TAB_ACTIVE = 0xffcc33;
+const SHOP_W = 520;
+const SHOP_H = 400;
+const SHOP_TABS = ['cuisine', 'salle', 'deco', 'tombstones'];
+const SHOP_TAB_LABELS = { cuisine: 'Cuisine', salle: 'Salle', deco: 'Deco', tombstones: 'Tombstones' };
+
 function shortDishName(label) {
   if (!label) return '';
   return label.length > 12 ? label.slice(0, 11) + '…' : label;
@@ -115,6 +123,7 @@ export default class GameScene extends Phaser.Scene {
     this.createDebugClientTable();
     this.cookbook = new Cookbook(this);
     this.createCarteButton();
+    this.createShopButton();
 
     this.enemyCafes = this.generateEnemyCafes();
 
@@ -718,47 +727,45 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
-  openZombieActionPopup(zombie) {
-    this.closeActionPopup();
+  _calcPopupPos(cx, cy) {
     const popupW = 200;
     const popupH = 120;
     const { width, height } = this.scale;
-    let popupX = zombie.circle.x;
-    let popupY = zombie.circle.y - 100;
+    let px = cx;
+    let py = cy - 100;
+    if (py < 60) py = cy + 70;
+    if (px < popupW / 2 + 8) px = popupW / 2 + 8;
+    if (px > width - popupW / 2 - 8) px = width - popupW / 2 - 8;
+    if (py > height - popupH / 2 - 8) py = height - popupH / 2 - 8;
+    return { px, py, popupW, popupH };
+  }
 
-    if (popupY < 60) popupY = zombie.circle.y + 70;
-    if (popupX < popupW / 2 + 8) popupX = popupW / 2 + 8;
-    if (popupX > width - popupW / 2 - 8) popupX = width - popupW / 2 - 8;
-    if (popupY > height - popupH / 2 - 8) popupY = height - popupH / 2 - 8;
+  openZombieActionPopup(zombie) {
+    this.closeActionPopup();
+    const { px, py, popupW, popupH } = this._calcPopupPos(zombie.circle.x, zombie.circle.y);
+    const D = 200;
 
-    const container = this.add.container(popupX, popupY);
-    container.setDepth(150);
-
-    const bg = this.add.rectangle(0, 0, popupW, popupH, 0x2a2a2a);
+    const bg = this.add.rectangle(px, py, popupW, popupH, 0x2a2a2a).setDepth(D);
     bg.setStrokeStyle(2, 0xffffff, 1);
     bg.setInteractive();
-    container.add(bg);
 
-    const statsText = this.add.text(0, -popupH / 2 + 14, '', {
+    const statsText = this.add.text(px, py - popupH / 2 + 14, '', {
       fontFamily: 'monospace', fontSize: '12px', color: '#ffffff', align: 'center'
-    }).setOrigin(0.5, 0);
-    container.add(statsText);
+    }).setOrigin(0.5, 0).setDepth(D + 1);
 
-    const btnRestBg = this.add.rectangle(0, -8, 140, 32, 0x3b82f6);
+    const btnRestBg = this.add.rectangle(px, py - 8, 140, 32, 0x3b82f6).setDepth(D + 1);
     btnRestBg.setStrokeStyle(1, 0xffffff, 1);
     btnRestBg.setInteractive({ useHandCursor: true });
-    const btnRestTxt = this.add.text(0, -8, 'Repos', {
+    const btnRestTxt = this.add.text(px, py - 8, 'Repos', {
       fontFamily: 'monospace', fontSize: '13px', color: '#ffffff'
-    }).setOrigin(0.5);
-    container.add([btnRestBg, btnRestTxt]);
+    }).setOrigin(0.5).setDepth(D + 2);
 
-    const btnWorkBg = this.add.rectangle(0, 30, 140, 32, 0x22c55e);
+    const btnWorkBg = this.add.rectangle(px, py + 30, 140, 32, 0x22c55e).setDepth(D + 1);
     btnWorkBg.setStrokeStyle(1, 0xffffff, 1);
     btnWorkBg.setInteractive({ useHandCursor: true });
-    const btnWorkTxt = this.add.text(0, 30, 'Travailler', {
+    const btnWorkTxt = this.add.text(px, py + 30, 'Travailler', {
       fontFamily: 'monospace', fontSize: '13px', color: '#ffffff'
-    }).setOrigin(0.5);
-    container.add([btnWorkBg, btnWorkTxt]);
+    }).setOrigin(0.5).setDepth(D + 2);
 
     btnRestBg.on('pointerdown', (pointer, lx, ly, ev) => {
       if (zombie.state !== 'reanimating') {
@@ -767,6 +774,7 @@ export default class GameScene extends Phaser.Scene {
       }
       if (ev && ev.stopPropagation) ev.stopPropagation();
     });
+
     btnWorkBg.on('pointerdown', (pointer, lx, ly, ev) => {
       if (zombie.state !== 'reanimating') {
         zombie.state = 'working';
@@ -793,7 +801,7 @@ export default class GameScene extends Phaser.Scene {
       if (ev && ev.stopPropagation) ev.stopPropagation();
     });
 
-    this.activeActionPopup = { container, zombie, statsText };
+    this.activeActionPopup = { zombie, statsText, bg, btnRestBg, btnRestTxt, btnWorkBg, btnWorkTxt };
     this.refreshActionPopup();
   }
 
@@ -803,25 +811,26 @@ export default class GameScene extends Phaser.Scene {
     const z = ui.zombie;
     if (!this.staff.includes(z)) { this.closeActionPopup(); return; }
 
-    const { width, height } = this.scale;
-    const popupW = 200;
-    const popupH = 120;
-    let popupX = z.circle.x;
-    let popupY = z.circle.y - 100;
+    const { px, py, popupH } = this._calcPopupPos(z.circle.x, z.circle.y);
 
-    if (popupY < 60) popupY = z.circle.y + 70;
-    if (popupX < popupW / 2 + 8) popupX = popupW / 2 + 8;
-    if (popupX > width - popupW / 2 - 8) popupX = width - popupW / 2 - 8;
-    if (popupY > height - popupH / 2 - 8) popupY = height - popupH / 2 - 8;
-
-    ui.container.x = popupX;
-    ui.container.y = popupY;
+    ui.bg.setPosition(px, py);
+    ui.statsText.setPosition(px, py - popupH / 2 + 14);
+    ui.btnRestBg.setPosition(px, py - 8);
+    ui.btnRestTxt.setPosition(px, py - 8);
+    ui.btnWorkBg.setPosition(px, py + 30);
+    ui.btnWorkTxt.setPosition(px, py + 30);
     ui.statsText.setText(`${z.name}\nÉnergie : ${Math.round(z.energyCurrent)}/${z.energy}\nÉtat : ${z.state}`);
   }
 
   closeActionPopup() {
     if (this.activeActionPopup) {
-      this.activeActionPopup.container.destroy();
+      const ui = this.activeActionPopup;
+      ui.bg.destroy();
+      ui.statsText.destroy();
+      ui.btnRestBg.destroy();
+      ui.btnRestTxt.destroy();
+      ui.btnWorkBg.destroy();
+      ui.btnWorkTxt.destroy();
       this.activeActionPopup = null;
     }
   }
@@ -2127,5 +2136,119 @@ export default class GameScene extends Phaser.Scene {
     };
 
     attemptPath(3);
+  }
+
+  createShopButton() {
+    const { height } = this.scale;
+    const btnW = 100;
+    const btnH = 32;
+    const carteW = 120;
+    const btnX = 12 + carteW + 8 + carteW + 8 + btnW / 2;
+    const btnY = height - btnH / 2 - 6;
+
+    this.shopButtonBg = this.add.rectangle(btnX, btnY, btnW, btnH, 0x22c55e);
+    this.shopButtonBg.setStrokeStyle(2, 0xffffff, 1);
+    this.shopButtonBg.setInteractive({ useHandCursor: true });
+    this.shopButtonBg.setDepth(50);
+
+    this.shopButtonText = this.add.text(btnX, btnY, 'Shop', {
+      fontFamily: 'monospace', fontSize: '14px', color: '#ffffff'
+    }).setOrigin(0.5);
+    this.shopButtonText.setDepth(51);
+
+    this.shopPanel = null;
+    this.shopActiveTab = 'cuisine';
+
+    this.shopButtonBg.on('pointerdown', (pointer, lx, ly, ev) => {
+      if (this.shopPanel) {
+        this.closeShopPanel();
+      } else {
+        this.openShopPanel();
+      }
+      if (ev && ev.stopPropagation) ev.stopPropagation();
+    });
+  }
+
+  openShopPanel() {
+    if (this.shopPanel) this.closeShopPanel();
+    const { width, height } = this.scale;
+    const cx = width / 2;
+    const cy = height / 2;
+
+    this.shopPanel = [];
+
+    const border = this.add.rectangle(cx, cy, SHOP_W + 6, SHOP_H + 6, COLOR_SHOP_BORDER);
+    border.setDepth(900);
+    this.shopPanel.push(border);
+
+    const bg = this.add.rectangle(cx, cy, SHOP_W, SHOP_H, COLOR_SHOP_BG);
+    bg.setDepth(901);
+    bg.setInteractive();
+    this.shopPanel.push(bg);
+
+    const tabY = cy - SHOP_H / 2 + 20;
+    const tabW = 100;
+    const tabH = 32;
+    const tabStartX = cx - SHOP_W / 2 + tabW / 2 + 10;
+    const tabSpacing = tabW + 8;
+
+    this.shopTabBgs = {};
+    SHOP_TABS.forEach((tab, i) => {
+      const tx = tabStartX + i * tabSpacing;
+      const isActive = tab === this.shopActiveTab;
+      const tabBg = this.add.rectangle(tx, tabY, tabW, tabH, isActive ? COLOR_TAB_ACTIVE : COLOR_SHOP_BORDER);
+      tabBg.setDepth(902);
+      tabBg.setInteractive({ useHandCursor: true });
+      this.shopPanel.push(tabBg);
+      this.shopTabBgs[tab] = tabBg;
+
+      const tabText = this.add.text(tx, tabY, SHOP_TAB_LABELS[tab], {
+        fontFamily: 'monospace', fontSize: '13px', color: isActive ? '#222222' : '#ffffff'
+      }).setOrigin(0.5);
+      tabText.setDepth(903);
+      this.shopPanel.push(tabText);
+
+      tabBg.on('pointerdown', (pointer, lx, ly, ev) => {
+        this.switchShopTab(tab);
+        if (ev && ev.stopPropagation) ev.stopPropagation();
+      });
+    });
+
+    const closeSize = 28;
+    const closeX = cx + SHOP_W / 2 - closeSize / 2 - 6;
+    const closeY = cy - SHOP_H / 2 + closeSize / 2 + 6;
+    const closeBg = this.add.rectangle(closeX, closeY, closeSize, closeSize, 0xcc3333);
+    closeBg.setDepth(904);
+    closeBg.setInteractive({ useHandCursor: true });
+    this.shopPanel.push(closeBg);
+
+    const closeText = this.add.text(closeX, closeY, 'X', {
+      fontFamily: 'monospace', fontSize: '16px', color: '#ffffff', fontStyle: 'bold'
+    }).setOrigin(0.5);
+    closeText.setDepth(905);
+    this.shopPanel.push(closeText);
+
+    closeBg.on('pointerdown', (pointer, lx, ly, ev) => {
+      this.closeShopPanel();
+      if (ev && ev.stopPropagation) ev.stopPropagation();
+    });
+  }
+
+  switchShopTab(tab) {
+    if (!this.shopPanel) return;
+    this.shopActiveTab = tab;
+    SHOP_TABS.forEach(t => {
+      const tabBg = this.shopTabBgs && this.shopTabBgs[t];
+      if (!tabBg) return;
+      const isActive = t === tab;
+      tabBg.setFillStyle(isActive ? COLOR_TAB_ACTIVE : COLOR_SHOP_BORDER);
+    });
+  }
+
+  closeShopPanel() {
+    if (!this.shopPanel) return;
+    this.shopPanel.forEach(obj => { if (obj && obj.destroy) obj.destroy(); });
+    this.shopPanel = null;
+    this.shopTabBgs = null;
   }
 }

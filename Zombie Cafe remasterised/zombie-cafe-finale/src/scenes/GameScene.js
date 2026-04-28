@@ -722,7 +722,15 @@ export default class GameScene extends Phaser.Scene {
     this.closeActionPopup();
     const popupW = 200;
     const popupH = 120;
-    const container = this.add.container(zombie.circle.x, zombie.circle.y - popupH / 2 - 30);
+    const { width, height } = this.scale;
+    let popupX = zombie.circle.x;
+    let popupY = zombie.circle.y - 100;
+
+    if (popupY < 60) popupY = zombie.circle.y + 70;
+    if (popupX < 100) popupX = 100;
+    if (popupX > width - 100) popupX = width - 100;
+
+    const container = this.add.container(popupX, popupY);
     container.setDepth(150);
 
     const bg = this.add.rectangle(0, 0, popupW, popupH, 0x2a2a2a);
@@ -776,8 +784,17 @@ export default class GameScene extends Phaser.Scene {
     if (!ui) return;
     const z = ui.zombie;
     if (!this.staff.includes(z)) { this.closeActionPopup(); return; }
-    ui.container.x = z.circle.x;
-    ui.container.y = z.circle.y - 60 - 30;
+
+    const { width, height } = this.scale;
+    let popupX = z.circle.x;
+    let popupY = z.circle.y - 100;
+
+    if (popupY < 60) popupY = z.circle.y + 70;
+    if (popupX < 100) popupX = 100;
+    if (popupX > width - 100) popupX = width - 100;
+
+    ui.container.x = popupX;
+    ui.container.y = popupY;
     ui.statsText.setText(`${z.name}\nÉnergie : ${Math.round(z.energyCurrent)}/${z.energy}\nÉtat : ${z.state}`);
   }
 

@@ -727,8 +727,9 @@ export default class GameScene extends Phaser.Scene {
     let popupY = zombie.circle.y - 100;
 
     if (popupY < 60) popupY = zombie.circle.y + 70;
-    if (popupX < 100) popupX = 100;
-    if (popupX > width - 100) popupX = width - 100;
+    if (popupX < popupW / 2 + 8) popupX = popupW / 2 + 8;
+    if (popupX > width - popupW / 2 - 8) popupX = width - popupW / 2 - 8;
+    if (popupY > height - popupH / 2 - 8) popupY = height - popupH / 2 - 8;
 
     const container = this.add.container(popupX, popupY);
     container.setDepth(150);
@@ -770,6 +771,23 @@ export default class GameScene extends Phaser.Scene {
       if (zombie.state !== 'reanimating') {
         zombie.state = 'working';
         zombie.daydreamNext = Date.now() + zombie.focus * 60 * 1000;
+        this.tweens.killTweensOf(zombie.circle);
+        zombie.path = [];
+        zombie.pathIndex = 0;
+        zombie.onArrive = null;
+        const staffPos = this.pathfinding.isoToScreen(STAFF_ZONE.col, STAFF_ZONE.row);
+        this.tweens.add({
+          targets: zombie.circle,
+          x: staffPos.x,
+          y: staffPos.y,
+          duration: 600,
+          onComplete: () => {
+            if (zombie.state === 'working' || zombie.state === 'idle') {
+              zombie.col = STAFF_ZONE.col;
+              zombie.row = STAFF_ZONE.row;
+            }
+          }
+        });
         this.closeActionPopup();
       }
       if (ev && ev.stopPropagation) ev.stopPropagation();
@@ -786,12 +804,15 @@ export default class GameScene extends Phaser.Scene {
     if (!this.staff.includes(z)) { this.closeActionPopup(); return; }
 
     const { width, height } = this.scale;
+    const popupW = 200;
+    const popupH = 120;
     let popupX = z.circle.x;
     let popupY = z.circle.y - 100;
 
     if (popupY < 60) popupY = z.circle.y + 70;
-    if (popupX < 100) popupX = 100;
-    if (popupX > width - 100) popupX = width - 100;
+    if (popupX < popupW / 2 + 8) popupX = popupW / 2 + 8;
+    if (popupX > width - popupW / 2 - 8) popupX = width - popupW / 2 - 8;
+    if (popupY > height - popupH / 2 - 8) popupY = height - popupH / 2 - 8;
 
     ui.container.x = popupX;
     ui.container.y = popupY;
@@ -807,6 +828,9 @@ export default class GameScene extends Phaser.Scene {
 
   sendZombieToRest(zombie) {
     zombie.state = 'resting';
+    zombie.path = [];
+    zombie.pathIndex = 0;
+    zombie.onArrive = null;
     if (zombie.daydreamBubble) {
       zombie.daydreamBubble.destroy();
       zombie.daydreamBubble = null;

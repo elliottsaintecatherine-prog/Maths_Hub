@@ -25,14 +25,15 @@ export default class RaidMapScene extends Phaser.Scene {
     this.closeBg = this.add.rectangle(closeX, closeY, closeSize, closeSize, 0x555555);
     this.closeBg.setStrokeStyle(2, 0xffffff, 1);
     this.closeBg.setInteractive({ useHandCursor: true });
-    this.closeBg.setDepth(2);
+    this.closeBg.setDepth(20);
 
     this.closeText = this.add.text(closeX, closeY, 'X', {
       fontFamily: 'monospace', fontSize: '20px', color: '#ffffff', fontStyle: 'bold'
     }).setOrigin(0.5);
-    this.closeText.setDepth(3);
+    this.closeText.setDepth(21);
 
     this.closeBg.on('pointerdown', (pointer, lx, ly, ev) => {
+      if (this.popupContainer) this.closePrepPopup();
       this.scene.stop('RaidMapScene');
       if (ev && ev.stopPropagation) ev.stopPropagation();
     });
@@ -249,8 +250,7 @@ export default class RaidMapScene extends Phaser.Scene {
 
   createZombieRow(zombie, rowY) {
     const isReanimating = zombie.state === 'reanimating';
-    const isResting = zombie.state === 'resting';
-    const isSelectable = !isReanimating && !isResting;
+    const isSelectable = !isReanimating;
 
     const checkX = -200;
     const boxColor = isSelectable ? 0xffffff : 0x555555;

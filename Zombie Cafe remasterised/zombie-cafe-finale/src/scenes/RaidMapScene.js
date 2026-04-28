@@ -240,6 +240,7 @@ export default class RaidMapScene extends Phaser.Scene {
       const names = selected.map(z => z.name);
       console.log(`Raid lancé sur ${this.popupCafe.name}`, names);
       this.closePrepPopup();
+      this.scene.start('RaidScene', { allies: selected, enemyCafe: this.popupCafe });
       if (ev && ev.stopPropagation) ev.stopPropagation();
     });
 

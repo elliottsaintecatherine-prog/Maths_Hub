@@ -752,13 +752,17 @@ export default class GameScene extends Phaser.Scene {
     container.add([btnWorkBg, btnWorkTxt]);
 
     btnRestBg.on('pointerdown', (pointer, lx, ly, ev) => {
-      if (zombie.state !== 'reanimating') this.sendZombieToRest(zombie);
+      if (zombie.state !== 'reanimating') {
+        this.sendZombieToRest(zombie);
+        this.closeActionPopup();
+      }
       if (ev && ev.stopPropagation) ev.stopPropagation();
     });
     btnWorkBg.on('pointerdown', (pointer, lx, ly, ev) => {
       if (zombie.state !== 'reanimating') {
         zombie.state = 'working';
         zombie.daydreamNext = Date.now() + zombie.focus * 60 * 1000;
+        this.closeActionPopup();
       }
       if (ev && ev.stopPropagation) ev.stopPropagation();
     });

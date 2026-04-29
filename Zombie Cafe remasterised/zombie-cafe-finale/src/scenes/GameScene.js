@@ -743,31 +743,36 @@ export default class GameScene extends Phaser.Scene {
   openZombieActionPopup(zombie) {
     this.closeActionPopup();
     const { px, py, popupW, popupH } = this._calcPopupPos(zombie.circle.x, zombie.circle.y);
-    const D = 200;
+    const D = 950;
 
-    const bg = this.add.rectangle(px, py, popupW, popupH, 0x2a2a2a).setDepth(D);
+    const bg = this.add.rectangle(px, py, popupW, popupH, 0x2a2a2a);
     bg.setStrokeStyle(2, 0xffffff, 1);
-    bg.setInteractive();
+    bg.setDepth(D);
 
     const statsText = this.add.text(px, py - popupH / 2 + 14, '', {
       fontFamily: 'monospace', fontSize: '12px', color: '#ffffff', align: 'center'
     }).setOrigin(0.5, 0).setDepth(D + 1);
 
-    const btnRestBg = this.add.rectangle(px, py - 8, 140, 32, 0x3b82f6).setDepth(D + 1);
+    const btnRestBg = this.add.rectangle(px, py - 8, 140, 32, 0x3b82f6);
     btnRestBg.setStrokeStyle(1, 0xffffff, 1);
-    btnRestBg.setInteractive({ useHandCursor: true });
+    btnRestBg.setInteractive(new Phaser.Geom.Rectangle(-70, -16, 140, 32), Phaser.Geom.Rectangle.Contains);
+    btnRestBg.input.cursor = 'pointer';
+    btnRestBg.setDepth(D + 2);
     const btnRestTxt = this.add.text(px, py - 8, 'Repos', {
       fontFamily: 'monospace', fontSize: '13px', color: '#ffffff'
-    }).setOrigin(0.5).setDepth(D + 2);
+    }).setOrigin(0.5).setDepth(D + 3);
 
-    const btnWorkBg = this.add.rectangle(px, py + 30, 140, 32, 0x22c55e).setDepth(D + 1);
+    const btnWorkBg = this.add.rectangle(px, py + 30, 140, 32, 0x22c55e);
     btnWorkBg.setStrokeStyle(1, 0xffffff, 1);
-    btnWorkBg.setInteractive({ useHandCursor: true });
+    btnWorkBg.setInteractive(new Phaser.Geom.Rectangle(-70, -16, 140, 32), Phaser.Geom.Rectangle.Contains);
+    btnWorkBg.input.cursor = 'pointer';
+    btnWorkBg.setDepth(D + 2);
     const btnWorkTxt = this.add.text(px, py + 30, 'Travailler', {
       fontFamily: 'monospace', fontSize: '13px', color: '#ffffff'
-    }).setOrigin(0.5).setDepth(D + 2);
+    }).setOrigin(0.5).setDepth(D + 3);
 
     btnRestBg.on('pointerdown', (pointer, lx, ly, ev) => {
+      console.log('[Popup] Repos cliqué, état zombie:', zombie.state);
       if (zombie.state !== 'reanimating') {
         this.sendZombieToRest(zombie);
         this.closeActionPopup();
@@ -776,9 +781,10 @@ export default class GameScene extends Phaser.Scene {
     });
 
     btnWorkBg.on('pointerdown', (pointer, lx, ly, ev) => {
+      console.log('[Popup] Travailler cliqué, état zombie:', zombie.state);
       if (zombie.state !== 'reanimating') {
         zombie.state = 'working';
-        zombie.daydreamNext = Date.now() + zombie.focus * 60 * 1000;
+        zombie.daydreamNext = Date.now() + (zombie.focus || 5) * 60 * 1000;
         this.tweens.killTweensOf(zombie.circle);
         zombie.path = [];
         zombie.pathIndex = 0;

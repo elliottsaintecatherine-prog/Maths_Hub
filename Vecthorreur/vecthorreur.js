@@ -1960,6 +1960,7 @@ function renderMenu() {
 // ═══════════════════════════════════════════════════
 function startGame(mapIndex, playerTurnOverride, preserveSession = false) {
   gameState.currentMap = mapIndex;
+  if (window.GFX) GFX.ambientParticles.init(mapIndex);
   if (playerTurnOverride !== undefined) gameState.playerTurn = playerTurnOverride;
   // Réinitialise le score de session sauf si on enchaîne les maps
   if (!preserveSession) gameState.sessionScore = 0;
@@ -2490,6 +2491,7 @@ function renderTopDown(ts) {
   ctx.clearRect(0, 0, W, H);
   ctx.fillStyle = map.bgColor || '#080808'; ctx.fillRect(0, 0, W, H);
   if (window.GFX) GFX.drawFloor(ctx, gameState.currentMap, worldTo2D, scale2D, W, H, ts);
+  if (window.GFX) GFX.ambientParticles.draw(ctx, worldTo2D, scale2D, ts);
   // Grille
   ctx.save();
   ctx.strokeStyle = map.gridColor || '#2a2a2a44'; ctx.lineWidth = 0.5;

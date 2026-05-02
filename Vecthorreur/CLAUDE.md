@@ -60,18 +60,19 @@ Groupes restants (dans l'ordre) :
 4. D (d1) — Menu
 
 Ordre d'exécution complet :
-a1 → a2 → a3 → b1 → b2 → c1 → c2 → d1
+a1 → a2 → a3 → b1 → b2 → c1 → c2 → d1 → e1
 
 | ID  | Titre                          | Status |
 | --- | ------------------------------ | ------ |
 | a1  | gfx.js + sol texturé           | [x]    |
 | a2  | Lumière thématique par map     | [x]    |
 | a3  | Textures murs + obstacles      | [x]    |
-| b1  | Particules ambiantes           | [ ]    |
+| b1  | Particules ambiantes           | [x]    |
 | b2  | Monstre expressif              | [ ]    |
 | c1  | Cartes parchemin CSS           | [ ]    |
 | c2  | Flèche SVG directionnelle      | [ ]    |
 | d1  | Menu image + polish            | [ ]    |
+| e1  | Personnage 3D : détails + éclairage | [ ]    |
 
 > Référence complète : voir `wiki/games/vecthorreur-prompts.md` dans l'Obsidian.
 
@@ -79,44 +80,45 @@ a1 → a2 → a3 → b1 → b2 → c1 → c2 → d1
 
 ## PROCHAINE ACTION
 
-**Prompt b1 — Particules ambiantes thématiques (~1h)**
+**Prompt b2 — Monstre Canvas expressif, style Chair de Poule (~45min)**
 
-CONTEXTE : Suite du rework graphique. `gfx.js` existe (a1-a3 faits). Ajouter un système de particules ambiant qui renforce l'atmosphère de chaque map. Les particules sont dans `gfx.js`, indépendantes du système `gameState.particles` existant dans vecthorreur.js.
+CONTEXTE : Suite du rework. `gfx.js` existe (a1-b1 faits). Le monstre actuel est une étoile à 12 branches qui tourne. Le remplacer par une silhouette Chair de Poule expressive. Même monstre pour toutes les maps.
 
 FICHIERS À LIRE :
 - `gfx.js` (complet)
-- `vecthorreur.js` : grep `gameState.particles` et `updateParticle` pour comprendre le système existant (éviter toute collision)
-- `vecthorreur.js` lignes 1959-2010 (startGame — pour savoir où injecter l'init)
-- `vecthorreur.js` lignes 2483-2543 (renderTopDown)
+- `vecthorreur.js` lignes 2348-2359 (drawMonster2D — à wraper)
 
 CONTENU :
-1. Ajouter dans `gfx.js` un objet `GFX.ambientParticles` avec :
-   - `pool` : tableau de max 50 objets `{x, y, vx, vy, r, opacity, life, maxLife, type, color}`
-   - `_lastTs` : timestamp interne pour calculer dt
-   - `init(mapIndex)` : vide le pool, génère 40 particules selon le type de la map :
-     - Maps 0,2 : poussière (position aléatoire dans [-18,18], vx/vy très lent ±0.003, r=0.8, color '#d4b89044', opacity 0.3)
-     - Map 1 : bulles (vy=-0.08 à -0.03, vx petit, r=1.5-3, color '#00ccff55', pop quand y < -20 → respawn en bas)
-     - Maps 3,4 : scintillements (position aléatoire, r=0.5, clignotement via `life` cyclique, color '#00ffcc22')
-     - Map 5 : spores (vy très lent, vx ±0.01, r=1, color '#88cc4433')
-     - Map 6 : débris (vx=0.04-0.08 horizontal, r=0.8, color '#88888844')
-     - Map 7 : flocons (vy=0.03-0.06, vx sin(i)*0.02, r=1.5, color '#eeeeff88')
-     - Map 8 : peluches médicales (vy=0.015-0.03, r=1, color '#ffffff44')
-     - Map 9 : braises (vy=-0.05 à -0.08, r=1-2, color '#ff660077', glow: shadowBlur=4 shadowColor='#ff3300')
-   - `update(ts)` : calcule `dt = ts - this._lastTs`, déplace chaque particule (x+=vx*dt, y+=vy*dt), recycle celles hors bornes [-22,22] en les replacant au bord opposé, met à jour `_lastTs`
-   - `draw(ctx, worldTo2D, scale2D, ts)` : pour chaque particule, convertir {x,y} monde → écran via worldTo2D, dessiner un cercle (r en pixels = particule.r * scale2D * 0.5). Pour les scintillements, opacity = 0.5 + 0.5*Math.sin(ts*0.01 + index*1.7)
-2. Dans `renderTopDown()` : AVANT la boucle de grille (juste après GFX.drawFloor), ajouter :
-   `if (window.GFX) GFX.ambientParticles.draw(ctx, worldTo2D, scale2D, ts);`
-3. Dans `startGame()` (vecthorreur.js, ligne ~1961) : après `gameState.currentMap = mapIndex;`, ajouter :
-   `if (window.GFX) GFX.ambientParticles.init(mapIndex);`
-4. Dans `renderTopDown()` : update des particules se fait dans `draw()` lui-même (plus simple, pas besoin de toucher renderLoop)
+1. Ajouter `GFX.drawMonster(ctx, screenX, screenY, scale2D, ts, palette)` dans `gfx.js` :
+   - **Corps** : silhouette humanoïde stylisée en Canvas bezier curves. Forme : torse allongé (trapèze arrondi), tête ovale en haut, membres inférieurs qui se fondent/effilochent vers le bas en 3-4 courbes
+   - **Couleur** : noir profond (#050305), pas de remplissage intérieur visible
+   - **Contour flou** : ctx.shadowBlur=24, ctx.shadowColor=palette.monsterGlow, ctx.lineWidth=3
+   - **Yeux** : deux ellipses lumineuses (rx=3*s, ry=4*s où s=scale2D*0.04) avec fillStyle=palette.monsterEye, shadowBlur=12 shadowColor=palette.monsterEye
+   - **Aura** : radialGradient centré sur screenX/screenY, rayon scale2D*1.2 : center rgba(monsterGlow,0.0) → edge rgba(monsterGlow,0.25)
+   - **Animation** : oscillation verticale `screenY += Math.sin(ts*0.002)*scale2D*0.1`, légère oscillation largeur corps `scaleX = 0.95 + 0.05*Math.sin(ts*0.003)`
+   - La taille totale du monstre : ~scale2D*1.1 de haut, ~scale2D*0.65 de large
+2. Modifier `drawMonster2D()` dans `vecthorreur.js` :
+   ```javascript
+   function drawMonster2D(ctx, ts) {
+     const mp = gameState.monsterPos;
+     const {cx, cy} = worldTo2D(mp.x, mp.y);
+     const pal = MAPS[gameState.currentMap].palette;
+     if (window.GFX) {
+       GFX.drawMonster(ctx, cx, cy, scale2D, ts, pal);
+       return;
+     }
+     // Ancien code conservé comme fallback :
+     const r = scale2D * 0.45, pulse = 1 + 0.1 * Math.sin(ts * 0.005);
+     // ... (copier l'ancien code ici) ...
+   }
+   ```
 
 CONTRAINTES :
-- Ne pas interférer avec `gameState.particles` (système de jeu existant — ne pas le modifier)
-- Recycle d'objets (pas de `new` dans update/draw — réutiliser les slots du pool)
-- Les particules sont en coordonnées monde [-20,20], converties à l'écran via worldTo2D
-- Fallback gracieux : if (window.GFX) partout
-- Ne modifier dans vecthorreur.js QUE : startGame() (1 ligne) + renderTopDown() (1 ligne)
+- L'ancien code de drawMonster2D reste complet en fallback (copier, ne pas supprimer)
+- Aucune image externe — tout en Canvas
+- Le monstre doit rester lisible sur TOUS les fonds de map (contraste suffisant via shadowColor)
+- Pas d'emoji
 
-VÉRIFICATION : relecture statique — vérifier que ambientParticles.update est bien appelé (soit dans draw, soit séparément) et que _lastTs est initialisé dans init()
+VÉRIFICATION : relecture statique de GFX.drawMonster — vérifier que les bezier curves ferment bien le path (closePath)
 
-À la fin : coche [x] b1 et copie le texte de b2 dans PROCHAINE ACTION.
+À la fin : coche [x] b2, met à jour GROUPE COURANT avec C et copie le texte de c1 dans PROCHAINE ACTION.

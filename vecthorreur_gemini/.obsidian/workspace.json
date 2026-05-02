@@ -185,6 +185,7 @@
   },
   "active": "1e5bbbdd39b62a55",
   "lastOpenFiles": [
+    "src/entities/Monster.js",
     "vecthorreur.png",
     "ANTIGRAVITY.md",
     "src/systems/DeckManager.js",

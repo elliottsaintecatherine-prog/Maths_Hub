@@ -116,6 +116,41 @@
             opacity: 0.35;
             cursor: not-allowed;
         }
+
+        /* e5 : Screamer plein écran */
+        #screamer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            pointer-events: none;
+        }
+        #screamer.active {
+            display: flex;
+            animation: screamerFlash 0.3s ease-in-out 3;
+        }
+        #screamer-img {
+            max-width: 80vw;
+            max-height: 80vh;
+            filter: drop-shadow(0 0 40px rgba(255, 0, 0, 0.9));
+            animation: screamerZoom 0.5s ease-out forwards;
+        }
+        @keyframes screamerFlash {
+            0% { background: rgba(180, 0, 0, 0.95); }
+            50% { background: rgba(0, 0, 0, 0.95); }
+            100% { background: rgba(180, 0, 0, 0.95); }
+        }
+        @keyframes screamerZoom {
+            0% { transform: scale(0.3) rotate(-10deg); opacity: 0; }
+            60% { transform: scale(1.2) rotate(5deg); opacity: 1; }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -129,6 +164,10 @@
         </defs>
     </svg>
     <canvas id="game-canvas"></canvas>
+    <!-- e5 : Screamer plein écran -->
+    <div id="screamer">
+        <img id="screamer-img" src="" alt="">
+    </div>
     <div id="combo-area">
         <button id="btn-mult-x2" class="btn-multiplier">x2</button>
         <button id="btn-mult-half" class="btn-multiplier">x0.5</button>

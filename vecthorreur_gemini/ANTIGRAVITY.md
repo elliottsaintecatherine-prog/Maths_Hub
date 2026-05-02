@@ -33,7 +33,7 @@ Par défaut : relecture statique et test manuel via live server si nécessaire.
 
 ## ÉTAT DU PROJET
 
-**GROUPE COURANT : E** (Le Monstre) — enchaîner automatiquement dans cette conversation
+**GROUPE COURANT : F** (UI) — enchaîner automatiquement dans cette conversation
 
 Quand tu termines un micro-prompt du groupe courant : coche [x], passe au suivant automatiquement, update PROCHAINE ACTION. Quand tout le groupe est [x], mets à jour GROUPE COURANT avec le groupe suivant et arrête.
 
@@ -43,8 +43,8 @@ Groupes restants (dans l'ordre) :
 3. b1→b4 (Map & Rendu) [x]
 4. c1→c5 (Le Joueur) [x]
 5. d1→d5 (Cartes) [x]
-6. e1→e5 (Le Monstre) ← COURANT
-7. f1→f4 (UI)
+6. e1→e5 (Le Monstre) [x]
+7. f1→f4 (UI) ← COURANT
 8. g1→g4 (Polish)
 
 | ID  | Titre                  | Status |
@@ -68,6 +68,11 @@ Groupes restants (dans l'ordre) :
 | D3  | Exécution Simple       | [x]    |
 | D4  | Système de Combo (u+v) | [x]    |
 | D5  | Produit Scalaire (k*u) | [x]    |
+| E1  | Entité Monstre         | [x]    |
+| E2  | Le Tour par Tour       | [x]    |
+| E3  | Pathfinding IA         | [x]    |
+| E4  | Animation du Monstre   | [x]    |
+| E5  | Screamer et Dégâts     | [x]    |
 
 > Référence complète : voir `wiki/games/vecthorreur-reborn-prompts.md` dans l'Obsidian (dossier gemini).
 
@@ -75,23 +80,21 @@ Groupes restants (dans l'ordre) :
 
 ## PROCHAINE ACTION
 
-**Prompt e1 — Entité Monstre (~20min)**
+**Prompt f1 — GameStateManager (~20min)**
 
-CONTEXTE : Introduire le poursuivant.
+CONTEXTE : Sauvegarder la progression.
 
 FICHIERS À LIRE :
-- `src/core/AssetManager.js`
 - `src/core/Game.js`
 
 CONTENU :
-1. Créer `src/entities/Monster.js` (Classe `Monster`).
-2. Constructeur `x, y` et référence à l'image `monster.png`.
-3. Méthode `draw(ctx, camera, tileSize)`.
-4. Instancier le monstre dans `Game.js` (en dur à une position de la map 0 pour l'instant).
+1. Créer `src/systems/GameStateManager.js`.
+2. Stocker `currentLevel`, `health` (ex: 3 PV), `score`.
+3. Gérer la réinitialisation de la map en cas de mort, ou le passage au niveau supérieur.
 
 CONTRAINTES :
-- Appliquer un effet de `shadowBlur` rouge autour de l'image du monstre pour l'aura.
+- Singleton ou instancié une seule fois dans Game.
 
-VÉRIFICATION : Relecture statique, le monstre s'affiche.
+VÉRIFICATION : Relecture statique.
 
-À la fin : coche [x] e1 et copie le texte de e2 dans PROCHAINE ACTION.
+À la fin : coche [x] f1 et copie le texte de f2 dans PROCHAINE ACTION.

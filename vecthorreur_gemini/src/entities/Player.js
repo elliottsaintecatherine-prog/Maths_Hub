@@ -66,4 +66,51 @@ export default class Player {
 
         ctx.restore();
     }
+
+    // h4 : Créer le mesh 3D du joueur
+    createMesh3D(palette) {
+        const THREE = window.THREE;
+        if (!THREE) return null;
+
+        this.mesh3D = new THREE.Group();
+
+        // Corps (cylindre)
+        const bodyColor = palette.player || '#f5d070';
+        const bodyGeometry = new THREE.CylinderGeometry(0.3, 0.35, 1.2, 8);
+        const bodyMaterial = new THREE.MeshStandardMaterial({
+            color: new THREE.Color(bodyColor),
+            roughness: 0.6,
+            metalness: 0.1
+        });
+        const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+        body.position.y = 0.6;
+        body.castShadow = true;
+        this.mesh3D.add(body);
+
+        // Tête (sphère)
+        const headColor = palette.playerHead || palette.player || '#f0c840';
+        const headGeometry = new THREE.SphereGeometry(0.25, 8, 6);
+        const headMaterial = new THREE.MeshStandardMaterial({
+            color: new THREE.Color(headColor),
+            roughness: 0.5,
+            metalness: 0.1
+        });
+        const head = new THREE.Mesh(headGeometry, headMaterial);
+        head.position.y = 1.45;
+        head.castShadow = true;
+        this.mesh3D.add(head);
+
+        // Position initiale
+        this.mesh3D.position.set(this.x, 0, this.y);
+
+        return this.mesh3D;
+    }
+
+    // h4 : Mettre à jour la position 3D
+    updateMesh3D() {
+        if (!this.mesh3D) return;
+        // Lerp vers la position logique
+        this.mesh3D.position.x += (this.x - this.mesh3D.position.x) * 0.2;
+        this.mesh3D.position.z += (this.y - this.mesh3D.position.z) * 0.2;
+    }
 }

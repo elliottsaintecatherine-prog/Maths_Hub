@@ -1,12 +1,16 @@
 export default class LevelManager {
     constructor() {
         this.currentMap = null;
+        this.currentMapIndex = -1; // h0
         this.walls = [];
         this.obstacles = [];
         this.deathZones = [];
         this.exits = [];
         this.palette = {};
         this.walkableGrid = null;
+        this.playerSpawn = { x: 0, y: 0 };   // h0
+        this.monsterSpawn = { x: 10, y: 10 }; // h0
+        this.rooms = [];                       // h0 : données ROOMS pour la map 0
     }
 
     loadMap(mapIndex, rawData) {
@@ -17,7 +21,19 @@ export default class LevelManager {
         }
 
         this.currentMap = mapData;
+        this.currentMapIndex = mapIndex; // h0
         this.palette = mapData.palette || {};
+
+        // h0 : Stocker les positions de spawn
+        this.playerSpawn = mapData.playerSpawn || { x: 0, y: 0 };
+        this.monsterSpawn = mapData.monsterSpawn || { x: 10, y: 10 };
+
+        // h0 : Stocker les données de pièces (ROOMS) si disponibles
+        if (window.ROOMS && mapIndex === 0) {
+            this.rooms = window.ROOMS;
+        } else {
+            this.rooms = [];
+        }
 
         // Normaliser les coordonnées {x, y, w, h}
         this.walls = this._normalizeRects(mapData.walls || []);

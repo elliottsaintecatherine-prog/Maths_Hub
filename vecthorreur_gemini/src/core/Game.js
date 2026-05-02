@@ -1,43 +1,47 @@
 import Renderer from './Renderer.js';
+import Renderer3D from './Renderer3D.js';
 import Input from './Input.js';
 import AssetManager from './AssetManager.js';
 import LevelManager from '../systems/LevelManager.js';
 import MapRenderer from '../systems/MapRenderer.js';
+import MapRenderer3D from '../systems/MapRenderer3D.js';
 import Player from '../entities/Player.js';
 import Monster from '../entities/Monster.js';
 import DeckManager from '../systems/DeckManager.js';
 import GameStateManager from '../systems/GameStateManager.js';
 import ParticleSystem from '../systems/ParticleSystem.js';
+import AudioManager from '../systems/AudioManager.js';
 
 export default class Game {
     constructor(canvasId) {
         this.renderer = new Renderer(canvasId);
+        this.renderer3D = new Renderer3D(canvasId); // h1
         this.input = new Input();
         this.assets = new AssetManager();
         this.levelManager = new LevelManager();
         this.mapRenderer = new MapRenderer(this.levelManager, this.assets);
+        this.mapRenderer3D = new MapRenderer3D(this.levelManager); // h2
         this.camera = { x: 0, y: 0, zoom: 1 };
         this.stateManager = new GameStateManager(); // f1
         this.player = null;
         this.monster = null;
         this.turn = 'PLAYER'; // e2 : tour par tour
         this.monsterDelay = 0;  // e2 : délai avant action monstre
+        this.elapsedTime = 0; // h5 : temps total pour animations
         this.deckManager = new DeckManager((dx, dy) => {
-            if (this.turn !== 'PLAYER') return false; // e2 : bloquer si pas le tour du joueur
+            if (this.turn !== 'PLAYER') return false;
             if (this.player) {
                 const moved = this.player.attemptMove(dx, dy);
                 if (moved) {
-                    // f1 : Vérifier sortie
                     if (this.player.hasWon) {
                         this.triggerLevelComplete();
                         return true;
                     }
-                    // f1 : Vérifier piège
                     if (this.player.isDead) {
                         this.triggerPlayerDeath();
                         return true;
                     }
-                    this.endPlayerTurn(); // e2
+                    this.endPlayerTurn();
                 }
                 return moved;
             }
@@ -45,6 +49,7 @@ export default class Game {
         });
         this.lastTime = 0;
         this.particleSystem = new ParticleSystem(); // g1
+        this.audioManager = new AudioManager(); // g3
     }
 
     // e2 : Fin du tour du joueur -> passer au monstre avec délai
@@ -52,27 +57,71 @@ export default class Game {
         this.turn = 'MONSTER';
         this.monsterDelay = 0.3; // 300ms de délai
         this.stateManager.recordMove(); // f1 : compter les coups
+        this.audioManager.playStepSound(); // g3 : son de pas
         console.log('Tour : MONSTER');
     }
 
     async init(manifest) {
         try {
             await this.assets.loadAll(manifest);
-            // Charger la première map par défaut si MAPS est dispo
             if (window.MAPS) {
                 this.levelManager.loadMap(0, window.MAPS);
-                // Le joueur commence en (0, 0)
-                this.player = new Player(0, 0, this.assets, this.levelManager);
-                // e1 : instancier le monstre (position en dur sur la map 0)
-                this.monster = new Monster(10, 10, this.assets);
+                const ps = this.levelManager.playerSpawn;
+                const ms = this.levelManager.monsterSpawn;
+                this.player = new Player(ps.x, ps.y, this.assets, this.levelManager);
+                this.monster = new Monster(ms.x, ms.y, this.assets);
+
+                // h2 : Construire la scène 3D
+                this._buildScene3D();
             }
             this.deckManager.generateHand();
-            this.stateManager.updateHUD(); // f2 : afficher le HUD initial
-            this.setupMenus(); // f3 : initialiser les menus transitoires
+            this.stateManager.updateHUD();
+            this.setupMenus();
+            this.audioManager.init();
+            this.audioManager.startDrone();
             this.start();
         } catch (error) {
             console.error("Erreur fatale lors du chargement des assets:", error);
         }
+    }
+
+    // h7 : Construire la scène 3D complète
+    _buildScene3D() {
+        const map = this.levelManager.currentMap;
+        if (!map) return;
+
+        // Fog selon le thème
+        const fogDensity = this._getFogDensity(map.theme);
+        this.renderer3D.setFog(map.bgColor || '#000000', fogDensity);
+
+        // Construire la map 3D
+        this.mapRenderer3D.buildMap(this.renderer3D.scene);
+
+        // Créer les meshes 3D des entités
+        if (this.player) {
+            const playerMesh = this.player.createMesh3D(this.levelManager.palette);
+            if (playerMesh) this.renderer3D.scene.add(playerMesh);
+        }
+        if (this.monster) {
+            const monsterMesh = this.monster.createMesh3D(this.levelManager.palette);
+            if (monsterMesh) this.renderer3D.scene.add(monsterMesh);
+        }
+    }
+
+    _getFogDensity(theme) {
+        if (!theme) return 0.06;
+        const t = theme.toLowerCase();
+        if (t.includes('manoir') || t.includes('terreur')) return 0.07;
+        if (t.includes('thalasso') || t.includes('sous-marin')) return 0.08;
+        if (t.includes('gothic')) return 0.065;
+        if (t.includes('sci-fi')) return 0.05;
+        if (t.includes('liminal')) return 0.04;
+        if (t.includes('bio') || t.includes('horror')) return 0.06;
+        if (t.includes('métro')) return 0.07;
+        if (t.includes('blizzard')) return 0.03;
+        if (t.includes('psycho')) return 0.055;
+        if (t.includes('lave')) return 0.04;
+        return 0.06;
     }
 
     start() {
@@ -132,6 +181,7 @@ export default class Game {
             this.monsterDelay -= dt;
             if (this.monsterDelay <= 0) {
                 this.monster.takeTurn(this.player.x, this.player.y, this.levelManager);
+                this.audioManager.playMonsterMoveSound(); // g3 : son du monstre
 
                 // e5 : Vérifier si le monstre a attrapé le joueur
                 if (this.monster.x === this.player.x && this.monster.y === this.player.y) {
@@ -159,12 +209,18 @@ export default class Game {
             );
         }
         this.particleSystem.update(dt);
+
+        // g4 : Moduler le drone selon la distance joueur-monstre
+        if (this.player && this.monster) {
+            this.audioManager.updateDrone(this.player.x, this.player.y, this.monster.x, this.monster.y);
+        }
     }
 
     // e5 : Screamer et Game Over
     triggerGameOver() {
         this.turn = 'GAME_OVER';
         console.log('Vous avez perdu 1 PV');
+        this.audioManager.playScreamerSound(); // g3 : son de screamer
 
         // g1 : Particules de sang à la position du joueur
         if (this.player) {
@@ -233,13 +289,20 @@ export default class Game {
 
     // f1 : Charger un niveau
     loadLevel(mapIndex) {
+        // h7 : Nettoyer la scène 3D avant de reconstruire
+        this.renderer3D.clearScene();
+
         this.levelManager.loadMap(mapIndex, window.MAPS);
-        this.player = new Player(0, 0, this.assets, this.levelManager);
-        // Repositionner le monstre (position par défaut)
-        this.monster = new Monster(10, 10, this.assets);
+        const ps = this.levelManager.playerSpawn;
+        const ms = this.levelManager.monsterSpawn;
+        this.player = new Player(ps.x, ps.y, this.assets, this.levelManager);
+        this.monster = new Monster(ms.x, ms.y, this.assets);
         this.turn = 'PLAYER';
         this.deckManager.generateHand();
-        this.stateManager.updateHUD(); // f2
+        this.stateManager.updateHUD();
+
+        // h7 : Reconstruire la scène 3D
+        this._buildScene3D();
     }
 
     // f1 : Respawn après perte d'un PV (même niveau)
@@ -303,23 +366,25 @@ export default class Game {
     }
 
     draw() {
-        this.renderer.clear();
-        this.mapRenderer.drawFloor(this.renderer.ctx, this.camera);
-        this.mapRenderer.drawObstacles(this.renderer.ctx, this.camera);
-        
+        this.elapsedTime += 0.016; // h5 : approximation pour les animations
+
+        // h5 : Mettre à jour les positions 3D des entités
         if (this.player) {
-            this.player.draw(this.renderer.ctx, this.camera, this.mapRenderer.tileSize);
+            this.player.updateMesh3D();
+            // h6 : Caméra suit le joueur
+            this.renderer3D.updateCamera(this.player.x, this.player.y);
         }
-
-        // e1 : Dessiner le monstre
         if (this.monster) {
-            this.monster.draw(this.renderer.ctx, this.camera, this.mapRenderer.tileSize);
+            this.monster.updateMesh3D(0.016);
         }
 
-        // La lumière se dessine par-dessus tout
-        this.mapRenderer.drawLighting(this.renderer.ctx, this.renderer.ctx.canvas.width / 2, this.renderer.ctx.canvas.height / 2);
+        // h5 : Flicker de la lampe torche
+        this.renderer3D.updateLightFlicker(this.elapsedTime);
 
-        // g1 : Particules (au-dessus de la lumière pour les étincelles)
-        this.particleSystem.draw(this.renderer.ctx, this.camera, this.mapRenderer.tileSize);
+        // h2 : Animer deathZones et exits
+        this.mapRenderer3D.update(this.elapsedTime);
+
+        // h7 : Rendu 3D
+        this.renderer3D.render();
     }
 }

@@ -128,4 +128,85 @@ export default class Monster {
 
         return moves;
     }
+
+    // h4 : Créer le mesh 3D du monstre
+    createMesh3D(palette) {
+        const THREE = window.THREE;
+        if (!THREE) return null;
+
+        this.mesh3D = new THREE.Group();
+
+        // Corps amorphe (sphère déformée)
+        const bodyColor = palette.monster || '#c0ccd8';
+        const bodyGeometry = new THREE.SphereGeometry(0.5, 8, 6);
+        // Déformer les vertices pour un aspect organique
+        const posAttr = bodyGeometry.attributes.position;
+        for (let i = 0; i < posAttr.count; i++) {
+            const x = posAttr.getX(i);
+            const y = posAttr.getY(i);
+            const z = posAttr.getZ(i);
+            posAttr.setXYZ(i,
+                x * (1 + Math.random() * 0.15),
+                y * (1 + Math.random() * 0.1),
+                z * (1 + Math.random() * 0.15)
+            );
+        }
+        bodyGeometry.computeVertexNormals();
+
+        const bodyMaterial = new THREE.MeshStandardMaterial({
+            color: new THREE.Color(bodyColor),
+            roughness: 0.3,
+            metalness: 0.5,
+            emissive: new THREE.Color(palette.monsterGlow || '#7088a0'),
+            emissiveIntensity: 0.3
+        });
+        const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+        body.position.y = 0.7;
+        body.castShadow = true;
+        this.mesh3D.add(body);
+
+        // Yeux
+        const eyeColor = palette.monsterEye || '#e8f4ff';
+        const eyeGeometry = new THREE.SphereGeometry(0.08, 6, 4);
+        const eyeMaterial = new THREE.MeshBasicMaterial({
+            color: new THREE.Color(eyeColor),
+        });
+        const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+        leftEye.position.set(-0.15, 0.85, 0.4);
+        this.mesh3D.add(leftEye);
+
+        const rightEye = new THREE.Mesh(eyeGeometry.clone(), eyeMaterial.clone());
+        rightEye.position.set(0.15, 0.85, 0.4);
+        this.mesh3D.add(rightEye);
+
+        // Aura lumineuse rouge
+        this.monsterLight = new THREE.PointLight(
+            new THREE.Color(palette.monsterGlow || '#ff0000'),
+            1.5, 8
+        );
+        this.monsterLight.position.set(0, 1, 0);
+        this.mesh3D.add(this.monsterLight);
+
+        // Position initiale
+        this.mesh3D.position.set(this.x, 0, this.y);
+
+        return this.mesh3D;
+    }
+
+    // h4 : Mettre à jour la position 3D
+    updateMesh3D(dt) {
+        if (!this.mesh3D) return;
+
+        // Lerp de position
+        this.mesh3D.position.x += (this.x - this.mesh3D.position.x) * this.lerpSpeed * (dt || 0.016);
+        this.mesh3D.position.z += (this.y - this.mesh3D.position.z) * this.lerpSpeed * (dt || 0.016);
+
+        // Oscillation verticale (flottement)
+        this.mesh3D.position.y = Math.sin(this.floatTime) * 0.15;
+
+        // Pulsation de la lumière
+        if (this.monsterLight) {
+            this.monsterLight.intensity = 1.2 + Math.sin(this.floatTime * 2) * 0.5;
+        }
+    }
 }

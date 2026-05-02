@@ -7,6 +7,7 @@ import Player from '../entities/Player.js';
 import Monster from '../entities/Monster.js';
 import DeckManager from '../systems/DeckManager.js';
 import GameStateManager from '../systems/GameStateManager.js';
+import ParticleSystem from '../systems/ParticleSystem.js';
 
 export default class Game {
     constructor(canvasId) {
@@ -43,6 +44,7 @@ export default class Game {
             return false;
         });
         this.lastTime = 0;
+        this.particleSystem = new ParticleSystem(); // g1
     }
 
     // e2 : Fin du tour du joueur -> passer au monstre avec délai
@@ -146,12 +148,29 @@ export default class Game {
         if (this.monster) {
             this.monster.update(dt);
         }
+
+        // g1 : Particules de poussière (ambiance)
+        if (this.player) {
+            const ts = this.mapRenderer.tileSize * this.camera.zoom;
+            this.particleSystem.emitDust(
+                this.player.x * ts,
+                this.player.y * ts,
+                ts * 4 // rayon autour du joueur
+            );
+        }
+        this.particleSystem.update(dt);
     }
 
     // e5 : Screamer et Game Over
     triggerGameOver() {
         this.turn = 'GAME_OVER';
         console.log('Vous avez perdu 1 PV');
+
+        // g1 : Particules de sang à la position du joueur
+        if (this.player) {
+            const ts = this.mapRenderer.tileSize * this.camera.zoom;
+            this.particleSystem.emitBlood(this.player.x * ts, this.player.y * ts, 25);
+        }
 
         const screamer = document.getElementById('screamer');
         if (screamer) {
@@ -184,6 +203,11 @@ export default class Game {
     // f1 : Mort par piège (deathZone)
     triggerPlayerDeath() {
         this.turn = 'GAME_OVER';
+        // g1 : Particules de sang
+        if (this.player) {
+            const ts = this.mapRenderer.tileSize * this.camera.zoom;
+            this.particleSystem.emitBlood(this.player.x * ts, this.player.y * ts, 20);
+        }
         const alive = this.stateManager.loseLife();
         this.stateManager.updateHUD(); // f2
         setTimeout(() => {
@@ -294,5 +318,8 @@ export default class Game {
 
         // La lumière se dessine par-dessus tout
         this.mapRenderer.drawLighting(this.renderer.ctx, this.renderer.ctx.canvas.width / 2, this.renderer.ctx.canvas.height / 2);
+
+        // g1 : Particules (au-dessus de la lumière pour les étincelles)
+        this.particleSystem.draw(this.renderer.ctx, this.camera, this.mapRenderer.tileSize);
     }
 }

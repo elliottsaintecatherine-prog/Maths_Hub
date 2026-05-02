@@ -185,6 +185,8 @@
   },
   "active": "1e5bbbdd39b62a55",
   "lastOpenFiles": [
+    "src/systems/AudioManager.js",
+    "src/systems/ParticleSystem.js",
     "src/systems/GameStateManager.js",
     "src/entities/Monster.js",
     "vecthorreur.png",

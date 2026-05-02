@@ -4,6 +4,7 @@ import AssetManager from './AssetManager.js';
 import LevelManager from '../systems/LevelManager.js';
 import MapRenderer from '../systems/MapRenderer.js';
 import Player from '../entities/Player.js';
+import DeckManager from '../systems/DeckManager.js';
 
 export default class Game {
     constructor(canvasId) {
@@ -14,6 +15,12 @@ export default class Game {
         this.mapRenderer = new MapRenderer(this.levelManager, this.assets);
         this.camera = { x: 0, y: 0, zoom: 1 };
         this.player = null;
+        this.deckManager = new DeckManager((dx, dy) => {
+            if (this.player) {
+                return this.player.attemptMove(dx, dy);
+            }
+            return false;
+        });
         this.lastTime = 0;
     }
 
@@ -26,6 +33,7 @@ export default class Game {
                 // Le joueur commence en (0, 0)
                 this.player = new Player(0, 0, this.assets, this.levelManager);
             }
+            this.deckManager.generateHand();
             this.start();
         } catch (error) {
             console.error("Erreur fatale lors du chargement des assets:", error);

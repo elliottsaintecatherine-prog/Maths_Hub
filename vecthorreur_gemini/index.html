@@ -16,10 +16,127 @@
         #game-canvas {
             display: block;
         }
+        #deck-area {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            z-index: 10;
+        }
+        .btn-deck {
+            width: 80px;
+            height: 120px;
+            background-color: #f4e4bc;
+            border: 2px solid #5a3e2b;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: monospace;
+            font-size: 16px;
+            font-weight: bold;
+            color: #3e2723;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 2px 4px 10px rgba(0, 0, 0, 0.5);
+            transition: transform 0.2s, box-shadow 0.2s;
+            filter: url(#parchment);
+        }
+        .btn-deck:hover {
+            transform: translateY(-10px);
+            box-shadow: 2px 14px 15px rgba(0, 0, 0, 0.7);
+        }
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); }
+        }
+        .shake {
+            animation: shake 0.3s ease-in-out;
+        }
+        .btn-deck.selected {
+            border-color: #ffab00;
+            box-shadow: 0 0 15px rgba(255, 171, 0, 0.8);
+            transform: translateY(-12px);
+        }
+        #combo-area {
+            position: absolute;
+            bottom: 160px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            z-index: 10;
+        }
+        #btn-execute {
+            padding: 10px 20px;
+            background: linear-gradient(180deg, #5a3e2b, #3e2723);
+            color: #f4e4bc;
+            border: 2px solid #8d6e63;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: monospace;
+            font-size: 14px;
+            font-weight: bold;
+            transition: background 0.2s, box-shadow 0.2s;
+        }
+        #btn-execute:hover {
+            background: linear-gradient(180deg, #8d6e63, #5a3e2b);
+            box-shadow: 0 0 10px rgba(141, 110, 99, 0.6);
+        }
+        #result-preview {
+            color: #ffab00;
+            font-family: monospace;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 0 0 8px rgba(255, 171, 0, 0.5);
+        }
+        .btn-multiplier {
+            padding: 8px 14px;
+            background: linear-gradient(180deg, #4a148c, #311b92);
+            color: #e1bee7;
+            border: 2px solid #7c43bd;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: monospace;
+            font-size: 13px;
+            font-weight: bold;
+            transition: background 0.2s, box-shadow 0.2s;
+        }
+        .btn-multiplier:hover:not(:disabled) {
+            background: linear-gradient(180deg, #7c43bd, #4a148c);
+            box-shadow: 0 0 10px rgba(124, 67, 189, 0.6);
+        }
+        .btn-multiplier:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
+    <svg width="0" height="0" style="position:absolute;z-index:-1;">
+        <defs>
+            <filter id="parchment">
+                <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="5" result="noise" />
+                <feColorMatrix type="matrix" values="1 0 0 0 0  0 0.9 0 0 0  0 0.7 0 0 0  0 0 0 0.2 0" in="noise" result="coloredNoise" />
+                <feBlend in="SourceGraphic" in2="coloredNoise" mode="multiply" />
+            </filter>
+        </defs>
+    </svg>
     <canvas id="game-canvas"></canvas>
+    <div id="combo-area">
+        <button id="btn-mult-x2" class="btn-multiplier">x2</button>
+        <button id="btn-mult-half" class="btn-multiplier">x0.5</button>
+        <button id="btn-mult-invert" class="btn-multiplier">Inverser (-u)</button>
+        <button id="btn-execute">Executer</button>
+        <span id="result-preview"></span>
+    </div>
+    <div id="deck-area"></div>
     <script src="v-data.js"></script>
     <script type="module" src="src/main.js"></script>
 </body>

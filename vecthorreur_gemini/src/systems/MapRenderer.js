@@ -120,16 +120,8 @@ export default class MapRenderer {
     }
 
     drawLighting(ctx, playerScreenX, playerScreenY) {
-        // 1. Assombrir tout l'écran
         ctx.save();
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
-        ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-        // 2. Percer les ténèbres autour du joueur (ou au centre si pas de joueur)
-        ctx.globalCompositeOperation = 'destination-out';
-        
-        // Variation du rayon avec le temps pour effet "flicker"
         const time = Date.now() / 150;
         const flicker = Math.sin(time) * Math.sin(time * 0.5) * 10;
         const baseRadius = 250;
@@ -138,15 +130,15 @@ export default class MapRenderer {
         const x = playerScreenX || (ctx.canvas.width / 2);
         const y = playerScreenY || (ctx.canvas.height / 2);
 
+        // Dessiner le brouillard de guerre via un gradient transparent -> noir
         const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
-        gradient.addColorStop(0, 'rgba(0, 0, 0, 1)');
-        gradient.addColorStop(0.5, 'rgba(0, 0, 0, 0.8)');
-        gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+        gradient.addColorStop(0.6, 'rgba(0, 0, 0, 0.7)');
+        gradient.addColorStop(1, 'rgba(0, 0, 0, 0.95)');
 
         ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.arc(x, y, radius, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
         ctx.restore();
     }

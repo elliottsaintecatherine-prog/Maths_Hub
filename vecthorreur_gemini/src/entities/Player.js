@@ -20,27 +20,35 @@ export default class Player {
         else if (input.isJustPressed('ArrowRight')) dx = 1;
 
         if (dx !== 0 || dy !== 0) {
-            const nx = this.x + dx;
-            const ny = this.y + dy;
-
-            // c3: Collisions Statiques
-            if (this.levelManager.isWalkable(nx, ny)) {
-                this.x = nx;
-                this.y = ny;
-
-                // c4: Pièges
-                if (this.levelManager.isDeathZone(nx, ny)) {
-                    this.isDead = true;
-                    console.log("Joueur mort");
-                }
-
-                // c5: Sortie
-                if (this.levelManager.isExit(nx, ny)) {
-                    this.hasWon = true;
-                    console.log("Niveau terminé");
-                }
-            }
+            this.attemptMove(dx, dy);
         }
+    }
+
+    attemptMove(dx, dy) {
+        if (this.isDead || this.hasWon) return false;
+
+        const nx = this.x + dx;
+        const ny = this.y + dy;
+
+        // c3: Collisions Statiques
+        if (this.levelManager.isWalkable(nx, ny)) {
+            this.x = nx;
+            this.y = ny;
+
+            // c4: Pièges
+            if (this.levelManager.isDeathZone(nx, ny)) {
+                this.isDead = true;
+                console.log("Joueur mort");
+            }
+
+            // c5: Sortie
+            if (this.levelManager.isExit(nx, ny)) {
+                this.hasWon = true;
+                console.log("Niveau terminé");
+            }
+            return true;
+        }
+        return false;
     }
 
     draw(ctx, camera, tileSize) {

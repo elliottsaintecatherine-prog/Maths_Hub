@@ -7,8 +7,8 @@ const game = new Game('game-canvas');
 const manifest = [
     { key: 'hero', url: 'assets/img/hero.png' },
     { key: 'monster', url: 'assets/img/monster.png' },
-    { key: 'floor', url: 'assets/img/floor_tile.png' },
-    { key: 'wall', url: 'assets/img/wall_tile.png' }
+    { key: 'floor_tile', url: 'assets/img/floor_tile.png' },
+    { key: 'wall_tile', url: 'assets/img/wall_tile.png' }
 ];
 
 game.init(manifest);

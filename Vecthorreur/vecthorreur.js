@@ -2353,12 +2353,8 @@ function drawPlayer2D(ctx, ts) {
 function drawMonster2D(ctx, ts) {
   const mp=gameState.monsterPos;
   const {cx,cy}=worldTo2D(mp.x,mp.y);
-  const pal=MAPS[gameState.currentMap].palette;
-  if (window.GFX) {
-    GFX.drawMonster(ctx, cx, cy, scale2D, ts, pal);
-    return;
-  }
   const r=scale2D*0.45, pulse=1+0.1*Math.sin(ts*0.005);
+  const pal=MAPS[gameState.currentMap].palette;
   ctx.save(); ctx.translate(cx,cy); ctx.rotate(ts*0.0008); ctx.scale(pulse,pulse);
   ctx.beginPath();
   for (let i=0;i<12;i++) { const sp=i%2===0?r:r*0.45,a=(i/12)*Math.PI*2; i===0?ctx.moveTo(Math.cos(a)*sp,Math.sin(a)*sp):ctx.lineTo(Math.cos(a)*sp,Math.sin(a)*sp); }

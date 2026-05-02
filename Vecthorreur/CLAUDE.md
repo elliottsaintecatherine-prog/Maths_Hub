@@ -49,14 +49,14 @@ Par défaut :
 
 ## ÉTAT DU PROJET
 
-**GROUPE COURANT : C (c1 → c2)** (Cartes vectorielles) — enchaîner automatiquement dans cette conversation
+**GROUPE COURANT : B (b1 → b2)** (Vie et atmosphère : particules + monstre) — enchaîner automatiquement dans cette conversation
 
 Quand tu termines un micro-prompt du groupe courant : coche [x], passe au suivant automatiquement, update PROCHAINE ACTION. Quand tout le groupe est [x], mets à jour GROUPE COURANT avec le groupe suivant et arrête.
 
 Groupes restants (dans l'ordre) :
 1. ~~A (a1 → a3) — Fondations visuelles~~ ✓
-2. ~~B (b1 → b2) — Vie et atmosphère~~ ✓
-3. C (c1 → c2) — Cartes vectorielles ← COURANT
+2. B (b1 → b2) — Vie et atmosphère ← COURANT
+3. C (c1 → c2) — Cartes vectorielles
 4. D (d1) — Menu
 
 Ordre d'exécution complet :
@@ -68,7 +68,7 @@ a1 → a2 → a3 → b1 → b2 → c1 → c2 → d1 → e1
 | a2  | Lumière thématique par map     | [x]    |
 | a3  | Textures murs + obstacles      | [x]    |
 | b1  | Particules ambiantes           | [x]    |
-| b2  | Monstre expressif              | [x]    |
+| b2  | Monstre expressif              | [ ]    |
 | c1  | Cartes parchemin CSS           | [ ]    |
 | c2  | Flèche SVG directionnelle      | [ ]    |
 | d1  | Menu image + polish            | [ ]    |
@@ -80,52 +80,45 @@ a1 → a2 → a3 → b1 → b2 → c1 → c2 → d1 → e1
 
 ## PROCHAINE ACTION
 
-### c1 — Cartes parchemin : CSS + filtre SVG (~45min)
+**Prompt b2 — Monstre Canvas expressif, style Chair de Poule (~45min)**
 
-CONTEXTE : Rework visuel des cartes de vecteurs dans le tiroir gauche. Actuellement : rectangles sombres avec emoji. Cible : parchemin vieilli Chair de Poule avec texture.
+CONTEXTE : Suite du rework. `gfx.js` existe (a1-b1 faits). Le monstre actuel est une étoile à 12 branches qui tourne. Le remplacer par une silhouette Chair de Poule expressive. Même monstre pour toutes les maps.
 
 FICHIERS À LIRE :
-- `vecthorreur.html` lignes 395-440 (CSS `.btn-deck`, `.deck-area`, `.card-*`)
-- `vecthorreur.html` lignes 858-870 (structure `<body>`, pour placer le filtre SVG)
+- `gfx.js` (complet)
+- `vecthorreur.js` lignes 2348-2359 (drawMonster2D — à wraper)
 
 CONTENU :
-1. Dans `vecthorreur.html`, ajouter dans `<body>` avant tout autre élément, un filtre SVG inline :
-   ```html
-   <svg style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
-     <defs>
-       <filter id="f-parchment" x="-5%" y="-5%" width="110%" height="110%">
-         <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" result="noise"/>
-         <feColorMatrix type="saturate" values="0" in="noise" result="grey"/>
-         <feBlend in="SourceGraphic" in2="grey" mode="multiply" result="blend"/>
-         <feComponentTransfer in="blend">
-           <feFuncR type="linear" slope="1.05" intercept="-0.02"/>
-           <feFuncG type="linear" slope="0.88" intercept="0.03"/>
-           <feFuncB type="linear" slope="0.68" intercept="-0.02"/>
-         </feComponentTransfer>
-       </filter>
-     </defs>
-   </svg>
+1. Ajouter `GFX.drawMonster(ctx, screenX, screenY, scale2D, ts, palette)` dans `gfx.js` :
+   - **Corps** : silhouette humanoïde stylisée en Canvas bezier curves. Forme : torse allongé (trapèze arrondi), tête ovale en haut, membres inférieurs qui se fondent/effilochent vers le bas en 3-4 courbes
+   - **Couleur** : noir profond (#050305), pas de remplissage intérieur visible
+   - **Contour flou** : ctx.shadowBlur=24, ctx.shadowColor=palette.monsterGlow, ctx.lineWidth=3
+   - **Yeux** : deux ellipses lumineuses (rx=3*s, ry=4*s où s=scale2D*0.04) avec fillStyle=palette.monsterEye, shadowBlur=12 shadowColor=palette.monsterEye
+   - **Aura** : radialGradient centré sur screenX/screenY, rayon scale2D*1.2 : center rgba(monsterGlow,0.0) → edge rgba(monsterGlow,0.25)
+   - **Animation** : oscillation verticale `screenY += Math.sin(ts*0.002)*scale2D*0.1`, légère oscillation largeur corps `scaleX = 0.95 + 0.05*Math.sin(ts*0.003)`
+   - La taille totale du monstre : ~scale2D*1.1 de haut, ~scale2D*0.65 de large
+2. Modifier `drawMonster2D()` dans `vecthorreur.js` :
+   ```javascript
+   function drawMonster2D(ctx, ts) {
+     const mp = gameState.monsterPos;
+     const {cx, cy} = worldTo2D(mp.x, mp.y);
+     const pal = MAPS[gameState.currentMap].palette;
+     if (window.GFX) {
+       GFX.drawMonster(ctx, cx, cy, scale2D, ts, pal);
+       return;
+     }
+     // Ancien code conservé comme fallback :
+     const r = scale2D * 0.45, pulse = 1 + 0.1 * Math.sin(ts * 0.005);
+     // ... (copier l'ancien code ici) ...
+   }
    ```
-2. Rework CSS `.btn-deck` dans le `<style>` :
-   - Background : `linear-gradient(170deg, #d4b896 0%, #c8a070 40%, #8a5a28 80%, #5a3010 100%)`
-   - Border : `1px solid #8a5a2a`
-   - Appliquer `filter: url(#f-parchment)`
-   - Box-shadow : `inset 0 0 12px rgba(40,15,0,0.6), inset 0 0 4px rgba(0,0,0,0.4), 0 3px 10px rgba(0,0,0,0.6)`
-   - `border-radius: 4px 4px 6px 6px` (conserver)
-3. `.btn-deck:hover` : conserver le `translateY(-5px) scale(1.05)` existant + changer border-color en `#f5d070`
-4. `.btn-deck.selected` : conserver l'animation pulse existante + border-color `#f5d070`
-5. Textes sur les cartes (lisibilité sur fond parchemin clair) :
-   - `.card-coords` : `color: #2a0e00; font-weight: bold; font-size: 10px`
-   - `.card-norm` : `color: #5a2a08; font-size: 9px`
-   - `.card-arrow` : `color: #3a1000; font-size: 15px` (le caractère fléché textuel, conservé pour c2)
-   - `.card-glyph` : `font-size: 22px; color: #2a0e00` (l'emoji actuel, remplacé en c2)
 
 CONTRAINTES :
-- Ne pas toucher `vecthorreur.js`
-- Les cartes restent fonctionnelles (onclick, states selected/hover)
-- Le filtre SVG ne doit pas s'appliquer à d'autres éléments (CSS filter sur `.btn-deck` uniquement)
-- Ne pas modifier le `::before` et `::after` existants sur `.btn-deck` (décoration)
+- L'ancien code de drawMonster2D reste complet en fallback (copier, ne pas supprimer)
+- Aucune image externe — tout en Canvas
+- Le monstre doit rester lisible sur TOUS les fonds de map (contraste suffisant via shadowColor)
+- Pas d'emoji
 
-VÉRIFICATION : relecture statique — vérifier que filter: url(#f-parchment) est bien sur .btn-deck et pas sur .deck-area
+VÉRIFICATION : relecture statique de GFX.drawMonster — vérifier que les bezier curves ferment bien le path (closePath)
 
-À la fin : coche [x] c1 et copie le texte de c2 dans PROCHAINE ACTION.
+À la fin : coche [x] b2, met à jour GROUPE COURANT avec C et copie le texte de c1 dans PROCHAINE ACTION.

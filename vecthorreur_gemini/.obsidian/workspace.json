@@ -185,6 +185,7 @@
   },
   "active": "1e5bbbdd39b62a55",
   "lastOpenFiles": [
+    "src/systems/GameStateManager.js",
     "src/entities/Monster.js",
     "vecthorreur.png",
     "ANTIGRAVITY.md",

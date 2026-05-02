@@ -6,6 +6,7 @@ import MapRenderer from '../systems/MapRenderer.js';
 import Player from '../entities/Player.js';
 import Monster from '../entities/Monster.js';
 import DeckManager from '../systems/DeckManager.js';
+import GameStateManager from '../systems/GameStateManager.js';
 
 export default class Game {
     constructor(canvasId) {
@@ -15,6 +16,7 @@ export default class Game {
         this.levelManager = new LevelManager();
         this.mapRenderer = new MapRenderer(this.levelManager, this.assets);
         this.camera = { x: 0, y: 0, zoom: 1 };
+        this.stateManager = new GameStateManager(); // f1
         this.player = null;
         this.monster = null;
         this.turn = 'PLAYER'; // e2 : tour par tour
@@ -37,6 +39,7 @@ export default class Game {
     endPlayerTurn() {
         this.turn = 'MONSTER';
         this.monsterDelay = 0.3; // 300ms de délai
+        this.stateManager.recordMove(); // f1 : compter les coups
         console.log('Tour : MONSTER');
     }
 
@@ -79,7 +82,7 @@ export default class Game {
     }
 
     update(dt) {
-        if (this.turn === 'GAME_OVER') return; // e5
+        if (this.turn === 'GAME_OVER' || this.turn === 'LEVEL_COMPLETE') return; // e5, f1
 
         if (this.player) {
             // e2 : Bloquer inputs joueur si ce n'est pas son tour
@@ -93,6 +96,16 @@ export default class Game {
                 else if (this.input.isJustPressed('ArrowRight')) dx = 1;
 
                 if ((dx !== 0 || dy !== 0) && this.player.attemptMove(dx, dy)) {
+                    // f1 : Vérifier sortie avant de passer au monstre
+                    if (this.player.hasWon) {
+                        this.triggerLevelComplete();
+                        return;
+                    }
+                    // f1 : Vérifier piège (mort)
+                    if (this.player.isDead) {
+                        this.triggerPlayerDeath();
+                        return;
+                    }
                     this.endPlayerTurn();
                 }
             }
@@ -138,11 +151,62 @@ export default class Game {
             }
             screamer.classList.add('active');
 
-            // Masquer le screamer après 2 secondes
+            // f1 : Perdre un PV via GameStateManager
+            const alive = this.stateManager.loseLife();
+
+            // Masquer le screamer après 2 secondes, puis décider
             setTimeout(() => {
                 screamer.classList.remove('active');
+                if (!alive) {
+                    // Plus de PV : afficher l'écran Game Over (f3 ajoutera le menu)
+                    console.log('GAME OVER DEFINITIF');
+                } else {
+                    // Respawn sur la même map
+                    this.respawnCurrentLevel();
+                }
             }, 2000);
         }
+    }
+
+    // f1 : Mort par piège (deathZone)
+    triggerPlayerDeath() {
+        this.turn = 'GAME_OVER';
+        const alive = this.stateManager.loseLife();
+        setTimeout(() => {
+            if (!alive) {
+                console.log('GAME OVER DEFINITIF');
+            } else {
+                this.respawnCurrentLevel();
+            }
+        }, 1000);
+    }
+
+    // f1 : Niveau terminé
+    triggerLevelComplete() {
+        this.turn = 'LEVEL_COMPLETE';
+        console.log(`Salle terminée en ${this.stateManager.totalMoves} coups`);
+        // f3 ajoutera le menu de transition
+        const nextIdx = this.stateManager.nextLevel();
+        if (window.MAPS && window.MAPS[nextIdx]) {
+            setTimeout(() => this.loadLevel(nextIdx), 1500);
+        } else {
+            console.log('Victoire ! Toutes les salles sont terminées.');
+        }
+    }
+
+    // f1 : Charger un niveau
+    loadLevel(mapIndex) {
+        this.levelManager.loadMap(mapIndex, window.MAPS);
+        this.player = new Player(0, 0, this.assets, this.levelManager);
+        // Repositionner le monstre (position par défaut)
+        this.monster = new Monster(10, 10, this.assets);
+        this.turn = 'PLAYER';
+        this.deckManager.generateHand();
+    }
+
+    // f1 : Respawn après perte d'un PV (même niveau)
+    respawnCurrentLevel() {
+        this.loadLevel(this.stateManager.currentLevel);
     }
 
     draw() {

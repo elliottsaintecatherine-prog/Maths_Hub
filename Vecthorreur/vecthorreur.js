@@ -2258,9 +2258,13 @@ function drawDecoObjects2D(ctx, ts) {
 function drawObstacles2D(ctx) {
   const map=MAPS[gameState.currentMap];
   map.obstacles.forEach(obs => {
+    const isFlash=gameState.flashObstacle===obs && gameState.flashTimer>0;
+    if (window.GFX && !isFlash) {
+      GFX.drawObstacle(ctx, obs, gameState.currentMap, worldTo2D, scale2D);
+      return;
+    }
     const {cx:px,cy:py}=worldTo2D(obs.x1,obs.y2);
     const w=(obs.x2-obs.x1)*scale2D, h=(obs.y2-obs.y1)*scale2D;
-    const isFlash=gameState.flashObstacle===obs && gameState.flashTimer>0;
     ctx.fillStyle=isFlash?'#5a1a08':(obs.color||'#241608'); ctx.fillRect(px,py,w,h);
     ctx.strokeStyle=isFlash?'#ff2200':'rgba(255,200,150,0.2)'; ctx.lineWidth=isFlash?2:0.5;
     if (isFlash) { ctx.shadowBlur=8; ctx.shadowColor='#ff2200'; }
@@ -2485,6 +2489,7 @@ function renderTopDown(ts) {
   const map = MAPS[gameState.currentMap];
   ctx.clearRect(0, 0, W, H);
   ctx.fillStyle = map.bgColor || '#080808'; ctx.fillRect(0, 0, W, H);
+  if (window.GFX) GFX.drawFloor(ctx, gameState.currentMap, worldTo2D, scale2D, W, H, ts);
   // Grille
   ctx.save();
   ctx.strokeStyle = map.gridColor || '#2a2a2a44'; ctx.lineWidth = 0.5;
@@ -2496,7 +2501,11 @@ function renderTopDown(ts) {
   }
   ctx.restore();
   // Murs
-  if (map.walls) {
+  if (window.GFX && map.walls) {
+    ctx.save();
+    map.walls.forEach(wall => GFX.drawWall(ctx, wall, gameState.currentMap, worldTo2D, scale2D));
+    ctx.restore();
+  } else if (map.walls) {
     ctx.save();
     map.walls.forEach(wall => {
       const {cx:px,cy:py}=worldTo2D(wall.x1,wall.y2);
@@ -2510,7 +2519,13 @@ function renderTopDown(ts) {
   drawExits2D(ctx, ts);
   drawObstacles2D(ctx);
   drawTrail2D(ctx);
-  drawLightOverlay2D(ctx, ts);
+  if (window.GFX) {
+    const pp = gameState.playerPos;
+    const {cx, cy} = worldTo2D(pp.x, pp.y);
+    GFX.drawLighting(ctx, cx, cy, gameState.currentMap, W, H, ts);
+  } else {
+    drawLightOverlay2D(ctx, ts);
+  }
   drawPlayer2D(ctx, ts);
   drawMonster2D(ctx, ts);
   // Labels

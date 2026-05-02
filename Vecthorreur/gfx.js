@@ -423,65 +423,6 @@ GFX.ambientParticles = {
   }
 };
 
-GFX.drawMonster = function (ctx, screenX, screenY, scale2D, ts, palette) {
-  const s = scale2D;
-  const dy = Math.sin(ts * 0.002) * s * 0.1;
-  const scaleX = 0.95 + 0.05 * Math.sin(ts * 0.003);
-
-  ctx.save();
-  ctx.translate(screenX, screenY + dy);
-  ctx.scale(scaleX, 1);
-
-  // Aura
-  const auraGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, s * 1.2);
-  auraGrad.addColorStop(0, 'rgba(0,0,0,0)');
-  auraGrad.addColorStop(1, palette.monsterGlow);
-  ctx.globalAlpha = 0.25;
-  ctx.fillStyle = auraGrad;
-  ctx.beginPath();
-  ctx.arc(0, 0, s * 1.2, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.globalAlpha = 1;
-
-  // Silhouette
-  ctx.fillStyle = '#050305';
-  ctx.shadowBlur = 24;
-  ctx.shadowColor = palette.monsterGlow;
-
-  // Tete ovale
-  ctx.beginPath();
-  ctx.ellipse(0, -s * 0.38, s * 0.17, s * 0.21, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Corps + membres effiloches
-  ctx.beginPath();
-  ctx.moveTo(0, -s * 0.18);
-  ctx.bezierCurveTo(-s * 0.28, -s * 0.16, -s * 0.32, s * 0.08, -s * 0.26, s * 0.22);
-  ctx.bezierCurveTo(-s * 0.22, s * 0.36, -s * 0.28, s * 0.44, -s * 0.18, s * 0.55);
-  ctx.bezierCurveTo(-s * 0.08, s * 0.50, 0, s * 0.46, 0, s * 0.44);
-  ctx.bezierCurveTo(0, s * 0.46, s * 0.08, s * 0.50, s * 0.18, s * 0.55);
-  ctx.bezierCurveTo(s * 0.28, s * 0.44, s * 0.22, s * 0.36, s * 0.26, s * 0.22);
-  ctx.bezierCurveTo(s * 0.32, s * 0.08, s * 0.28, -s * 0.16, 0, -s * 0.18);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.shadowBlur = 0;
-
-  // Yeux lumineux
-  const se = s * 0.04;
-  ctx.fillStyle = palette.monsterEye;
-  ctx.shadowBlur = 12;
-  ctx.shadowColor = palette.monsterEye;
-  ctx.beginPath();
-  ctx.ellipse(-s * 0.07, -s * 0.40, se * 3, se * 4, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(s * 0.07, -s * 0.40, se * 3, se * 4, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.shadowBlur = 0;
-
-  ctx.restore();
-};
 
 GFX.drawLighting = function (ctx, screenX, screenY, mapIndex, W, H, ts) {
   ctx.save();

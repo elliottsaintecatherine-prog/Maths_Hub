@@ -33,7 +33,7 @@ Par défaut : relecture statique et test manuel via live server si nécessaire.
 
 ## ÉTAT DU PROJET
 
-**GROUPE COURANT : F** (UI) — enchaîner automatiquement dans cette conversation
+**GROUPE COURANT : G** (Polish) — enchaîner automatiquement dans cette conversation
 
 Quand tu termines un micro-prompt du groupe courant : coche [x], passe au suivant automatiquement, update PROCHAINE ACTION. Quand tout le groupe est [x], mets à jour GROUPE COURANT avec le groupe suivant et arrête.
 
@@ -44,8 +44,8 @@ Groupes restants (dans l'ordre) :
 4. c1→c5 (Le Joueur) [x]
 5. d1→d5 (Cartes) [x]
 6. e1→e5 (Le Monstre) [x]
-7. f1→f4 (UI) ← COURANT
-8. g1→g4 (Polish)
+7. f1→f4 (UI) [x]
+8. g1→g4 (Polish) ← COURANT
 
 | ID  | Titre                  | Status |
 | --- | ---------------------- | ------ |
@@ -73,6 +73,10 @@ Groupes restants (dans l'ordre) :
 | E3  | Pathfinding IA         | [x]    |
 | E4  | Animation du Monstre   | [x]    |
 | E5  | Screamer et Dégâts     | [x]    |
+| F1  | GameStateManager       | [x]    |
+| F2  | HUD In-Game            | [x]    |
+| F3  | Menus Transitoires     | [x]    |
+| F4  | Menu Principal         | [x]    |
 
 > Référence complète : voir `wiki/games/vecthorreur-reborn-prompts.md` dans l'Obsidian (dossier gemini).
 
@@ -80,21 +84,22 @@ Groupes restants (dans l'ordre) :
 
 ## PROCHAINE ACTION
 
-**Prompt f1 — GameStateManager (~20min)**
+**Prompt g1 — Particules (~45min)**
 
-CONTEXTE : Sauvegarder la progression.
+CONTEXTE : Renforcer l'atmosphère horrifique.
 
 FICHIERS À LIRE :
 - `src/core/Game.js`
 
 CONTENU :
-1. Créer `src/systems/GameStateManager.js`.
-2. Stocker `currentLevel`, `health` (ex: 3 PV), `score`.
-3. Gérer la réinitialisation de la map en cas de mort, ou le passage au niveau supérieur.
+1. Créer `src/systems/ParticleSystem.js`.
+2. Générer des particules de poussière flottant doucement dans la lumière (Fog of war).
+3. Générer des particules rouges (sang/étincelles) lorsque le monstre frappe ou que le joueur marche dans un piège.
+4. Dessiner ces particules sur le Canvas.
 
 CONTRAINTES :
-- Singleton ou instancié une seule fois dans Game.
+- Recycler les particules (Object Pooling) pour ne pas détruire les performances.
 
-VÉRIFICATION : Relecture statique.
+VÉRIFICATION : Test visuel des particules.
 
-À la fin : coche [x] f1 et copie le texte de f2 dans PROCHAINE ACTION.
+À la fin : coche [x] g1 et copie le texte de g2 dans PROCHAINE ACTION.

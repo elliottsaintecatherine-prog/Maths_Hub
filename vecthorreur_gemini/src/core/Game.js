@@ -26,6 +26,16 @@ export default class Game {
             if (this.player) {
                 const moved = this.player.attemptMove(dx, dy);
                 if (moved) {
+                    // f1 : Vérifier sortie
+                    if (this.player.hasWon) {
+                        this.triggerLevelComplete();
+                        return true;
+                    }
+                    // f1 : Vérifier piège
+                    if (this.player.isDead) {
+                        this.triggerPlayerDeath();
+                        return true;
+                    }
                     this.endPlayerTurn(); // e2
                 }
                 return moved;
@@ -55,6 +65,8 @@ export default class Game {
                 this.monster = new Monster(10, 10, this.assets);
             }
             this.deckManager.generateHand();
+            this.stateManager.updateHUD(); // f2 : afficher le HUD initial
+            this.setupMenus(); // f3 : initialiser les menus transitoires
             this.start();
         } catch (error) {
             console.error("Erreur fatale lors du chargement des assets:", error);
@@ -153,13 +165,14 @@ export default class Game {
 
             // f1 : Perdre un PV via GameStateManager
             const alive = this.stateManager.loseLife();
+            this.stateManager.updateHUD(); // f2
 
             // Masquer le screamer après 2 secondes, puis décider
             setTimeout(() => {
                 screamer.classList.remove('active');
                 if (!alive) {
-                    // Plus de PV : afficher l'écran Game Over (f3 ajoutera le menu)
-                    console.log('GAME OVER DEFINITIF');
+                    // f3 : Plus de PV -> afficher l'écran Game Over
+                    this.showGameOverScreen();
                 } else {
                     // Respawn sur la même map
                     this.respawnCurrentLevel();
@@ -172,9 +185,10 @@ export default class Game {
     triggerPlayerDeath() {
         this.turn = 'GAME_OVER';
         const alive = this.stateManager.loseLife();
+        this.stateManager.updateHUD(); // f2
         setTimeout(() => {
             if (!alive) {
-                console.log('GAME OVER DEFINITIF');
+                this.showGameOverScreen(); // f3
             } else {
                 this.respawnCurrentLevel();
             }
@@ -184,14 +198,13 @@ export default class Game {
     // f1 : Niveau terminé
     triggerLevelComplete() {
         this.turn = 'LEVEL_COMPLETE';
-        console.log(`Salle terminée en ${this.stateManager.totalMoves} coups`);
-        // f3 ajoutera le menu de transition
+        const movesUsed = this.stateManager.totalMoves;
+        console.log(`Salle terminée en ${movesUsed} coups`);
         const nextIdx = this.stateManager.nextLevel();
-        if (window.MAPS && window.MAPS[nextIdx]) {
-            setTimeout(() => this.loadLevel(nextIdx), 1500);
-        } else {
-            console.log('Victoire ! Toutes les salles sont terminées.');
-        }
+        this.stateManager.updateHUD(); // f2
+
+        // f3 : Afficher l'écran de fin de salle
+        this.showLevelCompleteScreen(movesUsed, nextIdx);
     }
 
     // f1 : Charger un niveau
@@ -202,11 +215,67 @@ export default class Game {
         this.monster = new Monster(10, 10, this.assets);
         this.turn = 'PLAYER';
         this.deckManager.generateHand();
+        this.stateManager.updateHUD(); // f2
     }
 
     // f1 : Respawn après perte d'un PV (même niveau)
     respawnCurrentLevel() {
         this.loadLevel(this.stateManager.currentLevel);
+    }
+
+    // f3 : Initialiser les boutons des menus transitoires
+    setupMenus() {
+        const btnNext = document.getElementById('btn-next-level');
+        if (btnNext) {
+            btnNext.onclick = () => {
+                document.getElementById('level-complete-screen').classList.remove('active');
+                const nextIdx = this.stateManager.currentLevel;
+                if (window.MAPS && window.MAPS[nextIdx]) {
+                    this.loadLevel(nextIdx);
+                } else {
+                    // Plus de niveaux — victoire finale (reste sur l'écran)
+                    console.log('Victoire totale !');
+                }
+            };
+        }
+
+        const btnRestart = document.getElementById('btn-restart');
+        if (btnRestart) {
+            btnRestart.onclick = () => {
+                document.getElementById('game-over-screen').classList.remove('active');
+                this.stateManager.reset();
+                this.loadLevel(0);
+            };
+        }
+    }
+
+    // f3 : Afficher l'écran "Salle Terminée"
+    showLevelCompleteScreen(movesUsed, nextIdx) {
+        const screen = document.getElementById('level-complete-screen');
+        const recap = document.getElementById('level-recap');
+        const btnNext = document.getElementById('btn-next-level');
+        if (recap) {
+            recap.textContent = `Coups utilises : ${movesUsed}`;
+        }
+        if (btnNext) {
+            if (window.MAPS && window.MAPS[nextIdx]) {
+                btnNext.textContent = 'Niveau Suivant';
+                btnNext.style.display = '';
+            } else {
+                btnNext.textContent = 'Victoire !';
+            }
+        }
+        if (screen) {
+            screen.classList.add('active');
+        }
+    }
+
+    // f3 : Afficher l'écran "Game Over"
+    showGameOverScreen() {
+        const screen = document.getElementById('game-over-screen');
+        if (screen) {
+            screen.classList.add('active');
+        }
     }
 
     draw() {

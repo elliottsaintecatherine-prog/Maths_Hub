@@ -33,16 +33,16 @@ Par défaut : relecture statique et test manuel via live server si nécessaire.
 
 ## ÉTAT DU PROJET
 
-**GROUPE COURANT : B** (Map & Rendu) — enchaîner automatiquement dans cette conversation
+**GROUPE COURANT : C** (Le Joueur) — enchaîner automatiquement dans cette conversation
 
 Quand tu termines un micro-prompt du groupe courant : coche [x], passe au suivant automatiquement, update PROCHAINE ACTION. Quand tout le groupe est [x], mets à jour GROUPE COURANT avec le groupe suivant et arrête.
 
 Groupes restants (dans l'ordre) :
 1. Prompt 0 (Squelette) [x]
 2. a1→a6 (Fondations) [x]
-3. b1→b4 (Map & Rendu) ← COURANT
-4. c1→c5 (Le Joueur)
-5. d1→d5 (Cartes)
+3. b1→b4 (Map & Rendu) [x]
+4. c1→c5 (Le Joueur) [x]
+5. d1→d5 (Cartes) ← COURANT
 6. e1→e5 (Le Monstre)
 7. f1→f4 (UI)
 8. g1→g4 (Polish)
@@ -54,7 +54,15 @@ Groupes restants (dans l'ordre) :
 | A2  | Input Manager          | [x]    |
 | A3  | Asset Manager          | [x]    |
 | A4  | Génération IA          | [x]    |
-| B1  | LevelManager           | [ ]    |
+| B1  | LevelManager           | [x]    |
+| B2  | MapRenderer Grille     | [x]    |
+| B3  | MapRenderer Murs       | [x]    |
+| B4  | Fog of War & Éclairage | [x]    |
+| C1  | Entité Player          | [x]    |
+| C2  | Déplacement Grid       | [x]    |
+| C3  | Collisions Statiques   | [x]    |
+| C4  | Pièges (Trappes)       | [x]    |
+| C5  | Sortie                 | [x]    |
 
 > Référence complète : voir `wiki/games/vecthorreur-reborn-prompts.md` dans l'Obsidian (dossier gemini).
 
@@ -62,25 +70,6 @@ Groupes restants (dans l'ordre) :
 
 ## PROCHAINE ACTION
 
-**Prompt b1 — LevelManager : Parsing des données (~45min)**
+**En attente du groupe D (Cartes)**
 
-CONTEXTE : L'ancien fichier `v-data.js` contient toutes les maps. Il faut créer un système pour parser ces données de collision et les rendre utilisables par notre nouveau moteur.
-
-FICHIERS À LIRE :
-- L'ancien `v-data.js` (pour comprendre la structure `MAPS`).
-
-CONTENU :
-1. Créer `src/systems/LevelManager.js` (Classe `LevelManager`) :
-   - Méthode `loadMap(mapIndex, rawData)`.
-   - Extraire les murs (`walls`), les obstacles (`obstacles`), les trappes (`deathZones`) et les sorties (`exits`).
-   - Normaliser les coordonnées (x1, y1, x2, y2) dans un format standard `{x, y, w, h}`.
-   - Stocker la palette de couleurs de la map courante.
-2. Créer une grille de collision virtuelle optimisée pour des requêtes rapides `isWalkable(x, y)`.
-
-CONTRAINTES :
-- Ne pas modifier `v-data.js` original, juste le lire et parser ses données.
-- Convertir l'ancienne logique de coordonnées (qui allait de -20 à +20) en coordonnées internes (0 à 40) si nécessaire, ou la conserver en documentant clairement le choix.
-
-VÉRIFICATION : Script Python ou JS local testant si un point `(0,0)` sur la map 0 est considéré comme `walkable` ou bloqué selon l'ancien `v-data.js`.
-
-À la fin : coche [x] b1 et copie le texte de b2 dans PROCHAINE ACTION.
+CONTEXTE : Les prompts du groupe D n'ont pas encore été définis dans le fichier `vecthorreur-reborn-prompts.md`. Il faut que l'utilisateur les génère et les ajoute avant de poursuivre.

@@ -177,6 +177,11 @@
     </div>
     <div id="deck-area"></div>
     <script src="v-data.js"></script>
+    <script>
+        // Pont : exposer les const de v-data.js sur window pour les modules ES6
+        window.MAPS = MAPS;
+        if (typeof ROOMS !== 'undefined') window.ROOMS = ROOMS;
+    </script>
     <script type="module" src="src/main.js"></script>
 </body>
 </html>

@@ -35,7 +35,7 @@ Par défaut : relecture statique et test manuel via live server si nécessaire.
 
 **PROJET 2D : COMPLET** — Tous les groupes A→G sont terminés.
 
-**GROUPE COURANT : H** (Conversion 3D) — en cours
+**GROUPE COURANT : AUCUN** — Tous les groupes de développement sont terminés.
 
 Groupes terminés :
 1. Prompt 0 (Squelette) [x]
@@ -89,6 +89,6 @@ Groupes terminés :
 
 ## PROCHAINE ACTION
 
-**Groupe H — Conversion 3D (Three.js)**
+**Projet Terminé !**
 
-À définir : remplacer le rendu Canvas 2D par Three.js WebGL pour une vue 3D troisième personne, tout en conservant l'architecture de jeu existante (LevelManager, Player, Monster, DeckManager, GameStateManager, etc.).
+Félicitations, la refonte complète de Vecthorreur Reborn (incluant la conversion 3D) a été exécutée avec succès. Le jeu est prêt à être testé et distribué.

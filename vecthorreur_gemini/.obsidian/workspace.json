@@ -185,6 +185,7 @@
   },
   "active": "1e5bbbdd39b62a55",
   "lastOpenFiles": [
+    "test.html",
     "src/systems/MapRenderer3D.js",
     "src/core/Renderer3D.js",
     "src/systems/AudioManager.js",

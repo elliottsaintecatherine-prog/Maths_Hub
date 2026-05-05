@@ -1,31 +1,11 @@
 {
-  "version": 1,
-  "servers": [
+  "version": "0.0.1",
+  "configurations": [
     {
-      "name": "Scolaris Hub",
-      "type": "static",
-      "command": "python -m http.server 8080",
-      "cwd": ".",
-      "port": 8080,
-      "url": "http://localhost:8080",
-      "note": "No build step — pure static HTML/JS/CSS. Requires Python 3.",
-      "entryPoints": {
-        "Hub principal": "http://localhost:8080/index.html",
-        "Profil joueur": "http://localhost:8080/profile.html",
-        "Le Voleur de Copies": "http://localhost:8080/Le_Voleur/le_voleur.html",
-        "Neural Knockout": "http://localhost:8080/neural_knockout/neural_knockout.html",
-        "Vecthorreur Reborn": "http://localhost:8080/vecthorreur/index.html"
-      },
-      "alternatives": [
-        {
-          "name": "live-server (auto-reload)",
-          "command": "npx live-server --port=8080 --open=index.html"
-        },
-        {
-          "name": "serve (npx)",
-          "command": "npx serve -l 8080 ."
-        }
-      ]
+      "name": "vecthorreur-server",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8080"],
+      "port": 8080
     }
   ]
 }

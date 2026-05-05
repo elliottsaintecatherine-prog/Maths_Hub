@@ -15,11 +15,8 @@ Tout le travail se fait **exclusivement** dans ce dossier `vecthorreur/`.
 
 ```
 vecthorreur/
-  index.html          # Point d'entrée HTML (version Reborn)
-  vecthorreur.html    # Ancienne version (conserver comme référence)
-  vecthorreur.js      # Ancien code monolithique (ne pas modifier)
+  index.html          # Point d'entrée HTML (unique version Reborn ES6)
   v-data.js           # Données des maps (ne jamais modifier)
-  gfx.js              # Renderer graphique (référence)
   src/
     main.js           # Point d'entrée ES6 module
     core/

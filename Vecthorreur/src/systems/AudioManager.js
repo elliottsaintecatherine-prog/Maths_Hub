@@ -25,7 +25,12 @@ export default class AudioManager {
      * Initialise l'AudioContext (doit être appelé après une interaction utilisateur).
      */
     init() {
-        if (this.ctx) return;
+        if (this.ctx) {
+            if (this.ctx.state === 'suspended') {
+                this.ctx.resume().catch(err => console.warn('[AudioManager] resume:', err));
+            }
+            return;
+        }
         console.log("[AudioManager] Initialisation AudioContext...");
         try {
             this.ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -34,6 +39,21 @@ export default class AudioManager {
             this.masterGain.gain.value = 0.6;
             this.masterGain.connect(this.ctx.destination);
             console.log("[AudioManager] ✓ MasterGain connecté");
+            // Chrome/Safari : autoplay policy — resume après création (le clic JOUER fournit le user gesture)
+            if (this.ctx.state === 'suspended') {
+                this.ctx.resume()
+                    .then(() => console.log("[AudioManager] ✓ AudioContext resumed, state:", this.ctx.state))
+                    .catch(err => console.warn('[AudioManager] resume failed:', err));
+            }
+            // Filet de sécurité (mobile/Safari) : reprendre sur n'importe quelle interaction
+            const resumeOnGesture = () => {
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume().catch(() => {});
+                }
+            };
+            ['click', 'touchstart', 'keydown'].forEach(ev => {
+                window.addEventListener(ev, resumeOnGesture, { passive: true });
+            });
         } catch (err) {
             console.error("[AudioManager] ✗ Erreur création AudioContext:", err);
         }

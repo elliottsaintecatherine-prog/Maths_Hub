@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Vecthorreur - Haunted Manor Audio Engine</title>
+    <style>
+        body { background: #080503; color: #8a6a2a; font-family: 'Georgia', serif; display: flex; flex-direction: column; align-items: center; padding: 40px; margin: 0; user-select: none; }
+        h1 { color: #f5d070; text-transform: uppercase; letter-spacing: 10px; margin-bottom: 0; font-weight: normal; font-size: 2.2em; border-bottom: 1px solid #3d2810; padding-bottom: 20px; }
+        .subtitle { color: #6a4a2a; margin-top: 10px; margin-bottom: 40px; font-size: 0.9em; letter-spacing: 4px; font-style: italic; }
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; max-width: 1050px; }
+        .card { 
+            background: #100b07; border: 1px solid #2a1d0d; padding: 30px 20px; cursor: pointer; 
+            transition: all 0.4s ease; text-align: center; border-radius: 4px; 
+        }
+        .card:hover { background: #1a1208; border-color: #8a6a2a; }
+        .card.active { border-color: #f5d070; background: #22150a; box-shadow: inset 0 0 40px rgba(0,0,0,0.9), 0 0 15px rgba(138,106,42,0.2); }
+        .card h3 { margin: 0 0 15px; color: #f5d070; font-weight: normal; font-size: 1.2em; letter-spacing: 1px; }
+        .card p { font-size: 0.75em; color: #8a6a2a; line-height: 1.6; margin: 0; font-family: sans-serif; }
+        .controls { margin-top: 50px; }
+        .stop-btn { 
+            background: transparent; border: 1px solid #4a0000; color: #cc4444; 
+            padding: 12px 40px; cursor: pointer; font-size: 0.8em; letter-spacing: 2px; 
+            text-transform: uppercase; transition: 0.3s; font-family: sans-serif;
+        }
+        .stop-btn:hover { background: #4a0000; color: #fff; }
+    </style>
+</head>
+<body>
+    <h1>VECTHORREUR</h1>
+    <div class="subtitle">MAP 1 - LE MANOIR HANTÉ</div>
+    
+    <div class="grid" id="grid"></div>
+
+    <div class="controls">
+        <button class="stop-btn" onclick="stopAll()">SILENCE</button>
+    </div>
+
+    <script>
+        const PRESETS = {
+            V1: { name: "The Grandfather Clock", desc: "Tic-tac asymétrique résonnant dans le hall d'entrée vide." },
+            V2: { name: "Groaning Floorboards", desc: "Craquements de vieux bois étirés au plafond." },
+            V3: { name: "Cursed Music Box", desc: "Mélodie lointaine, fausse et hésitante d'une boîte à musique." },
+            V4: { name: "Storm Outside", desc: "Vent engouffré sous les portes et grondements sourds." },
+            V5: { name: "The Midnight Bell", desc: "Immense cloche lugubre dont l'écho ne s'arrête jamais." },
+            V6: { name: "Spectral Whispers", desc: "Souffles et chuchotements organiques dans les murs." }
+        };
+
+        let audioCtx = null;
+        let activeNodes = [];
+        let masterGain = null;
+        let convolver = null;
+
+        function createImpulseResponse(ctx, duration, decay) {
+            const length = ctx.sampleRate * duration;
+            const impulse = ctx.createBuffer(2, length, ctx.sampleRate);
+            for (let c = 0; c < 2; c++) {
+                const channelData = impulse.getChannelData(c);
+                for (let i = 0; i < length; i++) {
+                    channelData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay);
+                }
+            }
+            return impulse;
+        }
+
+        function createNoise(ctx, type='white') {
+            const bufferSize = ctx.sampleRate * 3; 
+            const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+            const output = buffer.getChannelData(0);
+            let lastOut = 0;
+            for (let i = 0; i < bufferSize; i++) {
+                const white = Math.random() * 2 - 1;
+                if (type === 'brown') {
+                    output[i] = (lastOut + (0.02 * white)) / 1.02;
+                    lastOut = output[i];
+                    output[i] *= 3.5;
+                } else if (type === 'pink') {
+                    // Simple pink noise approximation
+                    output[i] = (lastOut * 0.9) + (white * 0.1);
+                    lastOut = output[i];
+                    output[i] *= 2.0;
+                } else {
+                    output[i] = white;
+                }
+            }
+            const source = ctx.createBufferSource();
+            source.buffer = buffer;
+            source.loop = true;
+            return source;
+        }
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                masterGain = audioCtx.createGain();
+                masterGain.gain.value = 0.9;
+                masterGain.connect(audioCtx.destination);
+
+                // Huge empty manor hall reverb
+                convolver = audioCtx.createConvolver();
+                convolver.buffer = createImpulseResponse(audioCtx, 3.5, 2.5);
+                
+                const dry = audioCtx.createGain(); dry.gain.value = 0.7;
+                const wet = audioCtx.createGain(); wet.gain.value = 0.8;
+                
+                wet.connect(convolver);
+                convolver.connect(masterGain);
+                dry.connect(masterGain);
+
+                // Attach a route method for ease
+                audioCtx.routeToMaster = (node, mix = 0.5) => { // mix 1.0 = full reverb
+                    const nodeDry = audioCtx.createGain(); nodeDry.gain.value = 1 - mix;
+                    const nodeWet = audioCtx.createGain(); nodeWet.gain.value = mix;
+                    node.connect(nodeDry); nodeDry.connect(dry);
+                    node.connect(nodeWet); nodeWet.connect(wet);
+                };
+            }
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function playVariant(id) {
+            initAudio();
+            stopAll();
+
+            if (id === 'V1') { // Grandfather Clock
+                let tick = true;
+                const playTick = () => {
+                    const osc = audioCtx.createOscillator();
+                    const g = audioCtx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(tick ? 150 : 120, audioCtx.currentTime); // High/Low pitch
+                    
+                    g.gain.setValueAtTime(0, audioCtx.currentTime);
+                    g.gain.linearRampToValueAtTime(0.5, audioCtx.currentTime + 0.01);
+                    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+                    
+                    osc.connect(g);
+                    audioCtx.routeToMaster(g, 0.8); // Lots of echo
+                    
+                    osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+                    tick = !tick;
+                };
+                playTick();
+                const interval = setInterval(playTick, 1100); // 1.1s to feel slow and dread-inducing
+                activeNodes.push({ stop: () => clearInterval(interval) });
+            }
+
+            if (id === 'V2') { // Groaning Floorboards
+                const noise = createNoise(audioCtx, 'brown');
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.Q.value = 8.0;
+
+                const lfo = audioCtx.createOscillator();
+                lfo.type = 'sine';
+                lfo.frequency.value = 0.5; // Slow groaning
+                const lfoGain = audioCtx.createGain();
+                lfoGain.gain.value = 300;
+                filter.frequency.value = 400; // Wood creak frequency
+                
+                lfo.connect(lfoGain); lfoGain.connect(filter.frequency);
+                
+                const g = audioCtx.createGain();
+                g.gain.setValueAtTime(0, audioCtx.currentTime);
+                g.gain.linearRampToValueAtTime(0.6, audioCtx.currentTime + 1);
+
+                noise.connect(filter); filter.connect(g);
+                audioCtx.routeToMaster(g, 0.4);
+
+                noise.start(); lfo.start();
+                activeNodes.push(noise, lfo, g);
+            }
+
+            if (id === 'V3') { // Cursed Music Box
+                // D Minor scale frequencies
+                const scale = [293.66, 329.63, 349.23, 392.00, 440.00, 466.16, 523.25, 587.33];
+                const playNote = () => {
+                    const osc = audioCtx.createOscillator();
+                    const g = audioCtx.createGain();
+                    
+                    // Pitch instability (Wow/Flutter effect)
+                    const detuneLfo = audioCtx.createOscillator();
+                    detuneLfo.frequency.value = 3;
+                    const detuneGain = audioCtx.createGain();
+                    detuneGain.gain.value = 15; // cents
+                    detuneLfo.connect(detuneGain); detuneGain.connect(osc.detune);
+
+                    osc.type = 'sine';
+                    const freq = scale[Math.floor(Math.random() * scale.length)];
+                    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                    
+                    g.gain.setValueAtTime(0, audioCtx.currentTime);
+                    g.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.05);
+                    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 2.0);
+                    
+                    osc.connect(g);
+                    audioCtx.routeToMaster(g, 0.9); // Deep in the background
+                    
+                    osc.start(); detuneLfo.start();
+                    setTimeout(() => { try{ osc.stop(); detuneLfo.stop(); }catch(e){} }, 3000);
+                };
+                
+                playNote();
+                const interval = setInterval(() => {
+                    if (Math.random() > 0.3) playNote(); // Hesitant playing
+                }, 800);
+                activeNodes.push({ stop: () => clearInterval(interval) });
+            }
+
+            if (id === 'V4') { // Storm Outside
+                const wind = createNoise(audioCtx, 'brown');
+                const lp = audioCtx.createBiquadFilter();
+                lp.type = 'lowpass';
+                
+                const windLfo = audioCtx.createOscillator();
+                windLfo.frequency.value = 0.1; // Very slow gusts
+                const windLfoGain = audioCtx.createGain();
+                windLfoGain.gain.value = 300;
+                lp.frequency.value = 400; // Muffled outside
+                
+                windLfo.connect(windLfoGain); windLfoGain.connect(lp.frequency);
+                
+                const g = audioCtx.createGain();
+                g.gain.setValueAtTime(0.5, audioCtx.currentTime);
+
+                wind.connect(lp); lp.connect(g);
+                audioCtx.routeToMaster(g, 0.3);
+
+                wind.start(); windLfo.start();
+                activeNodes.push(wind, windLfo, g);
+
+                // Occasional thunder rumble
+                const thunderInterval = setInterval(() => {
+                    if (Math.random() > 0.7) {
+                        const tg = audioCtx.createGain();
+                        tg.gain.setValueAtTime(0, audioCtx.currentTime);
+                        tg.gain.linearRampToValueAtTime(0.8, audioCtx.currentTime + 0.5); // Attack
+                        tg.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 4.0); // Release
+                        
+                        const thunderLp = audioCtx.createBiquadFilter();
+                        thunderLp.type = 'lowpass';
+                        thunderLp.frequency.setValueAtTime(100, audioCtx.currentTime);
+                        thunderLp.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 3);
+
+                        const thunderNoise = createNoise(audioCtx, 'brown');
+                        thunderNoise.connect(thunderLp); thunderLp.connect(tg);
+                        audioCtx.routeToMaster(tg, 0.5);
+                        thunderNoise.start();
+                        setTimeout(() => thunderNoise.stop(), 5000);
+                    }
+                }, 4000);
+                activeNodes.push({ stop: () => clearInterval(thunderInterval) });
+            }
+
+            if (id === 'V5') { // The Midnight Bell
+                const playBell = () => {
+                    const freqs = [100, 240, 380, 520, 660]; // Inharmonic overtones
+                    freqs.forEach((f, i) => {
+                        const osc = audioCtx.createOscillator();
+                        const g = audioCtx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.value = f;
+                        
+                        g.gain.setValueAtTime(0, audioCtx.currentTime);
+                        g.gain.linearRampToValueAtTime(0.4 / (i+1), audioCtx.currentTime + 0.02);
+                        // Longer decay for lower frequencies
+                        g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + (8 / (i+1)));
+                        
+                        osc.connect(g);
+                        audioCtx.routeToMaster(g, 0.8);
+                        
+                        osc.start();
+                        setTimeout(() => { try{ osc.stop(); }catch(e){} }, 9000);
+                    });
+                };
+                playBell();
+                const interval = setInterval(playBell, 12000); // Tolls very slowly
+                activeNodes.push({ stop: () => clearInterval(interval) });
+            }
+
+            if (id === 'V6') { // Spectral Whispers
+                const noise = createNoise(audioCtx, 'pink');
+                
+                // Formant filters to simulate human vocal tract (whispers)
+                const f1 = audioCtx.createBiquadFilter(); f1.type = 'bandpass'; f1.Q.value = 5;
+                const f2 = audioCtx.createBiquadFilter(); f2.type = 'bandpass'; f2.Q.value = 5;
+                
+                // Slowly sweep formants to simulate whispering mouth movements
+                const lfo = audioCtx.createOscillator(); lfo.frequency.value = 0.2;
+                const g1 = audioCtx.createGain(); g1.gain.value = 300; f1.frequency.value = 700;
+                const g2 = audioCtx.createGain(); g2.gain.value = 500; f2.frequency.value = 1200;
+                
+                lfo.connect(g1); g1.connect(f1.frequency);
+                lfo.connect(g2); g2.connect(f2.frequency);
+                
+                const outGain = audioCtx.createGain();
+                outGain.gain.setValueAtTime(0, audioCtx.currentTime);
+                outGain.gain.linearRampToValueAtTime(1.5, audioCtx.currentTime + 2); // Boosted because bandpass cuts a lot
+                
+                noise.connect(f1); f1.connect(outGain);
+                noise.connect(f2); f2.connect(outGain);
+                
+                audioCtx.routeToMaster(outGain, 0.7);
+
+                noise.start(); lfo.start();
+                activeNodes.push(noise, lfo, outGain);
+            }
+        }
+
+        window.stopAll = () => {
+            activeNodes.forEach(n => { if (n.stop) n.stop(); else try{n.disconnect();}catch(e){} });
+            activeNodes = [];
+            document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
+        };
+
+        const grid = document.getElementById('grid');
+        for (const [id, data] of Object.entries(PRESETS)) {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `<h3>${data.name}</h3><p>${data.desc}</p>`;
+            card.onclick = () => {
+                document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
+                card.classList.add('active');
+                playVariant(id);
+            };
+            grid.appendChild(card);
+        }
+    </script>
+</body>
+</html>

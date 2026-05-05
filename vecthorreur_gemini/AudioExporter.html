@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Vecthorreur - Audio WAV Exporter</title>
+    <style>
+        body { background: #080503; color: #8a6a2a; font-family: monospace; display: flex; flex-direction: column; align-items: center; padding: 50px; }
+        h1 { color: #f5d070; }
+        button { background: #8a6a2a; color: #080503; padding: 15px 30px; font-size: 18px; font-weight: bold; cursor: pointer; border: none; margin: 20px; transition: 0.3s; }
+        button:hover { background: #f5d070; }
+        #status { font-size: 16px; margin-top: 20px; color: #fff; }
+        .success { color: #4CAF50; }
+    </style>
+</head>
+<body>
+    <h1>Extracteur Audio (WAV) - Vecthorreur</h1>
+    <p>Ce script génère les 4 pistes demandées en haute qualité (WAV 44.1kHz 16-bit) à partir des formules procédurales.</p>
+    
+    <button id="btn" onclick="generateAll()">Générer et Télécharger les 4 WAV</button>
+    <div id="status">En attente...</div>
+
+    <script>
+        // Fonction pour encoder l'AudioBuffer en fichier WAV
+        function audioBufferToWav(buffer) {
+            const numChannels = buffer.numberOfChannels;
+            const sampleRate = buffer.sampleRate;
+            const format = 1; // PCM
+            const bitDepth = 16;
+            
+            let result = new Uint8Array(44 + buffer.length * numChannels * 2);
+            let view = new DataView(result.buffer);
+            
+            function writeString(view, offset, string) {
+                for (let i = 0; i < string.length; i++) {
+                    view.setUint8(offset + i, string.charCodeAt(i));
+                }
+            }
+            
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + buffer.length * numChannels * 2, true);
+            writeString(view, 8, 'WAVE');
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, format, true);
+            view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * numChannels * 2, true);
+            view.setUint16(32, numChannels * 2, true);
+            view.setUint16(34, bitDepth, true);
+            writeString(view, 36, 'data');
+            view.setUint32(40, buffer.length * numChannels * 2, true);
+            
+            let offset = 44;
+            for (let i = 0; i < buffer.length; i++) {
+                for (let channel = 0; channel < numChannels; channel++) {
+                    let sample = buffer.getChannelData(channel)[i];
+                    sample = Math.max(-1, Math.min(1, sample));
+                    sample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+                    view.setInt16(offset, sample, true);
+                    offset += 2;
+                }
+            }
+            return new Blob([result], { type: 'audio/wav' });
+        }
+
+        function downloadBlob(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+        }
+
+        // Bruit procédural
+        function createNoiseBuffer(ctx, duration, type='brown') {
+            const bufferSize = ctx.sampleRate * duration;
+            const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+            const output = buffer.getChannelData(0);
+            let lastOut = 0;
+            for (let i = 0; i < bufferSize; i++) {
+                const white = Math.random() * 2 - 1;
+                if (type === 'brown') {
+                    output[i] = (lastOut + (0.02 * white)) / 1.02;
+                    lastOut = output[i];
+                    output[i] *= 3.5;
+                } else if (type === 'pink') {
+                    output[i] = (lastOut * 0.9) + (white * 0.1);
+                    lastOut = output[i];
+                    output[i] *= 2.0;
+                }
+            }
+            return buffer;
+        }
+
+        async function renderStorm() {
+            const duration = 10;
+            const ctx = new OfflineAudioContext(1, 44100 * duration, 44100);
+            const noise = ctx.createBufferSource();
+            noise.buffer = createNoiseBuffer(ctx, duration, 'brown');
+            
+            const lp = ctx.createBiquadFilter();
+            lp.type = 'lowpass';
+            lp.frequency.value = 400;
+
+            const lfo = ctx.createOscillator();
+            lfo.frequency.value = 0.1;
+            const lfoGain = ctx.createGain();
+            lfoGain.gain.value = 300;
+            lfo.connect(lfoGain); lfoGain.connect(lp.frequency);
+
+            noise.connect(lp); lp.connect(ctx.destination);
+            noise.start(0); lfo.start(0);
+
+            const buffer = await ctx.startRendering();
+            downloadBlob(audioBufferToWav(buffer), 'storm_outside.wav');
+        }
+
+        async function renderBell() {
+            const duration = 12;
+            const ctx = new OfflineAudioContext(1, 44100 * duration, 44100);
+            const freqs = [100, 240, 380, 520, 660];
+            
+            freqs.forEach((f, i) => {
+                const osc = ctx.createOscillator();
+                const g = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = f;
+                
+                g.gain.setValueAtTime(0, 0);
+                g.gain.linearRampToValueAtTime(0.4 / (i+1), 0.05);
+                g.gain.exponentialRampToValueAtTime(0.001, (8 / (i+1)));
+                
+                osc.connect(g); g.connect(ctx.destination);
+                osc.start(0);
+            });
+
+            const buffer = await ctx.startRendering();
+            downloadBlob(audioBufferToWav(buffer), 'midnight_bell.wav');
+        }
+
+        async function renderWhispers() {
+            const duration = 10;
+            const ctx = new OfflineAudioContext(1, 44100 * duration, 44100);
+            const noise = ctx.createBufferSource();
+            noise.buffer = createNoiseBuffer(ctx, duration, 'pink');
+            
+            const f1 = ctx.createBiquadFilter(); f1.type = 'bandpass'; f1.Q.value = 5;
+            const f2 = ctx.createBiquadFilter(); f2.type = 'bandpass'; f2.Q.value = 5;
+            
+            const lfo = ctx.createOscillator(); lfo.frequency.value = 0.2;
+            const g1 = ctx.createGain(); g1.gain.value = 300; f1.frequency.value = 700;
+            const g2 = ctx.createGain(); g2.gain.value = 500; f2.frequency.value = 1200;
+            
+            lfo.connect(g1); g1.connect(f1.frequency);
+            lfo.connect(g2); g2.connect(f2.frequency);
+            
+            const outGain = ctx.createGain(); outGain.gain.value = 1.5;
+            
+            noise.connect(f1); f1.connect(outGain);
+            noise.connect(f2); f2.connect(outGain);
+            outGain.connect(ctx.destination);
+
+            noise.start(0); lfo.start(0);
+
+            const buffer = await ctx.startRendering();
+            downloadBlob(audioBufferToWav(buffer), 'spectral_whispers.wav');
+        }
+
+        async function renderMusicBox() {
+            const duration = 15;
+            const ctx = new OfflineAudioContext(1, 44100 * duration, 44100);
+            const scale = [293.66, 329.63, 349.23, 392.00, 440.00, 466.16, 523.25];
+            
+            for(let i=0; i<8; i++) {
+                const time = i * 1.5 + Math.random() * 0.5;
+                const osc = ctx.createOscillator();
+                const g = ctx.createGain();
+                
+                const detuneLfo = ctx.createOscillator();
+                detuneLfo.frequency.value = 3;
+                const detuneGain = ctx.createGain();
+                detuneGain.gain.value = 15;
+                detuneLfo.connect(detuneGain); detuneGain.connect(osc.detune);
+
+                osc.type = 'sine';
+                osc.frequency.value = scale[Math.floor(Math.random() * scale.length)];
+                
+                g.gain.setValueAtTime(0, time);
+                g.gain.linearRampToValueAtTime(0.3, time + 0.05);
+                g.gain.exponentialRampToValueAtTime(0.001, time + 2.0);
+                
+                osc.connect(g); g.connect(ctx.destination);
+                osc.start(time); detuneLfo.start(time);
+                osc.stop(time + 3); detuneLfo.stop(time + 3);
+            }
+
+            const buffer = await ctx.startRendering();
+            downloadBlob(audioBufferToWav(buffer), 'cursed_music_box.wav');
+        }
+
+        async function generateAll() {
+            const status = document.getElementById('status');
+            const btn = document.getElementById('btn');
+            btn.disabled = true;
+            try {
+                status.innerText = "Génération de Storm Outside (1/4)...";
+                await renderStorm();
+                
+                status.innerText = "Génération de The Midnight Bell (2/4)...";
+                await renderBell();
+                
+                status.innerText = "Génération de Spectral Whispers (3/4)...";
+                await renderWhispers();
+                
+                status.innerText = "Génération de Cursed Music Box (4/4)...";
+                await renderMusicBox();
+
+                status.innerHTML = "<span class='success'>Terminé ! Les 4 fichiers WAV ont été téléchargés.</span>";
+            } catch(e) {
+                status.innerText = "Erreur: " + e.message;
+            }
+            btn.disabled = false;
+        }
+    </script>
+</body>
+</html>

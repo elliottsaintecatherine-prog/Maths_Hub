@@ -45,15 +45,6 @@ export default class AudioManager {
                     .then(() => console.log("[AudioManager] ✓ AudioContext resumed, state:", this.ctx.state))
                     .catch(err => console.warn('[AudioManager] resume failed:', err));
             }
-            // Filet de sécurité (mobile/Safari) : reprendre sur n'importe quelle interaction
-            const resumeOnGesture = () => {
-                if (this.ctx && this.ctx.state === 'suspended') {
-                    this.ctx.resume().catch(() => {});
-                }
-            };
-            ['click', 'touchstart', 'keydown'].forEach(ev => {
-                window.addEventListener(ev, resumeOnGesture, { passive: true });
-            });
         } catch (err) {
             console.error("[AudioManager] ✗ Erreur création AudioContext:", err);
         }

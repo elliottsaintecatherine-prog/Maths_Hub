@@ -25,6 +25,69 @@ let currentMapSound = null;
 document.addEventListener('click', () => {
   SFX.ambiance.play().catch(() => {});
 }, { once: true });
+
+// ─── Manor Music data (étape 1 : juste chargé) ────────────
+const MANOR = {
+  loops: [
+    Object.assign(new Audio('assets/audio/manor/cursed_music_box.wav'),  { loop: true, volume: 0.32 }),
+    Object.assign(new Audio('assets/audio/manor/spectral_whispers.wav'), { loop: true, volume: 0.40 }),
+  ],
+  alts: [
+    Object.assign(new Audio('assets/audio/manor/storm_outside.wav'),  { volume: 0.18 }),
+    Object.assign(new Audio('assets/audio/manor/midnight_bell.wav'),  { volume: 0.45 }),
+  ],
+  altActive: false,
+  altTimer: null,
+  altLastIdx: -1,
+};
+MANOR.loops.forEach(a => { a.onerror = () => {}; });
+MANOR.alts.forEach(a => { a.onerror = () => {}; });
+window.MANOR = MANOR;
+
+function _scheduleManorAlt() {
+  if (!MANOR.altActive) return;
+  // Délai entre 10-30s ; 1 chance sur 4 d'avoir un long silence (30-60s)
+  const longSilence = Math.random() < 0.25;
+  const delay = longSilence
+    ? 30000 + Math.random() * 30000
+    : 10000 + Math.random() * 20000;
+  MANOR.altTimer = setTimeout(() => {
+    if (!MANOR.altActive) return;
+    let idx = MANOR.altLastIdx === -1
+      ? Math.floor(Math.random() * MANOR.alts.length)
+      : (MANOR.altLastIdx + 1) % MANOR.alts.length;
+    MANOR.altLastIdx = idx;
+    const snd = MANOR.alts[idx];
+    try { snd.currentTime = 0; } catch (e) {}
+    // Le whisper (loops[1]) reste en boucle ; on baisse son volume pendant l'alt pour éviter
+    // la sensation de superposition de "vent". Restauré à la fin de l'alt.
+    const whisper = MANOR.loops[1];
+    const baseWhisperVol = whisper.volume;
+    whisper.volume = baseWhisperVol * 0.25;
+    const restoreWhisper = () => { whisper.volume = baseWhisperVol; };
+    snd.play().catch(() => {});
+    snd.onended = () => { restoreWhisper(); _scheduleManorAlt(); };
+    setTimeout(() => {
+      if (MANOR.altActive && snd.paused) { restoreWhisper(); _scheduleManorAlt(); }
+    }, 30000);
+  }, delay);
+}
+
+function startManorMusic() {
+  if (MANOR.altActive) return;
+  MANOR.altActive = true;
+  MANOR.loops.forEach(a => { try { a.currentTime = 0; } catch(e){} a.play().catch(() => {}); });
+  _scheduleManorAlt();
+}
+
+function stopManorMusic() {
+  MANOR.altActive = false;
+  if (MANOR.altTimer) { clearTimeout(MANOR.altTimer); MANOR.altTimer = null; }
+  MANOR.loops.forEach(a => { a.pause(); try { a.currentTime = 0; } catch(e){} });
+  MANOR.alts.forEach(a => { a.pause(); try { a.currentTime = 0; } catch(e){} });
+}
+// ──────────────────────────────────────────────────────────
+
 function playSound(key) {
   if (globalMute) return;
   const s = SFX[key]; if (!s) return;
@@ -52,6 +115,8 @@ function setMusicMute(muted) {
   musicMute = muted;
   SFX.ambiance.muted = muted;
   SFX.map.forEach(s => { s.muted = muted; });
+  MANOR.loops.forEach(a => { a.muted = muted; });
+  MANOR.alts.forEach(a => { a.muted = muted; });
   const toggle = document.getElementById('toggle-music');
   if (toggle) toggle.checked = !muted;
 }
@@ -59,6 +124,12 @@ function setMusicMute(muted) {
 function setMusicVolume(v) {
   SFX.ambiance.volume = v / 100;
   SFX.map.forEach(s => { s.volume = v / 100; });
+  // Garde le ratio relatif des layers Manor
+  const f = v / 100;
+  MANOR.loops[0].volume = 0.32 * f;
+  MANOR.loops[1].volume = 0.40 * f;
+  MANOR.alts[0].volume  = 0.18 * f; // storm_outside : volume bas
+  MANOR.alts[1].volume  = 0.45 * f; // midnight_bell
   const disp = document.getElementById('vol-display');
   if (disp) disp.textContent = v;
 }
@@ -1999,8 +2070,15 @@ function startGame(mapIndex, playerTurnOverride, preserveSession = false) {
   resizeCanvas();
   // Son ambiant de la map
   if (currentMapSound) { currentMapSound.pause(); currentMapSound.currentTime = 0; }
-  currentMapSound = SFX.map[mapIndex] || null;
-  if (currentMapSound) currentMapSound.play().catch(() => {});
+  stopManorMusic();
+  if (mapIndex === 0) {
+    // Map 1 (Manoir Blackwood) : musique 4 layers .wav
+    currentMapSound = null;
+    startManorMusic();
+  } else {
+    currentMapSound = SFX.map[mapIndex] || null;
+    if (currentMapSound) currentMapSound.play().catch(() => {});
+  }
   openOverlay();
 
   // Affiche le HUD score

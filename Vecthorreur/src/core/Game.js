@@ -63,7 +63,9 @@ export default class Game {
 
     async init(manifest) {
         try {
+            console.log("[Game] Initialisation...");
             await this.assets.loadAll(manifest);
+            console.log("[Game] ✓ Assets chargés");
             if (window.MAPS) {
                 this.levelManager.loadMap(0, window.MAPS);
                 const ps = this.levelManager.playerSpawn;
@@ -73,22 +75,36 @@ export default class Game {
 
                 // h2 : Construire la scène 3D
                 this._buildScene3D();
+                console.log("[Game] ✓ Scène 3D construite");
             }
             this.deckManager.generateHand();
             this.stateManager.updateHUD();
             this.setupMenus();
+
+            console.log("[Game] Initialisation AudioManager...");
             this.audioManager.init();
+            console.log("[Game] ✓ AudioManager initialisé");
+
+            console.log("[Game] Démarrage drone...");
             this.audioManager.startDrone();
+            console.log("[Game] ✓ Drone démarré");
 
             // A1 : charger la musique du Manoir et la démarrer si on est sur map 0
+            console.log("[Game] Chargement audio Manoir...");
             await this.audioManager.loadManorAudio();
+            console.log("[Game] ✓ Audio Manoir chargé");
+            console.log("[Game] currentMapIndex:", this.levelManager.currentMapIndex);
             if (this.levelManager.currentMapIndex === 0) {
+                console.log("[Game] Démarrage musique Manoir...");
                 this.audioManager.startManorMusic();
+                console.log("[Game] ✓ Musique Manoir démarrée");
             }
 
+            console.log("[Game] Démarrage boucle de jeu...");
             this.start();
         } catch (error) {
             console.error("Erreur fatale lors du chargement des assets:", error);
+            console.error(error.stack);
         }
     }
 

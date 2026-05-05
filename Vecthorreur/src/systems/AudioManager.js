@@ -26,10 +26,17 @@ export default class AudioManager {
      */
     init() {
         if (this.ctx) return;
-        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-        this.masterGain = this.ctx.createGain();
-        this.masterGain.gain.value = 0.6;
-        this.masterGain.connect(this.ctx.destination);
+        console.log("[AudioManager] Initialisation AudioContext...");
+        try {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            console.log("[AudioManager] ✓ AudioContext créé, state:", this.ctx.state);
+            this.masterGain = this.ctx.createGain();
+            this.masterGain.gain.value = 0.6;
+            this.masterGain.connect(this.ctx.destination);
+            console.log("[AudioManager] ✓ MasterGain connecté");
+        } catch (err) {
+            console.error("[AudioManager] ✗ Erreur création AudioContext:", err);
+        }
     }
 
     /**
@@ -131,8 +138,16 @@ export default class AudioManager {
      * g4 — Démarrer le drone d'ambiance.
      */
     startDrone() {
-        if (!this.ctx || this.droneOsc) return;
+        if (!this.ctx) {
+            console.error("[AudioManager] startDrone() : AudioContext null!");
+            return;
+        }
+        if (this.droneOsc) {
+            console.warn("[AudioManager] startDrone() : Drone déjà actif");
+            return;
+        }
 
+        console.log("[AudioManager] Démarrage du drone...");
         const now = this.ctx.currentTime;
 
         // Oscillateur principal (basse fréquence)
@@ -199,7 +214,11 @@ export default class AudioManager {
      * 2 sons en alternance random (5-20s gap) : storm_outside, midnight_bell
      */
     async loadManorAudio() {
-        if (!this.ctx) return;
+        if (!this.ctx) {
+            console.error("[AudioManager] ✗ loadManorAudio() : AudioContext est null!");
+            return;
+        }
+        console.log("[AudioManager] Chargement audio du Manoir...");
         const files = {
             cursed_music_box: 'assets/audio/manor/cursed_music_box.wav',
             spectral_whispers: 'assets/audio/manor/spectral_whispers.wav',
@@ -208,22 +227,38 @@ export default class AudioManager {
         };
         const promises = Object.entries(files).map(async ([key, url]) => {
             try {
+                console.log(`[AudioManager] Fetch ${key} from ${url}...`);
                 const res = await fetch(url);
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}`);
+                }
                 const arr = await res.arrayBuffer();
+                console.log(`[AudioManager] Décodage ${key}...`);
                 const buf = await this.ctx.decodeAudioData(arr);
                 this.manorBuffers[key] = buf;
+                console.log(`[AudioManager] ✓ ${key} chargé (${buf.duration.toFixed(2)}s)`);
             } catch (err) {
-                console.warn(`[AudioManager] Échec chargement ${key}:`, err);
+                console.error(`[AudioManager] ✗ Échec ${key}:`, err);
             }
         });
         await Promise.all(promises);
+        console.log(`[AudioManager] ✓ Chargement complet. Buffers: ${Object.keys(this.manorBuffers).length}/4`);
     }
 
     /**
      * Démarre la musique du Manoir : superposition + alternance.
      */
     startManorMusic() {
-        if (!this.ctx || this.manorAltActive) return;
+        if (!this.ctx) {
+            console.error("[AudioManager] startManorMusic() : AudioContext null!");
+            return;
+        }
+        if (this.manorAltActive) {
+            console.warn("[AudioManager] startManorMusic() : Musique du Manoir déjà active");
+            return;
+        }
+        console.log("[AudioManager] Démarrage musique du Manoir...");
+        console.log(`[AudioManager] Buffers disponibles: ${Object.keys(this.manorBuffers).join(', ')}`);
         this.manorAltActive = true;
 
         // Gain global pour les layers superposés (boucle continue)
@@ -314,6 +349,7 @@ export default class AudioManager {
 
         const buf = this.manorBuffers[altKeys[idx]];
         if (buf) {
+            console.log(`[AudioManager] Lecture alternance: ${altKeys[idx]}`);
             const src = this.ctx.createBufferSource();
             src.buffer = buf;
             src.connect(this.manorAltGain);
@@ -321,6 +357,7 @@ export default class AudioManager {
             // Quand le son finit, programmer le prochain
             src.onended = () => this._scheduleNextAltSound();
         } else {
+            console.warn(`[AudioManager] Buffer manquant: ${altKeys[idx]}`);
             // Buffer manquant : programmer le prochain quand même
             this._scheduleNextAltSound();
         }

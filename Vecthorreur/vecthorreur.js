@@ -27,34 +27,36 @@ document.addEventListener('click', () => {
 }, { once: true });
 
 // ─── Manor Music — réglages faciles ──────────────────────────
-//   Délai normal entre deux sons alternés  (min et max en secondes)
-const MANOR_DELAY_MIN =  10;   // secondes
-const MANOR_DELAY_MAX =  30;   // secondes
-//   Délai long (silence rare, 1 chance sur 4)
-const MANOR_LONG_DELAY_MIN =  30;  // secondes
-const MANOR_LONG_DELAY_MAX =  60;  // secondes
+//   Délai normal entre deux sons (min et max en secondes)
+const MANOR_DELAY_MIN =  50;   // secondes
+const MANOR_DELAY_MAX = 150;   // secondes
+//   Délai long (silence rare)
+const MANOR_LONG_DELAY_MIN = 150;  // secondes
+const MANOR_LONG_DELAY_MAX = 300;  // secondes
 //   Probabilité d'avoir un long silence (0 = jamais, 1 = toujours)
 const MANOR_LONG_SILENCE_CHANCE = 0.25;
-//   Durée du fondu entrant / sortant de la tempête (en ms)
-const MANOR_STORM_FADE_MS = 2000;
+//   Durée du fondu entrant / sortant pour TOUS les sons (anti-clic)
+const MANOR_FADE_MS = 1500;
 // ─────────────────────────────────────────────────────────────
 
 // ─── Manor Music data ────────────
+// 3 sons alternés au hasard (un seul vent : storm_outside)
 const MANOR = {
-  loops: [
-    Object.assign(new Audio('assets/audio/manor/cursed_music_box.wav'),  { loop: true, volume: 0.32 }),
-    Object.assign(new Audio('assets/audio/manor/spectral_whispers.wav'), { loop: true, volume: 0.40 }),
-  ],
   alts: [
-    Object.assign(new Audio('assets/audio/manor/storm_outside.wav'),  { volume: 0.10 }),
-    Object.assign(new Audio('assets/audio/manor/midnight_bell.wav'),  { volume: 0.45 }),
+    Object.assign(new Audio('assets/audio/manor/cursed_music_box.wav'), { volume: 0.32 }),
+    Object.assign(new Audio('assets/audio/manor/storm_outside.wav'),    { volume: 0.10 }),
+    Object.assign(new Audio('assets/audio/manor/midnight_bell.wav'),    { volume: 0.45 }),
   ],
   altActive: false,
   altTimer: null,
   altLastIdx: -1,
 };
-MANOR.loops.forEach(a => { a.onerror = () => {}; });
-MANOR.alts.forEach(a => { a.onerror = () => {}; });
+// Volume de référence pour chaque alt (utilisé pour le fondu et setMusicVolume)
+const MANOR_BASE_VOLS = [0.32, 0.10, 0.45];
+MANOR.alts.forEach((a, i) => {
+  a.onerror = () => {};
+  a._baseVol = MANOR_BASE_VOLS[i];
+});
 
 // Fondu progressif (fade in / fade out) — compatible new Audio()
 function _fadeVol(snd, fromVol, toVol, durationMs, onDone) {
@@ -71,81 +73,75 @@ function _fadeVol(snd, fromVol, toVol, durationMs, onDone) {
   return iv;
 }
 
+function _playManorAlt() {
+  if (!MANOR.altActive) return;
+  // Choix d'un index différent du précédent
+  let idx;
+  do { idx = Math.floor(Math.random() * MANOR.alts.length); }
+  while (MANOR.alts.length > 1 && idx === MANOR.altLastIdx);
+  MANOR.altLastIdx = idx;
+  const snd = MANOR.alts[idx];
+  try { snd.currentTime = 0; } catch (e) {}
+
+  const FADE_MS = MANOR_FADE_MS;
+  let done = false;
+  const finish = () => {
+    if (done) return;
+    done = true;
+    snd.ontimeupdate = null;
+    snd.onended = null;
+    _scheduleManorAlt();
+  };
+
+  // Fondu entrant
+  const targetVol = snd._baseVol;
+  snd.volume = 0;
+  snd.play().catch(() => {});
+  _fadeVol(snd, 0, targetVol, FADE_MS);
+
+  // Fondu sortant : déclenché quand il reste FADE_MS avant la fin
+  snd.ontimeupdate = () => {
+    if (!done && snd.duration > 0 && (snd.duration - snd.currentTime) <= FADE_MS / 1000) {
+      done = true;
+      snd.ontimeupdate = null;
+      _fadeVol(snd, snd.volume, 0, FADE_MS * 0.85, () => {
+        try { snd.pause(); } catch(e){}
+        _scheduleManorAlt();
+      });
+    }
+  };
+  snd.onended = finish; // filet de sécurité si le son est trop court
+
+  // Sécurité globale
+  setTimeout(() => {
+    if (MANOR.altActive && snd.paused && !done) finish();
+  }, 60000);
+}
+
 function _scheduleManorAlt() {
   if (!MANOR.altActive) return;
   const longSilence = Math.random() < MANOR_LONG_SILENCE_CHANCE;
   const delay = longSilence
     ? (MANOR_LONG_DELAY_MIN + Math.random() * (MANOR_LONG_DELAY_MAX - MANOR_LONG_DELAY_MIN)) * 1000
     : (MANOR_DELAY_MIN      + Math.random() * (MANOR_DELAY_MAX      - MANOR_DELAY_MIN     )) * 1000;
-  MANOR.altTimer = setTimeout(() => {
-    if (!MANOR.altActive) return;
-    let idx = MANOR.altLastIdx === -1
-      ? Math.floor(Math.random() * MANOR.alts.length)
-      : (MANOR.altLastIdx + 1) % MANOR.alts.length;
-    MANOR.altLastIdx = idx;
-    const snd = MANOR.alts[idx];
-    try { snd.currentTime = 0; } catch (e) {}
-
-    // Baisser le whisper pour éviter la superposition de "vent"
-    const whisper = MANOR.loops[1];
-    const baseWhisperVol = whisper.volume;
-    whisper.volume = baseWhisperVol * 0.25;
-
-    const isStorm = (idx === 0);
-    const FADE_MS = MANOR_STORM_FADE_MS;
-
-    // Callback unique (protégé contre le double appel)
-    let done = false;
-    const finish = () => {
-      if (done) return;
-      done = true;
-      snd.ontimeupdate = null;
-      snd.onended = null;
-      whisper.volume = baseWhisperVol;
-      _scheduleManorAlt();
-    };
-
-    if (isStorm) {
-      // ── Tempête : fondu entrant + sortant ──
-      const targetVol = snd.volume; // volume cible (peut avoir été ajusté par setMusicVolume)
-      snd.volume = 0;
-      snd.play().catch(() => {});
-      _fadeVol(snd, 0, targetVol, FADE_MS);
-
-      // Déclencher le fondu sortant quand il reste ~FADE_MS avant la fin
-      snd.ontimeupdate = () => {
-        if (!done && snd.duration > 0 && (snd.duration - snd.currentTime) <= FADE_MS / 1000) {
-          done = true; // bloque ontimeupdate et onended
-          snd.ontimeupdate = null;
-          _fadeVol(snd, snd.volume, 0, FADE_MS * 0.85, finish);
-        }
-      };
-      snd.onended = finish; // filet de sécurité si le son est trop court
-    } else {
-      // ── Cloche : pas de fondu ──
-      snd.play().catch(() => {});
-      snd.onended = finish;
-    }
-
-    // Sécurité globale : si le son ne joue toujours pas après 30s
-    setTimeout(() => {
-      if (MANOR.altActive && snd.paused && !done) finish();
-    }, 30000);
-  }, delay);
+  MANOR.altTimer = setTimeout(_playManorAlt, delay);
 }
 
 function startManorMusic() {
   if (MANOR.altActive) return;
   MANOR.altActive = true;
-  MANOR.loops.forEach(a => { try { a.currentTime = 0; } catch(e){} a.play().catch(() => {}); });
   _scheduleManorAlt();
 }
 
 function stopManorMusic() {
   MANOR.altActive = false;
   if (MANOR.altTimer) { clearTimeout(MANOR.altTimer); MANOR.altTimer = null; }
-  MANOR.loops.forEach(a => { a.pause(); try { a.currentTime = 0; } catch(e){} });
-  MANOR.alts.forEach(a => { a.pause(); try { a.currentTime = 0; } catch(e){} });
+  MANOR.alts.forEach(a => {
+    a.ontimeupdate = null;
+    a.onended = null;
+    a.pause();
+    try { a.currentTime = 0; } catch(e){}
+  });
 }
 // ──────────────────────────────────────────────────────────
 
@@ -176,7 +172,6 @@ function setMusicMute(muted) {
   musicMute = muted;
   SFX.ambiance.muted = muted;
   SFX.map.forEach(s => { s.muted = muted; });
-  MANOR.loops.forEach(a => { a.muted = muted; });
   MANOR.alts.forEach(a => { a.muted = muted; });
   const toggle = document.getElementById('toggle-music');
   if (toggle) toggle.checked = !muted;
@@ -185,12 +180,9 @@ function setMusicMute(muted) {
 function setMusicVolume(v) {
   SFX.ambiance.volume = v / 100;
   SFX.map.forEach(s => { s.volume = v / 100; });
-  // Garde le ratio relatif des layers Manor
+  // Met à jour les volumes de référence des 3 sons du manoir
   const f = v / 100;
-  MANOR.loops[0].volume = 0.32 * f;
-  MANOR.loops[1].volume = 0.40 * f;
-  MANOR.alts[0].volume  = 0.10 * f; // storm_outside : volume bas
-  MANOR.alts[1].volume  = 0.45 * f; // midnight_bell
+  MANOR.alts.forEach((a, i) => { a._baseVol = MANOR_BASE_VOLS[i] * f; });
   const disp = document.getElementById('vol-display');
   if (disp) disp.textContent = v;
 }

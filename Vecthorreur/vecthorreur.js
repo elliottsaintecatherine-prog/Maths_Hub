@@ -130,7 +130,9 @@ function _scheduleManorAlt() {
 function startManorMusic() {
   if (MANOR.altActive) return;
   MANOR.altActive = true;
-  _scheduleManorAlt();
+  // 1er son tout de suite (sinon long silence à l'entrée du manoir),
+  // les suivants utilisent les délais aléatoires
+  _playManorAlt();
 }
 
 function stopManorMusic() {

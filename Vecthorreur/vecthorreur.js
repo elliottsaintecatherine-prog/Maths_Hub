@@ -1471,30 +1471,34 @@ function showScreamer(callback) {
   playSound('screamer');
   const el = document.getElementById('screamer');
   const face = el.querySelector('#screamer-face');
-  // C3 — Map 1 (Manoir Blackwood) : screamer custom Tim Jacobus
-  if (gameState.currentMap === 0) {
+  const text = el.querySelector('#screamer-text');
+  // C3 — Map 1 (Manoir Blackwood) : screamer custom plein écran + shake
+  const manoirMode = (gameState.currentMap === 0);
+  if (manoirMode) {
     face.style.backgroundImage = "url('assets/images/map_1/screamer_manoir.png')";
-    face.style.backgroundSize = 'cover';
-    face.style.backgroundPosition = 'center';
     face.classList.add('screamer-img-mode');
+    el.classList.add('has-img-mode');
   } else {
     face.style.backgroundImage = '';
     face.classList.remove('screamer-img-mode');
+    el.classList.remove('has-img-mode');
   }
+  const duration = manoirMode ? 1400 : 850;
   el.style.display = 'flex';
   // Force reflow pour relancer l'animation à chaque fois
   void el.offsetWidth;
   el.style.animation = 'none';
   face.style.animation = 'none';
-  el.querySelector('#screamer-text').style.animation = 'none';
+  text.style.animation = 'none';
   void el.offsetWidth;
-  el.style.animation = 'screamer-flash 0.85s ease-out forwards';
-  face.style.animation = 'screamer-zoom 0.85s ease-out forwards';
-  el.querySelector('#screamer-text').style.animation = 'screamer-text-pop 0.85s ease-out forwards';
+  el.style.animation = `screamer-flash ${duration}ms ease-out forwards`;
+  // En mode Manoir, l'animation du visage vient du CSS (.screamer-img-mode → screamer-manoir)
+  if (!manoirMode) face.style.animation = 'screamer-zoom 0.85s ease-out forwards';
+  text.style.animation = `screamer-text-pop ${Math.min(duration, 900)}ms ease-out forwards`;
   setTimeout(() => {
     el.style.display = 'none';
     callback();
-  }, 900);
+  }, duration);
 }
 
 function gameOver(byMonster = false) {

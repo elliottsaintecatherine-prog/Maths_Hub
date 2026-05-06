@@ -26,14 +26,27 @@ document.addEventListener('click', () => {
   SFX.ambiance.play().catch(() => {});
 }, { once: true });
 
-// ─── Manor Music data (étape 1 : juste chargé) ────────────
+// ─── Manor Music — réglages faciles ──────────────────────────
+//   Délai normal entre deux sons alternés  (min et max en secondes)
+const MANOR_DELAY_MIN =  10;   // secondes
+const MANOR_DELAY_MAX =  30;   // secondes
+//   Délai long (silence rare, 1 chance sur 4)
+const MANOR_LONG_DELAY_MIN =  30;  // secondes
+const MANOR_LONG_DELAY_MAX =  60;  // secondes
+//   Probabilité d'avoir un long silence (0 = jamais, 1 = toujours)
+const MANOR_LONG_SILENCE_CHANCE = 0.25;
+//   Durée du fondu entrant / sortant de la tempête (en ms)
+const MANOR_STORM_FADE_MS = 2000;
+// ─────────────────────────────────────────────────────────────
+
+// ─── Manor Music data ────────────
 const MANOR = {
   loops: [
     Object.assign(new Audio('assets/audio/manor/cursed_music_box.wav'),  { loop: true, volume: 0.32 }),
     Object.assign(new Audio('assets/audio/manor/spectral_whispers.wav'), { loop: true, volume: 0.40 }),
   ],
   alts: [
-    Object.assign(new Audio('assets/audio/manor/storm_outside.wav'),  { volume: 0.18 }),
+    Object.assign(new Audio('assets/audio/manor/storm_outside.wav'),  { volume: 0.10 }),
     Object.assign(new Audio('assets/audio/manor/midnight_bell.wav'),  { volume: 0.45 }),
   ],
   altActive: false,
@@ -42,15 +55,28 @@ const MANOR = {
 };
 MANOR.loops.forEach(a => { a.onerror = () => {}; });
 MANOR.alts.forEach(a => { a.onerror = () => {}; });
-window.MANOR = MANOR;
+
+// Fondu progressif (fade in / fade out) — compatible new Audio()
+function _fadeVol(snd, fromVol, toVol, durationMs, onDone) {
+  const steps = 20;
+  const stepMs = durationMs / steps;
+  const delta = (toVol - fromVol) / steps;
+  let step = 0;
+  snd.volume = Math.max(0, Math.min(1, fromVol));
+  const iv = setInterval(() => {
+    step++;
+    snd.volume = Math.max(0, Math.min(1, fromVol + delta * step));
+    if (step >= steps) { clearInterval(iv); if (onDone) onDone(); }
+  }, stepMs);
+  return iv;
+}
 
 function _scheduleManorAlt() {
   if (!MANOR.altActive) return;
-  // Délai entre 10-30s ; 1 chance sur 4 d'avoir un long silence (30-60s)
-  const longSilence = Math.random() < 0.25;
+  const longSilence = Math.random() < MANOR_LONG_SILENCE_CHANCE;
   const delay = longSilence
-    ? 30000 + Math.random() * 30000
-    : 10000 + Math.random() * 20000;
+    ? (MANOR_LONG_DELAY_MIN + Math.random() * (MANOR_LONG_DELAY_MAX - MANOR_LONG_DELAY_MIN)) * 1000
+    : (MANOR_DELAY_MIN      + Math.random() * (MANOR_DELAY_MAX      - MANOR_DELAY_MIN     )) * 1000;
   MANOR.altTimer = setTimeout(() => {
     if (!MANOR.altActive) return;
     let idx = MANOR.altLastIdx === -1
@@ -59,16 +85,51 @@ function _scheduleManorAlt() {
     MANOR.altLastIdx = idx;
     const snd = MANOR.alts[idx];
     try { snd.currentTime = 0; } catch (e) {}
-    // Le whisper (loops[1]) reste en boucle ; on baisse son volume pendant l'alt pour éviter
-    // la sensation de superposition de "vent". Restauré à la fin de l'alt.
+
+    // Baisser le whisper pour éviter la superposition de "vent"
     const whisper = MANOR.loops[1];
     const baseWhisperVol = whisper.volume;
     whisper.volume = baseWhisperVol * 0.25;
-    const restoreWhisper = () => { whisper.volume = baseWhisperVol; };
-    snd.play().catch(() => {});
-    snd.onended = () => { restoreWhisper(); _scheduleManorAlt(); };
+
+    const isStorm = (idx === 0);
+    const FADE_MS = MANOR_STORM_FADE_MS;
+
+    // Callback unique (protégé contre le double appel)
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      snd.ontimeupdate = null;
+      snd.onended = null;
+      whisper.volume = baseWhisperVol;
+      _scheduleManorAlt();
+    };
+
+    if (isStorm) {
+      // ── Tempête : fondu entrant + sortant ──
+      const targetVol = snd.volume; // volume cible (peut avoir été ajusté par setMusicVolume)
+      snd.volume = 0;
+      snd.play().catch(() => {});
+      _fadeVol(snd, 0, targetVol, FADE_MS);
+
+      // Déclencher le fondu sortant quand il reste ~FADE_MS avant la fin
+      snd.ontimeupdate = () => {
+        if (!done && snd.duration > 0 && (snd.duration - snd.currentTime) <= FADE_MS / 1000) {
+          done = true; // bloque ontimeupdate et onended
+          snd.ontimeupdate = null;
+          _fadeVol(snd, snd.volume, 0, FADE_MS * 0.85, finish);
+        }
+      };
+      snd.onended = finish; // filet de sécurité si le son est trop court
+    } else {
+      // ── Cloche : pas de fondu ──
+      snd.play().catch(() => {});
+      snd.onended = finish;
+    }
+
+    // Sécurité globale : si le son ne joue toujours pas après 30s
     setTimeout(() => {
-      if (MANOR.altActive && snd.paused) { restoreWhisper(); _scheduleManorAlt(); }
+      if (MANOR.altActive && snd.paused && !done) finish();
     }, 30000);
   }, delay);
 }
@@ -128,7 +189,7 @@ function setMusicVolume(v) {
   const f = v / 100;
   MANOR.loops[0].volume = 0.32 * f;
   MANOR.loops[1].volume = 0.40 * f;
-  MANOR.alts[0].volume  = 0.18 * f; // storm_outside : volume bas
+  MANOR.alts[0].volume  = 0.10 * f; // storm_outside : volume bas
   MANOR.alts[1].volume  = 0.45 * f; // midnight_bell
   const disp = document.getElementById('vol-display');
   if (disp) disp.textContent = v;

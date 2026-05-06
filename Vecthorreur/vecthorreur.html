@@ -763,6 +763,13 @@
       flex-direction: column; align-items: center; justify-content: center;
       animation: screamer-flash 0.85s ease-out forwards;
     }
+    /* C3 — Mode image (Manoir Map 1) : on cache le crâne CSS */
+    #screamer-face.screamer-img-mode::before,
+    #screamer-face.screamer-img-mode::after { display: none !important; }
+    #screamer-face.screamer-img-mode {
+      background-color: transparent !important;
+      filter: drop-shadow(0 0 40px rgba(255, 0, 0, 0.9));
+    }
     #screamer-face {
       width: clamp(200px, 40vw, 400px);
       height: clamp(200px, 40vw, 400px);
@@ -1059,8 +1066,8 @@
     <button class="btn-hacker" id="btn-win-menu">MENU</button>
   </div>
 
-  <script src="gfx.js?v=13"></script>
-  <script src="vecthorreur.js?v=13"></script>
+  <script src="gfx.js?v=14"></script>
+  <script src="vecthorreur.js?v=14"></script>
 
   <!-- Économie Scolaris — bouclier spectral -->
   <script type="module">

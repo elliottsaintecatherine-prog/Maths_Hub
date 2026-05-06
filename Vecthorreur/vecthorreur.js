@@ -27,16 +27,16 @@ document.addEventListener('click', () => {
 }, { once: true });
 
 // ─── Manor Music — réglages faciles ──────────────────────────
-//   Délai normal entre deux sons (min et max en secondes)
-const MANOR_DELAY_MIN =  50;   // secondes
-const MANOR_DELAY_MAX = 150;   // secondes
-//   Délai long (silence rare)
-const MANOR_LONG_DELAY_MIN = 150;  // secondes
-const MANOR_LONG_DELAY_MAX = 300;  // secondes
-//   Probabilité d'avoir un long silence (0 = jamais, 1 = toujours)
-const MANOR_LONG_SILENCE_CHANCE = 0.25;
+//   Délai de silence APRÈS le vent (storm_outside)
+const MANOR_DELAY_WIND_MIN  = 10;  // secondes
+const MANOR_DELAY_WIND_MAX  = 30;  // secondes
+//   Délai de silence APRÈS le piano (cursed_music_box) ou la cloche (midnight_bell)
+const MANOR_DELAY_OTHER_MIN =  0;  // secondes
+const MANOR_DELAY_OTHER_MAX = 45;  // secondes
 //   Durée du fondu entrant / sortant pour TOUS les sons (anti-clic)
 const MANOR_FADE_MS = 1500;
+// Index dans MANOR.alts : 0 = piano, 1 = vent, 2 = cloche
+const MANOR_WIND_IDX = 1;
 // ─────────────────────────────────────────────────────────────
 
 // ─── Manor Music data ────────────
@@ -120,10 +120,11 @@ function _playManorAlt() {
 
 function _scheduleManorAlt() {
   if (!MANOR.altActive) return;
-  const longSilence = Math.random() < MANOR_LONG_SILENCE_CHANCE;
-  const delay = longSilence
-    ? (MANOR_LONG_DELAY_MIN + Math.random() * (MANOR_LONG_DELAY_MAX - MANOR_LONG_DELAY_MIN)) * 1000
-    : (MANOR_DELAY_MIN      + Math.random() * (MANOR_DELAY_MAX      - MANOR_DELAY_MIN     )) * 1000;
+  // Le délai dépend du son qui VIENT de finir (MANOR.altLastIdx)
+  const wasWind = (MANOR.altLastIdx === MANOR_WIND_IDX);
+  const minS = wasWind ? MANOR_DELAY_WIND_MIN : MANOR_DELAY_OTHER_MIN;
+  const maxS = wasWind ? MANOR_DELAY_WIND_MAX : MANOR_DELAY_OTHER_MAX;
+  const delay = (minS + Math.random() * (maxS - minS)) * 1000;
   MANOR.altTimer = setTimeout(_playManorAlt, delay);
 }
 
@@ -1469,15 +1470,26 @@ function animateMonster(start, end, duration) {
 function showScreamer(callback) {
   playSound('screamer');
   const el = document.getElementById('screamer');
+  const face = el.querySelector('#screamer-face');
+  // C3 — Map 1 (Manoir Blackwood) : screamer custom Tim Jacobus
+  if (gameState.currentMap === 0) {
+    face.style.backgroundImage = "url('assets/images/map_1/screamer_manoir.png')";
+    face.style.backgroundSize = 'cover';
+    face.style.backgroundPosition = 'center';
+    face.classList.add('screamer-img-mode');
+  } else {
+    face.style.backgroundImage = '';
+    face.classList.remove('screamer-img-mode');
+  }
   el.style.display = 'flex';
   // Force reflow pour relancer l'animation à chaque fois
   void el.offsetWidth;
   el.style.animation = 'none';
-  el.querySelector('#screamer-face').style.animation = 'none';
+  face.style.animation = 'none';
   el.querySelector('#screamer-text').style.animation = 'none';
   void el.offsetWidth;
   el.style.animation = 'screamer-flash 0.85s ease-out forwards';
-  el.querySelector('#screamer-face').style.animation = 'screamer-zoom 0.85s ease-out forwards';
+  face.style.animation = 'screamer-zoom 0.85s ease-out forwards';
   el.querySelector('#screamer-text').style.animation = 'screamer-text-pop 0.85s ease-out forwards';
   setTimeout(() => {
     el.style.display = 'none';
@@ -1489,6 +1501,9 @@ function gameOver(byMonster = false) {
   clearInterval(monsterTimer); monsterTimer = null;
   gameState.mode = 'gameover';
   closeOverlay();
+  // Coupe toute musique de map (manoir + autres) à la mort
+  stopManorMusic();
+  if (currentMapSound) { currentMapSound.pause(); currentMapSound.currentTime = 0; }
   function showOutcome() {
     if (gameState.gameMode === 'multi' && gameState.playerTurn === 1) {
       gameState.playerResults[0] = { player: 1, won: false, moves: gameState.moveCount, health: gameState.health };
@@ -1520,6 +1535,9 @@ function levelComplete() {
   clearInterval(monsterTimer); monsterTimer = null;
   playSound('win');
   closeOverlay();
+  // Coupe toute musique de map (manoir + autres) à la fin du niveau
+  stopManorMusic();
+  if (currentMapSound) { currentMapSound.pause(); currentMapSound.currentTime = 0; }
   const highest = parseInt(localStorage.getItem('vhHighest') || '0');
   if (gameState.currentMap + 1 > highest) localStorage.setItem('vhHighest', gameState.currentMap + 1);
 

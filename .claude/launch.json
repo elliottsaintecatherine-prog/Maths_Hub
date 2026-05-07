@@ -2,7 +2,7 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "vecthorreur-server",
+      "name": "maths-hub",
       "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "http.server", "8080"],
       "port": 8080

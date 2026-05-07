@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chair de Poule — Le Manoir Blackwood</title>
+<style>
+  *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+  html, body { width:100%; height:100%; overflow:hidden; background:#080503; color:#f5d070; font-family:'Courier New', monospace; user-select:none; }
+  #game-canvas { position:absolute; top:0; left:0; width:100vw; height:100vh; image-rendering:pixelated; cursor:default; }
+
+  /* Panneau vecteurs (dépliable, en bas à gauche) */
+  #panel-vectors { position:fixed; left:12px; bottom:12px; width:340px; max-width:calc(100vw - 24px); background:rgba(8,5,3,0.92); border:1px solid #3d2810; border-radius:8px; padding:14px; z-index:50; transform:translateY(calc(100% - 42px)); transition:transform 0.25s ease-out; }
+  #panel-vectors.expanded { transform:translateY(0); }
+  #panel-handle { display:flex; justify-content:space-between; align-items:center; cursor:pointer; padding-bottom:8px; }
+  #panel-handle h3 { font-size:13px; letter-spacing:1px; color:#f5d070; }
+  #panel-handle .arrow { font-size:14px; transition:transform 0.25s; }
+  #panel-vectors.expanded #panel-handle .arrow { transform:rotate(180deg); }
+  #panel-body { padding-top:10px; border-top:1px solid #3d2810; }
+  .vec-row { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+  .vec-row label { font-size:11px; color:#8a6a2a; min-width:18px; }
+  .vec-row input { flex:1; background:#1a1208; border:1px solid #3d2810; color:#f5d070; padding:6px; font-family:inherit; font-size:13px; border-radius:4px; }
+  .vec-row input:focus { outline:1px solid #f5d070; }
+  .btn-play-vec { width:100%; padding:9px; margin-top:6px; background:#3d2810; border:1px solid #f5d070; color:#f5d070; font-family:inherit; font-size:13px; cursor:pointer; border-radius:4px; letter-spacing:1px; }
+  .btn-play-vec:hover { background:#5a3815; }
+
+  /* HUD coin haut-gauche : nom de la salle */
+  #room-label { position:fixed; top:12px; left:12px; padding:6px 12px; background:rgba(8,5,3,0.85); border:1px solid #3d2810; color:#f5d070; font-size:12px; letter-spacing:1px; z-index:40; border-radius:4px; }
+
+  /* Bouton retour hub */
+  #btn-hub { position:fixed; top:12px; right:12px; padding:6px 12px; background:rgba(8,5,3,0.85); border:1px solid #3d2810; color:#8a6a2a; font-family:inherit; font-size:11px; cursor:pointer; z-index:40; border-radius:4px; }
+  #btn-hub:hover { color:#f5d070; }
+
+  /* Effet vision noire (game over progressif) */
+  #vision-overlay { position:fixed; inset:0; pointer-events:none; background:radial-gradient(circle, transparent 30%, #000 100%); opacity:0; transition:opacity 0.5s; z-index:30; }
+
+  /* Game over scene */
+  #gameover { position:fixed; inset:0; background:#000; z-index:100; display:none; align-items:center; justify-content:center; flex-direction:column; gap:20px; }
+  #gameover.show { display:flex; }
+  #gameover h1 { font-size:36px; color:#5a0000; letter-spacing:3px; }
+  #gameover p { color:#8a6a2a; font-size:14px; }
+  #gameover button { margin-top:20px; padding:10px 24px; background:#3d2810; border:1px solid #f5d070; color:#f5d070; font-family:inherit; cursor:pointer; }
+</style>
+</head>
+<body>
+
+<canvas id="game-canvas"></canvas>
+
+<div id="room-label">— Hall d'Entrée —</div>
+<a id="btn-hub" href="../index.html">← Hub</a>
+
+<div id="panel-vectors">
+  <div id="panel-handle" onclick="document.getElementById('panel-vectors').classList.toggle('expanded')">
+    <h3>♦ DÉPLACEMENT VECTORIEL</h3>
+    <span class="arrow">▲</span>
+  </div>
+  <div id="panel-body">
+    <div class="vec-row">
+      <label>x =</label>
+      <input type="number" id="vec-x" value="0" step="1">
+    </div>
+    <div class="vec-row">
+      <label>y =</label>
+      <input type="number" id="vec-y" value="0" step="1">
+    </div>
+    <button class="btn-play-vec" id="btn-play-vec">▶ INVOQUER LE VECTEUR</button>
+  </div>
+</div>
+
+<div id="vision-overlay"></div>
+
+<div id="gameover">
+  <h1>HANTÉ</h1>
+  <p>Le Manoir t'a englouti...</p>
+  <button onclick="window.location.reload()">Recommencer</button>
+</div>
+
+<script src="chair-data.js?v=1"></script>
+<script src="chair.js?v=1"></script>
+
+</body>
+</html>

@@ -32,19 +32,19 @@ function resizeCanvas() {
 function fitRoomToScreen() {
   const room = MAP1 && MAP1.rooms[gameState.currentRoom];
   if (!room) return;
-  // En projection iso, la salle (W×H tiles) occupe à l'écran :
-  //   largeur  = (W + H) * TILE_W / 2
-  //   hauteur  = (W + H) * TILE_H / 2 + WALL_H (marge pour les murs hauts)
-  // On veut que ça rentre dans canvas avec padding.
-  const padX = 60, padY = 60;
+  // Iso projection : pour une salle WxH tiles
+  //   iso_width  = (W + H) * TILE_W / 2
+  //   iso_height = (W + H) * TILE_H / 2 + WALL_H
+  //              = (W + H) * TILE_W / 4 + 0.75 * TILE_W   (avec TILE_H=TILE_W/2, WALL_H=0.75*TILE_W)
+  // Padding minimal — on veut que la salle remplisse l'écran.
+  const padX = 8, padY = 8;
   const availW = canvas.width  - padX * 2;
-  const availH = canvas.height - padY * 2 - 100; // marge bas pour panneau
+  const availH = canvas.height - padY * 2;
   const wTiles = room.width + room.height;
-  // Ratio iso : TILE_H = TILE_W / 2 ; WALL_H = TILE_W * 0.75
-  const maxByW = availW / wTiles * 2;
-  const maxByH = availH / (wTiles * 0.5 + 1.5);
+  const maxByW = availW / (wTiles / 2);
+  const maxByH = availH / (wTiles / 4 + 0.75);
   TILE_W = Math.floor(Math.min(maxByW, maxByH));
-  TILE_W = Math.max(48, Math.min(192, TILE_W));
+  TILE_W = Math.max(48, Math.min(320, TILE_W));
   TILE_H = TILE_W / 2;
   WALL_H = TILE_W * 0.75;
 }
@@ -59,7 +59,7 @@ function tileToScreen(tx, ty) {
   // Caméra centrée sur la salle (pas sur le joueur) — vue immersive fixe par room
   const room = MAP1.rooms[gameState.currentRoom];
   const cx = canvas.width / 2;
-  const cy = canvas.height / 2 - 30; // décalage haut pour place au panneau
+  const cy = canvas.height / 2; // salle centrée plein écran
   const rcx = (room.width - 1) / 2;  // centre tile X
   const rcy = (room.height - 1) / 2; // centre tile Y
   const dx = tx - rcx;

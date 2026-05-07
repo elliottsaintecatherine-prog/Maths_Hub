@@ -9,8 +9,8 @@
 // Inspirées des thèmes Chair de Poule de chaque map
 const MAPS = [
   {
-    // Le Manoir Blackwood — manoir victorien 10 pièces, 3 sorties
-    name: "Le Manoir Blackwood", theme: "Manoir de la Terreur",
+    // Map 0 — Test (ancienne version monolithique du Manoir, conservée pour test)
+    name: "Manoir Blackwood — TEST (v0)", theme: "Manoir de la Terreur",
     bgColor: "#080503", gridColor: "#3d281088", accentColor: "#8a6a2a",
     monsterSpeed: 0.50,
     palette: {
@@ -112,6 +112,50 @@ const MAPS = [
       { x1:-20, y1: 6,  x2:-8,  y2:20,  name:"Laboratoire"       },
       { x1: 8,  y1: 6,  x2:20,  y2:20,  name:"Salle des Miroirs" },
       { x1:-8,  y1:16,  x2: 8,  y2:20,  name:"Salle du Trône"    }
+    ]
+  },
+  {
+    // MAP 1 — Manoir Blackwood (v1, en construction)
+    // Phase 2.1 : seul le Hall S1 est implémenté. Salles S2-S7+E1-E3 à venir.
+    // Design complet : voir [[vecthorreur-map1-manoir-prompts]] dans escbrain.
+    name: "Le Manoir Blackwood", theme: "Manoir de la Terreur",
+    bgColor: "#080503", gridColor: "#3d281088", accentColor: "#8a6a2a",
+    monsterSpeed: 0.50,
+    palette: {
+      player:       '#f5d070', playerDark: '#8a6820', playerHead: '#f0c840',
+      trailRGB:     '245,208,112',
+      monster:      '#c0ccd8', monsterGlow: '#7088a0', monsterEye: '#e8f4ff',
+      axisX:        '#f5d07022', axisY:  '#8090a822',
+      haloRGB:      '245,208,112', vecOverlay: '#f5d070'
+    },
+    // Spawn dans S1 Hall (centré, près de la porte d'entrée fermée au sud)
+    playerSpawn:  { x: 0, y: -18 },
+    monsterSpawn: { x: 0, y: 18 },
+    // Sortie placeholder au nord (en attendant les vraies sorties multi-salles)
+    exits: [
+      { x1: -1, y1: 19, x2: 1, y2: 20, label: "Sortie — Provisoire" }
+    ],
+    // S1 Hall = grande pièce simple pour tester (8m × 6m étendu à 40×40 placeholder)
+    // Murs périmétriques du domaine (extérieur) — temporaire avant ajout salles
+    walls: [
+      { x1:-20, y1:-20, x2:-19, y2: 20, color:"#1a1208" }, // mur W
+      { x1: 19, y1:-20, x2: 20, y2: 20, color:"#1a1208" }, // mur E
+      { x1:-20, y1:-20, x2: 20, y2:-19, color:"#1a1208" }, // mur S
+      { x1:-20, y1: 19, x2: -2, y2: 20, color:"#1a1208" }, // mur N gauche (sortie au centre)
+      { x1:  2, y1: 19, x2: 20, y2: 20, color:"#1a1208" }  // mur N droit
+    ],
+    obstacles: [
+      // Placeholder mobilier S1 Hall (sera remplacé par sprites D1)
+      { x1:-2,  y1:-20, x2: 2,  y2:-19, color:"#2a1a08", label:"Porte d'Entrée (fermée)" },
+      { x1:-15, y1:-16, x2:-13, y2:-14, color:"#3d3020", label:"Armure" },
+      { x1: 13, y1:-16, x2: 15, y2:-14, color:"#3d3020", label:"Armure" },
+      { x1:-15, y1: -8, x2:-13, y2: -7, color:"#3d2010", label:"Console" },
+      { x1: 13, y1: -8, x2: 15, y2: -7, color:"#3d2010", label:"Console" }
+    ],
+    deathZones: [],
+    safeZones: [], invertLogic: false,
+    rooms: [
+      { x1:-20, y1:-20, x2:20, y2:20, name:"Hall d'Entrée (placeholder)" }
     ]
   },
   {

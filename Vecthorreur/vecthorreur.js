@@ -218,8 +218,8 @@ function closeSettings() {
 // Inspirées des thèmes Chair de Poule de chaque map
 const MAPS = [
   {
-    // Le Manoir Blackwood — manoir victorien 10 pièces, 3 sorties
-    name: "Le Manoir Blackwood", theme: "Manoir de la Terreur",
+    // Map 0 — Test (ancienne version monolithique du Manoir, conservée pour test)
+    name: "Manoir Blackwood — TEST (v0)", theme: "Manoir de la Terreur",
     bgColor: "#080503", gridColor: "#3d281088", accentColor: "#8a6a2a",
     monsterSpeed: 0.50,
     palette: {
@@ -321,6 +321,45 @@ const MAPS = [
       { x1:-20, y1: 6,  x2:-8,  y2:20,  name:"Laboratoire"       },
       { x1: 8,  y1: 6,  x2:20,  y2:20,  name:"Salle des Miroirs" },
       { x1:-8,  y1:16,  x2: 8,  y2:20,  name:"Salle du Trône"    }
+    ]
+  },
+  {
+    // MAP 1 — Manoir Blackwood (v1, en construction)
+    // Phase 2.1 : seul le Hall S1 est implémenté. Salles S2-S7+E1-E3 à venir.
+    // Design complet : voir [[vecthorreur-map1-manoir-prompts]] dans escbrain.
+    name: "Le Manoir Blackwood", theme: "Manoir de la Terreur",
+    bgColor: "#080503", gridColor: "#3d281088", accentColor: "#8a6a2a",
+    monsterSpeed: 0.50,
+    palette: {
+      player:       '#f5d070', playerDark: '#8a6820', playerHead: '#f0c840',
+      trailRGB:     '245,208,112',
+      monster:      '#c0ccd8', monsterGlow: '#7088a0', monsterEye: '#e8f4ff',
+      axisX:        '#f5d07022', axisY:  '#8090a822',
+      haloRGB:      '245,208,112', vecOverlay: '#f5d070'
+    },
+    playerSpawn:  { x: 0, y: -18 },
+    monsterSpawn: { x: 0, y: 18 },
+    exits: [
+      { x1: -1, y1: 19, x2: 1, y2: 20, label: "Sortie — Provisoire" }
+    ],
+    walls: [
+      { x1:-20, y1:-20, x2:-19, y2: 20, color:"#1a1208" },
+      { x1: 19, y1:-20, x2: 20, y2: 20, color:"#1a1208" },
+      { x1:-20, y1:-20, x2: 20, y2:-19, color:"#1a1208" },
+      { x1:-20, y1: 19, x2: -2, y2: 20, color:"#1a1208" },
+      { x1:  2, y1: 19, x2: 20, y2: 20, color:"#1a1208" }
+    ],
+    obstacles: [
+      { x1:-2,  y1:-20, x2: 2,  y2:-19, color:"#2a1a08", label:"Porte d'Entrée (fermée)" },
+      { x1:-15, y1:-16, x2:-13, y2:-14, color:"#3d3020", label:"Armure" },
+      { x1: 13, y1:-16, x2: 15, y2:-14, color:"#3d3020", label:"Armure" },
+      { x1:-15, y1: -8, x2:-13, y2: -7, color:"#3d2010", label:"Console" },
+      { x1: 13, y1: -8, x2: 15, y2: -7, color:"#3d2010", label:"Console" }
+    ],
+    deathZones: [],
+    safeZones: [], invertLogic: false,
+    rooms: [
+      { x1:-20, y1:-20, x2:20, y2:20, name:"Hall d'Entrée (placeholder)" }
     ]
   },
   {
@@ -1472,8 +1511,8 @@ function showScreamer(callback) {
   const el = document.getElementById('screamer');
   const face = el.querySelector('#screamer-face');
   const text = el.querySelector('#screamer-text');
-  // C3 — Map 1 (Manoir Blackwood) : screamer custom plein écran + shake
-  const manoirMode = (gameState.currentMap === 0);
+  // C3 — Manoir Blackwood (MAP 0 test + MAP 1 v1) : screamer custom plein écran + shake
+  const manoirMode = (gameState.currentMap === 0 || gameState.currentMap === 1);
   if (manoirMode) {
     face.style.backgroundImage = "url('assets/images/map_1/screamer_manoir.png')";
     face.classList.add('screamer-img-mode');
@@ -2148,8 +2187,8 @@ function startGame(mapIndex, playerTurnOverride, preserveSession = false) {
   // Son ambiant de la map
   if (currentMapSound) { currentMapSound.pause(); currentMapSound.currentTime = 0; }
   stopManorMusic();
-  if (mapIndex === 0) {
-    // Map 1 (Manoir Blackwood) : musique 4 layers .wav
+  if (mapIndex === 0 || mapIndex === 1) {
+    // Manoir Blackwood (MAP 0 test + MAP 1 v1) : musique 4 layers .wav
     currentMapSound = null;
     startManorMusic();
   } else {

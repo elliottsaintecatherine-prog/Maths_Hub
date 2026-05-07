@@ -283,11 +283,15 @@ function render() {
   if (room.grid[pTileY] && room.grid[pTileY][pTileX] !== TILE.WALL) {
     drawTileHighlight(pTileX, pTileY);
   }
-  // 3. Murs (depth-sorted)
+  // 3. Murs (depth-sorted) — on masque les 2 murs avant (sud + est) pour voir l'intérieur
   const walls = [];
   for (let y = 0; y < room.height; y++) {
     for (let x = 0; x < room.width; x++) {
-      if (room.grid[y][x] === TILE.WALL) walls.push({x, y});
+      if (room.grid[y][x] !== TILE.WALL) continue;
+      // Skip murs avant : y == max (sud) et x == max (est)
+      if (y === room.height - 1) continue;
+      if (x === room.width - 1) continue;
+      walls.push({x, y});
     }
   }
   walls.sort((a, b) => (a.x + a.y) - (b.x + b.y));

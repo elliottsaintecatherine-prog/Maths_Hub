@@ -6,9 +6,10 @@
 // SECTION 1 — Constantes & état
 // ═══════════════════════════════════════════════════════════════
 
-const TILE_W = 64;     // largeur tile en px (vue iso 2:1)
-const TILE_H = 32;     // hauteur tile en px
-const WALL_H = 48;     // hauteur visuelle des murs
+// Tiles plus grandes = plus immersif. Recalculées à chaque resize pour fit la salle à l'écran.
+let TILE_W = 128;
+let TILE_H = 64;
+let WALL_H = 96;
 
 const canvas = document.getElementById('game-canvas');
 const ctx    = canvas.getContext('2d');
@@ -25,6 +26,27 @@ const gameState = {
 function resizeCanvas() {
   canvas.width  = window.innerWidth;
   canvas.height = window.innerHeight;
+  // Recalcule la taille des tiles pour que la salle remplisse l'écran
+  fitRoomToScreen();
+}
+function fitRoomToScreen() {
+  const room = MAP1 && MAP1.rooms[gameState.currentRoom];
+  if (!room) return;
+  // En projection iso, la salle (W×H tiles) occupe à l'écran :
+  //   largeur  = (W + H) * TILE_W / 2
+  //   hauteur  = (W + H) * TILE_H / 2 + WALL_H (marge pour les murs hauts)
+  // On veut que ça rentre dans canvas avec padding.
+  const padX = 60, padY = 60;
+  const availW = canvas.width  - padX * 2;
+  const availH = canvas.height - padY * 2 - 100; // marge bas pour panneau
+  const wTiles = room.width + room.height;
+  // Ratio iso : TILE_H = TILE_W / 2 ; WALL_H = TILE_W * 0.75
+  const maxByW = availW / wTiles * 2;
+  const maxByH = availH / (wTiles * 0.5 + 1.5);
+  TILE_W = Math.floor(Math.min(maxByW, maxByH));
+  TILE_W = Math.max(48, Math.min(192, TILE_W));
+  TILE_H = TILE_W / 2;
+  WALL_H = TILE_W * 0.75;
 }
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
@@ -34,13 +56,14 @@ resizeCanvas();
 // ═══════════════════════════════════════════════════════════════
 
 function tileToScreen(tx, ty) {
-  // Caméra centrée sur le joueur
+  // Caméra centrée sur la salle (pas sur le joueur) — vue immersive fixe par room
+  const room = MAP1.rooms[gameState.currentRoom];
   const cx = canvas.width / 2;
-  const cy = canvas.height / 2;
-  const px = gameState.player.x;
-  const py = gameState.player.y;
-  const dx = tx - px;
-  const dy = ty - py;
+  const cy = canvas.height / 2 - 30; // décalage haut pour place au panneau
+  const rcx = (room.width - 1) / 2;  // centre tile X
+  const rcy = (room.height - 1) / 2; // centre tile Y
+  const dx = tx - rcx;
+  const dy = ty - rcy;
   return {
     x: cx + (dx - dy) * (TILE_W / 2),
     y: cy + (dx + dy) * (TILE_H / 2)
@@ -51,7 +74,7 @@ function tileToScreen(tx, ty) {
 // SECTION 3 — Rendu
 // ═══════════════════════════════════════════════════════════════
 
-function drawTile(tx, ty, color, topShade) {
+function drawTile(tx, ty, color, gridColor) {
   const { x, y } = tileToScreen(tx, ty);
   ctx.fillStyle = color;
   ctx.beginPath();
@@ -61,11 +84,38 @@ function drawTile(tx, ty, color, topShade) {
   ctx.lineTo(x - TILE_W/2, y);
   ctx.closePath();
   ctx.fill();
-  if (topShade) {
-    ctx.strokeStyle = topShade;
+  if (gridColor) {
+    ctx.strokeStyle = gridColor;
     ctx.lineWidth = 1;
     ctx.stroke();
   }
+}
+
+function drawTileHighlight(tx, ty) {
+  const { x, y } = tileToScreen(tx, ty);
+  // Glow orange sous le joueur (style image de réf)
+  const grad = ctx.createRadialGradient(x, y, 0, x, y, TILE_W * 0.6);
+  grad.addColorStop(0, 'rgba(245, 208, 112, 0.45)');
+  grad.addColorStop(0.6, 'rgba(245, 130, 60, 0.18)');
+  grad.addColorStop(1, 'rgba(245, 130, 60, 0)');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.moveTo(x, y - TILE_H * 0.7);
+  ctx.lineTo(x + TILE_W * 0.7, y);
+  ctx.lineTo(x, y + TILE_H * 0.7);
+  ctx.lineTo(x - TILE_W * 0.7, y);
+  ctx.closePath();
+  ctx.fill();
+  // Bord net du tile
+  ctx.strokeStyle = '#f5a040';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x, y - TILE_H/2);
+  ctx.lineTo(x + TILE_W/2, y);
+  ctx.lineTo(x, y + TILE_H/2);
+  ctx.lineTo(x - TILE_W/2, y);
+  ctx.closePath();
+  ctx.stroke();
 }
 
 function drawWall(tx, ty) {
@@ -79,7 +129,7 @@ function drawWall(tx, ty) {
   ctx.lineTo(x - TILE_W/2, y - WALL_H);
   ctx.closePath();
   ctx.fill();
-  // Face W (gauche, plus claire)
+  // Face W (gauche, plus claire) — boiserie
   ctx.fillStyle = '#2a1a08';
   ctx.beginPath();
   ctx.moveTo(x - TILE_W/2, y - WALL_H);
@@ -88,6 +138,13 @@ function drawWall(tx, ty) {
   ctx.lineTo(x - TILE_W/2, y);
   ctx.closePath();
   ctx.fill();
+  // Détail boiserie face W : moulure verticale
+  ctx.strokeStyle = '#3d2810';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(x - TILE_W/4, y - WALL_H + TILE_H/4);
+  ctx.lineTo(x - TILE_W/4, y + TILE_H/4);
+  ctx.stroke();
   // Face S (droite, plus sombre)
   ctx.fillStyle = '#150d05';
   ctx.beginPath();
@@ -97,33 +154,64 @@ function drawWall(tx, ty) {
   ctx.lineTo(x, y + TILE_H/2);
   ctx.closePath();
   ctx.fill();
+  // Détail boiserie face S
+  ctx.strokeStyle = '#2a1a08';
+  ctx.beginPath();
+  ctx.moveTo(x + TILE_W/4, y - WALL_H + TILE_H/4);
+  ctx.lineTo(x + TILE_W/4, y + TILE_H/4);
+  ctx.stroke();
+  // Bord supérieur
+  ctx.strokeStyle = '#3d2810';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(x, y - TILE_H/2 - WALL_H);
+  ctx.lineTo(x + TILE_W/2, y - WALL_H);
+  ctx.lineTo(x, y + TILE_H/2 - WALL_H);
+  ctx.lineTo(x - TILE_W/2, y - WALL_H);
+  ctx.closePath();
+  ctx.stroke();
 }
 
 function drawDecor(d) {
   const { x, y } = tileToScreen(d.x, d.y);
   ctx.save();
   ctx.translate(x, y);
+  const s = TILE_W / 128; // facteur d'échelle (128 = base)
   if (d.type === 'armure') {
-    // Placeholder armure : rectangle vertical gris
     ctx.fillStyle = '#3d3020';
-    ctx.fillRect(-8, -42, 16, 42);
+    ctx.fillRect(-12*s, -84*s, 24*s, 84*s);
     ctx.fillStyle = '#5a4828';
-    ctx.fillRect(-6, -38, 12, 4);
+    ctx.fillRect(-9*s, -76*s, 18*s, 6*s);
+    // tête armure
+    ctx.fillStyle = '#2a2010';
+    ctx.beginPath();
+    ctx.arc(0, -90*s, 7*s, 0, Math.PI*2);
+    ctx.fill();
   } else if (d.type === 'console') {
     ctx.fillStyle = '#3d2010';
-    ctx.fillRect(-14, -16, 28, 16);
+    ctx.fillRect(-22*s, -32*s, 44*s, 32*s);
     ctx.fillStyle = '#5a3815';
-    ctx.fillRect(-14, -16, 28, 3);
+    ctx.fillRect(-22*s, -32*s, 44*s, 5*s);
+    // bougeoir
+    ctx.fillStyle = '#8a6a2a';
+    ctx.fillRect(-3*s, -42*s, 6*s, 10*s);
+    ctx.fillStyle = '#f5d070';
+    ctx.beginPath();
+    ctx.arc(0, -46*s, 3*s, 0, Math.PI*2);
+    ctx.fill();
   } else if (d.type === 'porte') {
     ctx.fillStyle = '#2a1a08';
-    ctx.fillRect(-12, -36, 24, 36);
+    ctx.fillRect(-18*s, -72*s, 36*s, 72*s);
     ctx.fillStyle = '#f5d070';
-    ctx.fillRect(8, -20, 3, 3);
+    ctx.fillRect(12*s, -38*s, 5*s, 5*s); // poignée
+    ctx.strokeStyle = '#3d2810';
+    ctx.lineWidth = 2*s;
+    ctx.strokeRect(-18*s, -72*s, 36*s, 72*s);
   }
   ctx.restore();
 }
 
-function drawPlayer() {
+function getPlayerScreenPos() {
   let px = gameState.player.x;
   let py = gameState.player.y;
   if (gameState.moveAnim) {
@@ -133,24 +221,34 @@ function drawPlayer() {
     px = a.fromX + (a.toX - a.fromX) * ease;
     py = a.fromY + (a.toY - a.fromY) * ease;
   }
-  // Position perso dessinée séparément (override de la caméra)
-  const cx = canvas.width / 2;
-  const cy = canvas.height / 2;
-  const dx = px - gameState.player.x;
-  const dy = py - gameState.player.y;
-  const sx = cx + (dx - dy) * (TILE_W / 2);
-  const sy = cy + (dx + dy) * (TILE_H / 2);
-  // Corps (or chaud)
+  return tileToScreen(px, py);
+}
+
+function drawPlayer() {
+  const { x: sx, y: sy } = getPlayerScreenPos();
+  const s = TILE_W / 128;
+  // Ombre au sol
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.beginPath();
+  ctx.ellipse(sx, sy + 4*s, 18*s, 8*s, 0, 0, Math.PI*2);
+  ctx.fill();
+  // Corps (silhouette explorateur or chaud)
+  ctx.fillStyle = '#8a6820';
+  ctx.fillRect(sx - 12*s, sy - 56*s, 24*s, 38*s); // manteau
+  ctx.fillStyle = '#5a4015';
+  ctx.fillRect(sx - 14*s, sy - 22*s, 28*s, 6*s); // ceinture
+  // Tête
   ctx.fillStyle = '#f5d070';
   ctx.beginPath();
-  ctx.ellipse(sx, sy - 16, 10, 8, 0, 0, Math.PI*2);
+  ctx.arc(sx, sy - 64*s, 9*s, 0, Math.PI*2);
   ctx.fill();
-  ctx.fillStyle = '#8a6820';
-  ctx.fillRect(sx - 7, sy - 22, 14, 6);
-  // Halo
-  ctx.fillStyle = 'rgba(245, 208, 112, 0.18)';
+  // Halo (lanterne)
+  const grad = ctx.createRadialGradient(sx, sy - 30*s, 0, sx, sy - 30*s, 60*s);
+  grad.addColorStop(0, 'rgba(245, 208, 112, 0.35)');
+  grad.addColorStop(1, 'rgba(245, 208, 112, 0)');
+  ctx.fillStyle = grad;
   ctx.beginPath();
-  ctx.ellipse(sx, sy, 24, 12, 0, 0, Math.PI*2);
+  ctx.arc(sx, sy - 30*s, 60*s, 0, Math.PI*2);
   ctx.fill();
 }
 
@@ -161,15 +259,31 @@ function render() {
   const room = MAP1.rooms[gameState.currentRoom];
   if (!room) return;
 
-  // 1. Sols (tous les tiles non-mur d'abord)
+  // Position joueur (animation interpolée pour highlight)
+  let pxAnim = gameState.player.x, pyAnim = gameState.player.y;
+  if (gameState.moveAnim) {
+    const a = gameState.moveAnim;
+    const t = Math.min(1, (performance.now() - a.t0) / a.dur);
+    const ease = t * t * (3 - 2 * t);
+    pxAnim = a.fromX + (a.toX - a.fromX) * ease;
+    pyAnim = a.fromY + (a.toY - a.fromY) * ease;
+  }
+  const pTileX = Math.round(pxAnim);
+  const pTileY = Math.round(pyAnim);
+
+  // 1. Sols avec grille subtile
   for (let y = 0; y < room.height; y++) {
     for (let x = 0; x < room.width; x++) {
       const t = room.grid[y][x];
       if (t === TILE.WALL) continue;
-      drawTile(x, y, '#2a2520', '#3d281044');
+      drawTile(x, y, '#2a2520', 'rgba(245, 130, 60, 0.18)');
     }
   }
-  // 2. Murs (depth-sorted : back-to-front en y croissant)
+  // 2. Highlight tile sous le joueur
+  if (room.grid[pTileY] && room.grid[pTileY][pTileX] !== TILE.WALL) {
+    drawTileHighlight(pTileX, pTileY);
+  }
+  // 3. Murs (depth-sorted)
   const walls = [];
   for (let y = 0; y < room.height; y++) {
     for (let x = 0; x < room.width; x++) {
@@ -179,11 +293,11 @@ function render() {
   walls.sort((a, b) => (a.x + a.y) - (b.x + b.y));
   walls.forEach(w => drawWall(w.x, w.y));
 
-  // 3. Décors (depth-sorted)
+  // 4. Décors (depth-sorted)
   const decor = [...(room.decor || [])].sort((a, b) => (a.x + a.y) - (b.x + b.y));
   decor.forEach(drawDecor);
 
-  // 4. Joueur (toujours au-dessus de tout)
+  // 5. Joueur
   drawPlayer();
 }
 

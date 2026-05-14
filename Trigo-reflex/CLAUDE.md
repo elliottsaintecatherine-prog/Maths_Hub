@@ -49,7 +49,7 @@ Ordre d'exécution complet : `b1 → b2 → c1 → d1 → d2`
 | b2 | handleClick + renderTrigCircle étendu     | [x]    |
 | c1 | Flux + classement (gameType)              | [x]    |
 | d1 | Polish (touch, hint, leaderboard)         | [x]    |
-| d2 | Image tête d'affiche dans le Hub          | [ ]    |
+| d2 | Image tête d'affiche dans le Hub          | [x]    |
 
 > Référence complète : voir `wiki/games/trigo-reflex-prompts.md` dans l'Obsidian.
 

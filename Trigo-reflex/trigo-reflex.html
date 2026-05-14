@@ -566,27 +566,23 @@
       <p class="subtitle">Mémorise les valeurs particulières de cos et sin sur le cercle trigonométrique. 5 questions, 3 choix.</p>
     </header>
 
-    <div class="eyebrow">Jeu</div>
-    <div class="difficulty-group" id="type-group">
-      <button class="diff-btn selected" data-type="reflex">
-        <span class="diff-name">Reflex</span>
-        <span class="diff-time">Angle donné · trouve la valeur</span>
+    <div class="eyebrow">Mode de jeu</div>
+    <div class="difficulty-group" id="mode-group">
+      <button class="diff-btn" data-type="reflex" data-diff="loisir">
+        <span class="diff-name">Reflex · Loisir</span>
+        <span class="diff-time">Angle → valeur · entraînement</span>
       </button>
-      <button class="diff-btn" data-type="clic">
-        <span class="diff-name">Clic</span>
-        <span class="diff-time">Valeur donnée · vise le cercle</span>
+      <button class="diff-btn selected" data-type="reflex" data-diff="competitif">
+        <span class="diff-name">Reflex · Compétitif</span>
+        <span class="diff-time">Angle → valeur · classement</span>
       </button>
-    </div>
-
-    <div class="eyebrow">Mode</div>
-    <div class="difficulty-group" id="diff-group">
-      <button class="diff-btn" data-diff="loisir">
-        <span class="diff-name">Loisir</span>
-        <span class="diff-time">Entraînement libre · sans score</span>
+      <button class="diff-btn" data-type="clic" data-diff="loisir">
+        <span class="diff-name">Clic · Loisir</span>
+        <span class="diff-time">Valeur → cercle · entraînement</span>
       </button>
-      <button class="diff-btn selected" data-diff="competitif">
-        <span class="diff-name">Compétitif</span>
-        <span class="diff-time">Score à la vitesse · classement</span>
+      <button class="diff-btn" data-type="clic" data-diff="competitif">
+        <span class="diff-name">Clic · Compétitif</span>
+        <span class="diff-time">Valeur → cercle · classement</span>
       </button>
     </div>
 
@@ -927,18 +923,12 @@ function renderTrigCircle(angleRad, opts = {}) {
   `;
 }
 
-// ─── Difficulty UI ─────────────────────────────────────────
-function setDifficulty(diff) {
-  state.difficulty = diff;
-  $$('#diff-group .diff-btn').forEach(b => {
-    b.classList.toggle('selected', b.dataset.diff === diff);
-  });
-}
-
-function setGameType(type) {
+// ─── Mode UI ───────────────────────────────────────────────
+function setMode(type, diff) {
   state.gameType = type;
-  $$('#type-group .diff-btn').forEach(b => {
-    b.classList.toggle('selected', b.dataset.type === type);
+  state.difficulty = diff;
+  $$('#mode-group .diff-btn').forEach(b => {
+    b.classList.toggle('selected', b.dataset.type === type && b.dataset.diff === diff);
   });
 }
 
@@ -1336,16 +1326,10 @@ function escapeHtml(s) {
 
 // ─── Event bindings ────────────────────────────────────────
 function bindEvents() {
-  // Home: game type
-  $('#type-group').addEventListener('click', e => {
+  // Home: mode de jeu (type + difficulté combinés)
+  $('#mode-group').addEventListener('click', e => {
     const btn = e.target.closest('.diff-btn');
-    if (btn) setGameType(btn.dataset.type);
-  });
-
-  // Home: difficulty
-  $('#diff-group').addEventListener('click', e => {
-    const btn = e.target.closest('.diff-btn');
-    if (btn) setDifficulty(btn.dataset.diff);
+    if (btn) setMode(btn.dataset.type, btn.dataset.diff);
   });
 
   // Start
@@ -1383,8 +1367,7 @@ function bindEvents() {
 // ─── Init ──────────────────────────────────────────────────
 buildQuestionPool();
 bindEvents();
-setGameType('reflex');
-setDifficulty('competitif');
+setMode('reflex', 'competitif');
 </script>
 </body>
 </html>

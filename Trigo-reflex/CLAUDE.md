@@ -32,14 +32,12 @@ Maths_Hub/Trigo-reflex/
 
 ## ÉTAT DU PROJET
 
-**GROUPE COURANT : b1 → b2** (Mécanique Mode Clic) — enchaîner automatiquement dans cette conversation
+**GROUPE COURANT : d1** (Polish + image Hub) — enchaîner automatiquement dans cette conversation
 
 Quand tu termines un micro-prompt du groupe courant : coche [x], passe au suivant automatiquement, update PROCHAINE ACTION. Quand tout le groupe est [x], mets à jour GROUPE COURANT avec le groupe suivant et arrête.
 
 Groupes restants (dans l'ordre) :
-1. **b1 → b2** (Mécanique Mode Clic) ← COURANT
-2. **c1** (Flux & classement)
-3. **d1 → d2** (Polish + image Hub)
+1. **d1 → d2** (Polish + image Hub) ← COURANT
 
 Ordre d'exécution complet : `b1 → b2 → c1 → d1 → d2`
 
@@ -47,10 +45,10 @@ Ordre d'exécution complet : `b1 → b2 → c1 → d1 → d2`
 |----|-------------------------------------------|--------|
 | a1 | Home screen — sélecteur Reflex / Clic     | [x]    |
 | a2 | Constants Mode Clic + helpers cercle      | [x]    |
-| b1 | buildRound + renderRound (dispatch)       | [ ]    |
-| b2 | handleClick + renderTrigCircle étendu     | [ ]    |
-| c1 | Flux + classement (gameType)              | [ ]    |
-| d1 | Polish (touch, hint, leaderboard)         | [ ]    |
+| b1 | buildRound + renderRound (dispatch)       | [x]    |
+| b2 | handleClick + renderTrigCircle étendu     | [x]    |
+| c1 | Flux + classement (gameType)              | [x]    |
+| d1 | Polish (touch, hint, leaderboard)         | [x]    |
 | d2 | Image tête d'affiche dans le Hub          | [ ]    |
 
 > Référence complète : voir `wiki/games/trigo-reflex-prompts.md` dans l'Obsidian.
@@ -59,23 +57,25 @@ Ordre d'exécution complet : `b1 → b2 → c1 → d1 → d2`
 
 ## PROCHAINE ACTION
 
-**Prompt b1 — buildRound + renderRound (dispatch) (★★★ Sonnet)**
+**Prompt d2 — Image tête d'affiche dans le Hub (★★ Haiku)**
 
-Lire `trigo-reflex.html` (état après a2).
+Avant de lancer ce prompt : placer l'image générée dans `C:\Users\Herve\Documents\Elliott\Projet\Maths_Hub\Trigo-reflex\trigo-reflex.png`.
 
-CONTENU :
-- `buildRound()` : dispatcher sur `state.gameType`. Branche `'reflex'` = code existant inchangé (ajouter `mode:'reflex'` dans le retour). Branche `'clic'` = `pickRandom(QUESTION_POOL)` → `{ mode:'clic', ask, valueKey, validRads }`
-- `renderRound()` : wrapper qui appelle `renderRoundDots()` puis dispatche vers `renderRoundReflex()` ou `renderRoundClic()`
-- `renderRoundReflex()` = code existant de `renderRound()` extrait tel quel + `$('#answers').style.display=''` + `$('#click-hint')?.style.display='none'`
-- `renderRoundClic()` : affiche cercle `renderTrigCircle(0)`, question `r.ask + ' = ' + VALUES[r.valueKey]` + label "— Où est ce point ?", masque les boutons (`#answers`), affiche `#click-hint`
-- Ajouter dans le HTML de `#screen-game` après `#answers` : `<div id="click-hint" class="click-hint">Clique sur le cercle</div>`
-- CSS : `.click-hint { text-align:center; font-size:11px; color:var(--text-faint); font-family:var(--font-mono); text-transform:uppercase; letter-spacing:0.15em; margin-top:16px; transition:opacity 0.4s; }`
-- CSS : `.question-label { font-family:var(--font-mono); font-size:12px; color:var(--text-faint); font-style:normal; letter-spacing:0.08em; margin-left:6px; }`
+Lire uniquement `C:\Users\Herve\Documents\Elliott\Projet\Maths_Hub\index.html`.
+
+Dans le tableau `JEUX`, trouver l'entrée `id:"trigo-reflex"` et remplacer :
+```js
+imageClass:"ph-trigo", icon:"◎",
+```
+par :
+```js
+image:"Trigo-reflex/trigo-reflex.png",
+```
+
+C'est la seule modification à faire. Ne pas toucher au reste du fichier.
 
 CONTRAINTES :
-- `renderRoundReflex()` = code existant, aucune modification de logique
-- `renderTrigCircle()` pas encore modifiée (sera b2)
+- Ne pas modifier les autres entrées de JEUX
+- Ne pas toucher au CSS `.ph-trigo` (peut rester, il ne gêne pas)
 
-VÉRIFICATION : relecture statique.
-
-À la fin : coche [x] b1 et copie le texte de b2 dans PROCHAINE ACTION.
+VÉRIFICATION : relecture statique — vérifier que la clé `image` pointe vers le bon chemin relatif.

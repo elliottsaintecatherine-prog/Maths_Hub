@@ -541,6 +541,11 @@
   .flash.success { background: radial-gradient(circle at center, rgba(136, 192, 150, 0.25), transparent 60%); }
   .flash.error   { background: radial-gradient(circle at center, rgba(201, 122, 110, 0.3), transparent 60%); }
 
+  .click-hint { text-align:center; font-size:11px; color:var(--text-faint); font-family:var(--font-mono); text-transform:uppercase; letter-spacing:0.15em; margin-top:16px; transition:opacity 0.4s; }
+  .question-label { font-family:var(--font-mono); font-size:12px; color:var(--text-faint); font-style:normal; letter-spacing:0.08em; margin-left:6px; }
+  .circle-wrap.interactive { cursor:crosshair; touch-action:none; }
+  #score-current.score-flash { color: var(--accent-bright); transition: color 0.4s; }
+
   /* ─── Small adjustments mobile ─── */
   @media (max-height: 700px) {
     .home-header { padding: 8px 0 24px; }
@@ -606,6 +611,7 @@
     </div>
 
     <div class="answers" id="answers"></div>
+    <div id="click-hint" class="click-hint">Clique sur le cercle</div>
   </section>
 
   <!-- ─────────── END ─────────── -->
@@ -657,6 +663,7 @@
       <h2 class="title" style="font-size: clamp(40px, 10vw, 56px);"><span class="accent">Meilleurs</span><br>scores</h2>
     </header>
 
+    <div id="lb-type-label" class="eyebrow"></div>
     <div class="leaderboard-list" id="leaderboard-list"></div>
 
     <div class="button-row lb-back">
@@ -829,7 +836,8 @@ function showScreen(id) {
 }
 
 // ─── Trig circle SVG ───────────────────────────────────────
-function renderTrigCircle(angleRad) {
+function renderTrigCircle(angleRad, opts = {}) {
+  const { ghostRad, revealRads, clickedRad, clickCorrect } = opts;
   const x = Math.cos(angleRad);
   const y = -Math.sin(angleRad); // SVG y-flip
   const arcR = 0.22;
@@ -899,6 +907,22 @@ function renderTrigCircle(angleRad) {
 
       <!-- Origin -->
       <circle cx="0" cy="0" r="0.025" fill="var(--text-dim)"/>
+
+      ${(ghostRad !== undefined && ghostRad !== null) ? `
+        <circle cx="${Math.cos(ghostRad)}" cy="${-Math.sin(ghostRad)}" r="0.07" fill="var(--text)" opacity="0.18" filter="url(#ptGlow)"/>
+        <circle cx="${Math.cos(ghostRad)}" cy="${-Math.sin(ghostRad)}" r="0.04" fill="var(--text)" opacity="0.55"/>
+      ` : ''}
+
+      ${(revealRads && revealRads.length) ? revealRads.map(rad => `
+        <circle cx="${Math.cos(rad)}" cy="${-Math.sin(rad)}" r="0.09" fill="var(--success)" opacity="0.35" filter="url(#ptGlow)"/>
+        <circle cx="${Math.cos(rad)}" cy="${-Math.sin(rad)}" r="0.055" fill="var(--success)"/>
+        <circle cx="${Math.cos(rad)}" cy="${-Math.sin(rad)}" r="0.025" fill="var(--bg)"/>
+      `).join('') : ''}
+
+      ${(clickedRad !== undefined && clickedRad !== null && clickCorrect === false) ? `
+        <circle cx="${Math.cos(clickedRad)}" cy="${-Math.sin(clickedRad)}" r="0.08" fill="var(--error)" opacity="0.35" filter="url(#ptGlow)"/>
+        <circle cx="${Math.cos(clickedRad)}" cy="${-Math.sin(clickedRad)}" r="0.05" fill="var(--error)"/>
+      ` : ''}
     </svg>
   `;
 }
@@ -920,6 +944,11 @@ function setGameType(type) {
 
 // ─── Round generation ──────────────────────────────────────
 function buildRound() {
+  if (state.gameType === 'clic') {
+    const q = pickRandom(QUESTION_POOL);
+    return { mode: 'clic', ask: q.ask, valueKey: q.valueKey, validRads: q.validRads };
+  }
+
   const angle = pickRandom(ANGLES);
   const ask = Math.random() < 0.5 ? 'cos' : 'sin';
   const correct = angle[ask];
@@ -930,11 +959,18 @@ function buildRound() {
 
   const options = shuffle([correct, ...wrong]);
 
-  return { angle, ask, correct, options };
+  return { mode: 'reflex', angle, ask, correct, options };
 }
 
 // ─── Render round ──────────────────────────────────────────
 function renderRound() {
+  renderRoundDots();
+  const r = state.currentRound;
+  if (r.mode === 'clic') renderRoundClic();
+  else renderRoundReflex();
+}
+
+function renderRoundReflex() {
   const r = state.currentRound;
 
   // Circle
@@ -960,6 +996,95 @@ function renderRound() {
 
   // Round dots
   renderRoundDots();
+
+  $('#answers').style.display = '';
+  const hint = $('#click-hint');
+  if (hint) hint.style.display = 'none';
+  $('#circle-wrap').classList.remove('interactive');
+}
+
+function renderRoundClic() {
+  const r = state.currentRound;
+
+  $('#circle-wrap').innerHTML = renderTrigCircle(0);
+  $('#circle-wrap').classList.add('interactive');
+  $('#angle-display').innerHTML = '';
+  $('#ask-text').innerHTML = `${r.ask} = ${VALUES[r.valueKey]}<span class="question-label">— Où est ce point ?</span>`;
+
+  $('#answers').style.display = 'none';
+  const hint = $('#click-hint');
+  if (hint) { hint.style.display = ''; hint.style.opacity = '1'; }
+
+  attachCircleListeners($('#circle-wrap svg'));
+}
+
+function redrawClicCircle(opts) {
+  $('#circle-wrap').innerHTML = renderTrigCircle(0, opts);
+  attachCircleListeners($('#circle-wrap svg'));
+}
+
+function attachCircleListeners(svgEl) {
+  if (!svgEl) return;
+  const onMove = (e) => {
+    if (state.answered) return;
+    const a = svgToAngle(e, svgEl);
+    redrawClicCircle({ ghostRad: a });
+  };
+  const onLeave = () => {
+    if (state.answered) return;
+    redrawClicCircle({});
+  };
+  svgEl.addEventListener('mousemove', onMove);
+  svgEl.addEventListener('mouseleave', onLeave);
+  svgEl.addEventListener('touchmove', (e) => { e.preventDefault(); onMove(e); }, { passive: false });
+  svgEl.addEventListener('click', handleClick);
+  svgEl.addEventListener('touchend', (e) => { e.preventDefault(); handleClick(e); }, { passive: false });
+}
+
+function handleClick(event) {
+  if (state.answered || state.currentRound?.mode !== 'clic') return;
+  state.answered = true;
+  clearTimer();
+
+  const svgEl = $('#circle-wrap svg');
+  if (!svgEl) return;
+  const clickAngle = svgToAngle(event, svgEl);
+  const r = state.currentRound;
+  const best = findClosestValid(clickAngle, r.validRads);
+  const isCorrect = best.dist <= CLICK_TOLERANCE_RAD;
+
+  const elapsed = performance.now() - state.roundStartTs;
+  const mode = MODES[state.difficulty];
+
+  let earned = 0;
+  if (mode.scoring && isCorrect) {
+    earned = speedScore(elapsed);
+    state.score += earned;
+    $('#score-current').textContent = `${state.score} pts`;
+  }
+
+  state.results.push({ correct: isCorrect, timeMs: elapsed, earned });
+
+  const hintEl = $('#click-hint');
+  if (hintEl) hintEl.style.opacity = '0';
+
+  $('#circle-wrap').innerHTML = renderTrigCircle(0, {
+    revealRads: r.validRads,
+    clickedRad: clickAngle,
+    clickCorrect: isCorrect,
+  });
+
+  flash(isCorrect ? 'success' : 'error');
+  vibrate(isCorrect ? 30 : [40, 50, 40]);
+
+  if (mode.scoring && isCorrect && earned > 0) {
+    showFloatingScore($('#circle-wrap'), earned);
+    const scoreEl = $('#score-current');
+    scoreEl.classList.add('score-flash');
+    setTimeout(() => scoreEl.classList.remove('score-flash'), 400);
+  }
+
+  setTimeout(() => nextRound(), isCorrect ? 700 : 1300);
 }
 
 function renderRoundDots() {
@@ -1105,9 +1230,13 @@ function finishGame() {
 }
 
 // ─── Storage / scores ──────────────────────────────────────
+function getStorageKey() {
+  return state.gameType === 'reflex' ? STORAGE_KEY : STORAGE_KEY_CLIC;
+}
+
 async function loadScores() {
   try {
-    const r = await window.storage.get(STORAGE_KEY);
+    const r = await window.storage.get(getStorageKey());
     if (!r || !r.value) return [];
     return JSON.parse(r.value);
   } catch (e) {
@@ -1121,7 +1250,7 @@ async function saveScore(entry) {
   scores.sort((a, b) => b.score - a.score);
   const trimmed = scores.slice(0, 100);
   try {
-    await window.storage.set(STORAGE_KEY, JSON.stringify(trimmed));
+    await window.storage.set(getStorageKey(), JSON.stringify(trimmed));
   } catch (e) {
     console.warn('Save failed', e);
   }
@@ -1153,6 +1282,7 @@ function buildScoreEntry(name) {
     total: ROUNDS,
     avgTime: Number(avgTime.toFixed(2)),
     mode: state.difficulty,        // 'competitif'
+    gameType: state.gameType,
     exerciseType: 'cos/sin',
     date: new Date().toISOString(),
   };
@@ -1162,6 +1292,8 @@ function buildScoreEntry(name) {
 async function renderLeaderboard(highlightEntry = null) {
   const all = await loadScores();
   const filtered = [...all].sort((a, b) => b.score - a.score).slice(0, 20);
+
+  $('#lb-type-label').textContent = state.gameType === 'reflex' ? 'Mode Reflex' : 'Mode Clic';
 
   const listEl = $('#leaderboard-list');
   listEl.innerHTML = '';

@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+<meta name="theme-color" content="#0a0d18" />
+<title>Trigo · Reflex</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0a0d18;
+    --bg-elev: #141828;
+    --bg-card: #1a1f33;
+    --border: #2a3148;
+    --text: #f0ebe2;
+    --text-dim: #8a8676;
+    --text-faint: #555165;
+    --accent: #e8b878;
+    --accent-bright: #f5cb8e;
+    --accent-soft: #6e5230;
+    --circle: #3a4566;
+    --axis: #232a3e;
+    --success: #88c096;
+    --error: #c97a6e;
+    --shadow: 0 20px 60px -20px rgba(232, 184, 120, 0.15);
+
+    --font-display: 'Instrument Serif', 'Times New Roman', serif;
+    --font-body: 'Manrope', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100dvh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    /* subtle cosmic noise */
+    background-image:
+      radial-gradient(ellipse at top, rgba(232, 184, 120, 0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at bottom, rgba(136, 192, 150, 0.03) 0%, transparent 60%);
+  }
+
+  /* tiny star field */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image:
+      radial-gradient(1px 1px at 20% 30%, rgba(240, 235, 226, 0.35), transparent 50%),
+      radial-gradient(1px 1px at 75% 80%, rgba(240, 235, 226, 0.25), transparent 50%),
+      radial-gradient(1px 1px at 40% 70%, rgba(240, 235, 226, 0.2), transparent 50%),
+      radial-gradient(1px 1px at 85% 15%, rgba(240, 235, 226, 0.3), transparent 50%),
+      radial-gradient(1px 1px at 10% 90%, rgba(240, 235, 226, 0.2), transparent 50%),
+      radial-gradient(1px 1px at 60% 45%, rgba(240, 235, 226, 0.15), transparent 50%);
+    opacity: 0.7;
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 24px 20px 40px;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ─── Screens ─── */
+  .screen { display: none; flex-direction: column; flex: 1; animation: fadeIn 0.4s ease; }
+  .screen.active { display: flex; }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ─── Typography ─── */
+  .title {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: clamp(54px, 14vw, 78px);
+    line-height: 0.9;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    margin: 0;
+  }
+  .title .accent { color: var(--accent); font-style: italic; }
+  .subtitle {
+    font-size: 14px;
+    color: var(--text-dim);
+    margin: 14px 0 0;
+    letter-spacing: 0.02em;
+    line-height: 1.5;
+    max-width: 30ch;
+  }
+  .eyebrow {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--text-faint);
+    margin-bottom: 14px;
+    font-weight: 500;
+  }
+
+  /* ─── Home screen ─── */
+  .home-header { padding: 20px 0 36px; }
+
+  .difficulty-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 28px;
+  }
+  .diff-btn {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 20px;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    overflow: hidden;
+  }
+  .diff-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--accent) 0%, transparent 50%);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .diff-btn:hover { border-color: var(--text-faint); transform: translateY(-1px); }
+  .diff-btn.selected {
+    border-color: var(--accent);
+    background: linear-gradient(135deg, rgba(232, 184, 120, 0.12), rgba(232, 184, 120, 0.03));
+    box-shadow: var(--shadow);
+  }
+  .diff-name {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-style: italic;
+    position: relative;
+    z-index: 1;
+  }
+  .diff-time {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--text-dim);
+    position: relative;
+    z-index: 1;
+  }
+  .diff-btn.selected .diff-time { color: var(--accent); }
+
+  .primary-btn {
+    background: var(--text);
+    color: var(--bg);
+    border: none;
+    border-radius: 14px;
+    padding: 18px 28px;
+    font-family: var(--font-body);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.02em;
+    width: 100%;
+  }
+  .primary-btn:hover { transform: translateY(-1px); }
+  .primary-btn:active { transform: scale(0.98); }
+  .primary-btn.gold {
+    background: var(--accent);
+    color: var(--bg);
+  }
+  .primary-btn[disabled] { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .ghost-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    border-radius: 14px;
+    padding: 16px 24px;
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+    letter-spacing: 0.02em;
+  }
+  .ghost-btn:hover { border-color: var(--text-faint); color: var(--text); }
+
+  .button-row {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: auto;
+  }
+
+  /* ─── Game screen ─── */
+  .game-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+  .round-indicator { display: flex; gap: 6px; align-items: center; }
+  .round-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: all 0.3s;
+  }
+  .round-dot.done { background: var(--accent); }
+  .round-dot.done.correct { background: var(--success); }
+  .round-dot.done.wrong { background: var(--error); }
+  .round-dot.current {
+    background: var(--text);
+    box-shadow: 0 0 0 3px rgba(240, 235, 226, 0.15);
+  }
+  .score-display {
+    font-family: var(--font-mono);
+    color: var(--accent);
+    font-weight: 500;
+    font-size: 13px;
+  }
+
+  .game-header { margin-bottom: 22px; }
+
+  .circle-wrap {
+    width: 100%;
+    max-width: 360px;
+    aspect-ratio: 1;
+    margin: 0 auto 12px;
+    position: relative;
+  }
+  .circle-wrap svg { width: 100%; height: 100%; display: block; }
+
+  .question-block {
+    text-align: center;
+    margin: 4px 0 26px;
+  }
+  .angle-display {
+    font-family: var(--font-display);
+    font-size: 64px;
+    line-height: 1;
+    font-style: italic;
+    color: var(--accent);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 70px;
+  }
+  .ask {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-style: italic;
+    color: var(--text);
+    margin-top: 10px;
+    letter-spacing: 0.01em;
+  }
+  .ask .question-mark { color: var(--accent); }
+
+  .answers {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: auto;
+  }
+  @media (max-width: 380px) {
+    .answers { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  }
+  .answer-btn {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px 8px;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: var(--font-display);
+    font-size: 24px;
+    min-height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .answer-btn:hover { border-color: var(--text-faint); transform: translateY(-1px); }
+  .answer-btn:active { transform: scale(0.97); }
+  .answer-btn.correct {
+    background: rgba(136, 192, 150, 0.15);
+    border-color: var(--success);
+    color: var(--success);
+  }
+  .answer-btn.wrong {
+    background: rgba(201, 122, 110, 0.12);
+    border-color: var(--error);
+    color: var(--error);
+  }
+  .answer-btn.reveal {
+    background: rgba(136, 192, 150, 0.1);
+    border-color: var(--success);
+    color: var(--success);
+  }
+  .answer-btn[disabled] { cursor: not-allowed; }
+
+  /* ─── Math typography ─── */
+  .frac {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    vertical-align: middle;
+    font-size: 0.78em;
+    line-height: 1;
+    margin: 0 2px;
+    font-style: italic;
+  }
+  .frac .num, .frac .den { padding: 1px 6px; }
+  .frac .num { border-bottom: 1px solid currentColor; padding-bottom: 2px; }
+  .frac .den { padding-top: 2px; }
+  .sqrt { font-style: italic; }
+  .sqrt::before { content: '√'; font-style: normal; margin-right: -1px; }
+  .neg { margin-right: 2px; }
+
+  /* ─── End screen ─── */
+  .end-stats {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 32px 24px;
+    margin: 28px 0;
+    text-align: center;
+  }
+  .final-score {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 92px;
+    line-height: 1;
+    color: var(--accent);
+    margin: 8px 0 6px;
+  }
+  .final-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--text-faint);
+  }
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+  .stat { display: flex; flex-direction: column; gap: 6px; }
+  .stat-value {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 28px;
+    color: var(--text);
+    line-height: 1;
+  }
+  .stat-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--text-faint);
+  }
+
+  .name-input-wrap {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 18px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .name-input-wrap label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--text-faint);
+    flex-shrink: 0;
+  }
+  .name-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 16px;
+    outline: none;
+    text-align: right;
+  }
+
+  /* ─── Leaderboard ─── */
+  .leaderboard-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 20px 0;
+  }
+  .lb-row {
+    display: grid;
+    grid-template-columns: 28px 1fr auto;
+    gap: 12px;
+    align-items: center;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    transition: transform 0.2s;
+  }
+  .lb-row.highlight {
+    border-color: var(--accent);
+    background: linear-gradient(135deg, rgba(232, 184, 120, 0.1), rgba(232, 184, 120, 0.02));
+  }
+  .lb-row.top-1 .lb-rank { color: var(--accent); }
+  .lb-rank {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 22px;
+    color: var(--text-faint);
+    text-align: center;
+  }
+  .lb-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .lb-name {
+    font-weight: 600;
+    font-size: 15px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .lb-meta {
+    font-size: 11px;
+    color: var(--text-faint);
+    font-family: var(--font-mono);
+    letter-spacing: 0.02em;
+  }
+  .lb-score {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 24px;
+    color: var(--accent);
+  }
+  .lb-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-faint);
+    font-style: italic;
+    font-family: var(--font-display);
+    font-size: 20px;
+  }
+  .diff-badge {
+    display: inline-block;
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-family: var(--font-mono);
+    font-weight: 500;
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+  .diff-badge.competitif { background: rgba(232, 184, 120, 0.15); color: var(--accent); }
+  .diff-badge.loisir    { background: rgba(138, 155, 196, 0.15); color: #8a9bc4; }
+
+  /* ─── Mode-conditional visibility ─── */
+  body:not(.mode-loisir) .loisir-only { display: none !important; }
+  body.mode-loisir .scoring-only { display: none !important; }
+
+  .score-block { margin-bottom: 4px; }
+  .loisir-label {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 32px;
+    color: var(--accent);
+    margin: 12px 0 4px;
+  }
+
+  /* ─── Floating score popup ─── */
+  .floating-score {
+    position: fixed;
+    transform: translate(-50%, 0);
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 32px;
+    color: var(--accent);
+    font-weight: 500;
+    pointer-events: none;
+    z-index: 50;
+    animation: floatUp 0.9s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+    text-shadow: 0 4px 16px rgba(232, 184, 120, 0.4);
+  }
+  @keyframes floatUp {
+    0%   { opacity: 0; transform: translate(-50%, 10px); }
+    20%  { opacity: 1; }
+    100% { opacity: 0; transform: translate(-50%, -50px); }
+  }
+
+  .lb-back {
+    margin-top: auto;
+  }
+
+  /* ─── Feedback flash ─── */
+  .flash {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 100;
+    transition: opacity 0.15s;
+  }
+  .flash.show { opacity: 1; }
+  .flash.success { background: radial-gradient(circle at center, rgba(136, 192, 150, 0.25), transparent 60%); }
+  .flash.error   { background: radial-gradient(circle at center, rgba(201, 122, 110, 0.3), transparent 60%); }
+
+  /* ─── Small adjustments mobile ─── */
+  @media (max-height: 700px) {
+    .home-header { padding: 8px 0 24px; }
+    .title { font-size: clamp(46px, 12vw, 64px); }
+    .final-score { font-size: 72px; }
+    .circle-wrap { max-width: 280px; }
+    .angle-display { font-size: 52px; min-height: 56px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ─────────── HOME ─────────── -->
+  <section id="screen-home" class="screen active">
+    <header class="home-header">
+      <h1 class="title">Trigo<br><span class="accent">Reflex</span></h1>
+      <p class="subtitle">Mémorise les valeurs particulières de cos et sin sur le cercle trigonométrique. 5 questions, 3 choix.</p>
+    </header>
+
+    <div class="eyebrow">Jeu</div>
+    <div class="difficulty-group" id="type-group">
+      <button class="diff-btn selected" data-type="reflex">
+        <span class="diff-name">Reflex</span>
+        <span class="diff-time">Angle donné · trouve la valeur</span>
+      </button>
+      <button class="diff-btn" data-type="clic">
+        <span class="diff-name">Clic</span>
+        <span class="diff-time">Valeur donnée · vise le cercle</span>
+      </button>
+    </div>
+
+    <div class="eyebrow">Mode</div>
+    <div class="difficulty-group" id="diff-group">
+      <button class="diff-btn" data-diff="loisir">
+        <span class="diff-name">Loisir</span>
+        <span class="diff-time">Entraînement libre · sans score</span>
+      </button>
+      <button class="diff-btn selected" data-diff="competitif">
+        <span class="diff-name">Compétitif</span>
+        <span class="diff-time">Score à la vitesse · classement</span>
+      </button>
+    </div>
+
+    <div class="button-row">
+      <button class="primary-btn gold" id="btn-start">Commencer</button>
+      <button class="ghost-btn" id="btn-show-lb">Meilleurs scores</button>
+    </div>
+  </section>
+
+  <!-- ─────────── GAME ─────────── -->
+  <section id="screen-game" class="screen">
+    <div class="game-header">
+      <div class="round-indicator" id="round-dots"></div>
+      <div class="score-display" id="score-current"></div>
+    </div>
+
+    <div class="circle-wrap" id="circle-wrap"></div>
+
+    <div class="question-block">
+      <div class="angle-display" id="angle-display"></div>
+      <div class="ask" id="ask-text"></div>
+    </div>
+
+    <div class="answers" id="answers"></div>
+  </section>
+
+  <!-- ─────────── END ─────────── -->
+  <section id="screen-end" class="screen">
+    <header class="home-header" style="padding-bottom: 8px;">
+      <div class="eyebrow">Manche terminée</div>
+      <h2 class="title" style="font-size: clamp(40px, 10vw, 56px);">Bien joué.</h2>
+    </header>
+
+    <div class="end-stats">
+      <div class="score-block scoring-only">
+        <div class="final-label">Score final</div>
+        <div class="final-score" id="final-score">0</div>
+      </div>
+      <div class="loisir-label loisir-only">Entraînement terminé</div>
+      <div class="stats-row">
+        <div class="stat">
+          <div class="stat-value" id="stat-correct">0/5</div>
+          <div class="stat-label">Réussite</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="stat-avgtime">0.00 s</div>
+          <div class="stat-label">Temps moyen</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="stat-diff">—</div>
+          <div class="stat-label">Mode</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="name-input-wrap scoring-only" id="name-input-wrap">
+      <label for="player-name">Nom</label>
+      <input class="name-input" id="player-name" type="text" maxlength="14" placeholder="Anonyme" autocomplete="off" />
+    </div>
+
+    <div class="button-row">
+      <button class="primary-btn gold scoring-only" id="btn-save-replay">Enregistrer & Rejouer</button>
+      <button class="primary-btn gold loisir-only" id="btn-replay-loisir">Rejouer</button>
+      <button class="ghost-btn scoring-only" id="btn-end-lb">Voir le classement</button>
+      <button class="ghost-btn" id="btn-end-home">Retour à l'accueil</button>
+    </div>
+  </section>
+
+  <!-- ─────────── LEADERBOARD ─────────── -->
+  <section id="screen-lb" class="screen">
+    <header class="home-header" style="padding-bottom: 8px;">
+      <div class="eyebrow">Classement</div>
+      <h2 class="title" style="font-size: clamp(40px, 10vw, 56px);"><span class="accent">Meilleurs</span><br>scores</h2>
+    </header>
+
+    <div class="leaderboard-list" id="leaderboard-list"></div>
+
+    <div class="button-row lb-back">
+      <button class="ghost-btn" id="btn-lb-home">Retour à l'accueil</button>
+    </div>
+  </section>
+
+</div>
+
+<div class="flash" id="flash"></div>
+
+<script>
+/* ════════════════════════════════════════════════════════════
+   TRIGO REFLEX — game logic
+   ════════════════════════════════════════════════════════════ */
+
+// ─── Constants ─────────────────────────────────────────────
+const MODES = {
+  loisir:     { label: 'Loisir',     scoring: false },
+  competitif: { label: 'Compétitif', scoring: true  },
+};
+
+// Speed-based scoring for Compétitif mode.
+// Formula: 3120 × e^(-t/7) where t is response time in seconds.
+// Maximum total: 5 × 3120 = 15 600 (theoretical, requires ~instant answers).
+// Reaching 14 700 requires averaging ~0.42 s per question.
+const SCORE_MAX_PER_ROUND = 3120;
+const SCORE_TAU = 7;
+function speedScore(elapsedMs) {
+  const t = elapsedMs / 1000;
+  return Math.round(SCORE_MAX_PER_ROUND * Math.exp(-t / SCORE_TAU));
+}
+
+const ROUNDS = 5;
+const STORAGE_KEY = 'trigo_scores_v2';
+
+// All particular angles on the trig circle (in radians)
+// Each value is encoded as a key from VALUES below.
+const ANGLES = [
+  { rad: 0,                label: '0',     cos: 'p1',     sin: '0'      },
+  { rad: Math.PI / 6,      label: 'π/6',   cos: 'psqrt3', sin: 'p1_2'   },
+  { rad: Math.PI / 4,      label: 'π/4',   cos: 'psqrt2', sin: 'psqrt2' },
+  { rad: Math.PI / 3,      label: 'π/3',   cos: 'p1_2',   sin: 'psqrt3' },
+  { rad: Math.PI / 2,      label: 'π/2',   cos: '0',      sin: 'p1'     },
+  { rad: 2 * Math.PI / 3,  label: '2π/3',  cos: 'n1_2',   sin: 'psqrt3' },
+  { rad: 3 * Math.PI / 4,  label: '3π/4',  cos: 'nsqrt2', sin: 'psqrt2' },
+  { rad: 5 * Math.PI / 6,  label: '5π/6',  cos: 'nsqrt3', sin: 'p1_2'   },
+  { rad: Math.PI,          label: 'π',     cos: 'n1',     sin: '0'      },
+  { rad: 7 * Math.PI / 6,  label: '7π/6',  cos: 'nsqrt3', sin: 'n1_2'   },
+  { rad: 5 * Math.PI / 4,  label: '5π/4',  cos: 'nsqrt2', sin: 'nsqrt2' },
+  { rad: 4 * Math.PI / 3,  label: '4π/3',  cos: 'n1_2',   sin: 'nsqrt3' },
+  { rad: 3 * Math.PI / 2,  label: '3π/2',  cos: '0',      sin: 'n1'     },
+  { rad: 5 * Math.PI / 3,  label: '5π/3',  cos: 'p1_2',   sin: 'nsqrt3' },
+  { rad: 7 * Math.PI / 4,  label: '7π/4',  cos: 'psqrt2', sin: 'nsqrt2' },
+  { rad: 11 * Math.PI / 6, label: '11π/6', cos: 'psqrt3', sin: 'n1_2'   },
+];
+
+// Possible answer values — keyed string → display HTML
+const VALUES = {
+  '0'      : `0`,
+  'p1'     : `1`,
+  'n1'     : `<span class="neg">−</span>1`,
+  'p1_2'   : `<span class="frac"><span class="num">1</span><span class="den">2</span></span>`,
+  'n1_2'   : `<span class="neg">−</span><span class="frac"><span class="num">1</span><span class="den">2</span></span>`,
+  'psqrt2' : `<span class="frac"><span class="num sqrt">2</span><span class="den">2</span></span>`,
+  'nsqrt2' : `<span class="neg">−</span><span class="frac"><span class="num sqrt">2</span><span class="den">2</span></span>`,
+  'psqrt3' : `<span class="frac"><span class="num sqrt">3</span><span class="den">2</span></span>`,
+  'nsqrt3' : `<span class="neg">−</span><span class="frac"><span class="num sqrt">3</span><span class="den">2</span></span>`,
+};
+const VALUE_KEYS = Object.keys(VALUES);
+
+// ─── Mode Clic — constants & helpers ───────────────────────
+const CLICK_TOLERANCE_RAD = 12 * Math.PI / 180;
+const STORAGE_KEY_CLIC = 'trigo_clic_scores_v1';
+
+const QUESTION_POOL = [];
+function buildQuestionPool() {
+  QUESTION_POOL.length = 0;
+  const map = new Map();
+  for (const fn of ['cos', 'sin']) {
+    for (const a of ANGLES) {
+      const key = fn + ':' + a[fn];
+      if (!map.has(key)) {
+        map.set(key, { ask: fn, valueKey: a[fn], validRads: [] });
+      }
+      map.get(key).validRads.push(a.rad);
+    }
+  }
+  for (const entry of map.values()) QUESTION_POOL.push(entry);
+}
+
+function svgToAngle(event, svgEl) {
+  const rect = svgEl.getBoundingClientRect();
+  const point = event.touches && event.touches[0] ? event.touches[0]
+              : event.changedTouches && event.changedTouches[0] ? event.changedTouches[0]
+              : event;
+  const cx = point.clientX - rect.left;
+  const cy = point.clientY - rect.top;
+  const nx = (cx / rect.width) * 2.7 - 1.35;
+  const ny = (cy / rect.height) * 2.7 - 1.35;
+  const a = Math.atan2(-ny, nx);
+  return a < 0 ? a + 2 * Math.PI : a;
+}
+
+function angularDistance(a, b) {
+  const d = Math.abs(a - b) % (2 * Math.PI);
+  return d > Math.PI ? 2 * Math.PI - d : d;
+}
+
+function findClosestValid(clickAngle, validRads) {
+  let best = { rad: validRads[0], dist: angularDistance(clickAngle, validRads[0]) };
+  for (let i = 1; i < validRads.length; i++) {
+    const d = angularDistance(clickAngle, validRads[i]);
+    if (d < best.dist) best = { rad: validRads[i], dist: d };
+  }
+  return best;
+}
+
+// ─── State ─────────────────────────────────────────────────
+let state = {
+  gameType: 'reflex',        // 'reflex' | 'clic'
+  difficulty: 'competitif',  // 'loisir' | 'competitif'
+  round: 0,
+  score: 0,
+  results: [],         // [{correct, timeMs, earned}]
+  currentRound: null,  // {angle, ask: 'cos'|'sin', correct, options}
+  roundStartTs: 0,
+  answered: false,
+  lastSavedIdx: -1,
+};
+
+// ─── Utilities ─────────────────────────────────────────────
+const $ = (s, root = document) => root.querySelector(s);
+const $$ = (s, root = document) => Array.from(root.querySelectorAll(s));
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+function vibrate(pattern) {
+  try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (e) {}
+}
+
+function formatLabel(label) {
+  // The angle label like "5π/6". Render as stacked fraction if it has /.
+  if (label === '0') return `<span style="font-style: normal;">0</span>`;
+  if (!label.includes('/')) return label; // just "π" etc.
+  const [num, den] = label.split('/');
+  return `<span class="frac" style="font-size: 0.8em;"><span class="num">${num}</span><span class="den">${den}</span></span>`;
+}
+
+function formatDateShort(iso) {
+  const d = new Date(iso);
+  const day = String(d.getDate()).padStart(2, '0');
+  const mon = String(d.getMonth() + 1).padStart(2, '0');
+  const yr = String(d.getFullYear()).slice(2);
+  return `${day}/${mon}/${yr}`;
+}
+
+// ─── Screen switching ─────────────────────────────────────
+function showScreen(id) {
+  $$('.screen').forEach(s => s.classList.remove('active'));
+  $('#' + id).classList.add('active');
+}
+
+// ─── Trig circle SVG ───────────────────────────────────────
+function renderTrigCircle(angleRad) {
+  const x = Math.cos(angleRad);
+  const y = -Math.sin(angleRad); // SVG y-flip
+  const arcR = 0.22;
+  const arcEndX = arcR * Math.cos(angleRad);
+  const arcEndY = -arcR * Math.sin(angleRad);
+  const largeArc = angleRad > Math.PI ? 1 : 0;
+  const showArc = angleRad > 0.01;
+
+  // tick marks at unit positions on axes
+  const ticks = [
+    { x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 }
+  ];
+  const tickMarks = ticks.map(t =>
+    `<circle cx="${t.x}" cy="${t.y}" r="0.018" fill="var(--axis)" />`
+  ).join('');
+
+  return `
+    <svg viewBox="-1.35 -1.35 2.7 2.7" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="bgGlow" cx="0.5" cy="0.5" r="0.5">
+          <stop offset="0%" stop-color="#e8b878" stop-opacity="0.10"/>
+          <stop offset="60%" stop-color="#e8b878" stop-opacity="0.02"/>
+          <stop offset="100%" stop-color="#e8b878" stop-opacity="0"/>
+        </radialGradient>
+        <filter id="ptGlow" x="-100%" y="-100%" width="300%" height="300%">
+          <feGaussianBlur stdDeviation="0.04"/>
+        </filter>
+      </defs>
+
+      <!-- Inner background glow -->
+      <circle cx="0" cy="0" r="1.25" fill="url(#bgGlow)"/>
+
+      <!-- Axes -->
+      <line x1="-1.18" y1="0" x2="1.18" y2="0" stroke="var(--axis)" stroke-width="0.006" stroke-linecap="round"/>
+      <line x1="0" y1="-1.18" x2="0" y2="1.18" stroke="var(--axis)" stroke-width="0.006" stroke-linecap="round"/>
+
+      <!-- Arrow tips on axes -->
+      <polygon points="1.18,0 1.13,0.025 1.13,-0.025" fill="var(--axis)"/>
+      <polygon points="0,-1.18 0.025,-1.13 -0.025,-1.13" fill="var(--axis)"/>
+
+      <!-- Unit circle -->
+      <circle cx="0" cy="0" r="1" fill="none" stroke="var(--circle)" stroke-width="0.012"/>
+
+      <!-- Cardinal tick dots -->
+      ${tickMarks}
+
+      <!-- Axis labels -->
+      <text x="1.22" y="0.06" fill="var(--text-faint)" font-family="Instrument Serif, serif" font-style="italic" font-size="0.14">x</text>
+      <text x="0.05" y="-1.18" fill="var(--text-faint)" font-family="Instrument Serif, serif" font-style="italic" font-size="0.14">y</text>
+
+      <!-- Arc showing angle rotation -->
+      ${showArc ? `
+        <path d="M ${arcR} 0 A ${arcR} ${arcR} 0 ${largeArc} 0 ${arcEndX} ${arcEndY}"
+              fill="none" stroke="var(--accent)" stroke-width="0.012" opacity="0.55"
+              stroke-linecap="round"/>
+      ` : ''}
+
+      <!-- Radius line -->
+      <line x1="0" y1="0" x2="${x}" y2="${y}"
+            stroke="var(--accent)" stroke-width="0.018" stroke-linecap="round"
+            opacity="0.85"/>
+
+      <!-- Glowing point -->
+      <circle cx="${x}" cy="${y}" r="0.09" fill="var(--accent)" opacity="0.35" filter="url(#ptGlow)"/>
+      <circle cx="${x}" cy="${y}" r="0.055" fill="var(--accent)"/>
+      <circle cx="${x}" cy="${y}" r="0.025" fill="var(--bg)"/>
+
+      <!-- Origin -->
+      <circle cx="0" cy="0" r="0.025" fill="var(--text-dim)"/>
+    </svg>
+  `;
+}
+
+// ─── Difficulty UI ─────────────────────────────────────────
+function setDifficulty(diff) {
+  state.difficulty = diff;
+  $$('#diff-group .diff-btn').forEach(b => {
+    b.classList.toggle('selected', b.dataset.diff === diff);
+  });
+}
+
+function setGameType(type) {
+  state.gameType = type;
+  $$('#type-group .diff-btn').forEach(b => {
+    b.classList.toggle('selected', b.dataset.type === type);
+  });
+}
+
+// ─── Round generation ──────────────────────────────────────
+function buildRound() {
+  const angle = pickRandom(ANGLES);
+  const ask = Math.random() < 0.5 ? 'cos' : 'sin';
+  const correct = angle[ask];
+
+  // Build 2 distinct wrong options
+  const pool = VALUE_KEYS.filter(v => v !== correct);
+  const wrong = shuffle(pool).slice(0, 2);
+
+  const options = shuffle([correct, ...wrong]);
+
+  return { angle, ask, correct, options };
+}
+
+// ─── Render round ──────────────────────────────────────────
+function renderRound() {
+  const r = state.currentRound;
+
+  // Circle
+  $('#circle-wrap').innerHTML = renderTrigCircle(r.angle.rad);
+
+  // Angle text
+  $('#angle-display').innerHTML = formatLabel(r.angle.label);
+
+  // Question prompt
+  $('#ask-text').innerHTML = `${r.ask} = <span class="question-mark">?</span>`;
+
+  // Options
+  const answersEl = $('#answers');
+  answersEl.innerHTML = '';
+  r.options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'answer-btn';
+    btn.innerHTML = VALUES[opt];
+    btn.dataset.value = opt;
+    btn.addEventListener('click', () => handleAnswer(opt, btn));
+    answersEl.appendChild(btn);
+  });
+
+  // Round dots
+  renderRoundDots();
+}
+
+function renderRoundDots() {
+  const dotsEl = $('#round-dots');
+  dotsEl.innerHTML = '';
+  for (let i = 0; i < ROUNDS; i++) {
+    const d = document.createElement('div');
+    d.className = 'round-dot';
+    if (i < state.round) {
+      d.classList.add('done');
+      d.classList.add(state.results[i].correct ? 'correct' : 'wrong');
+    } else if (i === state.round) {
+      d.classList.add('current');
+    }
+    dotsEl.appendChild(d);
+  }
+}
+
+// ─── Round timing ──────────────────────────────────────────
+function startTimer() {
+  state.roundStartTs = performance.now();
+}
+
+function clearTimer() {
+  // No active timers to clear (kept for API symmetry).
+}
+
+// ─── Answer handling ───────────────────────────────────────
+function handleAnswer(value, btnEl) {
+  if (state.answered) return;
+  state.answered = true;
+  clearTimer();
+
+  const r = state.currentRound;
+  const mode = MODES[state.difficulty];
+  const elapsed = performance.now() - state.roundStartTs;
+  const isCorrect = value === r.correct;
+
+  // Score
+  let earned = 0;
+  if (mode.scoring && isCorrect) {
+    earned = speedScore(elapsed);
+    state.score += earned;
+    $('#score-current').textContent = `${state.score} pts`;
+  }
+
+  // Record
+  state.results.push({
+    correct: isCorrect,
+    timeMs: elapsed,
+    earned
+  });
+
+  // Visual feedback on buttons
+  const btns = $$('.answer-btn');
+  btns.forEach(b => {
+    b.disabled = true;
+    if (b.dataset.value === r.correct) b.classList.add('reveal');
+  });
+  if (btnEl) {
+    btnEl.classList.remove('reveal');
+    btnEl.classList.add(isCorrect ? 'correct' : 'wrong');
+  }
+
+  // Flash + haptics
+  flash(isCorrect ? 'success' : 'error');
+  vibrate(isCorrect ? 30 : [40, 50, 40]);
+
+  // Show points earned floating up briefly (competitive mode only)
+  if (mode.scoring && isCorrect && earned > 0 && btnEl) {
+    showFloatingScore(btnEl, earned);
+  }
+
+  // Advance to next round (or end)
+  setTimeout(() => nextRound(), isCorrect ? 700 : 1300);
+}
+
+function showFloatingScore(anchorEl, amount) {
+  const rect = anchorEl.getBoundingClientRect();
+  const el = document.createElement('div');
+  el.className = 'floating-score';
+  el.textContent = `+${amount}`;
+  el.style.left = (rect.left + rect.width / 2) + 'px';
+  el.style.top = (rect.top - 8) + 'px';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 900);
+}
+
+function flash(kind) {
+  const el = $('#flash');
+  el.className = `flash ${kind} show`;
+  setTimeout(() => el.classList.remove('show'), 250);
+}
+
+// ─── Game flow ─────────────────────────────────────────────
+function startGame() {
+  state.round = 0;
+  state.score = 0;
+  state.results = [];
+  state.lastSavedIdx = -1;
+  const mode = MODES[state.difficulty];
+  $('#score-current').textContent = mode.scoring ? '0 pts' : '';
+  showScreen('screen-game');
+  nextRound();
+}
+
+function nextRound() {
+  if (state.round >= ROUNDS) {
+    finishGame();
+    return;
+  }
+  state.currentRound = buildRound();
+  state.answered = false;
+  renderRound();
+  // Start timing right after the browser paints the new round.
+  requestAnimationFrame(() => requestAnimationFrame(() => startTimer()));
+  state.round++;
+}
+
+function finishGame() {
+  const correctCount = state.results.filter(r => r.correct).length;
+  const correctTimes = state.results.filter(r => r.correct).map(r => r.timeMs);
+  const avgTime = correctTimes.length
+    ? correctTimes.reduce((a, b) => a + b, 0) / correctTimes.length / 1000
+    : 0;
+
+  const mode = MODES[state.difficulty];
+
+  // Toggle competitive-only elements
+  document.body.classList.toggle('mode-loisir', !mode.scoring);
+  document.body.classList.toggle('mode-competitif', mode.scoring);
+
+  $('#final-score').textContent = mode.scoring ? state.score : '—';
+  $('#stat-correct').textContent = `${correctCount}/${ROUNDS}`;
+  $('#stat-avgtime').textContent = correctCount > 0 ? `${avgTime.toFixed(2)} s` : '—';
+  $('#stat-diff').innerHTML = `<span style="font-size: 18px;">${mode.label}</span>`;
+
+  // pre-fill name if used before
+  const last = localStorage.getItem('trigo_last_name');
+  if (last) $('#player-name').value = last;
+
+  showScreen('screen-end');
+}
+
+// ─── Storage / scores ──────────────────────────────────────
+async function loadScores() {
+  try {
+    const r = await window.storage.get(STORAGE_KEY);
+    if (!r || !r.value) return [];
+    return JSON.parse(r.value);
+  } catch (e) {
+    return [];
+  }
+}
+
+async function saveScore(entry) {
+  const scores = await loadScores();
+  scores.push(entry);
+  scores.sort((a, b) => b.score - a.score);
+  const trimmed = scores.slice(0, 100);
+  try {
+    await window.storage.set(STORAGE_KEY, JSON.stringify(trimmed));
+  } catch (e) {
+    console.warn('Save failed', e);
+  }
+  return trimmed;
+}
+
+async function handleSaveAndReplay() {
+  const name = ($('#player-name').value || '').trim().slice(0, 14) || 'Anonyme';
+  try { localStorage.setItem('trigo_last_name', name); } catch (e) {}
+
+  const entry = buildScoreEntry(name);
+  await saveScore(entry);
+  state.lastSavedEntry = entry;
+
+  // replay same mode
+  startGame();
+}
+
+function buildScoreEntry(name) {
+  const correctCount = state.results.filter(r => r.correct).length;
+  const correctTimes = state.results.filter(r => r.correct).map(r => r.timeMs);
+  const avgTime = correctTimes.length
+    ? correctTimes.reduce((a, b) => a + b, 0) / correctTimes.length / 1000
+    : 0;
+  return {
+    name,
+    score: state.score,
+    correct: correctCount,
+    total: ROUNDS,
+    avgTime: Number(avgTime.toFixed(2)),
+    mode: state.difficulty,        // 'competitif'
+    exerciseType: 'cos/sin',
+    date: new Date().toISOString(),
+  };
+}
+
+// ─── Leaderboard rendering ─────────────────────────────────
+async function renderLeaderboard(highlightEntry = null) {
+  const all = await loadScores();
+  const filtered = [...all].sort((a, b) => b.score - a.score).slice(0, 20);
+
+  const listEl = $('#leaderboard-list');
+  listEl.innerHTML = '';
+
+  if (!filtered.length) {
+    listEl.innerHTML = `<div class="lb-empty">Aucun score pour l'instant.</div>`;
+    return;
+  }
+
+  filtered.forEach((e, i) => {
+    const row = document.createElement('div');
+    row.className = 'lb-row' + (i === 0 ? ' top-1' : '');
+    if (highlightEntry &&
+        e.name === highlightEntry.name &&
+        e.score === highlightEntry.score &&
+        e.date === highlightEntry.date) {
+      row.classList.add('highlight');
+    }
+    const exo = e.exerciseType || 'cos/sin';
+    row.innerHTML = `
+      <div class="lb-rank">${i + 1}</div>
+      <div class="lb-info">
+        <div class="lb-name">${escapeHtml(e.name)}</div>
+        <div class="lb-meta">
+          <span class="diff-badge competitif">${exo}</span>
+          ${e.correct}/${e.total} · ⌀ ${e.avgTime.toFixed(2)}s · ${formatDateShort(e.date)}
+        </div>
+      </div>
+      <div class="lb-score">${e.score}</div>
+    `;
+    listEl.appendChild(row);
+  });
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+// ─── Event bindings ────────────────────────────────────────
+function bindEvents() {
+  // Home: game type
+  $('#type-group').addEventListener('click', e => {
+    const btn = e.target.closest('.diff-btn');
+    if (btn) setGameType(btn.dataset.type);
+  });
+
+  // Home: difficulty
+  $('#diff-group').addEventListener('click', e => {
+    const btn = e.target.closest('.diff-btn');
+    if (btn) setDifficulty(btn.dataset.diff);
+  });
+
+  // Start
+  $('#btn-start').addEventListener('click', () => startGame());
+
+  // Show leaderboard from home
+  $('#btn-show-lb').addEventListener('click', async () => {
+    await renderLeaderboard();
+    showScreen('screen-lb');
+  });
+
+  // End screen buttons
+  $('#btn-save-replay').addEventListener('click', handleSaveAndReplay);
+  $('#btn-replay-loisir').addEventListener('click', () => startGame());
+  $('#btn-end-lb').addEventListener('click', async () => {
+    // Save without replay
+    const name = ($('#player-name').value || '').trim().slice(0, 14) || 'Anonyme';
+    try { localStorage.setItem('trigo_last_name', name); } catch (e) {}
+    const entry = buildScoreEntry(name);
+    await saveScore(entry);
+    await renderLeaderboard(entry);
+    showScreen('screen-lb');
+  });
+  $('#btn-end-home').addEventListener('click', () => showScreen('screen-home'));
+
+  // Leaderboard
+  $('#btn-lb-home').addEventListener('click', () => showScreen('screen-home'));
+
+  // Allow Enter in name input
+  $('#player-name').addEventListener('keydown', e => {
+    if (e.key === 'Enter') handleSaveAndReplay();
+  });
+}
+
+// ─── Init ──────────────────────────────────────────────────
+buildQuestionPool();
+bindEvents();
+setGameType('reflex');
+setDifficulty('competitif');
+</script>
+</body>
+</html>

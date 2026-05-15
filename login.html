@@ -239,28 +239,12 @@ function continuerInvite() {
 
 <script type="module">
 let supabase, signIn, signUp, getCurrentUser;
-try {
-  const mod = await import('./auth/supabase.js');
-  supabase       = mod.supabase;
-  signIn         = mod.signIn;
-  signUp         = mod.signUp;
-  getCurrentUser = mod.getCurrentUser;
-} catch (e) {
-  // Module indisponible — on signale, mais on laisse l'utilisateur
-  // continuer en invité avec le bouton dédié.
-  console.warn('[login] Supabase indisponible.', e && e.message);
-  document.getElementById('error-msg').textContent =
-    'Service de comptes indisponible. Tu peux continuer en invité.';
-  document.getElementById('btn-submit').disabled = true;
-  throw e;
-}
+let _authReady = false;
 
-/* Déjà connecté → hub directement */
-try {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session) location.href = 'index.html';
-} catch (e) { /* silencieux : on laisse la page de connexion */ }
-
+/* Définir handleAuth IMMÉDIATEMENT — avant tout `await` — pour que le
+   bouton "Se connecter" fonctionne même si l'utilisateur clique avant
+   la fin du chargement du module Supabase, et même si ce module n'est
+   jamais assigné parce qu'il a planté. */
 window.handleAuth = async () => {
   const username = document.getElementById('username').value.trim();
   const password = document.getElementById('password').value;
@@ -269,6 +253,11 @@ window.handleAuth = async () => {
   const btn      = document.getElementById('btn-submit');
 
   errEl.textContent = '';
+
+  if (!_authReady) {
+    errEl.textContent = 'Service en cours de chargement, réessaie dans un instant…';
+    return;
+  }
 
   /* Validations front */
   if (!username || !password) {
@@ -311,6 +300,30 @@ window.handleAuth = async () => {
     btn.textContent = activeTab === 'login' ? 'Se connecter' : "S'inscrire";
   }
 };
+
+try {
+  const mod = await import('./auth/supabase.js');
+  supabase       = mod.supabase;
+  signIn         = mod.signIn;
+  signUp         = mod.signUp;
+  getCurrentUser = mod.getCurrentUser;
+  _authReady = true;
+} catch (e) {
+  // Module indisponible — on signale, mais on laisse l'utilisateur
+  // continuer en invité avec le bouton dédié.
+  console.warn('[login] Supabase indisponible.', e && e.message);
+  document.getElementById('error-msg').textContent =
+    'Service de comptes indisponible. Tu peux continuer en invité.';
+  document.getElementById('btn-submit').disabled = true;
+}
+
+/* Déjà connecté → hub directement */
+if (_authReady) {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) location.href = 'index.html';
+  } catch (e) { /* silencieux : on laisse la page de connexion */ }
+}
 </script>
 
 </body>

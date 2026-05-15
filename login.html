@@ -133,6 +133,20 @@ body {
 
 /* CHAMP CACHÉ */
 .hidden { display:none !important; }
+
+/* DIAGNOSTIC */
+.diag {
+  margin-top:14px; padding:10px 12px; border-radius:8px;
+  font-size:11px; font-family:ui-monospace,monospace;
+  background:rgba(99,102,241,0.08); border:1px solid var(--border);
+  color:var(--text-sub); line-height:1.5;
+}
+.diag.ok    { background:rgba(34,197,94,0.10);  border-color:rgba(34,197,94,0.4);  color:#86efac; }
+.diag.warn  { background:rgba(245,158,11,0.10); border-color:rgba(245,158,11,0.4); color:#fbbf24; }
+.diag.fail  { background:rgba(239,68,68,0.10);  border-color:rgba(239,68,68,0.4);  color:#fca5a5; }
+.diag-row   { display:flex; justify-content:space-between; gap:8px; }
+.diag-key   { opacity:0.75; }
+.diag-val   { font-weight:700; }
 </style>
 </head>
 <body>
@@ -146,10 +160,10 @@ body {
     <div class="logo-name">Scolaris</div>
   </div>
 
-  <!-- Tabs -->
+  <!-- Tabs (Inscription par défaut : priorité à la création de compte) -->
   <div class="tabs">
-    <button class="tab active" id="tab-login"    onclick="switchTab('login')">Connexion</button>
-    <button class="tab"        id="tab-register" onclick="switchTab('register')">Inscription</button>
+    <button class="tab"        id="tab-login"    onclick="switchTab('login')">Connexion</button>
+    <button class="tab active" id="tab-register" onclick="switchTab('register')">Inscription</button>
   </div>
 
   <!-- Champs -->
@@ -172,7 +186,7 @@ body {
       placeholder="••••••••" autocomplete="current-password">
   </div>
 
-  <div class="field hidden" id="field-confirm">
+  <div class="field" id="field-confirm">
     <label class="label">Confirmer le mot de passe</label>
     <input class="input" id="confirm" type="password" placeholder="••••••••">
   </div>
@@ -180,7 +194,7 @@ body {
   <div class="error" id="error-msg"></div>
 
   <button class="btn-primary" id="btn-submit" onclick="handleAuth()">
-    Se connecter
+    S'inscrire
   </button>
 
   <div class="sep">— ou —</div>
@@ -192,6 +206,13 @@ body {
   <p class="guest-info">
     En invité, les scores ne sont pas sauvegardés en ligne
   </p>
+
+  <!-- Diagnostic visible : on ne reste plus aveugle si quelque chose plante -->
+  <div class="diag" id="diag">
+    <div class="diag-row"><span class="diag-key">Module Supabase</span><span class="diag-val" id="diag-mod">…</span></div>
+    <div class="diag-row"><span class="diag-key">Session</span><span class="diag-val" id="diag-sess">…</span></div>
+    <div class="diag-row" id="diag-err-row" style="display:none;"><span class="diag-key">Dernière erreur</span><span class="diag-val" id="diag-err">—</span></div>
+  </div>
 </div>
 
 <script>
@@ -209,8 +230,8 @@ if (savedTheme) {
     savedTheme === 'light' ? '🌙 Mode sombre' : '☀ Mode clair';
 }
 
-/* ── Tabs ── */
-let activeTab = 'login';
+/* ── Tabs (par défaut : inscription) ── */
+let activeTab = 'register';
 function switchTab(tab) {
   activeTab = tab;
   document.getElementById('tab-login').classList.toggle('active',    tab === 'login');
@@ -222,6 +243,8 @@ function switchTab(tab) {
   document.getElementById('password').autocomplete =
     tab === 'login' ? 'current-password' : 'new-password';
 }
+// Force l'état initial cohérent avec activeTab='register'
+switchTab('register');
 
 /* ── Invité ── */
 function continuerInvite() {
@@ -241,10 +264,26 @@ function continuerInvite() {
 let supabase, signIn, signUp, getCurrentUser;
 let _authReady = false;
 
-/* Définir handleAuth IMMÉDIATEMENT — avant tout `await` — pour que le
-   bouton "Se connecter" fonctionne même si l'utilisateur clique avant
-   la fin du chargement du module Supabase, et même si ce module n'est
-   jamais assigné parce qu'il a planté. */
+/* ── Diagnostic helpers ─────────────────────────────────── */
+const diagEl    = document.getElementById('diag');
+const diagMod   = document.getElementById('diag-mod');
+const diagSess  = document.getElementById('diag-sess');
+const diagErrRow = document.getElementById('diag-err-row');
+const diagErr   = document.getElementById('diag-err');
+function setDiag(field, value, severity) {
+  if (field === 'mod')  diagMod.textContent  = value;
+  if (field === 'sess') diagSess.textContent = value;
+  if (field === 'err' && value) {
+    diagErrRow.style.display = '';
+    diagErr.textContent = value;
+  }
+  if (severity) diagEl.className = 'diag ' + severity;
+}
+setDiag('mod', 'chargement…', 'warn');
+setDiag('sess', '—');
+
+/* handleAuth défini IMMÉDIATEMENT (avant tout await), pour qu'un clic
+   précoce ne soit jamais muet — il affiche au pire un message clair. */
 window.handleAuth = async () => {
   const username = document.getElementById('username').value.trim();
   const password = document.getElementById('password').value;
@@ -255,7 +294,7 @@ window.handleAuth = async () => {
   errEl.textContent = '';
 
   if (!_authReady) {
-    errEl.textContent = 'Service en cours de chargement, réessaie dans un instant…';
+    errEl.textContent = 'Service de comptes indisponible — voir le panneau Diagnostic ci-dessous.';
     return;
   }
 
@@ -286,13 +325,17 @@ window.handleAuth = async () => {
     }
     location.href = 'index.html';
   } catch (e) {
-    const msg = e.message || '';
+    const msg = (e && e.message) || String(e);
+    console.error('[login] auth error:', e);
+    setDiag('err', msg, 'fail');
     if (msg.includes('Invalid login credentials'))
       errEl.textContent = 'Identifiant ou mot de passe incorrect.';
     else if (msg.includes('already registered') || msg.includes('already been registered'))
       errEl.textContent = 'Cet identifiant est déjà pris.';
     else if (msg.includes('23505') || msg.includes('duplicate'))
       errEl.textContent = 'Cet identifiant est déjà utilisé.';
+    else if (msg.toLowerCase().includes('fetch') || msg.toLowerCase().includes('network'))
+      errEl.textContent = 'Réseau injoignable. Vérifie ta connexion ou que le projet Supabase n\'est pas en pause.';
     else
       errEl.textContent = msg;
   } finally {
@@ -301,6 +344,7 @@ window.handleAuth = async () => {
   }
 };
 
+/* ── Chargement du module Supabase ──────────────────────── */
 try {
   const mod = await import('./auth/supabase.js');
   supabase       = mod.supabase;
@@ -308,21 +352,28 @@ try {
   signUp         = mod.signUp;
   getCurrentUser = mod.getCurrentUser;
   _authReady = true;
+  setDiag('mod', 'chargé ✓', 'ok');
 } catch (e) {
-  // Module indisponible — on signale, mais on laisse l'utilisateur
-  // continuer en invité avec le bouton dédié.
   console.warn('[login] Supabase indisponible.', e && e.message);
-  document.getElementById('error-msg').textContent =
-    'Service de comptes indisponible. Tu peux continuer en invité.';
-  document.getElementById('btn-submit').disabled = true;
+  // ⚠ On NE désactive PLUS le bouton — clic possible → message clair.
+  setDiag('mod', 'échec ✗', 'fail');
+  setDiag('err', (e && e.message) || String(e), 'fail');
 }
 
 /* Déjà connecté → hub directement */
 if (_authReady) {
   try {
     const { data: { session } } = await supabase.auth.getSession();
-    if (session) location.href = 'index.html';
-  } catch (e) { /* silencieux : on laisse la page de connexion */ }
+    if (session) {
+      setDiag('sess', 'connecté → redirection', 'ok');
+      location.href = 'index.html';
+    } else {
+      setDiag('sess', 'aucune', 'ok');
+    }
+  } catch (e) {
+    setDiag('sess', 'erreur', 'fail');
+    setDiag('err', (e && e.message) || String(e), 'fail');
+  }
 }
 </script>
 

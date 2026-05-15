@@ -481,11 +481,22 @@ function setNavAccount({ loggedIn, username }) {
 
 async function init() {
   let session = null;
+  let supabaseReachable = true;
   try {
     const res = await supabase.auth.getSession();
     session = res?.data?.session ?? null;
   } catch (e) {
     console.warn('[index] getSession failed:', e && e.message);
+    supabaseReachable = false;
+  }
+
+  // Règle demandée : au lancement du hub, soit on est connecté automatiquement,
+  // soit on est envoyé sur la page d'inscription. Le mode invité reste explicite
+  // via le bouton "Continuer en invité" de login.html.
+  const isGuest = sessionStorage.getItem('scolaris_guest') === '1';
+  if (!session && !isGuest && supabaseReachable) {
+    location.href = 'login.html';
+    return;
   }
 
   if (session) {

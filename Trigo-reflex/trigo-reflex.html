@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../shared/classement.css" />
 <style>
   :root {
     --bg: #0a0d18;
@@ -564,6 +565,7 @@
     <header class="home-header">
       <h1 class="title">Trigo<br><span class="accent">Reflex</span></h1>
       <p class="subtitle">Mémorise les valeurs particulières de cos et sin sur le cercle trigonométrique. 5 questions, 3 choix.</p>
+      <div id="player-grade-badge" style="display:none; margin-top:14px;"></div>
     </header>
 
     <div class="eyebrow">Mode de jeu</div>
@@ -660,6 +662,16 @@
     </header>
 
     <div id="lb-type-label" class="eyebrow"></div>
+    <div class="difficulty-group" id="lb-scope-tabs" style="margin-bottom:14px;">
+      <button class="diff-btn selected" data-scope="local"  style="padding:12px 16px;">
+        <span class="diff-name" style="font-size:18px;">Local</span>
+        <span class="diff-time">Cet appareil</span>
+      </button>
+      <button class="diff-btn" data-scope="global" style="padding:12px 16px;">
+        <span class="diff-name" style="font-size:18px;">Mondial</span>
+        <span class="diff-time">Tous les joueurs connectés</span>
+      </button>
+    </div>
     <div class="leaderboard-list" id="leaderboard-list"></div>
 
     <div class="button-row lb-back">
@@ -671,10 +683,39 @@
 
 <div class="flash" id="flash"></div>
 
+<!-- Classement partagé (template tous-jeux) -->
+<script src="../shared/classement.js"></script>
+
+<!-- Auth Supabase (optionnelle : si non disponible, fallback localStorage uniquement) -->
+<script type="module">
+  try {
+    const mod = await import('../auth/supabase.js');
+    const user = await mod.getCurrentUser().catch(() => null);
+    window._scolarisAuth = {
+      saveGameScore: mod.saveGameScore,
+      getLeaderboard: mod.getLeaderboard,
+      getCurrentUser: mod.getCurrentUser,
+    };
+    window._scolarisUser = user;
+  } catch (e) {
+    console.info('[trigo-reflex] Supabase indisponible — mode local seul.', e && e.message);
+  } finally {
+    window.dispatchEvent(new Event('scolaris-auth-ready'));
+  }
+</script>
+
 <script>
 /* ════════════════════════════════════════════════════════════
    TRIGO REFLEX — game logic
    ════════════════════════════════════════════════════════════ */
+
+// Initialise le template de classement (max théorique 15600 ; plafond humain ≈14700)
+ScolarisRanking.init({
+  gameId:    'trigo-reflex',
+  gameLabel: 'Trigo · Reflex',
+  maxScore:  15600,
+  humanCap:  14700,
+});
 
 // ─── Constants ─────────────────────────────────────────────
 const MODES = {
@@ -694,7 +735,10 @@ function speedScore(elapsedMs) {
 }
 
 const ROUNDS = 5;
-const STORAGE_KEY = 'trigo_scores_v2';
+// Note : la persistance passe désormais par ScolarisRanking (template partagé).
+// On garde des clés distinctes par variante de jeu (reflex / clic).
+const STORAGE_KEY_REFLEX = 'trigo-reflex';
+const STORAGE_KEY_CLIC_GAME = 'trigo-clic';
 
 // All particular angles on the trig circle (in radians)
 // Each value is encoded as a key from VALUES below.
@@ -733,7 +777,6 @@ const VALUE_KEYS = Object.keys(VALUES);
 
 // ─── Mode Clic — constants & helpers ───────────────────────
 const CLICK_TOLERANCE_RAD = 12 * Math.PI / 180;
-const STORAGE_KEY_CLIC = 'trigo_clic_scores_v1';
 
 const QUESTION_POOL = [];
 function buildQuestionPool() {
@@ -1219,32 +1262,22 @@ function finishGame() {
   showScreen('screen-end');
 }
 
-// ─── Storage / scores ──────────────────────────────────────
-function getStorageKey() {
-  return state.gameType === 'reflex' ? STORAGE_KEY : STORAGE_KEY_CLIC;
+// ─── Storage / scores (délégué à ScolarisRanking) ──────────
+let _lbScope = 'local';            // 'local' | 'global'
+let _lbHighlight = null;           // dernière entrée pour mise en surbrillance
+
+function currentGameId() {
+  return state.gameType === 'reflex' ? STORAGE_KEY_REFLEX : STORAGE_KEY_CLIC_GAME;
 }
 
-async function loadScores() {
-  try {
-    const r = await window.storage.get(getStorageKey());
-    if (!r || !r.value) return [];
-    return JSON.parse(r.value);
-  } catch (e) {
-    return [];
-  }
-}
-
-async function saveScore(entry) {
-  const scores = await loadScores();
-  scores.push(entry);
-  scores.sort((a, b) => b.score - a.score);
-  const trimmed = scores.slice(0, 100);
-  try {
-    await window.storage.set(getStorageKey(), JSON.stringify(trimmed));
-  } catch (e) {
-    console.warn('Save failed', e);
-  }
-  return trimmed;
+function ensureRankingConfig() {
+  // Re-init avec le bon gameId selon le mode actif
+  ScolarisRanking.init({
+    gameId:    currentGameId(),
+    gameLabel: state.gameType === 'reflex' ? 'Trigo · Reflex' : 'Trigo · Clic',
+    maxScore:  15600,
+    humanCap:  14700,
+  });
 }
 
 async function handleSaveAndReplay() {
@@ -1252,8 +1285,10 @@ async function handleSaveAndReplay() {
   try { localStorage.setItem('trigo_last_name', name); } catch (e) {}
 
   const entry = buildScoreEntry(name);
-  await saveScore(entry);
-  state.lastSavedEntry = entry;
+  ensureRankingConfig();
+  const saved = await ScolarisRanking.saveScore(entry);
+  state.lastSavedEntry = saved;
+  _lbHighlight = saved;
 
   // replay same mode
   startGame();
@@ -1279,42 +1314,20 @@ function buildScoreEntry(name) {
 }
 
 // ─── Leaderboard rendering ─────────────────────────────────
-async function renderLeaderboard(highlightEntry = null) {
-  const all = await loadScores();
-  const filtered = [...all].sort((a, b) => b.score - a.score).slice(0, 20);
+async function renderLeaderboard(highlightEntry) {
+  if (highlightEntry) _lbHighlight = highlightEntry;
+  ensureRankingConfig();
+  $('#lb-type-label').textContent =
+    (state.gameType === 'reflex' ? 'Mode Reflex' : 'Mode Clic')
+    + ' · ' + (_lbScope === 'global' ? 'Classement mondial' : 'Classement local');
 
-  $('#lb-type-label').textContent = state.gameType === 'reflex' ? 'Mode Reflex' : 'Mode Clic';
+  $$('#lb-scope-tabs .diff-btn').forEach(b => {
+    b.classList.toggle('selected', b.dataset.scope === _lbScope);
+  });
 
-  const listEl = $('#leaderboard-list');
-  listEl.innerHTML = '';
-
-  if (!filtered.length) {
-    listEl.innerHTML = `<div class="lb-empty">Aucun score pour l'instant.</div>`;
-    return;
-  }
-
-  filtered.forEach((e, i) => {
-    const row = document.createElement('div');
-    row.className = 'lb-row' + (i === 0 ? ' top-1' : '');
-    if (highlightEntry &&
-        e.name === highlightEntry.name &&
-        e.score === highlightEntry.score &&
-        e.date === highlightEntry.date) {
-      row.classList.add('highlight');
-    }
-    const exo = e.exerciseType || 'cos/sin';
-    row.innerHTML = `
-      <div class="lb-rank">${i + 1}</div>
-      <div class="lb-info">
-        <div class="lb-name">${escapeHtml(e.name)}</div>
-        <div class="lb-meta">
-          <span class="diff-badge competitif">${exo}</span>
-          ${e.correct}/${e.total} · ⌀ ${e.avgTime.toFixed(2)}s · ${formatDateShort(e.date)}
-        </div>
-      </div>
-      <div class="lb-score">${e.score}</div>
-    `;
-    listEl.appendChild(row);
+  await ScolarisRanking.renderLeaderboard($('#leaderboard-list'), {
+    scope: _lbScope,
+    highlight: _lbHighlight,
   });
 }
 
@@ -1324,12 +1337,23 @@ function escapeHtml(s) {
   }[c]));
 }
 
+// Refresh du badge grade joueur (home)
+async function refreshPlayerBadge() {
+  ensureRankingConfig();
+  // Si Supabase dispo : on charge le mondial pour récupérer le rang global
+  try { await ScolarisRanking.loadOnline(); } catch (e) { /* silencieux */ }
+  ScolarisRanking.renderGradeBadge($('#player-grade-badge'));
+}
+
 // ─── Event bindings ────────────────────────────────────────
 function bindEvents() {
   // Home: mode de jeu (type + difficulté combinés)
   $('#mode-group').addEventListener('click', e => {
     const btn = e.target.closest('.diff-btn');
-    if (btn) setMode(btn.dataset.type, btn.dataset.diff);
+    if (btn) {
+      setMode(btn.dataset.type, btn.dataset.diff);
+      refreshPlayerBadge();
+    }
   });
 
   // Start
@@ -1337,8 +1361,17 @@ function bindEvents() {
 
   // Show leaderboard from home
   $('#btn-show-lb').addEventListener('click', async () => {
+    _lbHighlight = null;
     await renderLeaderboard();
     showScreen('screen-lb');
+  });
+
+  // Bascule scope local / mondial
+  $('#lb-scope-tabs').addEventListener('click', async (e) => {
+    const btn = e.target.closest('.diff-btn');
+    if (!btn) return;
+    _lbScope = btn.dataset.scope === 'global' ? 'global' : 'local';
+    await renderLeaderboard();
   });
 
   // End screen buttons
@@ -1349,14 +1382,21 @@ function bindEvents() {
     const name = ($('#player-name').value || '').trim().slice(0, 14) || 'Anonyme';
     try { localStorage.setItem('trigo_last_name', name); } catch (e) {}
     const entry = buildScoreEntry(name);
-    await saveScore(entry);
-    await renderLeaderboard(entry);
+    ensureRankingConfig();
+    const saved = await ScolarisRanking.saveScore(entry);
+    await renderLeaderboard(saved);
     showScreen('screen-lb');
   });
-  $('#btn-end-home').addEventListener('click', () => showScreen('screen-home'));
+  $('#btn-end-home').addEventListener('click', () => {
+    showScreen('screen-home');
+    refreshPlayerBadge();
+  });
 
   // Leaderboard
-  $('#btn-lb-home').addEventListener('click', () => showScreen('screen-home'));
+  $('#btn-lb-home').addEventListener('click', () => {
+    showScreen('screen-home');
+    refreshPlayerBadge();
+  });
 
   // Allow Enter in name input
   $('#player-name').addEventListener('keydown', e => {
@@ -1368,6 +1408,14 @@ function bindEvents() {
 buildQuestionPool();
 bindEvents();
 setMode('reflex', 'competitif');
+
+// Premier affichage du badge ; on attend l'auth Supabase (optionnelle) pour
+// récupérer le rang mondial, mais on n'attend pas plus de 1.5 s.
+let _badgeTimer = setTimeout(refreshPlayerBadge, 1500);
+window.addEventListener('scolaris-auth-ready', () => {
+  clearTimeout(_badgeTimer);
+  refreshPlayerBadge();
+}, { once: true });
 </script>
 </body>
 </html>

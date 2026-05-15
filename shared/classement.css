@@ -1,0 +1,142 @@
+/* ─── Maths_Hub — Classement partagé (styles) ───
+   Variables consommées (à fournir par le jeu hôte ou fallbacks ici) :
+     --accent, --bg, --bg-card, --border, --text, --text-dim, --text-faint
+   Préfixe `.scolaris-` pour éviter les collisions avec les styles du jeu. */
+
+.scolaris-lb {
+  --slb-bg:       var(--bg-card,   #1a1f33);
+  --slb-border:   var(--border,    #2a3148);
+  --slb-text:     var(--text,      #f0ebe2);
+  --slb-dim:      var(--text-dim,  #8a8676);
+  --slb-faint:    var(--text-faint,#555165);
+  --slb-accent:   var(--accent,    #e8b878);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-family: inherit;
+}
+
+.scolaris-lb-loading,
+.scolaris-lb-empty {
+  text-align: center;
+  padding: 28px 16px;
+  color: var(--slb-faint);
+  font-style: italic;
+}
+
+.scolaris-lb-header {
+  display: grid;
+  grid-template-columns: 56px 1fr 110px 96px;
+  gap: 10px;
+  align-items: center;
+  padding: 4px 14px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--slb-faint);
+}
+@media (max-width: 480px) {
+  .scolaris-lb-header { grid-template-columns: 44px 1fr 84px 78px; gap: 8px; padding: 4px 10px; font-size: 9px; }
+}
+
+.scolaris-lb-row {
+  display: grid;
+  grid-template-columns: 56px 1fr 110px 96px;
+  gap: 10px;
+  align-items: center;
+  background: var(--slb-bg);
+  border: 1px solid var(--slb-border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  transition: transform 0.15s, border-color 0.2s;
+}
+@media (max-width: 480px) {
+  .scolaris-lb-row { grid-template-columns: 44px 1fr 84px 78px; gap: 8px; padding: 10px; }
+}
+.scolaris-lb-row.scolaris-lb-top1 { border-color: var(--slb-accent); }
+.scolaris-lb-row.scolaris-lb-hl   { border-color: var(--slb-accent); box-shadow: 0 0 0 1px var(--slb-accent) inset; }
+.scolaris-lb-row.scolaris-lb-me   { background: linear-gradient(135deg, rgba(232,184,120,0.10), rgba(232,184,120,0.02)); }
+
+.scolaris-lb-rank {
+  font-family: var(--font-display, 'Instrument Serif', 'Times New Roman', serif);
+  font-style: italic;
+  font-size: 22px;
+  color: var(--slb-faint);
+  text-align: center;
+}
+.scolaris-lb-top1 .scolaris-lb-rank { color: var(--slb-accent); }
+
+.scolaris-lb-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--slb-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scolaris-lb-grade {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  background: rgba(0,0,0,0.20);
+  width: max-content;
+  max-width: 100%;
+}
+.scolaris-lb-grade-letter { font-weight: 700; font-size: 13px; }
+.scolaris-lb-grade-label  { font-size: 10px; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.12em; }
+@media (max-width: 480px) {
+  .scolaris-lb-grade-label { display: none; }
+}
+
+.scolaris-lb-score {
+  font-family: var(--font-display, 'Instrument Serif', 'Times New Roman', serif);
+  font-style: italic;
+  font-size: 24px;
+  color: var(--slb-accent);
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1;
+}
+.scolaris-lb-score-pct {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-style: normal;
+  font-size: 10px;
+  color: var(--slb-faint);
+  letter-spacing: 0.08em;
+  margin-top: 4px;
+}
+
+.scolaris-lb-foot {
+  text-align: center;
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 10px;
+  color: var(--slb-faint);
+  letter-spacing: 0.1em;
+  margin-top: 6px;
+  text-transform: uppercase;
+}
+
+/* ─── Badge joueur ─── */
+.scolaris-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  background: rgba(0,0,0,0.30);
+}
+.scolaris-badge-grade { font-weight: 700; font-size: 12px; }
+.scolaris-badge-rank  { font-size: 10px; opacity: 0.85; }

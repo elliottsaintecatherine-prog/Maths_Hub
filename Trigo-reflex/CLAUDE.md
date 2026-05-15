@@ -32,14 +32,7 @@ Maths_Hub/Trigo-reflex/
 
 ## ÉTAT DU PROJET
 
-**GROUPE COURANT : d1** (Polish + image Hub) — enchaîner automatiquement dans cette conversation
-
-Quand tu termines un micro-prompt du groupe courant : coche [x], passe au suivant automatiquement, update PROCHAINE ACTION. Quand tout le groupe est [x], mets à jour GROUPE COURANT avec le groupe suivant et arrête.
-
-Groupes restants (dans l'ordre) :
-1. **d1 → d2** (Polish + image Hub) ← COURANT
-
-Ordre d'exécution complet : `b1 → b2 → c1 → d1 → d2`
+**TOUS LES GROUPES SONT TERMINÉS** + extension : classement partagé branché.
 
 | ID | Titre                                     | Status |
 |----|-------------------------------------------|--------|
@@ -50,6 +43,27 @@ Ordre d'exécution complet : `b1 → b2 → c1 → d1 → d2`
 | c1 | Flux + classement (gameType)              | [x]    |
 | d1 | Polish (touch, hint, leaderboard)         | [x]    |
 | d2 | Image tête d'affiche dans le Hub          | [x]    |
+| e1 | Template classement partagé + intégration | [x]    |
+
+## TEMPLATE DE CLASSEMENT PARTAGÉ (e1)
+
+Module commun : `Maths_Hub/shared/classement.js` + `classement.css`.
+Tous les futurs jeux doivent appeler `ScolarisRanking.init({...})` puis utiliser
+`saveScore` / `renderLeaderboard` / `renderGradeBadge` au lieu de réécrire la
+plomberie classement.
+
+**Configuration Trigo-reflex** :
+- `maxScore: 15600` (5 × 3120, instantané parfait)
+- `humanCap: 14700` (≈ 0.42 s/question)
+- Grades F → SS dérivés de `humanCap` (40 / 60 / 75 / 85 / 93 / 100 %).
+
+**Persistance** :
+- Local : `localStorage['scolaris_scores_<gameId>']`.
+- Mondial : Supabase via `window._scolarisAuth.saveGameScore` / `getLeaderboard`
+  (bootstrap dynamique depuis `auth/supabase.js` ; fallback silencieux si offline).
+
+**Vérification** : `python test_classement.py` (9 assertions ; vérifie le scoring,
+les seuils de grade et la présence des appels d'API côté HTML).
 
 > Référence complète : voir `wiki/games/trigo-reflex-prompts.md` dans l'Obsidian.
 
@@ -57,25 +71,14 @@ Ordre d'exécution complet : `b1 → b2 → c1 → d1 → d2`
 
 ## PROCHAINE ACTION
 
-**Prompt d2 — Image tête d'affiche dans le Hub (★★ Haiku)**
+Aucune. Le projet est complet et le template de classement est branché.
 
-Avant de lancer ce prompt : placer l'image générée dans `C:\Users\Herve\Documents\Elliott\Projet\Maths_Hub\Trigo-reflex\trigo-reflex.png`.
-
-Lire uniquement `C:\Users\Herve\Documents\Elliott\Projet\Maths_Hub\index.html`.
-
-Dans le tableau `JEUX`, trouver l'entrée `id:"trigo-reflex"` et remplacer :
-```js
-imageClass:"ph-trigo", icon:"◎",
-```
-par :
-```js
-image:"Trigo-reflex/trigo-reflex.png",
-```
-
-C'est la seule modification à faire. Ne pas toucher au reste du fichier.
-
-CONTRAINTES :
-- Ne pas modifier les autres entrées de JEUX
-- Ne pas toucher au CSS `.ph-trigo` (peut rester, il ne gêne pas)
-
-VÉRIFICATION : relecture statique — vérifier que la clé `image` pointe vers le bon chemin relatif.
+Pour ajouter le classement à un nouveau jeu :
+1. Charger `<link rel="stylesheet" href="../shared/classement.css">` et
+   `<script src="../shared/classement.js"></script>`.
+2. (Optionnel) Bootstrap Supabase identique à celui de Trigo-reflex pour
+   activer le mode mondial.
+3. `ScolarisRanking.init({ gameId, gameLabel, maxScore, humanCap })`.
+4. À la fin d'une partie : `await ScolarisRanking.saveScore({ name, score })`.
+5. Pour l'écran classement : `await ScolarisRanking.renderLeaderboard(el, { scope:'local'|'global' })`.
+6. Pour un badge grade : `ScolarisRanking.renderGradeBadge(el)`.

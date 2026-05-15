@@ -130,7 +130,22 @@ svg.radar { overflow:visible; }
 </div>
 
 <script type="module">
-import { supabase, getCurrentUser, getLeaderboard, getUserCompetencies, getUserTotalScore } from './auth/supabase.js';
+// Bootstrap résilient : si l'import échoue, on revient au hub plutôt
+// que de laisser un "Chargement…" permanent.
+let supabase, getCurrentUser, getLeaderboard, getUserCompetencies, getUserTotalScore;
+try {
+  const mod = await import('./auth/supabase.js');
+  supabase             = mod.supabase;
+  getCurrentUser       = mod.getCurrentUser;
+  getLeaderboard       = mod.getLeaderboard;
+  getUserCompetencies  = mod.getUserCompetencies;
+  getUserTotalScore    = mod.getUserTotalScore;
+} catch (e) {
+  console.warn('[profile] Supabase indisponible — retour au hub.', e && e.message);
+  alert("Connexion impossible au serveur. Retour au hub.");
+  location.href = 'index.html';
+  throw e;
+}
 
 /* ══════════════════════════════════════════════════════════
    ARBRE DES COMPÉTENCES
@@ -175,11 +190,17 @@ let currentUser = null;
    INIT
 ══════════════════════════════════════════════════════════ */
 async function init() {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) { location.href = 'index.html'; return; }
+  let user = null;
+  try {
+    const res = await supabase.auth.getUser();
+    user = res?.data?.user ?? null;
+  } catch (e) {
+    console.warn('[profile] getUser failed:', e && e.message);
+  }
+  if (!user) { location.href = 'login.html'; return; }
 
-  currentUser = await getCurrentUser();
-  if (!currentUser) { location.href = 'index.html'; return; }
+  try { currentUser = await getCurrentUser(); } catch (e) { currentUser = null; }
+  if (!currentUser) { location.href = 'login.html'; return; }
 
   // Profil
   document.getElementById('av').textContent    = currentUser.username[0].toUpperCase();

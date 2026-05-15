@@ -238,13 +238,28 @@ function continuerInvite() {
 </script>
 
 <script type="module">
-import { supabase, signIn, signUp, getCurrentUser } from './auth/supabase.js';
+let supabase, signIn, signUp, getCurrentUser;
+try {
+  const mod = await import('./auth/supabase.js');
+  supabase       = mod.supabase;
+  signIn         = mod.signIn;
+  signUp         = mod.signUp;
+  getCurrentUser = mod.getCurrentUser;
+} catch (e) {
+  // Module indisponible — on signale, mais on laisse l'utilisateur
+  // continuer en invité avec le bouton dédié.
+  console.warn('[login] Supabase indisponible.', e && e.message);
+  document.getElementById('error-msg').textContent =
+    'Service de comptes indisponible. Tu peux continuer en invité.';
+  document.getElementById('btn-submit').disabled = true;
+  throw e;
+}
 
 /* Déjà connecté → hub directement */
-const { data: { session } } = await supabase.auth.getSession();
-if (session) {
-  location.href = 'index.html';
-}
+try {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) location.href = 'index.html';
+} catch (e) { /* silencieux : on laisse la page de connexion */ }
 
 window.handleAuth = async () => {
   const username = document.getElementById('username').value.trim();

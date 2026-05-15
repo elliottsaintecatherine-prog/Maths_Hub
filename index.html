@@ -173,6 +173,11 @@ a { text-decoration:none; color:inherit; }
     <span class="nav-balance" id="nav-balance">💶 — €</span>
     <button class="btn-icon" id="shop-btn" title="Boutique">🛒</button>
     <button class="btn-icon" id="secret-btn" title="Hub secret">🎵</button>
+    <a class="btn-toggle" id="nav-account" href="login.html" title="Compte"
+       style="display:inline-flex; align-items:center; gap:6px; text-decoration:none;">
+      <span id="nav-account-icon">👤</span>
+      <span id="nav-account-label">Connexion</span>
+    </a>
     <button class="btn-toggle" id="theme-btn" onclick="toggleTheme()">☀ Mode clair</button>
   </div>
 </nav>
@@ -194,7 +199,9 @@ a { text-decoration:none; color:inherit; }
         <button class="btn-logout" onclick="handleSignOut()">Déconnexion</button>
       </div>
     </div>
-    <div class="guest-bar hidden" id="guest-bar">
+    <!-- Guest-bar visible par défaut : si le module Supabase plante, l'utilisateur garde
+         toujours un accès à la connexion. La JS la cache si une session est détectée. -->
+    <div class="guest-bar" id="guest-bar">
       <button class="btn-login" onclick="location.href='login.html'">Connexion / Inscription</button>
       <span class="guest-hint">Mode invité — tes scores ne seront pas sauvegardés en ligne</span>
     </div>
@@ -372,7 +379,26 @@ if (new URLSearchParams(location.search).get('hub') === 'secret') deverrouillerS
 </script>
 
 <script type="module">
-import { supabase, signOut, getCurrentUser, getUserTotalScore } from './auth/supabase.js';
+// Bootstrap auth — totalement résilient : si l'import ou la session échouent,
+// on retombe sur l'affichage invité (la guest-bar est déjà visible).
+let supabase, signOut, getCurrentUser, getUserTotalScore;
+try {
+  const mod = await import('./auth/supabase.js');
+  supabase        = mod.supabase;
+  signOut         = mod.signOut;
+  getCurrentUser  = mod.getCurrentUser;
+  getUserTotalScore = mod.getUserTotalScore;
+} catch (e) {
+  console.warn('[index] Supabase indisponible — mode invité forcé.', e && e.message);
+  // Stubs pour que le reste du fichier ne crashe pas
+  supabase = { auth: {
+    getSession: async () => ({ data: { session: null } }),
+    onAuthStateChange: () => ({ data: { subscription: { unsubscribe(){} } } }),
+  } };
+  signOut         = async () => {};
+  getCurrentUser  = async () => null;
+  getUserTotalScore = async () => 0;
+}
 import { getBalance, SHOP, buyItem, itemCount } from './economy.js';
 
 /* ── Économie : affichage solde ── */
@@ -432,31 +458,67 @@ document.getElementById('shop-backdrop').addEventListener('click', closeShop);
 window.addEventListener('scolaris-balance', refreshBalance);
 refreshBalance();
 
-/* ── Init : vérifie session, redirige si non connecté ── */
-async function init() {
-  const { data: { session } } = await supabase.auth.getSession();
-  const isGuest = sessionStorage.getItem('scolaris_guest') === '1';
+/* ── Init : détecte la session et révèle la bonne barre ────
+   Plus de redirection automatique vers login.html — l'utilisateur
+   garde toujours un accès via le bouton "Compte" de la navbar. */
+function setNavAccount({ loggedIn, username }) {
+  const link  = document.getElementById('nav-account');
+  const icon  = document.getElementById('nav-account-icon');
+  const label = document.getElementById('nav-account-label');
+  if (!link) return;
+  if (loggedIn) {
+    link.href = 'profile.html';
+    link.title = 'Voir mon profil';
+    icon.textContent = '👤';
+    label.textContent = username ? username : 'Profil';
+  } else {
+    link.href = 'login.html';
+    link.title = 'Connexion / Inscription';
+    icon.textContent = '👤';
+    label.textContent = 'Connexion';
+  }
+}
 
-  if (!session && !isGuest) {
-    // Ni connecté ni invité → page de connexion
-    location.href = 'login.html';
-    return;
+async function init() {
+  let session = null;
+  try {
+    const res = await supabase.auth.getSession();
+    session = res?.data?.session ?? null;
+  } catch (e) {
+    console.warn('[index] getSession failed:', e && e.message);
   }
 
   if (session) {
-    const user = await getCurrentUser();
-    if (user) await showProfileBar(user);
-    else showGuestBar();
+    let user = null;
+    try { user = await getCurrentUser(); } catch (e) { /* fallthrough */ }
+    if (user) {
+      await showProfileBar(user);
+      setNavAccount({ loggedIn: true, username: user.username });
+    } else {
+      showGuestBar();
+      setNavAccount({ loggedIn: false });
+    }
   } else {
     showGuestBar();
+    setNavAccount({ loggedIn: false });
   }
 
-  // Écoute déconnexion
-  supabase.auth.onAuthStateChange((_event, session) => {
-    if (!session && sessionStorage.getItem('scolaris_guest') !== '1') {
-      location.href = 'login.html';
-    }
-  });
+  // Écoute déconnexion / connexion en direct
+  try {
+    supabase.auth.onAuthStateChange(async (_event, s) => {
+      if (s) {
+        let user = null;
+        try { user = await getCurrentUser(); } catch (e) {}
+        if (user) {
+          await showProfileBar(user);
+          setNavAccount({ loggedIn: true, username: user.username });
+        }
+      } else {
+        showGuestBar();
+        setNavAccount({ loggedIn: false });
+      }
+    });
+  } catch (e) { /* silencieux */ }
 }
 
 async function showProfileBar(user) {
@@ -465,7 +527,8 @@ async function showProfileBar(user) {
   bar.classList.remove('hidden');
   document.getElementById('p-avatar').textContent = user.username[0].toUpperCase();
   document.getElementById('p-username').textContent = user.username;
-  const total = await getUserTotalScore(user.id);
+  let total = 0;
+  try { total = await getUserTotalScore(user.id); } catch (e) {}
   document.getElementById('p-score').textContent = total
     ? `${total.toLocaleString('fr-FR')} pts au total`
     : 'Aucun score encore';
@@ -478,11 +541,17 @@ function showGuestBar() {
 
 window.handleSignOut = async () => {
   sessionStorage.removeItem('scolaris_guest');
-  await signOut();
-  location.href = 'login.html';
+  try { await signOut(); } catch (e) {}
+  // Reste sur le hub en mode invité au lieu de forcer login.html
+  showGuestBar();
+  setNavAccount({ loggedIn: false });
 };
 
-init();
+init().catch(e => {
+  console.warn('[index] init failed, fallback guest mode:', e && e.message);
+  showGuestBar();
+  setNavAccount({ loggedIn: false });
+});
 </script>
 </body>
 </html>

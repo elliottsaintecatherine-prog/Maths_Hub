@@ -328,14 +328,23 @@ window.handleAuth = async () => {
     const msg = (e && e.message) || String(e);
     console.error('[login] auth error:', e);
     setDiag('err', msg, 'fail');
-    if (msg.includes('Invalid login credentials'))
-      errEl.textContent = 'Identifiant ou mot de passe incorrect.';
+    const lower = msg.toLowerCase();
+    if (lower.includes('email not confirmed') || lower.includes('confirmation'))
+      errEl.textContent = 'Compte non confirmé. → Dans Supabase → Auth → Sign In/Up : décoche « Confirm email ».';
+    else if (lower.includes('email') && (lower.includes('disabled') || lower.includes('not enabled') || lower.includes('signup')))
+      errEl.textContent = 'Inscriptions désactivées. → Dans Supabase → Auth → Providers → Email : activer « Enable email signup ».';
+    else if (lower.includes('email') && lower.includes('invalid'))
+      errEl.textContent = 'Supabase refuse le format d\'email interne. → Auth → Settings : autoriser les emails non-vérifiés / désactiver la validation d\'email.';
+    else if (msg.includes('Invalid login credentials'))
+      errEl.textContent = 'Identifiant ou mot de passe incorrect (ou compte non confirmé côté Supabase).';
     else if (msg.includes('already registered') || msg.includes('already been registered'))
       errEl.textContent = 'Cet identifiant est déjà pris.';
     else if (msg.includes('23505') || msg.includes('duplicate'))
       errEl.textContent = 'Cet identifiant est déjà utilisé.';
-    else if (msg.toLowerCase().includes('fetch') || msg.toLowerCase().includes('network'))
+    else if (lower.includes('fetch') || lower.includes('network') || lower.includes('failed to fetch'))
       errEl.textContent = 'Réseau injoignable. Vérifie ta connexion ou que le projet Supabase n\'est pas en pause.';
+    else if (lower.includes('jwt') || lower.includes('401') || lower.includes('unauthorized') || lower.includes('api key'))
+      errEl.textContent = 'Clé Supabase rejetée. → Régénère la clé publishable et mets-la dans auth/supabase.js.';
     else
       errEl.textContent = msg;
   } finally {
@@ -374,6 +383,27 @@ if (_authReady) {
     setDiag('sess', 'erreur', 'fail');
     setDiag('err', (e && e.message) || String(e), 'fail');
   }
+
+  // Pré-diagnostic : on lit la config publique du projet Supabase pour détecter
+  // les pièges classiques AVANT que l'utilisateur clique.
+  try {
+    const url = (supabase.supabaseUrl || '').replace(/\/$/, '') + '/auth/v1/settings';
+    const r = await fetch(url, { headers: { apikey: supabase.supabaseKey || '' } });
+    if (r.ok) {
+      const cfg = await r.json();
+      const probs = [];
+      if (cfg.disable_signup) probs.push('inscriptions désactivées (Auth → Sign In/Up : « Allow new users to sign up »)');
+      if (cfg.mailer_autoconfirm === false) probs.push('confirmation email requise (Auth → Sign In/Up : décoche « Confirm email »)');
+      if (cfg.external && cfg.external.email === false) probs.push('provider Email désactivé (Auth → Providers → Email : activer)');
+      if (probs.length) {
+        setDiag('mod', 'chargé ✓ mais config problématique', 'warn');
+        setDiag('err', '⚠ ' + probs.join(' • '), 'warn');
+      }
+    } else if (r.status === 401 || r.status === 403) {
+      setDiag('mod', 'chargé ✓ mais clé refusée', 'fail');
+      setDiag('err', 'HTTP ' + r.status + ' — clé publishable rejetée par le projet Supabase', 'fail');
+    }
+  } catch (e) { /* pré-diag best-effort : on ne casse rien si ça échoue */ }
 }
 </script>
 

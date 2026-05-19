@@ -65,6 +65,30 @@ const ROOMS = {
         guardian: { id:'spectre_gris', x:3, y:1, w:2, h:2, active:true,
                     objective: { type:'item', required:'cle_rouillee' } } }
     ]
+  },
+
+  // PLACEHOLDER : S3 Bibliotheque — squelette pour tester les transitions.
+  //               A enrichir en Phase 2 (decors, objets, agencement final).
+  S3: {
+    name: "Bibliotheque",
+    width: 8,
+    height: 7,
+    grid: [
+      [1, 1, 1, 1, 1, 1, 1, 1], // y=0 : mur N
+      [1, 0, 0, 0, 0, 0, 0, 1], // y=1
+      [1, 0, 0, 0, 0, 0, 0, 1], // y=2
+      [1, 0, 0, 0, 0, 0, 0, 1], // y=3
+      [1, 0, 0, 0, 0, 0, 0, 1], // y=4
+      [1, 0, 0, 0, 0, 0, 0, 1], // y=5
+      [1, 1, 1, 2, 1, 1, 1, 1], // y=6 : mur S avec porte vers S1 en (3,6)
+    ],
+    decor: [],
+    items: [],
+    spawn: { x: 3, y: 5 },
+    doors: [
+      // Porte sud vers S1 — re-spawn cote nord du Hall (au-dessous de la porte (4,0))
+      { x: 3, y: 6, target: 'S1', spawnAt: { x: 4, y: 1 } }
+    ]
   }
 };
 

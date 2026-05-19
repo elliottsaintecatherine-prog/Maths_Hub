@@ -27,9 +27,7 @@
   /* HUD coin haut-gauche : nom de la salle */
   #room-label { position:fixed; top:12px; left:12px; padding:6px 12px; background:rgba(8,5,3,0.85); border:1px solid #3d2810; color:#f5d070; font-size:12px; letter-spacing:1px; z-index:40; border-radius:4px; }
 
-  /* Bouton retour hub */
-  #btn-hub { position:fixed; top:12px; right:12px; padding:6px 12px; background:rgba(8,5,3,0.85); border:1px solid #3d2810; color:#8a6a2a; font-family:inherit; font-size:11px; cursor:pointer; z-index:40; border-radius:4px; }
-  #btn-hub:hover { color:#f5d070; }
+  /* Bouton retour hub : retire, deplace dans le menu engrenage (coin haut-droit). */
 
   /* Effet vision noire (game over progressif) */
   #vision-overlay { position:fixed; inset:0; pointer-events:none; background:radial-gradient(circle, transparent 30%, #000 100%); opacity:0; transition:opacity 0.5s; z-index:30; }
@@ -47,7 +45,6 @@
 <canvas id="game-canvas"></canvas>
 
 <div id="room-label">— Hall d'Entrée —</div>
-<a id="btn-hub" href="../index.html">← Hub</a>
 
 <div id="panel-vectors">
   <div id="panel-handle" onclick="document.getElementById('panel-vectors').classList.toggle('expanded')">
@@ -75,8 +72,8 @@
   <button onclick="window.location.reload()">Recommencer</button>
 </div>
 
-<script src="chair-data.js?v=3"></script>
-<script src="chair.js?v=3"></script>
+<script src="chair-data.js?v=4"></script>
+<script src="chair.js?v=4"></script>
 
 </body>
 </html>

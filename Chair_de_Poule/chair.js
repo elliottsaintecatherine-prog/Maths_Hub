@@ -583,6 +583,9 @@ function render() {
   // 4d. Axes math discrets (x, y) sur la map
   drawAxes(room);
 
+  // 4e. Trace au sol du dernier vecteur (fade 3s)
+  drawFloorTrace();
+
   // 5. Joueur
   drawPlayer();
 }
@@ -618,6 +621,12 @@ function playVector(vx, vy) {
   }
   // Stocker la position avant l'animation (pour rebond eventuel sur porte gardee)
   gameState.lastPlayerPos = { x: gameState.player.x, y: gameState.player.y };
+  // Trace au sol du dernier vecteur (P6) — visible 3s
+  gameState.lastVectorTrace = {
+    from: { x: gameState.player.x, y: gameState.player.y },
+    to:   { x: targetX, y: targetY },
+    t0: performance.now()
+  };
   // Animation glissante
   gameState.isMoving = true;
   gameState.moveAnim = {
@@ -680,6 +689,7 @@ function loadRoom(roomId, spawnX, spawnY) {
   gameState.player = { x: spawnX, y: spawnY };
   gameState.isMoving = false;
   gameState.moveAnim = null;
+  gameState.lastVectorTrace = null;  // pas de trace residuelle dans la nouvelle salle
   fitRoomToScreen();
   document.getElementById('room-label').textContent = '— ' + MAP1.rooms[roomId].name + ' —';
 }
@@ -991,6 +1001,8 @@ function update() {
       }
     }
   }
+  // MAJ barre de vie hantise (P6) — chaque frame
+  updateHauntingBar();
   // Hantise (vision blackouts dans les dernières minutes)
   const elapsed = Date.now() - gameState.startTime;
   const overlay = document.getElementById('vision-overlay');
@@ -1093,6 +1105,9 @@ function init() {
 
   // Panneau Sac (vide au demarrage)
   updateInventoryHUD();
+
+  // Barre de vie hantise (top centre)
+  ensureHauntingBar();
 
   // Clic sur le canvas : detecter clic sur un gardien actif et ouvrir le modal
   canvas.addEventListener('click', (e) => {

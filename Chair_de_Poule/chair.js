@@ -265,6 +265,13 @@ function hexWithAlpha(hex, alpha) {
 
 function drawGuardian(g) {
   const info = (typeof GUARDIANS !== 'undefined' && GUARDIANS[g.id]) || { color: '#808080', eyeColor: '#ff0000' };
+  // Fade out (1s) si le gardien vient d'etre desactive par "DONNER"
+  let fade = 1;
+  if (g.fadeOutStart) {
+    fade = Math.max(0, 1 - (performance.now() - g.fadeOutStart) / 1000);
+    if (fade <= 0) return;
+  }
+
   const centreX = g.x + (g.w - 1) / 2;
   const centreY = g.y + (g.h - 1) / 2;
   const { x: sx, y: sy } = tileToScreen(centreX, centreY);
@@ -272,7 +279,7 @@ function drawGuardian(g) {
   const sg = s * Math.max(g.w, g.h);
 
   // Aura pulsante au sol
-  const auraAlpha = 0.2 + 0.15 * Math.sin(performance.now() / 400);
+  const auraAlpha = (0.2 + 0.15 * Math.sin(performance.now() / 400)) * fade;
   ctx.fillStyle = hexWithAlpha(info.color, auraAlpha);
   ctx.beginPath();
   ctx.ellipse(sx, sy, 40 * sg, 14 * sg, 0, 0, Math.PI * 2);
@@ -280,7 +287,7 @@ function drawGuardian(g) {
 
   // Corps trapeze (top 28, bottom 14, height 50)
   ctx.save();
-  ctx.globalAlpha = 0.85;
+  ctx.globalAlpha = 0.85 * fade;
   ctx.fillStyle = info.color;
   ctx.beginPath();
   ctx.moveTo(sx - 28 * sg, sy - 50 * sg);
@@ -297,6 +304,8 @@ function drawGuardian(g) {
   ctx.restore();
 
   // Yeux (sur la tete, couleur info.eyeColor)
+  ctx.save();
+  ctx.globalAlpha = fade;
   ctx.fillStyle = info.eyeColor;
   ctx.beginPath();
   ctx.arc(sx - 6 * sg, sy - 50 * sg - 18 * sg, 2.5 * sg, 0, Math.PI * 2);
@@ -304,15 +313,21 @@ function drawGuardian(g) {
   ctx.beginPath();
   ctx.arc(sx + 6 * sg, sy - 50 * sg - 18 * sg, 2.5 * sg, 0, Math.PI * 2);
   ctx.fill();
+  ctx.restore();
 }
 
 function drawGuardians(room) {
   if (!room.doors) return;
   const list = [];
   room.doors.forEach(d => {
-    if (d.guardian && d.guardian.active) {
-      const g = d.guardian;
+    if (!d.guardian) return;
+    const g = d.guardian;
+    const stillFading = g.fadeOutStart && (performance.now() - g.fadeOutStart) < 1000;
+    if (g.active || stillFading) {
       list.push({ g, key: (g.x + g.w - 1) + (g.y + g.h - 1) });
+    } else if (g.fadeOutStart) {
+      // Cleanup une fois le fade termine
+      delete g.fadeOutStart;
     }
   });
   list.sort((a, b) => a.key - b.key);
@@ -568,6 +583,11 @@ function loadRoom(roomId, spawnX, spawnY) {
 }
 
 function transitionToRoom(roomId, spawnX, spawnY) {
+  // Securite : si la salle cible n'existe pas encore (Phase 2 a creer), on ne fait rien
+  if (!MAP1.rooms[roomId]) {
+    console.warn('[chair] Salle "' + roomId + '" pas encore implementee, transition annulee.');
+    return;
+  }
   gameState.inTransition = true;
   const overlay = document.getElementById('fade-overlay');
   overlay.style.opacity = '1';
@@ -627,38 +647,155 @@ function markObjectiveResolved(roomId, doorIndex) {
 }
 
 function resolveGuardian(door, roomId, doorIndex) {
-  const g = door.guardian;
-  const obj = g.objective;
+  // Nouvelle mecanique : marcher sur la porte gardee ne consomme JAMAIS.
+  // L'eleve doit cliquer sur le gardien pour interagir.
+  // Ici on enregistre juste l'objectif et on fait rebondir.
   registerObjective(roomId, doorIndex);
+  bouncePlayer();
+}
+
+// Appelee depuis le modal quand l'eleve clique sur DONNER (item) ou VALIDER (math correct)
+function giveItemToGuardian(door, roomId, doorIndex) {
+  const g = door.guardian;
+  const obj = g && g.objective;
+  if (obj && obj.type === 'item') {
+    const idx = gameState.inventory.indexOf(obj.required);
+    if (idx === -1) return false;  // securite
+    gameState.inventory.splice(idx, 1);
+    updateInventoryHUD();
+  }
+  // Desactive immediatement + lance le fade-out visuel (1s)
+  g.active = false;
+  g.fadeOutStart = performance.now();
+  markObjectiveResolved(roomId, doorIndex);
+  closeGuardianModal();
+  return true;
+}
+
+// ─── Interaction par clic sur un gardien ────────────────────────
+
+function findClickedGuardian(clickX, clickY) {
+  const room = MAP1.rooms[gameState.currentRoom];
+  if (!room || !room.doors) return null;
+  for (let i = 0; i < room.doors.length; i++) {
+    const d = room.doors[i];
+    if (!d.guardian || !d.guardian.active) continue;
+    const g = d.guardian;
+    const centreX = g.x + (g.w - 1) / 2;
+    const centreY = g.y + (g.h - 1) / 2;
+    const { x: sx, y: sy } = tileToScreen(centreX, centreY);
+    const s = TILE_W / 128;
+    const sg = s * Math.max(g.w, g.h);
+    // Bounding box visuel : aura au sol jusqu'au sommet de la tete
+    const left   = sx - 40 * sg;
+    const right  = sx + 40 * sg;
+    const top    = sy - 50 * sg - 40 * sg;
+    const bottom = sy + 14 * sg;
+    if (clickX >= left && clickX <= right && clickY >= top && clickY <= bottom) {
+      return { door: d, doorIndex: i, guardian: g };
+    }
+  }
+  return null;
+}
+
+function closeGuardianModal() {
+  const m = document.getElementById('guardian-modal');
+  if (m) m.remove();
+  const b = document.getElementById('guardian-backdrop');
+  if (b) b.remove();
+}
+
+function showGuardianModal(door, doorIndex) {
+  const g = door.guardian;
+  if (!g || !g.active) return;
+  const obj = g.objective;
+  const info = (typeof GUARDIANS !== 'undefined' && GUARDIANS[g.id]) || { name: 'Gardien', desc: '', color: '#a0a0c0' };
+
+  // Premier clic = ajoute l'objectif au journal
+  registerObjective(gameState.currentRoom, doorIndex);
+
+  // Nettoyer ancien modal
+  closeGuardianModal();
+
+  // Backdrop semi-transparent (clic ferme)
+  const backdrop = document.createElement('div');
+  backdrop.id = 'guardian-backdrop';
+  backdrop.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9099;';
+  backdrop.addEventListener('click', closeGuardianModal);
+  document.body.appendChild(backdrop);
+
+  // Modal centre
+  const modal = document.createElement('div');
+  modal.id = 'guardian-modal';
+  modal.style.cssText =
+    'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);' +
+    'background:#1a1208;border:2px solid ' + info.color + ';padding:24px 28px;' +
+    'min-width:320px;max-width:420px;z-index:9100;' +
+    'font-family:Georgia,serif;color:#d4b078;box-shadow:0 0 40px rgba(0,0,0,0.85);';
+
+  let html = '';
+  html += '<h2 style="color:' + info.color + ';margin:0 0 4px;font-size:22px;letter-spacing:2px;">' + (info.name || 'Gardien') + '</h2>';
+  if (info.desc) html += '<p style="font-style:italic;color:#88806a;font-size:12px;margin:0 0 16px;">' + info.desc + '</p>';
+
+  let canGive = false;
+  let isMath = false;
 
   if (!obj) {
-    bouncePlayer();
-    return;
-  }
-
-  if (obj.type === 'item') {
-    const idx = gameState.inventory.indexOf(obj.required);
-    if (idx !== -1) {
-      // Item present : consomme, desactive gardien, marque resolu, transition
-      gameState.inventory.splice(idx, 1);
-      updateInventoryHUD();
-      g.active = false;
-      markObjectiveResolved(roomId, doorIndex);
-      transitionToRoom(door.target, door.spawnAt.x, door.spawnAt.y);
+    html += '<p style="margin:8px 0;">Il te barre le passage en silence. Aucun moyen connu de le faire partir.</p>';
+  } else if (obj.type === 'item') {
+    const item = (typeof OBJECTS !== 'undefined' && OBJECTS[obj.required]) || { name: obj.required, desc: '' };
+    html += '<p style="margin:8px 0 12px;">Il bloque le passage. Apporte-lui :</p>';
+    html += '<div style="background:#2a1a08;padding:12px 14px;border:1px solid #3d2810;margin:0 0 12px;">';
+    html += '<div style="color:#f5d070;font-size:16px;">' + item.name + '</div>';
+    html += '<div style="font-style:italic;color:#88806a;font-size:12px;margin-top:4px;">' + (item.desc || '') + '</div>';
+    html += '</div>';
+    if (gameState.inventory.indexOf(obj.required) !== -1) {
+      html += '<p style="color:#88c060;margin:8px 0;">&#10003; Tu l\'as dans ton sac.</p>';
+      canGive = true;
     } else {
-      bouncePlayer();
+      html += '<p style="color:#c87060;margin:8px 0;">&#10007; A trouver.</p>';
     }
-    return;
+  } else if (obj.type === 'math') {
+    isMath = true;
+    html += '<p style="margin:8px 0;">Reponds a cette enigme :</p>';
+    html += '<div style="text-align:center;font-size:28px;color:#f5d070;margin:14px 0;">' + obj.question + '</div>';
+    if (obj.hint) html += '<p style="font-style:italic;color:#88806a;font-size:11px;text-align:center;margin:0 0 12px;">' + obj.hint + '</p>';
+    html += '<input type="number" id="guardian-modal-input" style="width:100%;padding:10px;background:#2a1a08;border:1px solid #f5d070;color:#f5d070;font-size:18px;text-align:center;font-family:inherit;box-sizing:border-box;" />';
+    canGive = true;
   }
 
-  if (obj.type === 'math') {
-    // P5b ajoutera la resolution interactive via panneau journal
-    bouncePlayer();
-    return;
+  // Boutons
+  html += '<div style="display:flex;gap:12px;margin-top:18px;">';
+  html += '<button id="guardian-modal-close" style="flex:1;padding:10px;background:transparent;border:1px solid #88806a;color:#88806a;cursor:pointer;font-family:inherit;font-size:13px;letter-spacing:1px;">FERMER</button>';
+  if (canGive) {
+    const label = isMath ? 'VALIDER' : 'DONNER';
+    html += '<button id="guardian-modal-give" style="flex:1;padding:10px;background:#f5d070;border:1px solid #f5d070;color:#1a1208;cursor:pointer;font-family:inherit;font-size:13px;letter-spacing:1px;font-weight:bold;">' + label + '</button>';
   }
+  html += '</div>';
 
-  // Type inconnu : rebond par defaut
-  bouncePlayer();
+  modal.innerHTML = html;
+  document.body.appendChild(modal);
+
+  document.getElementById('guardian-modal-close').addEventListener('click', closeGuardianModal);
+
+  if (canGive) {
+    const btn = document.getElementById('guardian-modal-give');
+    btn.addEventListener('click', () => {
+      if (isMath) {
+        const inp = document.getElementById('guardian-modal-input');
+        const val = parseInt(inp.value, 10);
+        if (val === obj.answer) {
+          giveItemToGuardian(door, gameState.currentRoom, doorIndex);
+        } else {
+          inp.style.borderColor = '#c81e1e';
+          setTimeout(() => { inp.style.borderColor = '#f5d070'; }, 500);
+          gameState.startTime -= PENALTY_MS;
+        }
+      } else {
+        giveItemToGuardian(door, gameState.currentRoom, doorIndex);
+      }
+    });
+  }
 }
 
 function triggerVictory() {
@@ -854,6 +991,16 @@ function init() {
 
   // Panneau Sac (vide au demarrage)
   updateInventoryHUD();
+
+  // Clic sur le canvas : detecter clic sur un gardien actif et ouvrir le modal
+  canvas.addEventListener('click', (e) => {
+    if (gameState.gameOver || gameState.inTransition) return;
+    const rect = canvas.getBoundingClientRect();
+    const cx = e.clientX - rect.left;
+    const cy = e.clientY - rect.top;
+    const hit = findClickedGuardian(cx, cy);
+    if (hit) showGuardianModal(hit.door, hit.doorIndex);
+  });
 
   loop();
 }

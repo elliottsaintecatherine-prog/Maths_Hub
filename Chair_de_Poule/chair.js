@@ -29,6 +29,7 @@ const gameState = {
   muted: false,
   inventory: [],
   lastPlayerPos: { x: 0, y: 0 },
+  objectives: [], // { key, roomId, doorIndex, status: 'pending'|'resolved' }
 };
 
 function resizeCanvas() {
@@ -529,13 +530,14 @@ function checkSpecialTile(tx, ty) {
   if (!room) return;
   const tile = (room.grid[ty] || [])[tx];
   if (tile === TILE.DOOR || tile === TILE.ESCALIER || tile === TILE.TRAPPE) {
-    const door = (room.doors || []).find(d => d.x === tx && d.y === ty);
-    if (door) {
-      if (door.guardian && door.guardian.active) {
-        bouncePlayer();
-      } else {
-        transitionToRoom(door.target, door.spawnAt.x, door.spawnAt.y);
-      }
+    const doors = room.doors || [];
+    const doorIndex = doors.findIndex(d => d.x === tx && d.y === ty);
+    if (doorIndex === -1) return;
+    const door = doors[doorIndex];
+    if (door.guardian && door.guardian.active) {
+      resolveGuardian(door, gameState.currentRoom, doorIndex);
+    } else {
+      transitionToRoom(door.target, door.spawnAt.x, door.spawnAt.y);
     }
   } else if (tile === TILE.EXIT) {
     triggerVictory();
@@ -554,6 +556,56 @@ function bouncePlayer() {
     dur: 500,
     isBounce: true
   };
+}
+
+// ─── Journal interne des objectifs (P5a) ────────────────────────
+
+function registerObjective(roomId, doorIndex) {
+  const key = roomId + '-' + doorIndex;
+  if (!gameState.objectives.some(o => o.key === key)) {
+    gameState.objectives.push({ key, roomId, doorIndex, status: 'pending' });
+  }
+}
+
+function markObjectiveResolved(roomId, doorIndex) {
+  const key = roomId + '-' + doorIndex;
+  const entry = gameState.objectives.find(o => o.key === key);
+  if (entry) entry.status = 'resolved';
+}
+
+function resolveGuardian(door, roomId, doorIndex) {
+  const g = door.guardian;
+  const obj = g.objective;
+  registerObjective(roomId, doorIndex);
+
+  if (!obj) {
+    bouncePlayer();
+    return;
+  }
+
+  if (obj.type === 'item') {
+    const idx = gameState.inventory.indexOf(obj.required);
+    if (idx !== -1) {
+      // Item present : consomme, desactive gardien, marque resolu, transition
+      gameState.inventory.splice(idx, 1);
+      updateInventoryHUD();
+      g.active = false;
+      markObjectiveResolved(roomId, doorIndex);
+      transitionToRoom(door.target, door.spawnAt.x, door.spawnAt.y);
+    } else {
+      bouncePlayer();
+    }
+    return;
+  }
+
+  if (obj.type === 'math') {
+    // P5b ajoutera la resolution interactive via panneau journal
+    bouncePlayer();
+    return;
+  }
+
+  // Type inconnu : rebond par defaut
+  bouncePlayer();
 }
 
 function triggerVictory() {

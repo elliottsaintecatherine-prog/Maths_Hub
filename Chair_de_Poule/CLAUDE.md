@@ -60,7 +60,7 @@ Groupes restants (dans l'ordre) :
 | a2 | S2 Salon (données + décors) | [x] |
 | a3 | S3 Bibliothèque (données + décors) | [x] |
 | b1 | S4 Cuisine (données + décors) | [x] |
-| b2 | S5 Chapelle (données + décors) | [ ] |
+| b2 | S5 Chapelle (données + décors) | [x] |
 | b3 | S6 Cave (données + décors) | [ ] |
 | b4 | S7 Jardin (données + décors) | [ ] |
 | c1 | E1 Chambre Maître + escalier S1→E1 | [ ] |
@@ -77,21 +77,20 @@ Groupes restants (dans l'ordre) :
 
 ## PROCHAINE ACTION
 
-**Prompt P5a — Logique objectifs + résolution silencieuse 'item' (★★★ Sonnet)**
+**Prompt P5b — Panneau journal rétractable + résolution 'math' (★★★ Sonnet)**
 
-Fichiers à lire : `chair.js` + `chair-data.js`.
+Fichiers à lire : `chair.js` uniquement.
 
-Voir spec complète dans `escbrain/wiki/games/chair-de-poule-prompts.md` section P5a.
+Voir spec complète dans `escbrain/wiki/games/chair-de-poule-prompts.md` section P5b.
 
 Résumé :
-1. `chair-data.js` : ajouter `objective:{type:'item', required:'cle_rouillee'}` au gardien S1→S3
-2. `gameState.objectives: []` (tableau `{ key, roomId, doorIndex, status }`)
-3. `registerObjective(roomId, doorIndex)` + `markObjectiveResolved(roomId, doorIndex)`
-4. `resolveGuardian(door, roomId, doorIndex)` :
-   - register objective
-   - type 'item' + inventory contient required → consomme item, g.active=false, mark resolved, transitionToRoom
-   - type 'item' sans required → bouncePlayer()
-   - type 'math' → bouncePlayer() (P5b ajoutera l'UI)
-5. Modifier `checkSpecialTile` : si door.guardian.active → `resolveGuardian(door, currentRoom, doorIndex)` au lieu de bouncePlayer direct
+1. `#obj-toggle` hamburger 3-traits fixed right (translateY -50%), 40×60, animation right 0↔360px
+2. `#obj-panel` fixed right, 360×100vh, transform translateX(100%) → .open, transition 400ms, scrollable
+3. Header sticky "JOURNAL"
+4. Sections "TÂCHES EN COURS" / "RÉSOLU" avec `renderTaskCard(obj)`
+5. Cards : type 'item' → boîte objet requis + "✓ Tu l'as" / "✗ À trouver" ; type 'math' → question + input + bouton VALIDER
+6. `checkMathAnswer(roomId, doorIndex)` : si correct → g.active=false + mark resolved ; sinon flash rouge + -30s
+7. `ensureObjectiveUI()` + `togglePanel()` + `renderObjectivePanel()` — appelés depuis resolveGuardian et tryPickupItem
+8. Cacher panneau + hamburger sur écrans victoire/hanté ; 1ère découverte auto-ouvre
 
-CONTRAINTES : Aucun emoji. Résolution item entièrement silencieuse. Pas d'UI panneau (vient en P5b).
+CONTRAINTES : Ne pas toucher chair.html. Aucun emoji. Panneau NON modal (jeu jouable).

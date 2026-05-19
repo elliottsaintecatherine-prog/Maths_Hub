@@ -62,7 +62,8 @@ const ROOMS = {
       // TEST : ce gardien (2x2) en (3,1)-(4,2) bloque la porte vers S3.
       //        A retirer/deplacer en PZ vers la vraie salle gardee.
       { x:4, y:0, target:'S3', spawnAt:{ x:3, y:5 },
-        guardian: { id:'spectre_gris', x:3, y:1, w:2, h:2, active:true } }
+        guardian: { id:'spectre_gris', x:3, y:1, w:2, h:2, active:true,
+                    objective: { type:'item', required:'cle_rouillee' } } }
     ]
   }
 };

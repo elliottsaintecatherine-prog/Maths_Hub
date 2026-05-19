@@ -319,6 +319,54 @@ function drawGuardians(room) {
   list.forEach(({ g }) => drawGuardian(g));
 }
 
+// ─── Axes math discrets (x = bas-droite iso, y = haut-droite iso) ──
+
+function drawArrowHead(fx, fy, tx, ty, size) {
+  const angle = Math.atan2(ty - fy, tx - fx);
+  ctx.beginPath();
+  ctx.moveTo(tx, ty);
+  ctx.lineTo(tx - size * Math.cos(angle - Math.PI / 6), ty - size * Math.sin(angle - Math.PI / 6));
+  ctx.lineTo(tx - size * Math.cos(angle + Math.PI / 6), ty - size * Math.sin(angle + Math.PI / 6));
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawAxes(room) {
+  const H = room.height;
+  // Anchor : coin LEFT du losange iso (zone vide hors mur), 2 tiles d'extension
+  const origin = tileToScreen(0, H - 1);
+  const xTip   = tileToScreen(2, H - 1);  // +x : 2 tiles le long de l'arete bas-gauche (bas-droite iso visuel)
+  const yTip   = tileToScreen(0, H - 3);  // +y : 2 tiles le long de l'arete haut-gauche (haut-droite iso visuel)
+
+  ctx.save();
+  ctx.globalAlpha = 0.55;
+  ctx.strokeStyle = '#f5d070';
+  ctx.fillStyle = '#f5d070';
+  ctx.lineWidth = 1.5;
+
+  // Axe +x
+  ctx.beginPath();
+  ctx.moveTo(origin.x, origin.y);
+  ctx.lineTo(xTip.x, xTip.y);
+  ctx.stroke();
+  drawArrowHead(origin.x, origin.y, xTip.x, xTip.y, 8);
+
+  // Axe +y
+  ctx.beginPath();
+  ctx.moveTo(origin.x, origin.y);
+  ctx.lineTo(yTip.x, yTip.y);
+  ctx.stroke();
+  drawArrowHead(origin.x, origin.y, yTip.x, yTip.y, 8);
+
+  // Labels italiques discrets
+  ctx.globalAlpha = 0.8;
+  ctx.font = 'italic 14px Georgia';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('x', xTip.x + 6, xTip.y + 6);
+  ctx.fillText('y', yTip.x - 14, yTip.y - 4);
+  ctx.restore();
+}
+
 function getPlayerScreenPos() {
   let px = gameState.player.x;
   let py = gameState.player.y;
@@ -415,6 +463,9 @@ function render() {
   // 4c. Gardiens statiques multi-tiles (depth-sorted par coin bas-droit)
   drawGuardians(room);
 
+  // 4d. Axes math discrets (x, y) sur la map
+  drawAxes(room);
+
   // 5. Joueur
   drawPlayer();
 }
@@ -434,8 +485,10 @@ function isBlocked(tx, ty) {
 
 function playVector(vx, vy) {
   if (gameState.isMoving || gameState.gameOver || gameState.inTransition) return;
+  // Convention math : +y = haut sur l'ecran (donc on inverse l'axe grille).
+  // L'eleve saisit (vx, vy) avec +y vers le haut comme en cours de maths.
   const targetX = gameState.player.x + vx;
-  const targetY = gameState.player.y + vy;
+  const targetY = gameState.player.y - vy;
   const room = MAP1.rooms[gameState.currentRoom];
   if (isBlocked(targetX, targetY)) {
     flashError();
@@ -749,8 +802,9 @@ function init() {
   document.addEventListener('keydown', e => {
     if (gameState.isMoving || gameState.gameOver || gameState.inTransition) return;
     if (e.target.tagName === 'INPUT') return;
-    if (e.key === 'ArrowUp')    playVector(0, -1);
-    if (e.key === 'ArrowDown')  playVector(0,  1);
+    // Convention math : ArrowUp envoie +y (player.y diminue grace au flip dans playVector)
+    if (e.key === 'ArrowUp')    playVector(0,  1);
+    if (e.key === 'ArrowDown')  playVector(0, -1);
     if (e.key === 'ArrowLeft')  playVector(-1, 0);
     if (e.key === 'ArrowRight') playVector(1,  0);
   });

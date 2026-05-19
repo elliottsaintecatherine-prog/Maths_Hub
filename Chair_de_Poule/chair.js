@@ -30,6 +30,7 @@ const gameState = {
   inventory: [],
   lastPlayerPos: { x: 0, y: 0 },
   objectives: [], // { key, roomId, doorIndex, status: 'pending'|'resolved' }
+  lastVectorTrace: null, // { from:{x,y}, to:{x,y}, t0 } — trace au sol 3s
 };
 
 function resizeCanvas() {
@@ -380,6 +381,107 @@ function drawAxes(room) {
   ctx.fillText('x', xTip.x + 6, xTip.y + 6);
   ctx.fillText('y', yTip.x - 14, yTip.y - 4);
   ctx.restore();
+}
+
+// ─── Trace au sol du dernier vecteur (P6) ───────────────────────
+
+function drawFloorTrace() {
+  const trace = gameState.lastVectorTrace;
+  if (!trace) return;
+  const elapsed = performance.now() - trace.t0;
+  if (elapsed >= 3000) { gameState.lastVectorTrace = null; return; }
+  const alpha = 1 - elapsed / 3000;
+  const { x: sx1, y: sy1 } = tileToScreen(trace.from.x, trace.from.y);
+  const { x: sx2, y: sy2 } = tileToScreen(trace.to.x, trace.to.y);
+  const s = TILE_W / 128;
+
+  ctx.save();
+  ctx.lineCap = 'round';
+  // Ombre portee
+  ctx.strokeStyle = 'rgba(0,0,0,1)';
+  ctx.globalAlpha = alpha * 0.3;
+  ctx.lineWidth = 5 * s;
+  ctx.beginPath();
+  ctx.moveTo(sx1 + 1 * s, sy1 + 1 * s);
+  ctx.lineTo(sx2 + 1 * s, sy2 + 1 * s);
+  ctx.stroke();
+  // Trait or "craie"
+  ctx.strokeStyle = '#f5d070';
+  ctx.globalAlpha = alpha * 0.7;
+  ctx.lineWidth = 5 * s;
+  ctx.beginPath();
+  ctx.moveTo(sx1, sy1);
+  ctx.lineTo(sx2, sy2);
+  ctx.stroke();
+  // Pointe a l'arrivee
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = '#f5d070';
+  drawArrowHead(sx1, sy1, sx2, sy2, 12 * s);
+  ctx.restore();
+}
+
+// ─── Barre de vie hantise (P6) ──────────────────────────────────
+
+function ensureHauntingBar() {
+  if (document.getElementById('haunting-bar')) return;
+  const bar = document.createElement('div');
+  bar.id = 'haunting-bar';
+  bar.style.cssText =
+    'position:fixed;top:28px;left:50%;transform:translateX(-50%);' +
+    'width:320px;height:28px;background:rgba(8,5,3,0.85);' +
+    'border:2px solid #f5d070;z-index:7000;padding:2px;box-sizing:border-box;';
+
+  const label = document.createElement('div');
+  label.textContent = 'HANTISE';
+  label.style.cssText =
+    'position:absolute;top:-18px;left:50%;transform:translateX(-50%);' +
+    'color:#f5d070;font-size:11px;letter-spacing:3px;font-family:Georgia,serif;';
+  bar.appendChild(label);
+
+  const fill = document.createElement('div');
+  fill.id = 'haunting-bar-fill';
+  fill.style.cssText =
+    'height:100%;width:100%;transition:width 200ms ease,background 400ms ease;' +
+    'background:linear-gradient(90deg,#f5d070,#d4a050);';
+  bar.appendChild(fill);
+
+  const pct = document.createElement('div');
+  pct.id = 'haunting-bar-pct';
+  pct.textContent = '100%';
+  pct.style.cssText =
+    'position:absolute;right:-52px;top:50%;transform:translateY(-50%);' +
+    'color:#f5d070;font-size:12px;font-family:monospace;';
+  bar.appendChild(pct);
+
+  document.body.appendChild(bar);
+}
+
+function updateHauntingBar() {
+  const bar = document.getElementById('haunting-bar');
+  const fill = document.getElementById('haunting-bar-fill');
+  const pctEl = document.getElementById('haunting-bar-pct');
+  if (!bar || !fill || !pctEl) return;
+
+  if (gameState.gameOver) { bar.style.display = 'none'; return; }
+  bar.style.display = '';
+
+  const elapsedSec = (Date.now() - gameState.startTime) / 1000;
+  const remaining = Math.max(0, 1 - elapsedSec / 600);
+  const pctVal = Math.round(remaining * 100);
+  fill.style.width = pctVal + '%';
+  pctEl.textContent = pctVal + '%';
+
+  if (remaining > 0.5) {
+    fill.style.background = 'linear-gradient(90deg,#f5d070,#d4a050)';
+    fill.style.opacity = '1';
+  } else if (remaining > 0.3) {
+    fill.style.background = 'linear-gradient(90deg,#f59030,#d47020)';
+    fill.style.opacity = '1';
+  } else {
+    fill.style.background = 'linear-gradient(90deg,#c81e1e,#8a1010)';
+    const pulse = 0.6 + 0.4 * Math.sin(performance.now() / 400);
+    fill.style.opacity = pulse.toFixed(2);
+  }
 }
 
 function getPlayerScreenPos() {

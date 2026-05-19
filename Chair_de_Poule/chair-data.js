@@ -12,6 +12,12 @@ const TILE = {
   ESCALIER:5, // escalier vers étage
 };
 
+// Catalogue des gardiens (id → metadata visuelle)
+const GUARDIANS = {
+  spectre_gris: { name: 'Spectre Gris', desc: 'Une silhouette vaporeuse aux yeux blancs.', color: '#a0a0c0', eyeColor: '#ffffff' },
+  gargouille:   { name: 'Gargouille',   desc: 'Une statue de pierre aux yeux rougeoyants.', color: '#605040', eyeColor: '#ff3030' }
+};
+
 // Catalogue des objets ramassables (id → metadata)
 const OBJECTS = {
   cle_rouillee: { name: 'Clé rouillée', desc: 'Une clé en fer corrodé.' },
@@ -27,7 +33,7 @@ const ROOMS = {
     height: 6,
     // Grille [y][x] de tiles
     grid: [
-      [1, 1, 1, 1, 0, 1, 1, 1], // y=0 : mur N avec porte vers S3
+      [1, 1, 1, 1, 2, 1, 1, 1], // y=0 : mur N avec porte vers S3 (TILE.DOOR en (4,0))
       [1, 0, 0, 0, 0, 0, 0, 1], // y=1
       [1, 0, 0, 0, 0, 0, 0, 1], // y=2
       [1, 0, 0, 0, 0, 0, 0, 1], // y=3
@@ -53,7 +59,10 @@ const ROOMS = {
     spawn: { x: 3, y: 4 },
     // Connexions sortantes (où mène chaque DOOR)
     doors: [
-      { x:4, y:0, target:'S3', spawnAt:{ x:3, y:5 } } // porte N → S3 sud
+      // TEST : ce gardien (2x2) en (3,1)-(4,2) bloque la porte vers S3.
+      //        A retirer/deplacer en PZ vers la vraie salle gardee.
+      { x:4, y:0, target:'S3', spawnAt:{ x:3, y:5 },
+        guardian: { id:'spectre_gris', x:3, y:1, w:2, h:2, active:true } }
     ]
   }
 };

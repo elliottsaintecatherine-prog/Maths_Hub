@@ -11,6 +11,9 @@ let TILE_W = 128;
 let TILE_H = 64;
 let WALL_H = 96;
 
+// Penalite temps lorsque le joueur rebondit sur une porte gardee (P4)
+const PENALTY_MS = 30000;
+
 const canvas = document.getElementById('game-canvas');
 const ctx    = canvas.getContext('2d');
 
@@ -25,6 +28,7 @@ const gameState = {
   audioVolume: 50,
   muted: false,
   inventory: [],
+  lastPlayerPos: { x: 0, y: 0 },
 };
 
 function resizeCanvas() {
@@ -239,6 +243,81 @@ function drawItems(room) {
   });
 }
 
+// ─── Helpers gardiens (P4) ──────────────────────────────────────
+
+function guardianOccupies(g, tx, ty) {
+  if (!g || !g.active) return false;
+  return tx >= g.x && tx < g.x + g.w && ty >= g.y && ty < g.y + g.h;
+}
+
+function tileBlockedByGuardian(room, tx, ty) {
+  if (!room || !room.doors) return false;
+  return room.doors.some(d => guardianOccupies(d.guardian, tx, ty));
+}
+
+function hexWithAlpha(hex, alpha) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+}
+
+function drawGuardian(g) {
+  const info = (typeof GUARDIANS !== 'undefined' && GUARDIANS[g.id]) || { color: '#808080', eyeColor: '#ff0000' };
+  const centreX = g.x + (g.w - 1) / 2;
+  const centreY = g.y + (g.h - 1) / 2;
+  const { x: sx, y: sy } = tileToScreen(centreX, centreY);
+  const s = TILE_W / 128;
+  const sg = s * Math.max(g.w, g.h);
+
+  // Aura pulsante au sol
+  const auraAlpha = 0.2 + 0.15 * Math.sin(performance.now() / 400);
+  ctx.fillStyle = hexWithAlpha(info.color, auraAlpha);
+  ctx.beginPath();
+  ctx.ellipse(sx, sy, 40 * sg, 14 * sg, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Corps trapeze (top 28, bottom 14, height 50)
+  ctx.save();
+  ctx.globalAlpha = 0.85;
+  ctx.fillStyle = info.color;
+  ctx.beginPath();
+  ctx.moveTo(sx - 28 * sg, sy - 50 * sg);
+  ctx.lineTo(sx + 28 * sg, sy - 50 * sg);
+  ctx.lineTo(sx + 14 * sg, sy);
+  ctx.lineTo(sx - 14 * sg, sy);
+  ctx.closePath();
+  ctx.fill();
+
+  // Tete (ellipse 18x22 au sommet)
+  ctx.beginPath();
+  ctx.ellipse(sx, sy - 50 * sg - 18 * sg, 18 * sg, 22 * sg, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Yeux (sur la tete, couleur info.eyeColor)
+  ctx.fillStyle = info.eyeColor;
+  ctx.beginPath();
+  ctx.arc(sx - 6 * sg, sy - 50 * sg - 18 * sg, 2.5 * sg, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(sx + 6 * sg, sy - 50 * sg - 18 * sg, 2.5 * sg, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawGuardians(room) {
+  if (!room.doors) return;
+  const list = [];
+  room.doors.forEach(d => {
+    if (d.guardian && d.guardian.active) {
+      const g = d.guardian;
+      list.push({ g, key: (g.x + g.w - 1) + (g.y + g.h - 1) });
+    }
+  });
+  list.sort((a, b) => a.key - b.key);
+  list.forEach(({ g }) => drawGuardian(g));
+}
+
 function getPlayerScreenPos() {
   let px = gameState.player.x;
   let py = gameState.player.y;
@@ -332,6 +411,9 @@ function render() {
   // 4b. Items (depth-sorted) — clignotement procedural
   drawItems(room);
 
+  // 4c. Gardiens statiques multi-tiles (depth-sorted par coin bas-droit)
+  drawGuardians(room);
+
   // 5. Joueur
   drawPlayer();
 }
@@ -353,10 +435,18 @@ function playVector(vx, vy) {
   if (gameState.isMoving || gameState.gameOver || gameState.inTransition) return;
   const targetX = gameState.player.x + vx;
   const targetY = gameState.player.y + vy;
+  const room = MAP1.rooms[gameState.currentRoom];
   if (isBlocked(targetX, targetY)) {
     flashError();
     return;
   }
+  // Tile occupee par un gardien actif = infranchissable (aucun texte)
+  if (tileBlockedByGuardian(room, targetX, targetY)) {
+    flashError();
+    return;
+  }
+  // Stocker la position avant l'animation (pour rebond eventuel sur porte gardee)
+  gameState.lastPlayerPos = { x: gameState.player.x, y: gameState.player.y };
   // Animation glissante
   gameState.isMoving = true;
   gameState.moveAnim = {
@@ -440,10 +530,30 @@ function checkSpecialTile(tx, ty) {
   const tile = (room.grid[ty] || [])[tx];
   if (tile === TILE.DOOR || tile === TILE.ESCALIER || tile === TILE.TRAPPE) {
     const door = (room.doors || []).find(d => d.x === tx && d.y === ty);
-    if (door) transitionToRoom(door.target, door.spawnAt.x, door.spawnAt.y);
+    if (door) {
+      if (door.guardian && door.guardian.active) {
+        bouncePlayer();
+      } else {
+        transitionToRoom(door.target, door.spawnAt.x, door.spawnAt.y);
+      }
+    }
   } else if (tile === TILE.EXIT) {
     triggerVictory();
   }
+}
+
+function bouncePlayer() {
+  // Anim retour vers lastPlayerPos en 500ms ease-out (drapeau isBounce)
+  gameState.isMoving = true;
+  gameState.moveAnim = {
+    fromX: gameState.player.x,
+    fromY: gameState.player.y,
+    toX: gameState.lastPlayerPos.x,
+    toY: gameState.lastPlayerPos.y,
+    t0: performance.now(),
+    dur: 500,
+    isBounce: true
+  };
 }
 
 function triggerVictory() {
@@ -525,10 +635,16 @@ function update() {
     if (performance.now() >= a.t0 + a.dur) {
       gameState.player.x = a.toX;
       gameState.player.y = a.toY;
+      const wasBounce = a.isBounce;
       gameState.moveAnim = null;
       gameState.isMoving = false;
-      tryPickupItem(a.toX, a.toY);
-      checkSpecialTile(a.toX, a.toY);
+      if (wasBounce) {
+        // Penalite hantise : on recule le startTime de 30s
+        gameState.startTime -= PENALTY_MS;
+      } else {
+        tryPickupItem(a.toX, a.toY);
+        checkSpecialTile(a.toX, a.toY);
+      }
     }
   }
   // Hantise (vision blackouts dans les dernières minutes)

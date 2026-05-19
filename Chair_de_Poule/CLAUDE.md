@@ -59,7 +59,7 @@ Groupes restants (dans l'ordre) :
 | a1 | Transition salles (DOOR/TRAPPE/ESCALIER) | [x] |
 | a2 | S2 Salon (données + décors) | [x] |
 | a3 | S3 Bibliothèque (données + décors) | [x] |
-| b1 | S4 Cuisine (données + décors) | [ ] |
+| b1 | S4 Cuisine (données + décors) | [x] |
 | b2 | S5 Chapelle (données + décors) | [ ] |
 | b3 | S6 Cave (données + décors) | [ ] |
 | b4 | S7 Jardin (données + décors) | [ ] |
@@ -77,20 +77,21 @@ Groupes restants (dans l'ordre) :
 
 ## PROCHAINE ACTION
 
-**Prompt P4 — Gardiens statiques multi-tiles + rebond + pénalité temps (★★★★ Sonnet)**
+**Prompt P5a — Logique objectifs + résolution silencieuse 'item' (★★★ Sonnet)**
 
 Fichiers à lire : `chair.js` + `chair-data.js`.
 
-Voir spec complète dans `escbrain/wiki/games/chair-de-poule-prompts.md` section P4.
+Voir spec complète dans `escbrain/wiki/games/chair-de-poule-prompts.md` section P5a.
 
 Résumé :
-1. `chair-data.js` : constante `GUARDIANS` (spectre_gris, gargouille) + ajouter `guardian:{id,x,y,w,h,active}` à la door S1→S3 (test 2×2)
-2. Helpers `guardianOccupies(g, tx, ty)` et `tileBlockedByGuardian(room, tx, ty)`
-3. Validation vecteur : si target bloquée par gardien → flashError, pas d'animation, **aucun texte**
-4. `gameState.lastPlayerPos` stocké AVANT chaque animation
-5. `PENALTY_MS = 30000` const globale
-6. Modifier `checkSpecialTile` : si `door.guardian.active` → `bouncePlayer()`, pas de transition
-7. `bouncePlayer()` : interpolation retour 500ms ease-out, `startTime -= PENALTY_MS`, aucun texte
-8. `drawGuardians(room)` : silhouette multi-tile (aura pulsante, trapèze, tête, yeux), depth-sort par coin bas-droit
+1. `chair-data.js` : ajouter `objective:{type:'item', required:'cle_rouillee'}` au gardien S1→S3
+2. `gameState.objectives: []` (tableau `{ key, roomId, doorIndex, status }`)
+3. `registerObjective(roomId, doorIndex)` + `markObjectiveResolved(roomId, doorIndex)`
+4. `resolveGuardian(door, roomId, doorIndex)` :
+   - register objective
+   - type 'item' + inventory contient required → consomme item, g.active=false, mark resolved, transitionToRoom
+   - type 'item' sans required → bouncePlayer()
+   - type 'math' → bouncePlayer() (P5b ajoutera l'UI)
+5. Modifier `checkSpecialTile` : si door.guardian.active → `resolveGuardian(door, currentRoom, doorIndex)` au lieu de bouncePlayer direct
 
-CONTRAINTES : Ne pas toucher chair.html. Aucun emoji. **Aucun texte affiché** pendant rebond.
+CONTRAINTES : Aucun emoji. Résolution item entièrement silencieuse. Pas d'UI panneau (vient en P5b).

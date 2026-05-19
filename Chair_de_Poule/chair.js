@@ -21,6 +21,10 @@ const gameState = {
   isMoving: false,
   moveAnim: null, // {fromX, fromY, toX, toY, t0, dur}
   gameOver: false,
+  inTransition: false,
+  audioVolume: 50,
+  muted: false,
+  inventory: [],
 };
 
 function resizeCanvas() {
@@ -211,6 +215,30 @@ function drawDecor(d) {
   ctx.restore();
 }
 
+function drawItems(room) {
+  if (!room.items || room.items.length === 0) return;
+  const items = [...room.items].sort((a, b) => (a.x + a.y) - (b.x + b.y));
+  const s = TILE_W / 128;
+  const phase = (performance.now() / 500) % 2;
+  const brightness = phase < 1 ? 1.0 : 0.5;
+  const color = brightness === 1.0 ? 'rgb(245,208,112)' : 'rgb(150,120,60)';
+  items.forEach(item => {
+    const { x: sx, y: sy } = tileToScreen(item.x, item.y);
+    // Aura ellipse au sol (alpha proportionnelle a la brillance)
+    ctx.fillStyle = 'rgba(245,208,112,' + (0.3 * brightness) + ')';
+    ctx.beginPath();
+    ctx.ellipse(sx, sy, 32 * s, 12 * s, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Objet : carre 16x16 incline 45 deg, leger offset vertical
+    ctx.save();
+    ctx.translate(sx, sy - 24 * s);
+    ctx.rotate(Math.PI / 4);
+    ctx.fillStyle = color;
+    ctx.fillRect(-8 * s, -8 * s, 16 * s, 16 * s);
+    ctx.restore();
+  });
+}
+
 function getPlayerScreenPos() {
   let px = gameState.player.x;
   let py = gameState.player.y;
@@ -301,6 +329,9 @@ function render() {
   const decor = [...(room.decor || [])].sort((a, b) => (a.x + a.y) - (b.x + b.y));
   decor.forEach(drawDecor);
 
+  // 4b. Items (depth-sorted) — clignotement procedural
+  drawItems(room);
+
   // 5. Joueur
   drawPlayer();
 }
@@ -319,7 +350,7 @@ function isBlocked(tx, ty) {
 }
 
 function playVector(vx, vy) {
-  if (gameState.isMoving || gameState.gameOver) return;
+  if (gameState.isMoving || gameState.gameOver || gameState.inTransition) return;
   const targetX = gameState.player.x + vx;
   const targetY = gameState.player.y + vy;
   if (isBlocked(targetX, targetY)) {
@@ -344,11 +375,150 @@ function flashError() {
   setTimeout(() => { el.style.borderColor = '#3d2810'; }, 300);
 }
 
+function tryPickupItem(tx, ty) {
+  const room = MAP1.rooms[gameState.currentRoom];
+  if (!room || !room.items) return false;
+  const i = room.items.findIndex(it => it.x === tx && it.y === ty);
+  if (i === -1) return false;
+  const item = room.items[i];
+  gameState.inventory.push(item.id);
+  room.items.splice(i, 1);
+  updateInventoryHUD();
+  return true;
+}
+
+function updateInventoryHUD() {
+  let panel = document.getElementById('inventory-panel');
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = 'inventory-panel';
+    panel.style.cssText = 'position:fixed;bottom:16px;left:16px;width:auto;min-width:120px;padding:12px;background:rgba(26,18,8,0.85);border:1px solid #f5d070;z-index:7000;font-family:Georgia,serif;';
+    document.body.appendChild(panel);
+  }
+  const items = gameState.inventory;
+  let html = '<div style="color:#f5d070;font-size:14px;letter-spacing:2px;margin-bottom:8px;">SAC</div>';
+  if (items.length === 0) {
+    html += '<div style="font-style:italic;color:#6a5030;font-size:13px;">(vide)</div>';
+  } else {
+    html += '<div style="display:flex;flex-direction:column;gap:6px;">';
+    items.forEach(id => {
+      const obj = OBJECTS[id];
+      if (obj) html += '<div style="color:#d4b078;font-size:13px;">' + obj.name + '</div>';
+    });
+    html += '</div>';
+  }
+  panel.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SECTION 4b — Transitions de salles
+// ═══════════════════════════════════════════════════════════════
+
+function loadRoom(roomId, spawnX, spawnY) {
+  gameState.currentRoom = roomId;
+  gameState.player = { x: spawnX, y: spawnY };
+  gameState.isMoving = false;
+  gameState.moveAnim = null;
+  fitRoomToScreen();
+  document.getElementById('room-label').textContent = '— ' + MAP1.rooms[roomId].name + ' —';
+}
+
+function transitionToRoom(roomId, spawnX, spawnY) {
+  gameState.inTransition = true;
+  const overlay = document.getElementById('fade-overlay');
+  overlay.style.opacity = '1';
+  setTimeout(() => {
+    loadRoom(roomId, spawnX, spawnY);
+    overlay.style.opacity = '0';
+    setTimeout(() => { gameState.inTransition = false; }, 500);
+  }, 500);
+}
+
+function checkSpecialTile(tx, ty) {
+  const room = MAP1.rooms[gameState.currentRoom];
+  if (!room) return;
+  const tile = (room.grid[ty] || [])[tx];
+  if (tile === TILE.DOOR || tile === TILE.ESCALIER || tile === TILE.TRAPPE) {
+    const door = (room.doors || []).find(d => d.x === tx && d.y === ty);
+    if (door) transitionToRoom(door.target, door.spawnAt.x, door.spawnAt.y);
+  } else if (tile === TILE.EXIT) {
+    triggerVictory();
+  }
+}
+
+function triggerVictory() {
+  gameState.gameOver = true;
+  const t = (Date.now() - gameState.startTime) / 1000;
+  const m = Math.floor(t / 60);
+  const s = Math.round(t % 60);
+  const sStr = (s < 10 ? '0' : '') + s;
+
+  // Masquer l'engrenage
+  const gearBtn = document.getElementById('gear-button');
+  if (gearBtn) gearBtn.style.display = 'none';
+  const gearMenu = document.getElementById('gear-menu');
+  if (gearMenu) gearMenu.style.display = 'none';
+
+  // #blackout-overlay : fond noir au-dessus du canvas (z 8500)
+  const blackout = document.createElement('div');
+  blackout.id = 'blackout-overlay';
+  blackout.style.cssText = 'position:fixed;inset:0;background:#000;z-index:8500;opacity:0;transition:opacity 2s ease-in;pointer-events:none;';
+  document.body.appendChild(blackout);
+
+  // #victory-overlay : ecran de fin (z 9999)
+  const vict = document.createElement('div');
+  vict.id = 'victory-overlay';
+  vict.style.cssText = 'position:fixed;inset:0;background:radial-gradient(ellipse at center,#001a2e,#000810);z-index:9999;opacity:0;transition:opacity 2s ease-in;display:flex;flex-direction:column;align-items:center;overflow-y:auto;';
+  vict.innerHTML = `
+<div style="color:#4ec5f0;font-family:Georgia,serif;font-size:56px;letter-spacing:4px;margin-top:80px;text-align:center;">ÉCHAPPE DU MANOIR</div>
+<div style="color:#88c0d0;font-size:22px;margin-top:16px;">Temps de survie : ${m}m ${sStr}s</div>
+<div style="max-width:640px;padding:32px;line-height:1.7;color:#b8d4e0;text-align:center;">
+La fontaine s'effondre sous tes pieds. L'eau t'engloutit.<br><br>
+Tu reprends conscience dans un sas metallique inonde.<br>
+Les lumieres clignotent en rouge. Une voix gresille<br>
+dans un haut-parleur :<br><br>
+<span style="font-style:italic;">« Survivant ? Vous etes dans le Complexe Atlantis-7,<br>
+profondeur 380 metres. Une breche s'est ouverte<br>
+au niveau 3. Vous devez atteindre le module de<br>
+decompression avant que la pression ne broie<br>
+la coque. »</span><br><br>
+Le compte a rebours commence.
+</div>
+<div id="vict-btns" style="display:flex;gap:24px;margin-bottom:80px;margin-top:16px;"></div>`;
+  document.body.appendChild(vict);
+
+  // Bouton RETOUR PLANQUE
+  const btnRetour = document.createElement('button');
+  btnRetour.textContent = 'RETOUR PLANQUE';
+  btnRetour.style.cssText = 'border:2px solid #88c0d0;background:transparent;color:#88c0d0;padding:12px 28px;font-size:16px;cursor:pointer;letter-spacing:1px;';
+  btnRetour.addEventListener('mouseover', () => { btnRetour.style.background = '#88c0d0'; btnRetour.style.color = '#001a2e'; });
+  btnRetour.addEventListener('mouseout',  () => { btnRetour.style.background = 'transparent'; btnRetour.style.color = '#88c0d0'; });
+  btnRetour.addEventListener('click', () => { window.location.href = '../index.html'; });
+
+  // Bouton EPISODE SUIVANT
+  const btnSuite = document.createElement('button');
+  btnSuite.textContent = 'EPISODE SUIVANT →';
+  btnSuite.style.cssText = 'border:2px solid #4ec5f0;background:#4ec5f0;color:#001a2e;padding:12px 28px;font-size:16px;cursor:pointer;letter-spacing:1px;';
+  btnSuite.addEventListener('mouseover', () => { btnSuite.style.background = 'transparent'; btnSuite.style.color = '#4ec5f0'; });
+  btnSuite.addEventListener('mouseout',  () => { btnSuite.style.background = '#4ec5f0'; btnSuite.style.color = '#001a2e'; });
+  btnSuite.addEventListener('click', () => { window.location.href = '../Complexe_Sous_Marin/index.html'; });
+
+  document.getElementById('vict-btns').appendChild(btnRetour);
+  document.getElementById('vict-btns').appendChild(btnSuite);
+
+  // Fade simultane blackout + victoire sur le meme tick
+  requestAnimationFrame(() => {
+    blackout.style.opacity = '1';
+    vict.style.opacity = '1';
+  });
+}
+
 // ═══════════════════════════════════════════════════════════════
 // SECTION 5 — Game loop
 // ═══════════════════════════════════════════════════════════════
 
 function update() {
+  if (gameState.gameOver) return;
   // Animation mouvement
   if (gameState.moveAnim) {
     const a = gameState.moveAnim;
@@ -357,6 +527,8 @@ function update() {
       gameState.player.y = a.toY;
       gameState.moveAnim = null;
       gameState.isMoving = false;
+      tryPickupItem(a.toX, a.toY);
+      checkSpecialTile(a.toX, a.toY);
     }
   }
   // Hantise (vision blackouts dans les dernières minutes)
@@ -398,6 +570,7 @@ function init() {
 
   // Bouton invoquer vecteur
   document.getElementById('btn-play-vec').addEventListener('click', () => {
+    if (gameState.inTransition) return;
     const vx = parseInt(document.getElementById('vec-x').value, 10) || 0;
     const vy = parseInt(document.getElementById('vec-y').value, 10) || 0;
     if (vx === 0 && vy === 0) { flashError(); return; }
@@ -406,7 +579,7 @@ function init() {
 
   // Touches clavier rapides (pour test)
   document.addEventListener('keydown', e => {
-    if (gameState.isMoving || gameState.gameOver) return;
+    if (gameState.isMoving || gameState.gameOver || gameState.inTransition) return;
     if (e.target.tagName === 'INPUT') return;
     if (e.key === 'ArrowUp')    playVector(0, -1);
     if (e.key === 'ArrowDown')  playVector(0,  1);
@@ -416,6 +589,49 @@ function init() {
 
   // Panneau replié au démarrage
   // (l'utilisateur clique sur la poignée pour ouvrir)
+
+  // Bouton engrenage permanent (coin haut-droit, z-index 9000)
+  const gearBtnEl = document.createElement('div');
+  gearBtnEl.id = 'gear-button';
+  gearBtnEl.style.cssText = 'position:fixed;top:16px;right:16px;width:40px;height:40px;background:#1a1208;border:1px solid #f5d070;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:9000;font-size:24px;color:#f5d070;user-select:none;';
+  gearBtnEl.textContent = '⚙';
+  document.body.appendChild(gearBtnEl);
+
+  // Panneau reglages (cache par defaut)
+  const gearMenuEl = document.createElement('div');
+  gearMenuEl.id = 'gear-menu';
+  gearMenuEl.style.cssText = 'position:fixed;top:64px;right:16px;width:240px;padding:16px;background:#1a1208;border:1px solid #f5d070;z-index:9000;display:none;';
+  gearMenuEl.innerHTML = '<div style="display:flex;flex-direction:column;gap:12px;">'
+    + '<div style="color:#f5d070;font-size:16px;letter-spacing:2px;">REGLAGES</div>'
+    + '<div><label style="color:#f5d070;font-size:13px;">Volume</label>'
+    + '<input id="vol-slider" type="range" min="0" max="100" value="50" style="width:100%;accent-color:#f5d070;display:block;margin-top:4px;"></div>'
+    + '<button id="mute-btn" style="border:1px solid #f5d070;background:transparent;color:#f5d070;padding:8px;cursor:pointer;font-size:14px;">MUTE</button>'
+    + '<button id="planque-btn" style="border:1px solid #f5d070;background:transparent;color:#f5d070;padding:8px;cursor:pointer;font-size:14px;">RETOUR PLANQUE</button>'
+    + '</div>';
+  document.body.appendChild(gearMenuEl);
+
+  gearBtnEl.addEventListener('click', () => {
+    gearMenuEl.style.display = gearMenuEl.style.display === 'none' ? 'block' : 'none';
+  });
+  document.getElementById('vol-slider').addEventListener('change', function () {
+    gameState.audioVolume = parseInt(this.value);
+  });
+  document.getElementById('mute-btn').addEventListener('click', function () {
+    gameState.muted = !gameState.muted;
+    this.textContent = gameState.muted ? 'UNMUTE' : 'MUTE';
+  });
+  document.getElementById('planque-btn').addEventListener('click', () => {
+    if (confirm('Quitter la partie ?')) location.href = '../index.html';
+  });
+
+  // Overlay de fade pour transitions de salles (z-index 8000 : au-dessus canvas, sous game over 9999)
+  const fadeEl = document.createElement('div');
+  fadeEl.id = 'fade-overlay';
+  fadeEl.style.cssText = 'position:fixed;inset:0;background:#000;opacity:0;transition:opacity 500ms ease;z-index:8000;pointer-events:none;';
+  document.body.appendChild(fadeEl);
+
+  // Panneau Sac (vide au demarrage)
+  updateInventoryHUD();
 
   loop();
 }

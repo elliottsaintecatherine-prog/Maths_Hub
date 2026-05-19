@@ -565,7 +565,7 @@
     <header class="home-header">
       <h1 class="title">Trigo<br><span class="accent">Reflex</span></h1>
       <p class="subtitle">Mémorise les valeurs particulières de cos et sin sur le cercle trigonométrique. 5 questions, 3 choix.</p>
-      <div id="player-grade-badge" style="display:none; margin-top:14px;"></div>
+      <div id="player-grade-badge" class="scoring-only" style="display:none; margin-top:14px;"></div>
     </header>
 
     <div class="eyebrow">Mode de jeu</div>
@@ -590,7 +590,7 @@
 
     <div class="button-row">
       <button class="primary-btn gold" id="btn-start">Commencer</button>
-      <button class="ghost-btn" id="btn-show-lb">Meilleurs scores</button>
+      <button class="ghost-btn scoring-only" id="btn-show-lb">Meilleurs scores</button>
     </div>
   </section>
 
@@ -973,6 +973,10 @@ function setMode(type, diff) {
   $$('#mode-group .diff-btn').forEach(b => {
     b.classList.toggle('selected', b.dataset.type === type && b.dataset.diff === diff);
   });
+  // Applique immédiatement la visibilité des éléments scoring-only sur l'écran d'accueil
+  const scoring = MODES[diff].scoring;
+  document.body.classList.toggle('mode-loisir', !scoring);
+  document.body.classList.toggle('mode-competitif', scoring);
 }
 
 // ─── Round generation ──────────────────────────────────────
@@ -1352,7 +1356,8 @@ function bindEvents() {
     const btn = e.target.closest('.diff-btn');
     if (btn) {
       setMode(btn.dataset.type, btn.dataset.diff);
-      refreshPlayerBadge();
+      // Badge de grade uniquement en mode compétitif
+      if (MODES[btn.dataset.diff].scoring) refreshPlayerBadge();
     }
   });
 
@@ -1389,13 +1394,13 @@ function bindEvents() {
   });
   $('#btn-end-home').addEventListener('click', () => {
     showScreen('screen-home');
-    refreshPlayerBadge();
+    if (MODES[state.difficulty].scoring) refreshPlayerBadge();
   });
 
   // Leaderboard
   $('#btn-lb-home').addEventListener('click', () => {
     showScreen('screen-home');
-    refreshPlayerBadge();
+    if (MODES[state.difficulty].scoring) refreshPlayerBadge();
   });
 
   // Allow Enter in name input
@@ -1409,12 +1414,13 @@ buildQuestionPool();
 bindEvents();
 setMode('reflex', 'competitif');
 
-// Premier affichage du badge ; on attend l'auth Supabase (optionnelle) pour
-// récupérer le rang mondial, mais on n'attend pas plus de 1.5 s.
-let _badgeTimer = setTimeout(refreshPlayerBadge, 1500);
+// Premier affichage du badge (compétitif uniquement) ; attend auth Supabase max 1.5 s.
+let _badgeTimer = setTimeout(() => {
+  if (MODES[state.difficulty].scoring) refreshPlayerBadge();
+}, 1500);
 window.addEventListener('scolaris-auth-ready', () => {
   clearTimeout(_badgeTimer);
-  refreshPlayerBadge();
+  if (MODES[state.difficulty].scoring) refreshPlayerBadge();
 }, { once: true });
 </script>
 </body>

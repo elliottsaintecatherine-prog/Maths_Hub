@@ -32,7 +32,11 @@ const gameState = {
   objectives: [], // { key, roomId, guardianIndex, status: 'pending'|'resolved' }
   lastVectorTrace: null, // { from:{x,y}, to:{x,y}, t0 } — trace au sol 3s
   objPanelAutoOpened: false, // P5b : 1ere decouverte auto-ouvre le panneau
-  playerFacing: 'right',
+  playerFacing: 'front',
+  // ─── Tutoriel (mode=tuto uniquement) ───
+  mode: 'tuto',                  // 'tuto' | 'jeu' — lu depuis ?mode= dans init()
+  tutorialActive: true,          // false = passe ou termine
+  tutorialFiredEvents: {},       // dedupe : chaque event ne declenche qu'une fois
 };
 
 // =================================================================
@@ -75,12 +79,12 @@ function itemBrightImagePath(id, v) { return ASSETS_BASE + 'items/'     + id   +
 function guardianImagePath(id)      { return ASSETS_BASE + 'guardians/' + id   + '.png'; }
 function playerImagePath()          { return ASSETS_BASE + 'player/player.png'; }
 
-// Sprites du joueur : facing in {'left','right'}, pose in {'stand','walk_1','walk_2'}
+// Sprites du joueur : facing in {'left','front'}, pose in {'stand','walk_1','walk_2'}
 function playerSpritePath(facing, pose) {
   return ASSETS_BASE + 'player/player_' + facing + '_' + pose + '.png';
 }
 const PLAYER_POSES = ['stand', 'walk_1', 'walk_2'];
-const PLAYER_FACINGS = ['left', 'right'];
+const PLAYER_FACINGS = ['left', 'front'];
 
 // ─── Cache + loader d'images (silencieux sur 404) ───────────────
 // MODE DEV : ASSETS_VERSION = timestamp du chargement de la page.
@@ -396,28 +400,45 @@ function drawItems(room) {
   if (!room.items || room.items.length === 0) return;
   const items = [...room.items].sort((a, b) => (a.x + a.y) - (b.x + b.y));
   const s = TILE_W / 128;
-  const phase = (performance.now() / 500) % 2;
-  const brightness = phase < 1 ? 1.0 : 0.5;
-  const color = brightness === 1.0 ? 'rgb(245,208,112)' : 'rgb(150,120,60)';
-  
+
+  // Pulse smooth (sin) sur 1.6s — utilise pour le halo et l'eventuelle overlay bright.
+  // pulse ∈ [0..1], jamais de hard-cut → aucun stroboscope.
+  const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 1600 * Math.PI * 2);
+
   items.forEach(item => {
     const { x: sx, y: sy } = tileToScreen(item.x, item.y);
-    const isBright = brightness === 1.0;
     const v = item.v || 1;
-    const brightImg = isBright ? getImage(itemBrightImagePath(item.id, v)) : null;
-    const img = brightImg || getImage(itemImagePath(item.id, v));
-    
-    if (img) {
-      const width = TILE_W / 2;
-      const height = (TILE_W / 2) * (img.naturalHeight / img.naturalWidth);
-      ctx.drawImage(img, sx - width / 2, sy - height - 10 * s, width, height);
+    const baseImg   = getImage(itemImagePath(item.id, v));
+    const brightImg = getImage(itemBrightImagePath(item.id, v));
+
+    // Halo dore qui respire au sol, toujours present (cue "ramassable")
+    ctx.fillStyle = 'rgba(245,208,112,' + (0.18 + 0.22 * pulse).toFixed(3) + ')';
+    ctx.beginPath();
+    ctx.ellipse(sx, sy, (28 + 6 * pulse) * s, (10 + 2 * pulse) * s, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (baseImg) {
+      // Sprite normal toujours dessine
+      const width  = TILE_W / 2;
+      const height = (TILE_W / 2) * (baseImg.naturalHeight / baseImg.naturalWidth);
+      ctx.drawImage(baseImg, sx - width / 2, sy - height - 10 * s, width, height);
+
+      // Overlay bright en cross-fade SI ET SEULEMENT SI il existe ET a le meme aspect-ratio
+      // (sinon on aurait un swap visuel disgracieux entre 2 sprites differents)
+      if (brightImg) {
+        const ratioBase   = baseImg.naturalHeight / baseImg.naturalWidth;
+        const ratioBright = brightImg.naturalHeight / brightImg.naturalWidth;
+        const ratioOk = Math.abs(ratioBase - ratioBright) < 0.05;
+        if (ratioOk) {
+          ctx.save();
+          ctx.globalAlpha = pulse; // cross-fade smooth, jamais de cut
+          ctx.drawImage(brightImg, sx - width / 2, sy - height - 10 * s, width, height);
+          ctx.restore();
+        }
+      }
     } else {
-      // Aura ellipse au sol (alpha proportionnelle a la brillance)
-      ctx.fillStyle = 'rgba(245,208,112,' + (0.3 * brightness) + ')';
-      ctx.beginPath();
-      ctx.ellipse(sx, sy, 32 * s, 12 * s, 0, 0, Math.PI * 2);
-      ctx.fill();
-      // Objet : carre 16x16 incline 45 deg, leger offset vertical
+      // Fallback procedural : carre 16x16 incline 45 deg qui respire
+      const color = 'rgba(245,208,112,' + (0.6 + 0.4 * pulse).toFixed(3) + ')';
       ctx.save();
       ctx.translate(sx, sy - 24 * s);
       ctx.rotate(Math.PI / 4);
@@ -462,13 +483,38 @@ function drawGuardian(g) {
   const s = TILE_W / 128;
   const sg = s * Math.max(g.w, g.h);
 
+  // Animation : flottement + balancement + respiration + halo pulse (creatures ethereees)
+  const isGhostly = info.ghostly === true;
+  const now = performance.now();
+  let offsetY = 0, offsetX = 0, alphaPulse = 1, scalePulse = 1, auraPulse = 0;
+  if (isGhostly) {
+    offsetY    = Math.sin(now / 1200) * 7 * s;            // flotte +/- 7px (cycle 7.5s)
+    offsetX    = Math.sin(now / 1700 + 0.7) * 3 * s;      // balance +/- 3px (freq differente)
+    alphaPulse = 0.85 + 0.15 * Math.sin(now / 900 + 1.3); // respire 0.70 -> 1.00
+    scalePulse = 1 + 0.025 * Math.sin(now / 2200);        // breathe scale +/- 2.5%
+    auraPulse  = 0.5 + 0.5 * Math.sin(now / 800);         // 0..1 pour halo au sol
+  }
+
+  // Halo ethereé au sol (subtil, uniquement ghostly et tant que pas en fadeout)
+  if (isGhostly) {
+    const auraAlpha = (0.12 + 0.10 * auraPulse) * fade;
+    const auraRX = (38 + 4 * auraPulse) * sg;
+    const auraRY = (13 + 2 * auraPulse) * sg;
+    ctx.fillStyle = hexWithAlpha(info.color, auraAlpha);
+    ctx.beginPath();
+    ctx.ellipse(sx, sy, auraRX, auraRY, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
   const img = getImage(guardianImagePath(g.id));
   if (img) {
     ctx.save();
-    ctx.globalAlpha = fade;
-    const width = TILE_W * Math.max(g.w, g.h);
-    const height = width * (img.naturalHeight / img.naturalWidth);
-    ctx.drawImage(img, sx - width / 2, sy - height, width, height);
+    ctx.globalAlpha = fade * alphaPulse;
+    const baseW  = TILE_W * Math.max(g.w, g.h);
+    const baseH  = baseW * (img.naturalHeight / img.naturalWidth);
+    const width  = baseW * scalePulse;
+    const height = baseH * scalePulse;
+    ctx.drawImage(img, sx - width / 2 + offsetX, sy - height + offsetY, width, height);
     ctx.restore();
   } else {
     // Aura pulsante au sol
@@ -704,7 +750,7 @@ function getAnimPos(a, now) {
   return { x: a.midX, y: a.midY + (a.toY - a.midY) * ee };
 }
 
-// Renvoie la direction du sprite ('left'/'right') pour la jambe en cours.
+// Renvoie la direction du sprite ('left'/'front') pour la jambe en cours.
 // Si pas d'anim ou anim rectiligne : conserve gameState.playerFacing.
 function getAnimFacing(a, now, fallback) {
   if (!a || a.midX === undefined) return fallback;
@@ -718,11 +764,11 @@ function getAnimFacing(a, now, fallback) {
   // Iso : screenDx = gridDx - gridDy
   if (inLegY) {
     const screenDx = -(a.toY - a.midY); // gridDx=0
-    if (screenDx > 0) return 'right';
+    if (screenDx > 0) return 'front';
     if (screenDx < 0) return 'left';
   } else {
     const screenDx = (a.midX - a.fromX); // gridDy=0
-    if (screenDx > 0) return 'right';
+    if (screenDx > 0) return 'front';
     if (screenDx < 0) return 'left';
   }
   return fallback;
@@ -744,8 +790,8 @@ function drawPlayer() {
 
   // Determine facing direction (peut basculer au coin pour un trajet L-shape)
   const facing = gameState.moveAnim && !gameState.moveAnim.isBounce
-    ? getAnimFacing(gameState.moveAnim, performance.now(), gameState.playerFacing || 'right')
-    : (gameState.playerFacing || 'right');
+    ? getAnimFacing(gameState.moveAnim, performance.now(), gameState.playerFacing || 'front')
+    : (gameState.playerFacing || 'front');
 
   // Determine animation frame
   let frame = 'stand';
@@ -929,8 +975,8 @@ function playVector(vx, vy) {
   // Facing initial = direction de la 1ere jambe.
   // Leg X (gridDy=0) : screenDx = vx -> sign(vx)
   // Leg Y (gridDx=0) : screenDx = -gridDy = vy -> sign(vy)
-  if (legX > 0)      gameState.playerFacing = (vx > 0) ? 'right' : 'left';
-  else if (legY > 0) gameState.playerFacing = (vy > 0) ? 'right' : 'left';
+  if (legX > 0)      gameState.playerFacing = (vx > 0) ? 'front' : 'left';
+  else if (legY > 0) gameState.playerFacing = (vy > 0) ? 'front' : 'left';
 
   // Stocker la position avant l'animation (pour rebond eventuel sur porte gardee)
   gameState.lastPlayerPos = { x: fromX, y: fromY };
@@ -951,6 +997,9 @@ function playVector(vx, vy) {
     dur,
     legSplit
   };
+
+  // Tuto : 1er mouvement reussi -> etape 'firstMove'
+  maybeFireTutorialEvent('firstMove');
 }
 
 function flashError() {
@@ -970,6 +1019,8 @@ function tryPickupItem(tx, ty) {
   updateInventoryHUD();
   // P5b : maj cards (passage de "A trouver" -> "Tu l'as")
   if (typeof renderObjectivePanel === 'function') renderObjectivePanel();
+  // Tuto : si on vient de ramasser la cle rouillee, etape 'cleAcquired'
+  if (item.id === 'cle_rouillee') maybeFireTutorialEvent('cleAcquired');
   return true;
 }
 
@@ -1022,6 +1073,8 @@ function transitionToRoom(roomId, spawnX, spawnY) {
   setTimeout(() => {
     loadRoom(roomId, spawnX, spawnY);
     overlay.style.opacity = '0';
+    // Tuto : entree dans S3 (Bibliotheque) = derniere etape
+    if (roomId === 'S3') maybeFireTutorialEvent('enteredS3');
     setTimeout(() => { gameState.inTransition = false; }, 500);
   }, 500);
 }
@@ -1051,7 +1104,7 @@ function bouncePlayer() {
   const dx = gameState.lastPlayerPos.x - gameState.player.x;
   const dy = gameState.lastPlayerPos.y - gameState.player.y;
   const screenDx = dx - dy;
-  if (screenDx > 0) gameState.playerFacing = 'right';
+  if (screenDx > 0) gameState.playerFacing = 'front';
   else if (screenDx < 0) gameState.playerFacing = 'left';
 
   gameState.isMoving = true;
@@ -1110,6 +1163,8 @@ function giveItemToGuardian(guardian, roomId, guardianIndex) {
   guardian.fadeOutStart = performance.now();
   markObjectiveResolved(roomId, guardianIndex);
   closeGuardianModal();
+  // Tuto : si on vient de resoudre le spectre, etape 'spectreResolved'
+  if (guardian.id === 'spectre_gris') maybeFireTutorialEvent('spectreResolved');
   return true;
 }
 
@@ -1500,7 +1555,7 @@ function update() {
       // En L-shape : le facing final = direction de la 2e jambe (Y) si elle existe.
       if (!a.isBounce && a.midX !== undefined && a.legSplit < 1) {
         const screenDx = -(a.toY - a.midY);
-        if (screenDx > 0) gameState.playerFacing = 'right';
+        if (screenDx > 0) gameState.playerFacing = 'front';
         else if (screenDx < 0) gameState.playerFacing = 'left';
       }
       const wasBounce = a.isBounce;
@@ -1549,16 +1604,81 @@ function triggerGameOver() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// SECTION 5b — Tutoriel contextuel
+// ═══════════════════════════════════════════════════════════════
+// Catalogue TUTORIAL_STEPS defini dans chair-data.js. Chaque etape a un
+// trigger 'showOn' (init | firstMove | cleAcquired | spectreResolved | enteredS3).
+// maybeFireTutorialEvent('xxx') appele depuis les hooks correspondants.
+
+function showTutorialNote(stepIdx) {
+  if (gameState.mode !== 'tuto') return;
+  if (typeof TUTORIAL_STEPS === 'undefined') return;
+  const step = TUTORIAL_STEPS[stepIdx];
+  if (!step) { gameState.tutorialActive = false; return; }
+  let el = document.getElementById('tutorial-note');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'tutorial-note';
+    document.body.appendChild(el);
+  }
+  const last = (stepIdx === TUTORIAL_STEPS.length - 1);
+  el.innerHTML =
+    '<div class="tut-step">ETAPE ' + (stepIdx + 1) + ' / ' + TUTORIAL_STEPS.length + '</div>' +
+    '<div class="tut-title">' + step.title + '</div>' +
+    '<div class="tut-text">' + step.text + '</div>' +
+    (step.hint ? '<div class="tut-hint">' + step.hint + '</div>' : '') +
+    '<div class="tut-buttons">' +
+      (last ? '' : '<button class="tut-btn" id="tut-skip">Passer le tuto</button>') +
+      '<button class="tut-btn primary" id="tut-ok">' + (last ? 'Terminer' : 'Compris') + '</button>' +
+    '</div>';
+  // requestAnimationFrame pour declencher la transition opacity/transform
+  requestAnimationFrame(() => el.classList.add('show'));
+  const okBtn = document.getElementById('tut-ok');
+  if (okBtn) okBtn.onclick = () => {
+    el.classList.remove('show');
+    if (last) gameState.tutorialActive = false;
+  };
+  const skipBtn = document.getElementById('tut-skip');
+  if (skipBtn) skipBtn.onclick = () => {
+    el.classList.remove('show');
+    gameState.tutorialActive = false;
+  };
+}
+
+function maybeFireTutorialEvent(eventType) {
+  if (gameState.mode !== 'tuto' || !gameState.tutorialActive) return;
+  if (gameState.tutorialFiredEvents[eventType]) return;
+  if (typeof TUTORIAL_STEPS === 'undefined') return;
+  const idx = TUTORIAL_STEPS.findIndex(s => s.showOn === eventType);
+  if (idx === -1) return;
+  gameState.tutorialFiredEvents[eventType] = true;
+  showTutorialNote(idx);
+}
+
+// ═══════════════════════════════════════════════════════════════
 // SECTION 6 — Init
 // ═══════════════════════════════════════════════════════════════
 
 function init() {
+  // Lire ?mode= depuis l'URL (depuis la landing page index.html)
+  try {
+    const params = new URLSearchParams(location.search);
+    const m = params.get('mode');
+    if (m === 'jeu' || m === 'tuto') gameState.mode = m;
+  } catch (_) { /* fallback : reste sur 'tuto' */ }
+  gameState.tutorialActive = (gameState.mode === 'tuto');
+
   preloadAllImages();
   const startRoom = MAP1.rooms[MAP1.startRoom];
   gameState.player.x = startRoom.spawn.x;
   gameState.player.y = startRoom.spawn.y;
   gameState.currentRoom = MAP1.startRoom;
   document.getElementById('room-label').textContent = '— ' + startRoom.name + ' —';
+
+  // Tutoriel : 1ere note ('init') apres 800ms pour laisser le decor charger
+  if (gameState.mode === 'tuto') {
+    setTimeout(() => maybeFireTutorialEvent('init'), 800);
+  }
 
   // Bouton invoquer vecteur
   document.getElementById('btn-play-vec').addEventListener('click', () => {

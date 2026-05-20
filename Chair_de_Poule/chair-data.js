@@ -59,9 +59,11 @@ const TILE_IMG = {
 };
 
 // Catalogue des gardiens (id → metadata visuelle de secours)
+// ghostly:true = flotte verticalement, balance, halo pulsant. Pour creatures ethereees.
+// ghostly:false (ou absent) = statique. Pour creatures de pierre / corporelles.
 const GUARDIANS = {
-  spectre_gris: { name: 'Spectre Gris', desc: 'Une silhouette vaporeuse aux yeux blancs.', color: '#a0a0c0', eyeColor: '#ffffff' },
-  gargouille:   { name: 'Gargouille',   desc: 'Une statue de pierre aux yeux rougeoyants.', color: '#605040', eyeColor: '#ff3030' }
+  spectre_gris: { name: 'Spectre Gris', desc: 'Une silhouette vaporeuse aux yeux blancs.', color: '#a0a0c0', eyeColor: '#ffffff', ghostly: true },
+  gargouille:   { name: 'Gargouille',   desc: 'Une statue de pierre aux yeux rougeoyants.', color: '#605040', eyeColor: '#ff3030', ghostly: false }
 };
 
 // Catalogue des objets ramassables
@@ -93,7 +95,6 @@ const ROOMS = {
       { x:6, y:1, type:'armure',  block:true },
       { x:1, y:3, type:'console', block:true },
       { x:6, y:3, type:'console', block:true },
-      { x:3, y:5, type:'porte',   block:true }, // porte d'entrée (décor)
     ],
     items: [
       // TEST : objet pour exercer le ramassage + l'objectif spectre. A retirer en PZ.
@@ -409,6 +410,45 @@ const ROOMS = {
   },
 
 };
+
+// ============================================================
+// TUTORIEL (uniquement en mode ?mode=tuto)
+// ============================================================
+// Chaque etape se declenche sur un evenement (showOn) et affiche
+// une carte gothique en haut de l'ecran. L'ordre des etapes est
+// fige : on ne peut pas sauter en arriere.
+const TUTORIAL_STEPS = [
+  {
+    showOn: 'init',
+    title: 'Bienvenue au Manoir Blackwood',
+    text: "Tu es prisonnier du Hall d'Entree. Pour te deplacer, tape un vecteur (x, y) dans le panneau ♦ DEPLACEMENT VECTORIEL en bas de l'ecran, puis clique sur ▶ INVOQUER LE VECTEUR.",
+    hint: "Convention de maths : +y est vers le HAUT (comme sur tes cours). Essaie par exemple (1, 0) pour bouger d'un pas a droite, ou (0, 1) pour monter d'un pas."
+  },
+  {
+    showOn: 'firstMove',
+    title: 'Tu te deplaces en L',
+    text: "Bien joue ! Le vecteur deplace ton personnage en deux temps : d'abord toute la composante x, puis toute la composante y. C'est une marche en L. Maintenant ramasse la CLE ROUILLEE qui scintille en (5, 1) — marche dessus.",
+    hint: "Depuis ta position actuelle, calcule le vecteur (Δx, Δy) qui t'y mene. Tu peux invoquer un vecteur diagonal d'un coup, sans repasser plusieurs fois."
+  },
+  {
+    showOn: 'cleAcquired',
+    title: 'La cle est dans ton sac',
+    text: "Un SPECTRE vaporeux flotte devant l'unique porte au nord. Il bloque le passage. Pour lui parler, CLIQUE directement sur lui avec la souris : un dialogue va s'ouvrir et tu pourras lui donner la cle.",
+    hint: "Tu peux aussi ouvrir le 📓 journal (icone en haut a droite) pour voir tes objectifs en cours."
+  },
+  {
+    showOn: 'spectreResolved',
+    title: 'La porte est libre',
+    text: "Le spectre s'estompe. La case (4, 0) au nord est maintenant traversable. Invoque le vecteur qui t'y emmene pour quitter le Hall et entrer dans la BIBLIOTHEQUE.",
+    hint: "Rappel : +y monte vers la porte. Calcule (4 − x_actuel, y_actuel − 0)."
+  },
+  {
+    showOn: 'enteredS3',
+    title: 'Tutoriel termine !',
+    text: "Bienvenue dans la BIBLIOTHEQUE. Tu maitrises maintenant les vecteurs, le ramassage d'objets et la gestion des gardiens. La suite du Manoir reste a ecrire — la sortie victoire se trouve quelque part dans le Salon Principal.",
+    hint: "Bonne chance, et evite que la hantise ne t'engloutisse..."
+  },
+];
 
 // Map 1 active
 const MAP1 = {

@@ -2,13 +2,15 @@
 
 ## Stack
 - Vanilla JS + HTML5 Canvas (rendu iso procédural, pas de lib externe)
-- 3 fichiers principaux : `chair.html`, `chair.js`, `chair-data.js`
-- GitHub Pages : `https://elliottsaintecatherine-prog.github.io/Maths_Hub/Chair_de_Poule/chair.html`
+- Landing page : `index.html` (menu de choix Tuto / Jeu — point d'entrée depuis le hub)
+- 3 fichiers de jeu : `chair.html`, `chair.js`, `chair-data.js`
+- GitHub Pages : `https://elliottsaintecatherine-prog.github.io/Maths_Hub/Chair_de_Poule/` (sert `index.html`)
 
 ## Architecture
 ```
 Chair_de_Poule/
-├── chair.html       # structure + CSS (HUD, panneau vecteurs, overlays)
+├── index.html       # landing page : menu Tuto / Jeu (entrée depuis hub)
+├── chair.html       # structure + CSS du jeu (HUD, panneau vecteurs, overlays)
 ├── chair.js         # logique + rendu iso (~420 lignes actuellement)
 ├── chair-data.js    # données salles (MAP1, ROOMS, TILE types)
 └── assets/

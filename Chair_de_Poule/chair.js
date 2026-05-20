@@ -75,20 +75,32 @@ function guardianImagePath(id)      { return ASSETS_BASE + 'guardians/' + id   +
 function playerImagePath()          { return ASSETS_BASE + 'player/player.png'; }
 
 // ─── Cache + loader d'images (silencieux sur 404) ───────────────
+// MODE DEV : ASSETS_VERSION = timestamp du chargement de la page.
+// Chaque reload (F5) → nouvelle version → toutes les images sont
+// re-fetchees automatiquement. Plus besoin de hard-refresh pour
+// voir un sprite modifie sur disque.
+//
+// POUR LA PROD : remplacer Date.now() par une chaine fixe (ex: '1') et
+// la bumper manuellement quand on veut casser le cache utilisateur.
+const ASSETS_VERSION = Date.now();
 const imageCache = {};
 const imageLoadStatus = {}; // path -> 'loading' | 'loaded' | 'error'
 
+function bustedUrl(path) { return path + '?v=' + ASSETS_VERSION; }
+
 function loadImage(path) {
-  if (imageLoadStatus[path]) return;
-  imageLoadStatus[path] = 'loading';
+  const url = bustedUrl(path);
+  if (imageLoadStatus[url]) return;
+  imageLoadStatus[url] = 'loading';
   const img = new Image();
-  img.onload  = () => { imageCache[path] = img; imageLoadStatus[path] = 'loaded'; };
-  img.onerror = () => { imageLoadStatus[path] = 'error'; };
-  img.src = path;
+  img.onload  = () => { imageCache[url] = img; imageLoadStatus[url] = 'loaded'; };
+  img.onerror = () => { imageLoadStatus[url] = 'error'; };
+  img.src = url;
 }
 
 function getImage(path) {
-  return imageLoadStatus[path] === 'loaded' ? imageCache[path] : null;
+  const url = bustedUrl(path);
+  return imageLoadStatus[url] === 'loaded' ? imageCache[url] : null;
 }
 
 function preloadAllImages() {

@@ -284,7 +284,7 @@ const ROOMS = {
       [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
       [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
       [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-      [1, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 1], // y=5 : EXIT en (7,5)
+      [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], // y=5 : (EXIT deplacee dans S3 — la case gagnante est unique et dans la 2eme salle)
       [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
       [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
       [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
@@ -305,17 +305,19 @@ const ROOMS = {
     doors: [
       { x:3, y:11, target:'S5', spawnAt:{ x:4, y:1 } },
       { x:10, y:11, target:'S4', spawnAt:{ x:5, y:1 } },
-      // EXIT (7,5) : la tile TILE.EXIT declenche directement la victoire, pas une transition
     ],
     guardians: [
-      // Gargouille gardant la sortie : enigme math
-      {
-        id: 'gargouille',
-        x: 6, y: 4, w: 2, h: 2,
-        active: true,
-        blocksDoor: { x:7, y:5 }, // tile EXIT (utilisee par checkSpecialTile)
-        objective: { type:'math', question:'37 + 56', answer:93, hint:'Additionne les dizaines et les unités.' }
-      },
+      // La gargouille gardait la sortie en S7. La sortie est maintenant unique
+      // dans S3 (Bibliotheque). On garde la gargouille en standby pour la
+      // re-implanter ailleurs ou la deplacer vers S3 plus tard.
+      //
+      // {
+      //   id: 'gargouille',
+      //   x: 6, y: 4, w: 2, h: 2,
+      //   active: true,
+      //   blocksDoor: { x:7, y:5 },
+      //   objective: { type:'math', question:'37 + 56', answer:93, hint:'Additionne les dizaines et les unités.' }
+      // },
     ],
   },
 

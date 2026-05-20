@@ -110,6 +110,8 @@ Le `type` est exactement le nom de fichier sans extension (sans variante). Ajout
 | `armoire`         | Armoire monumentale en noyer, deux portes sculptées de scènes de chasse, miroir terni        |
 | `coiffeuse`       | Coiffeuse de dame, miroir triptyque, flacons de parfum dorés, brosse à cheveux noire        |
 | `coffre_lit`      | Coffre en bois de cèdre au pied du lit, ferrures dorées, couvercle entrouvert sur du tissu    |
+| `table_de_nuit`   | Table de nuit en noyer sculpté, un tiroir entrouvert, bougeoir en laiton allumé dessus, livre refermé |
+| `table_de_nuit-2` | **Variante** : même table mais plateau avec un verre d'eau et une petite cloche en argent     |
 
 ### Chambre d'Enfant (E2)
 

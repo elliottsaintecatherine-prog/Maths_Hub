@@ -63,6 +63,7 @@ Ces gardiens ne sont **pas encore** dans `chair-data.js`. Pour les utiliser, ajo
 
 | ID                 | Concept                                                                                          |
 |--------------------|--------------------------------------------------------------------------------------------------|
+| `vampire`          | Vampire en frac noir, cape bordeaux doublée rouge sang, peau cireuse, canines visibles, mains en griffes |
 | `epouvantail`      | Épouvantail à la tête de citrouille creuse, vêtu d'une vieille chemise tachée, fourche à la main |
 | `araignee_geante`  | Araignée noire de la taille d'un chien, mandibules dégoulinantes, 8 yeux rouges                  |
 | `loup_garou`       | Lycanthrope mi-homme mi-loup, fourrure grise, dressé sur ses pattes arrière, gueule ouverte      |

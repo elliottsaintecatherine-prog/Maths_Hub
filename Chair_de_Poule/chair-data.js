@@ -85,7 +85,7 @@ const ROOMS = {
       [1, 0, 0, 0, 0, 0, 0, 1],
       [1, 0, 0, 0, 0, 0, 0, 1],
       [1, 0, 0, 0, 0, 0, 0, 1],
-      [1, 5, 0, 0, 0, 0, 0, 1], // y=4 : escalier (1,4) vers E1
+      [1, 0, 0, 0, 0, 0, 0, 1], // y=4 : (escalier vers E1 supprime — voir note)
       [1, 1, 1, 1, 1, 1, 1, 1], // y=5 : mur S
     ],
     decor: [
@@ -101,7 +101,6 @@ const ROOMS = {
     ],
     doors: [
       { x:4, y:0, target:'S3', spawnAt:{ x:4, y:5 } },
-      { x:1, y:4, target:'E1', spawnAt:{ x:1, y:4 } },
     ],
     guardians: [
       // TEST : spectre 2x2 devant la porte (4,0). A retirer/deplacer en PZ.
@@ -120,7 +119,7 @@ const ROOMS = {
     width: 10, height: 8,
     spawn: { x: 4, y: 6 },
     grid: [
-      [1, 1, 1, 1, 2, 1, 1, 1, 2, 1], // y=0 : portes vers S5 (4,0) et S4 (8,0)
+      [1, 1, 1, 1, 2, 3, 1, 1, 2, 1], // y=0 : portes vers S5 (4,0), S4 (8,0) ; EXIT victoire (5,0)
       [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
       [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
       [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
@@ -151,7 +150,7 @@ const ROOMS = {
     width: 8, height: 7,
     spawn: { x: 3, y: 5 },
     grid: [
-      [1, 1, 1, 1, 3, 1, 1, 1], // y=0 : SORTIE (TILE.EXIT) en (4,0)
+      [1, 1, 1, 1, 1, 1, 1, 1], // y=0 : mur N (EXIT deplace dans S2 — unique en (5,0))
       [1, 0, 0, 0, 0, 0, 0, 1],
       [1, 0, 0, 0, 0, 0, 0, 1],
       [1, 0, 0, 0, 0, 0, 0, 1],

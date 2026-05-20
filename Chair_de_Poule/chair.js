@@ -22,7 +22,7 @@ const gameState = {
   player: { x: 0, y: 0 }, // tile coords
   startTime: Date.now(),
   isMoving: false,
-  moveAnim: null, // {fromX, fromY, toX, toY, t0, dur}
+  moveAnim: null, // {fromX, fromY, midX?, midY?, toX, toY, t0, dur, legSplit?, isBounce?}
   gameOver: false,
   inTransition: false,
   audioVolume: 50,
@@ -674,15 +674,66 @@ function updateHauntingBar() {
   }
 }
 
+// Interpole la position du joueur en cours d'animation.
+// Supporte 2 modes :
+//   - rectiligne (bounce) : (fromX,fromY) -> (toX,toY) en smoothstep
+//   - L-shape  : (fromX,fromY) -> (midX,midY) puis (midX,midY) -> (toX,toY)
+//                chaque jambe ease independamment ; le split temporel est legSplit (0..1)
+function getAnimPos(a, now) {
+  const t = Math.min(1, (now - a.t0) / a.dur);
+  if (a.midX === undefined) {
+    const ease = t * t * (3 - 2 * t);
+    return { x: a.fromX + (a.toX - a.fromX) * ease, y: a.fromY + (a.toY - a.fromY) * ease };
+  }
+  const split = a.legSplit;
+  if (split <= 0) {
+    const ee = t * t * (3 - 2 * t);
+    return { x: a.midX, y: a.midY + (a.toY - a.midY) * ee };
+  }
+  if (split >= 1) {
+    const ee = t * t * (3 - 2 * t);
+    return { x: a.fromX + (a.toX - a.fromX) * ee, y: a.fromY };
+  }
+  if (t < split) {
+    const tt = t / split;
+    const ee = tt * tt * (3 - 2 * tt);
+    return { x: a.fromX + (a.midX - a.fromX) * ee, y: a.fromY };
+  }
+  const tt = (t - split) / (1 - split);
+  const ee = tt * tt * (3 - 2 * tt);
+  return { x: a.midX, y: a.midY + (a.toY - a.midY) * ee };
+}
+
+// Renvoie la direction du sprite ('left'/'right') pour la jambe en cours.
+// Si pas d'anim ou anim rectiligne : conserve gameState.playerFacing.
+function getAnimFacing(a, now, fallback) {
+  if (!a || a.midX === undefined) return fallback;
+  const t = Math.min(1, (now - a.t0) / a.dur);
+  const split = a.legSplit;
+  // Determine si on est dans la jambe Y (apres le coin)
+  let inLegY;
+  if (split <= 0) inLegY = true;
+  else if (split >= 1) inLegY = false;
+  else inLegY = (t >= split);
+  // Iso : screenDx = gridDx - gridDy
+  if (inLegY) {
+    const screenDx = -(a.toY - a.midY); // gridDx=0
+    if (screenDx > 0) return 'right';
+    if (screenDx < 0) return 'left';
+  } else {
+    const screenDx = (a.midX - a.fromX); // gridDy=0
+    if (screenDx > 0) return 'right';
+    if (screenDx < 0) return 'left';
+  }
+  return fallback;
+}
+
 function getPlayerScreenPos() {
   let px = gameState.player.x;
   let py = gameState.player.y;
   if (gameState.moveAnim) {
-    const a = gameState.moveAnim;
-    const t = Math.min(1, (performance.now() - a.t0) / a.dur);
-    const ease = t * t * (3 - 2 * t);
-    px = a.fromX + (a.toX - a.fromX) * ease;
-    py = a.fromY + (a.toY - a.fromY) * ease;
+    const p = getAnimPos(gameState.moveAnim, performance.now());
+    px = p.x; py = p.y;
   }
   return tileToScreen(px, py);
 }
@@ -691,16 +742,17 @@ function drawPlayer() {
   const { x: sx, y: sy } = getPlayerScreenPos();
   const s = TILE_W / 128;
 
-  // Determine facing direction
-  const facing = gameState.playerFacing || 'right';
+  // Determine facing direction (peut basculer au coin pour un trajet L-shape)
+  const facing = gameState.moveAnim && !gameState.moveAnim.isBounce
+    ? getAnimFacing(gameState.moveAnim, performance.now(), gameState.playerFacing || 'right')
+    : (gameState.playerFacing || 'right');
 
   // Determine animation frame
   let frame = 'stand';
   if (gameState.isMoving && gameState.moveAnim) {
     const elapsed = performance.now() - gameState.moveAnim.t0;
-    // Walk cycle: stand -> walk_1 -> stand -> walk_2 -> stand
-    // Alternating between stand (neutral), walk_1 (one step), and walk_2 (opposite step)
-    const stepTime = 100; // ms per frame
+    // Walk cycle: walk_1 -> stand -> walk_2 -> stand (4 phases)
+    const stepTime = 180; // ms par phase (ralenti pour une marche plus posee)
     const frameIndex = Math.floor(elapsed / stepTime) % 4;
     if (frameIndex === 0) frame = 'walk_1';
     else if (frameIndex === 1) frame = 'stand';
@@ -775,11 +827,8 @@ function render() {
   // Position joueur (animation interpolée pour highlight)
   let pxAnim = gameState.player.x, pyAnim = gameState.player.y;
   if (gameState.moveAnim) {
-    const a = gameState.moveAnim;
-    const t = Math.min(1, (performance.now() - a.t0) / a.dur);
-    const ease = t * t * (3 - 2 * t);
-    pxAnim = a.fromX + (a.toX - a.fromX) * ease;
-    pyAnim = a.fromY + (a.toY - a.fromY) * ease;
+    const p = getAnimPos(gameState.moveAnim, performance.now());
+    pxAnim = p.x; pyAnim = p.y;
   }
   const pTileX = Math.round(pxAnim);
   const pTileY = Math.round(pyAnim);
@@ -843,12 +892,18 @@ function isBlocked(tx, ty) {
   return false;
 }
 
+// Vitesse de marche : ms par tile parcouru (distance de Manhattan).
+// 500 ms/tile = environ 2 tiles/s, marche normale un peu posee.
+const MS_PER_TILE = 500;
+
 function playVector(vx, vy) {
   if (gameState.isMoving || gameState.gameOver || gameState.inTransition) return;
   // Convention math : +y = haut sur l'ecran (donc on inverse l'axe grille).
   // L'eleve saisit (vx, vy) avec +y vers le haut comme en cours de maths.
-  const targetX = gameState.player.x + vx;
-  const targetY = gameState.player.y - vy;
+  const fromX = gameState.player.x;
+  const fromY = gameState.player.y;
+  const targetX = fromX + vx;
+  const targetY = fromY - vy;
   const room = MAP1.rooms[gameState.currentRoom];
   if (isBlocked(targetX, targetY)) {
     flashError();
@@ -859,30 +914,42 @@ function playVector(vx, vy) {
     flashError();
     return;
   }
-  // Direction du sprite : on regarde le delta x ECRAN (projection iso).
-  // En iso : screenDx = (gridDx - gridDy). gridDx = vx, gridDy = -vy (flip math).
-  // => screenDx = vx + vy. Si > 0 face droite, si < 0 face gauche, sinon on garde.
-  const screenDx = vx + vy;
-  if (screenDx > 0) gameState.playerFacing = 'right';
-  else if (screenDx < 0) gameState.playerFacing = 'left';
+
+  // Trajet en L : on parcourt d'abord toute la composante X, puis toute la composante Y.
+  // Le coin (waypoint) est donc (targetX, fromY).
+  const midX = targetX;
+  const midY = fromY;
+  const legX = Math.abs(vx);
+  const legY = Math.abs(vy);
+  const total = legX + legY;
+  // legSplit = fraction temporelle dediee a la jambe X. 0 si pas de jambe X, 1 si pas de jambe Y.
+  const legSplit = (total > 0) ? (legX / total) : 0;
+  const dur = MS_PER_TILE * Math.max(1, total);
+
+  // Facing initial = direction de la 1ere jambe.
+  // Leg X (gridDy=0) : screenDx = vx -> sign(vx)
+  // Leg Y (gridDx=0) : screenDx = -gridDy = vy -> sign(vy)
+  if (legX > 0)      gameState.playerFacing = (vx > 0) ? 'right' : 'left';
+  else if (legY > 0) gameState.playerFacing = (vy > 0) ? 'right' : 'left';
 
   // Stocker la position avant l'animation (pour rebond eventuel sur porte gardee)
-  gameState.lastPlayerPos = { x: gameState.player.x, y: gameState.player.y };
+  gameState.lastPlayerPos = { x: fromX, y: fromY };
   // Trace au sol du dernier vecteur (P6) — visible 3s
   gameState.lastVectorTrace = {
-    from: { x: gameState.player.x, y: gameState.player.y },
+    from: { x: fromX, y: fromY },
     to:   { x: targetX, y: targetY },
     t0: performance.now()
   };
-  // Animation glissante
+  // Animation glissante en L
   gameState.isMoving = true;
   gameState.moveAnim = {
-    fromX: gameState.player.x,
-    fromY: gameState.player.y,
+    fromX, fromY,
+    midX, midY,
     toX: targetX,
     toY: targetY,
     t0: performance.now(),
-    dur: 250 + Math.hypot(vx, vy) * 60
+    dur,
+    legSplit
   };
 }
 
@@ -1430,6 +1497,12 @@ function update() {
     if (performance.now() >= a.t0 + a.dur) {
       gameState.player.x = a.toX;
       gameState.player.y = a.toY;
+      // En L-shape : le facing final = direction de la 2e jambe (Y) si elle existe.
+      if (!a.isBounce && a.midX !== undefined && a.legSplit < 1) {
+        const screenDx = -(a.toY - a.midY);
+        if (screenDx > 0) gameState.playerFacing = 'right';
+        else if (screenDx < 0) gameState.playerFacing = 'left';
+      }
       const wasBounce = a.isBounce;
       gameState.moveAnim = null;
       gameState.isMoving = false;

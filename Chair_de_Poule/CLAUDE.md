@@ -56,11 +56,13 @@ Groupes restants (dans l'ordre) :
 
 | ID | Titre | Statut |
 |----|-------|--------|
+| P5b | Panneau journal rétractable + résolution 'math' | [x] |
+| P7  | Système d'images + variantes + refacto schéma data | [x] |
 | a1 | Transition salles (DOOR/TRAPPE/ESCALIER) | [x] |
-| a2 | S2 Salon (données + décors) | [x] |
-| a3 | S3 Bibliothèque (données + décors) | [x] |
-| b1 | S4 Cuisine (données + décors) | [x] |
-| b2 | S5 Chapelle (données + décors) | [x] |
+| a2 | S2 Salon (données + décors) | [ ] |
+| a3 | S3 Bibliothèque (données + décors) | [ ] |
+| b1 | S4 Cuisine (données + décors) | [ ] |
+| b2 | S5 Chapelle (données + décors) | [ ] |
 | b3 | S6 Cave (données + décors) | [ ] |
 | b4 | S7 Jardin (données + décors) | [ ] |
 | c1 | E1 Chambre Maître + escalier S1→E1 | [ ] |
@@ -77,20 +79,49 @@ Groupes restants (dans l'ordre) :
 
 ## PROCHAINE ACTION
 
-**Prompt P5b — Panneau journal rétractable + résolution 'math' (★★★ Sonnet)**
+**Phase 2 — Construire les salles une par une (S2 → E3)**
 
-Fichiers à lire : `chair.js` uniquement.
+Phase 1 (systèmes de jeu) terminée. Toutes les salles existent en stub dans `chair-data.js` mais sans rendu visuel. La suite consiste à :
 
-Voir spec complète dans `escbrain/wiki/games/chair-de-poule-prompts.md` section P5b.
+1. **Générer les images** une salle à la fois en suivant les 4 prompt files :
+   - `PROMPTS/_COMMUN.md` — règles partagées (palette, perspective, détourage exhaustif)
+   - `PROMPTS/TILES.md` — sol, mur, porte/escalier/trappe/exit par salle
+   - `PROMPTS/DECOR.md` — mobilier par salle
+   - `PROMPTS/ITEMS.md` — objets ramassables
+   - `PROMPTS/GUARDIANS.md` — monstres
+2. **Vérifier en jeu** : la salle doit être traversable, les transitions OK, le rendu satisfaisant.
+3. **Ajouter objectifs / gardiens** : 1 ligne dans `guardians[]` de la salle avec `blocksDoor`.
 
-Résumé :
-1. `#obj-toggle` hamburger 3-traits fixed right (translateY -50%), 40×60, animation right 0↔360px
-2. `#obj-panel` fixed right, 360×100vh, transform translateX(100%) → .open, transition 400ms, scrollable
-3. Header sticky "JOURNAL"
-4. Sections "TÂCHES EN COURS" / "RÉSOLU" avec `renderTaskCard(obj)`
-5. Cards : type 'item' → boîte objet requis + "✓ Tu l'as" / "✗ À trouver" ; type 'math' → question + input + bouton VALIDER
-6. `checkMathAnswer(roomId, doorIndex)` : si correct → g.active=false + mark resolved ; sinon flash rouge + -30s
-7. `ensureObjectiveUI()` + `togglePanel()` + `renderObjectivePanel()` — appelés depuis resolveGuardian et tryPickupItem
-8. Cacher panneau + hamburger sur écrans victoire/hanté ; 1ère découverte auto-ouvre
+Ordre suggéré : S2 (Salon) → S3 (Bibliothèque) → S4 (Cuisine) → S5 (Chapelle) → S6 (Cave) → S7 (Jardin/Exit) → E1 (Chambre Maître) → E2 (Chambre Enfant) → E3 (Bureau).
 
-CONTRAINTES : Ne pas toucher chair.html. Aucun emoji. Panneau NON modal (jeu jouable).
+---
+
+## SCHÉMA DE DONNÉES (v2 — 2026-05-20)
+
+Une salle = `{ name, width, height, spawn, grid, decor, items, doors, guardians }`.
+
+**Ajouter en 1 ligne :**
+
+| Type    | Exemple                                                                                              |
+|---------|------------------------------------------------------------------------------------------------------|
+| Décor   | `{ x:2, y:3, type:'armure', block:true }`                                                            |
+| Item    | `{ x:5, y:1, id:'cle_rouillee' }`                                                                    |
+| Porte   | `{ x:4, y:0, target:'S3', spawnAt:{x:3,y:5} }`                                                       |
+| Gardien | `{ id:'spectre_gris', x:3, y:1, w:2, h:2, blocksDoor:{x:4,y:0}, objective:{type:'item', required:'cle_rouillee'} }` |
+
+**Variantes** (défaut v:1) : ajouter `v:2` sur décor/item, ou `{t:0, v:2}` dans la grille → utilise `name-2.png`.
+
+**Chemins images (convention auto)** :
+- `assets/images/rooms/{roomId}/{floor|wall|door|exit|trappe|escalier}{-v}.png`
+- `assets/images/decor/{type}{-v}.png`
+- `assets/images/items/{id}{-v}.png` (+ `{id}_bright.png` optionnel pour clignotement)
+- `assets/images/guardians/{id}.png`
+- `assets/images/player/player.png`
+
+Si l'image n'existe pas : **fallback procédural automatique**, aucune erreur visible.
+
+---
+
+## ÉTAT RÉEL PHASE 2 (note 2026-05-20)
+
+L'utilisateur a confirmé que les salles S2-E3 marquées [x] dans le tableau étaient **fausses** : aucune salle hors S1 n'est implémentée (S3 est un placeholder squelette). On reset à [ ] pour repartir proprement après P7.

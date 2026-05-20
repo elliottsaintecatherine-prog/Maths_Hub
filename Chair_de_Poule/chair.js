@@ -29,9 +29,95 @@ const gameState = {
   muted: false,
   inventory: [],
   lastPlayerPos: { x: 0, y: 0 },
-  objectives: [], // { key, roomId, doorIndex, status: 'pending'|'resolved' }
+  objectives: [], // { key, roomId, guardianIndex, status: 'pending'|'resolved' }
   lastVectorTrace: null, // { from:{x,y}, to:{x,y}, t0 } — trace au sol 3s
+  objPanelAutoOpened: false, // P5b : 1ere decouverte auto-ouvre le panneau
 };
+
+// =================================================================
+// SECTION 1b — Helpers schema + Systeme d'Images (P7)
+// =================================================================
+
+// ─── Normalisation cell grid (int OU {t,v}) ─────────────────────
+function getCell(room, x, y) {
+  if (!room || x < 0 || y < 0 || x >= room.width || y >= room.height) {
+    return { t: TILE.WALL, v: 1 };
+  }
+  const c = room.grid[y][x];
+  if (c !== null && typeof c === 'object') return { t: c.t, v: c.v || 1 };
+  return { t: c, v: 1 };
+}
+function getTileType(room, x, y) { return getCell(room, x, y).t; }
+
+// ─── Recherche de gardiens via blocksDoor (nouveau schema) ──────
+function findGuardianForDoor(room, doorX, doorY) {
+  if (!room || !room.guardians) return null;
+  return room.guardians.find(g => g.active !== false &&
+    g.blocksDoor && g.blocksDoor.x === doorX && g.blocksDoor.y === doorY) || null;
+}
+function findGuardianIndexForDoor(room, doorX, doorY) {
+  if (!room || !room.guardians) return -1;
+  return room.guardians.findIndex(g => g.active !== false &&
+    g.blocksDoor && g.blocksDoor.x === doorX && g.blocksDoor.y === doorY);
+}
+
+// ─── Convention chemins images + suffixe variante ───────────────
+const ASSETS_BASE = 'assets/images/';
+function variantSuffix(v) { return (v && v > 1) ? '-' + v : ''; }
+function tileImagePath(roomId, t, v) {
+  const name = (typeof TILE_IMG !== 'undefined' && TILE_IMG[t]) || 'floor';
+  return ASSETS_BASE + 'rooms/' + roomId + '/' + name + variantSuffix(v) + '.png';
+}
+function decorImagePath(type, v)    { return ASSETS_BASE + 'decor/'     + type + variantSuffix(v) + '.png'; }
+function itemImagePath(id, v)       { return ASSETS_BASE + 'items/'     + id   + variantSuffix(v) + '.png'; }
+function itemBrightImagePath(id, v) { return ASSETS_BASE + 'items/'     + id   + variantSuffix(v) + '_bright.png'; }
+function guardianImagePath(id)      { return ASSETS_BASE + 'guardians/' + id   + '.png'; }
+function playerImagePath()          { return ASSETS_BASE + 'player/player.png'; }
+
+// ─── Cache + loader d'images (silencieux sur 404) ───────────────
+const imageCache = {};
+const imageLoadStatus = {}; // path -> 'loading' | 'loaded' | 'error'
+
+function loadImage(path) {
+  if (imageLoadStatus[path]) return;
+  imageLoadStatus[path] = 'loading';
+  const img = new Image();
+  img.onload  = () => { imageCache[path] = img; imageLoadStatus[path] = 'loaded'; };
+  img.onerror = () => { imageLoadStatus[path] = 'error'; };
+  img.src = path;
+}
+
+function getImage(path) {
+  return imageLoadStatus[path] === 'loaded' ? imageCache[path] : null;
+}
+
+function preloadAllImages() {
+  loadImage(playerImagePath());
+  if (typeof MAP1 === 'undefined' || !MAP1.rooms) return;
+  Object.keys(MAP1.rooms).forEach(roomId => {
+    const room = MAP1.rooms[roomId];
+    // Tiles : un chargement par couple (t, v) utilise dans la grille
+    const seen = {};
+    for (let y = 0; y < room.height; y++) {
+      for (let x = 0; x < room.width; x++) {
+        const c = getCell(room, x, y);
+        const k = c.t + '-' + c.v;
+        if (seen[k]) continue;
+        seen[k] = true;
+        loadImage(tileImagePath(roomId, c.t, c.v));
+      }
+    }
+    // Decor : type + variante
+    (room.decor || []).forEach(d => loadImage(decorImagePath(d.type, d.v || 1)));
+    // Items : id + variante (+ tentative _bright pour le clignotement)
+    (room.items || []).forEach(it => {
+      loadImage(itemImagePath(it.id, it.v || 1));
+      loadImage(itemBrightImagePath(it.id, it.v || 1));
+    });
+    // Guardians : id seul
+    (room.guardians || []).forEach(g => loadImage(guardianImagePath(g.id)));
+  });
+}
 
 function resizeCanvas() {
   canvas.width  = window.innerWidth;
@@ -84,19 +170,42 @@ function tileToScreen(tx, ty) {
 // SECTION 3 — Rendu
 // ═══════════════════════════════════════════════════════════════
 
-function drawTile(tx, ty, color, gridColor) {
+// drawTile(tx, ty, cell, gridColor)
+//   cell = {t, v}  -- normalize via getCell()
+//   Image : assets/images/rooms/{roomId}/{name}{-v}.png
+//   Fallback procedural si image absente.
+function drawTile(tx, ty, cell, gridColor) {
   const { x, y } = tileToScreen(tx, ty);
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.moveTo(x, y - TILE_H/2);
-  ctx.lineTo(x + TILE_W/2, y);
-  ctx.lineTo(x, y + TILE_H/2);
-  ctx.lineTo(x - TILE_W/2, y);
-  ctx.closePath();
-  ctx.fill();
+  const img = getImage(tileImagePath(gameState.currentRoom, cell.t, cell.v));
+  if (img) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(1, TILE_H / TILE_W);
+    ctx.rotate(45 * Math.PI / 180);
+    const side = TILE_W / Math.SQRT2;
+    // Micro-overlap (+1px) pour eviter les trous entre tiles dus a l'antialiasing
+    ctx.drawImage(img, -side / 2, -side / 2, side + 1, side + 1);
+    ctx.restore();
+  } else {
+    // Fallback procedural : sol fonce uni
+    ctx.fillStyle = '#2a2520';
+    ctx.beginPath();
+    ctx.moveTo(x, y - TILE_H/2);
+    ctx.lineTo(x + TILE_W/2, y);
+    ctx.lineTo(x, y + TILE_H/2);
+    ctx.lineTo(x - TILE_W/2, y);
+    ctx.closePath();
+    ctx.fill();
+  }
   if (gridColor) {
     ctx.strokeStyle = gridColor;
     ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x, y - TILE_H/2);
+    ctx.lineTo(x + TILE_W/2, y);
+    ctx.lineTo(x, y + TILE_H/2);
+    ctx.lineTo(x - TILE_W/2, y);
+    ctx.closePath();
     ctx.stroke();
   }
 }
@@ -128,97 +237,135 @@ function drawTileHighlight(tx, ty) {
   ctx.stroke();
 }
 
-function drawWall(tx, ty) {
+function drawWall(tx, ty, cell) {
   const { x, y } = tileToScreen(tx, ty);
-  // Face top (losange foncé)
-  ctx.fillStyle = '#1a1208';
-  ctx.beginPath();
-  ctx.moveTo(x, y - TILE_H/2 - WALL_H);
-  ctx.lineTo(x + TILE_W/2, y - WALL_H);
-  ctx.lineTo(x, y + TILE_H/2 - WALL_H);
-  ctx.lineTo(x - TILE_W/2, y - WALL_H);
-  ctx.closePath();
-  ctx.fill();
-  // Face W (gauche, plus claire) — boiserie
-  ctx.fillStyle = '#2a1a08';
-  ctx.beginPath();
-  ctx.moveTo(x - TILE_W/2, y - WALL_H);
-  ctx.lineTo(x, y + TILE_H/2 - WALL_H);
-  ctx.lineTo(x, y + TILE_H/2);
-  ctx.lineTo(x - TILE_W/2, y);
-  ctx.closePath();
-  ctx.fill();
-  // Détail boiserie face W : moulure verticale
-  ctx.strokeStyle = '#3d2810';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(x - TILE_W/4, y - WALL_H + TILE_H/4);
-  ctx.lineTo(x - TILE_W/4, y + TILE_H/4);
-  ctx.stroke();
-  // Face S (droite, plus sombre)
-  ctx.fillStyle = '#150d05';
-  ctx.beginPath();
-  ctx.moveTo(x, y + TILE_H/2 - WALL_H);
-  ctx.lineTo(x + TILE_W/2, y - WALL_H);
-  ctx.lineTo(x + TILE_W/2, y);
-  ctx.lineTo(x, y + TILE_H/2);
-  ctx.closePath();
-  ctx.fill();
-  // Détail boiserie face S
-  ctx.strokeStyle = '#2a1a08';
-  ctx.beginPath();
-  ctx.moveTo(x + TILE_W/4, y - WALL_H + TILE_H/4);
-  ctx.lineTo(x + TILE_W/4, y + TILE_H/4);
-  ctx.stroke();
-  // Bord supérieur
-  ctx.strokeStyle = '#3d2810';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(x, y - TILE_H/2 - WALL_H);
-  ctx.lineTo(x + TILE_W/2, y - WALL_H);
-  ctx.lineTo(x, y + TILE_H/2 - WALL_H);
-  ctx.lineTo(x - TILE_W/2, y - WALL_H);
-  ctx.closePath();
-  ctx.stroke();
+  const v = (cell && cell.v) || 1;
+  const img = getImage(tileImagePath(gameState.currentRoom, TILE.WALL, v));
+  
+  if (img) {
+    // Face W (gauche)
+    ctx.save();
+    ctx.translate(x - TILE_W/2, y - WALL_H);
+    ctx.transform((TILE_W/2)/img.width, (TILE_H/2)/img.width, 0, WALL_H/img.height, 0, 0);
+    ctx.drawImage(img, 0, 0);
+    ctx.restore();
+    
+    // Face S (droite)
+    ctx.save();
+    ctx.translate(x, y - WALL_H + TILE_H/2);
+    ctx.transform((TILE_W/2)/img.width, (-TILE_H/2)/img.width, 0, WALL_H/img.height, 0, 0);
+    // Assombrir la face droite pour donner du volume 3D
+    ctx.filter = 'brightness(0.6)';
+    ctx.drawImage(img, 0, 0);
+    ctx.restore();
+    
+    // Face top (toit du mur) - on garde un losange noir/sombre procedural
+    ctx.fillStyle = '#0a0502';
+    ctx.beginPath();
+    ctx.moveTo(x, y - TILE_H/2 - WALL_H);
+    ctx.lineTo(x + TILE_W/2, y - WALL_H);
+    ctx.lineTo(x, y + TILE_H/2 - WALL_H);
+    ctx.lineTo(x - TILE_W/2, y - WALL_H);
+    ctx.closePath();
+    ctx.fill();
+  } else {
+    // Face top (losange foncé)
+    ctx.fillStyle = '#1a1208';
+    ctx.beginPath();
+    ctx.moveTo(x, y - TILE_H/2 - WALL_H);
+    ctx.lineTo(x + TILE_W/2, y - WALL_H);
+    ctx.lineTo(x, y + TILE_H/2 - WALL_H);
+    ctx.lineTo(x - TILE_W/2, y - WALL_H);
+    ctx.closePath();
+    ctx.fill();
+    // Face W (gauche, plus claire) — boiserie
+    ctx.fillStyle = '#2a1a08';
+    ctx.beginPath();
+    ctx.moveTo(x - TILE_W/2, y - WALL_H);
+    ctx.lineTo(x, y + TILE_H/2 - WALL_H);
+    ctx.lineTo(x, y + TILE_H/2);
+    ctx.lineTo(x - TILE_W/2, y);
+    ctx.closePath();
+    ctx.fill();
+    // Détail boiserie face W : moulure verticale
+    ctx.strokeStyle = '#3d2810';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x - TILE_W/4, y - WALL_H + TILE_H/4);
+    ctx.lineTo(x - TILE_W/4, y + TILE_H/4);
+    ctx.stroke();
+    // Face S (droite, plus sombre)
+    ctx.fillStyle = '#150d05';
+    ctx.beginPath();
+    ctx.moveTo(x, y + TILE_H/2 - WALL_H);
+    ctx.lineTo(x + TILE_W/2, y - WALL_H);
+    ctx.lineTo(x + TILE_W/2, y);
+    ctx.lineTo(x, y + TILE_H/2);
+    ctx.closePath();
+    ctx.fill();
+    // Détail boiserie face S
+    ctx.strokeStyle = '#2a1a08';
+    ctx.beginPath();
+    ctx.moveTo(x + TILE_W/4, y - WALL_H + TILE_H/4);
+    ctx.lineTo(x + TILE_W/4, y + TILE_H/4);
+    ctx.stroke();
+    // Bord supérieur
+    ctx.strokeStyle = '#3d2810';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x, y - TILE_H/2 - WALL_H);
+    ctx.lineTo(x + TILE_W/2, y - WALL_H);
+    ctx.lineTo(x, y + TILE_H/2 - WALL_H);
+    ctx.lineTo(x - TILE_W/2, y - WALL_H);
+    ctx.closePath();
+    ctx.stroke();
+  }
 }
 
 function drawDecor(d) {
   const { x, y } = tileToScreen(d.x, d.y);
-  ctx.save();
-  ctx.translate(x, y);
-  const s = TILE_W / 128; // facteur d'échelle (128 = base)
-  if (d.type === 'armure') {
-    ctx.fillStyle = '#3d3020';
-    ctx.fillRect(-12*s, -84*s, 24*s, 84*s);
-    ctx.fillStyle = '#5a4828';
-    ctx.fillRect(-9*s, -76*s, 18*s, 6*s);
-    // tête armure
-    ctx.fillStyle = '#2a2010';
-    ctx.beginPath();
-    ctx.arc(0, -90*s, 7*s, 0, Math.PI*2);
-    ctx.fill();
-  } else if (d.type === 'console') {
-    ctx.fillStyle = '#3d2010';
-    ctx.fillRect(-22*s, -32*s, 44*s, 32*s);
-    ctx.fillStyle = '#5a3815';
-    ctx.fillRect(-22*s, -32*s, 44*s, 5*s);
-    // bougeoir
-    ctx.fillStyle = '#8a6a2a';
-    ctx.fillRect(-3*s, -42*s, 6*s, 10*s);
-    ctx.fillStyle = '#f5d070';
-    ctx.beginPath();
-    ctx.arc(0, -46*s, 3*s, 0, Math.PI*2);
-    ctx.fill();
-  } else if (d.type === 'porte') {
-    ctx.fillStyle = '#2a1a08';
-    ctx.fillRect(-18*s, -72*s, 36*s, 72*s);
-    ctx.fillStyle = '#f5d070';
-    ctx.fillRect(12*s, -38*s, 5*s, 5*s); // poignée
-    ctx.strokeStyle = '#3d2810';
-    ctx.lineWidth = 2*s;
-    ctx.strokeRect(-18*s, -72*s, 36*s, 72*s);
+  const img = getImage(decorImagePath(d.type, d.v || 1));
+  if (img) {
+    const width = TILE_W;
+    const height = TILE_W * (img.naturalHeight / img.naturalWidth);
+    ctx.drawImage(img, x - width / 2, y - height, width, height);
+  } else {
+    ctx.save();
+    ctx.translate(x, y);
+    const s = TILE_W / 128; // facteur d'échelle (128 = base)
+    if (d.type === 'armure') {
+      ctx.fillStyle = '#3d3020';
+      ctx.fillRect(-12*s, -84*s, 24*s, 84*s);
+      ctx.fillStyle = '#5a4828';
+      ctx.fillRect(-9*s, -76*s, 18*s, 6*s);
+      // tête armure
+      ctx.fillStyle = '#2a2010';
+      ctx.beginPath();
+      ctx.arc(0, -90*s, 7*s, 0, Math.PI*2);
+      ctx.fill();
+    } else if (d.type === 'console') {
+      ctx.fillStyle = '#3d2010';
+      ctx.fillRect(-22*s, -32*s, 44*s, 32*s);
+      ctx.fillStyle = '#5a3815';
+      ctx.fillRect(-22*s, -32*s, 44*s, 5*s);
+      // bougeoir
+      ctx.fillStyle = '#8a6a2a';
+      ctx.fillRect(-3*s, -42*s, 6*s, 10*s);
+      ctx.fillStyle = '#f5d070';
+      ctx.beginPath();
+      ctx.arc(0, -46*s, 3*s, 0, Math.PI*2);
+      ctx.fill();
+    } else if (d.type === 'porte') {
+      ctx.fillStyle = '#2a1a08';
+      ctx.fillRect(-18*s, -72*s, 36*s, 72*s);
+      ctx.fillStyle = '#f5d070';
+      ctx.fillRect(12*s, -38*s, 5*s, 5*s); // poignée
+      ctx.strokeStyle = '#3d2810';
+      ctx.lineWidth = 2*s;
+      ctx.strokeRect(-18*s, -72*s, 36*s, 72*s);
+    }
+    ctx.restore();
   }
-  ctx.restore();
 }
 
 function drawItems(room) {
@@ -228,20 +375,32 @@ function drawItems(room) {
   const phase = (performance.now() / 500) % 2;
   const brightness = phase < 1 ? 1.0 : 0.5;
   const color = brightness === 1.0 ? 'rgb(245,208,112)' : 'rgb(150,120,60)';
+  
   items.forEach(item => {
     const { x: sx, y: sy } = tileToScreen(item.x, item.y);
-    // Aura ellipse au sol (alpha proportionnelle a la brillance)
-    ctx.fillStyle = 'rgba(245,208,112,' + (0.3 * brightness) + ')';
-    ctx.beginPath();
-    ctx.ellipse(sx, sy, 32 * s, 12 * s, 0, 0, Math.PI * 2);
-    ctx.fill();
-    // Objet : carre 16x16 incline 45 deg, leger offset vertical
-    ctx.save();
-    ctx.translate(sx, sy - 24 * s);
-    ctx.rotate(Math.PI / 4);
-    ctx.fillStyle = color;
-    ctx.fillRect(-8 * s, -8 * s, 16 * s, 16 * s);
-    ctx.restore();
+    const isBright = brightness === 1.0;
+    const v = item.v || 1;
+    const brightImg = isBright ? getImage(itemBrightImagePath(item.id, v)) : null;
+    const img = brightImg || getImage(itemImagePath(item.id, v));
+    
+    if (img) {
+      const width = TILE_W / 2;
+      const height = (TILE_W / 2) * (img.naturalHeight / img.naturalWidth);
+      ctx.drawImage(img, sx - width / 2, sy - height - 10 * s, width, height);
+    } else {
+      // Aura ellipse au sol (alpha proportionnelle a la brillance)
+      ctx.fillStyle = 'rgba(245,208,112,' + (0.3 * brightness) + ')';
+      ctx.beginPath();
+      ctx.ellipse(sx, sy, 32 * s, 12 * s, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Objet : carre 16x16 incline 45 deg, leger offset vertical
+      ctx.save();
+      ctx.translate(sx, sy - 24 * s);
+      ctx.rotate(Math.PI / 4);
+      ctx.fillStyle = color;
+      ctx.fillRect(-8 * s, -8 * s, 16 * s, 16 * s);
+      ctx.restore();
+    }
   });
 }
 
@@ -253,8 +412,8 @@ function guardianOccupies(g, tx, ty) {
 }
 
 function tileBlockedByGuardian(room, tx, ty) {
-  if (!room || !room.doors) return false;
-  return room.doors.some(d => guardianOccupies(d.guardian, tx, ty));
+  if (!room || !room.guardians) return false;
+  return room.guardians.some(g => guardianOccupies(g, tx, ty));
 }
 
 function hexWithAlpha(hex, alpha) {
@@ -279,55 +438,62 @@ function drawGuardian(g) {
   const s = TILE_W / 128;
   const sg = s * Math.max(g.w, g.h);
 
-  // Aura pulsante au sol
-  const auraAlpha = (0.2 + 0.15 * Math.sin(performance.now() / 400)) * fade;
-  ctx.fillStyle = hexWithAlpha(info.color, auraAlpha);
-  ctx.beginPath();
-  ctx.ellipse(sx, sy, 40 * sg, 14 * sg, 0, 0, Math.PI * 2);
-  ctx.fill();
+  const img = getImage(guardianImagePath(g.id));
+  if (img) {
+    ctx.save();
+    ctx.globalAlpha = fade;
+    const width = TILE_W * Math.max(g.w, g.h);
+    const height = width * (img.naturalHeight / img.naturalWidth);
+    ctx.drawImage(img, sx - width / 2, sy - height, width, height);
+    ctx.restore();
+  } else {
+    // Aura pulsante au sol
+    const auraAlpha = (0.2 + 0.15 * Math.sin(performance.now() / 400)) * fade;
+    ctx.fillStyle = hexWithAlpha(info.color, auraAlpha);
+    ctx.beginPath();
+    ctx.ellipse(sx, sy, 40 * sg, 14 * sg, 0, 0, Math.PI * 2);
+    ctx.fill();
 
-  // Corps trapeze (top 28, bottom 14, height 50)
-  ctx.save();
-  ctx.globalAlpha = 0.85 * fade;
-  ctx.fillStyle = info.color;
-  ctx.beginPath();
-  ctx.moveTo(sx - 28 * sg, sy - 50 * sg);
-  ctx.lineTo(sx + 28 * sg, sy - 50 * sg);
-  ctx.lineTo(sx + 14 * sg, sy);
-  ctx.lineTo(sx - 14 * sg, sy);
-  ctx.closePath();
-  ctx.fill();
+    // Corps trapeze (top 28, bottom 14, height 50)
+    ctx.save();
+    ctx.globalAlpha = 0.85 * fade;
+    ctx.fillStyle = info.color;
+    ctx.beginPath();
+    ctx.moveTo(sx - 28 * sg, sy - 50 * sg);
+    ctx.lineTo(sx + 28 * sg, sy - 50 * sg);
+    ctx.lineTo(sx + 14 * sg, sy);
+    ctx.lineTo(sx - 14 * sg, sy);
+    ctx.closePath();
+    ctx.fill();
 
-  // Tete (ellipse 18x22 au sommet)
-  ctx.beginPath();
-  ctx.ellipse(sx, sy - 50 * sg - 18 * sg, 18 * sg, 22 * sg, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
+    // Tete (ellipse 18x22 au sommet)
+    ctx.beginPath();
+    ctx.ellipse(sx, sy - 50 * sg - 18 * sg, 18 * sg, 22 * sg, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
 
-  // Yeux (sur la tete, couleur info.eyeColor)
-  ctx.save();
-  ctx.globalAlpha = fade;
-  ctx.fillStyle = info.eyeColor;
-  ctx.beginPath();
-  ctx.arc(sx - 6 * sg, sy - 50 * sg - 18 * sg, 2.5 * sg, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(sx + 6 * sg, sy - 50 * sg - 18 * sg, 2.5 * sg, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
+    // Yeux (sur la tete, couleur info.eyeColor)
+    ctx.save();
+    ctx.globalAlpha = fade;
+    ctx.fillStyle = info.eyeColor;
+    ctx.beginPath();
+    ctx.arc(sx - 6 * sg, sy - 50 * sg - 18 * sg, 2.5 * sg, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(sx + 6 * sg, sy - 50 * sg - 18 * sg, 2.5 * sg, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
 }
 
 function drawGuardians(room) {
-  if (!room.doors) return;
+  if (!room.guardians) return;
   const list = [];
-  room.doors.forEach(d => {
-    if (!d.guardian) return;
-    const g = d.guardian;
+  room.guardians.forEach(g => {
     const stillFading = g.fadeOutStart && (performance.now() - g.fadeOutStart) < 1000;
     if (g.active || stillFading) {
       list.push({ g, key: (g.x + g.w - 1) + (g.y + g.h - 1) });
     } else if (g.fadeOutStart) {
-      // Cleanup une fois le fade termine
       delete g.fadeOutStart;
     }
   });
@@ -500,29 +666,53 @@ function getPlayerScreenPos() {
 function drawPlayer() {
   const { x: sx, y: sy } = getPlayerScreenPos();
   const s = TILE_W / 128;
-  // Ombre au sol
-  ctx.fillStyle = 'rgba(0,0,0,0.5)';
-  ctx.beginPath();
-  ctx.ellipse(sx, sy + 4*s, 18*s, 8*s, 0, 0, Math.PI*2);
-  ctx.fill();
-  // Corps (silhouette explorateur or chaud)
-  ctx.fillStyle = '#8a6820';
-  ctx.fillRect(sx - 12*s, sy - 56*s, 24*s, 38*s); // manteau
-  ctx.fillStyle = '#5a4015';
-  ctx.fillRect(sx - 14*s, sy - 22*s, 28*s, 6*s); // ceinture
-  // Tête
-  ctx.fillStyle = '#f5d070';
-  ctx.beginPath();
-  ctx.arc(sx, sy - 64*s, 9*s, 0, Math.PI*2);
-  ctx.fill();
-  // Halo (lanterne)
-  const grad = ctx.createRadialGradient(sx, sy - 30*s, 0, sx, sy - 30*s, 60*s);
-  grad.addColorStop(0, 'rgba(245, 208, 112, 0.35)');
-  grad.addColorStop(1, 'rgba(245, 208, 112, 0)');
-  ctx.fillStyle = grad;
-  ctx.beginPath();
-  ctx.arc(sx, sy - 30*s, 60*s, 0, Math.PI*2);
-  ctx.fill();
+  const img = getImage(playerImagePath());
+  
+  if (img) {
+    // Ombre au sol
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.beginPath();
+    ctx.ellipse(sx, sy + 4*s, 18*s, 8*s, 0, 0, Math.PI*2);
+    ctx.fill();
+    
+    // Corps joueur
+    const width = TILE_W / 2;
+    const height = width * (img.naturalHeight / img.naturalWidth);
+    ctx.drawImage(img, sx - width / 2, sy - height, width, height);
+    
+    // Halo (lanterne) - toujours par-dessus, procedural
+    const grad = ctx.createRadialGradient(sx, sy - 30*s, 0, sx, sy - 30*s, 60*s);
+    grad.addColorStop(0, 'rgba(245, 208, 112, 0.35)');
+    grad.addColorStop(1, 'rgba(245, 208, 112, 0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(sx, sy - 30*s, 60*s, 0, Math.PI*2);
+    ctx.fill();
+  } else {
+    // Ombre au sol
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.beginPath();
+    ctx.ellipse(sx, sy + 4*s, 18*s, 8*s, 0, 0, Math.PI*2);
+    ctx.fill();
+    // Corps (silhouette explorateur or chaud)
+    ctx.fillStyle = '#8a6820';
+    ctx.fillRect(sx - 12*s, sy - 56*s, 24*s, 38*s); // manteau
+    ctx.fillStyle = '#5a4015';
+    ctx.fillRect(sx - 14*s, sy - 22*s, 28*s, 6*s); // ceinture
+    // Tête
+    ctx.fillStyle = '#f5d070';
+    ctx.beginPath();
+    ctx.arc(sx, sy - 64*s, 9*s, 0, Math.PI*2);
+    ctx.fill();
+    // Halo (lanterne)
+    const grad = ctx.createRadialGradient(sx, sy - 30*s, 0, sx, sy - 30*s, 60*s);
+    grad.addColorStop(0, 'rgba(245, 208, 112, 0.35)');
+    grad.addColorStop(1, 'rgba(245, 208, 112, 0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(sx, sy - 30*s, 60*s, 0, Math.PI*2);
+    ctx.fill();
+  }
 }
 
 function render() {
@@ -547,28 +737,28 @@ function render() {
   // 1. Sols avec grille subtile
   for (let y = 0; y < room.height; y++) {
     for (let x = 0; x < room.width; x++) {
-      const t = room.grid[y][x];
-      if (t === TILE.WALL) continue;
-      drawTile(x, y, '#2a2520', 'rgba(245, 130, 60, 0.18)');
+      const cell = getCell(room, x, y);
+      if (cell.t === TILE.WALL) continue;
+      drawTile(x, y, cell, 'rgba(245, 130, 60, 0.18)');
     }
   }
   // 2. Highlight tile sous le joueur
-  if (room.grid[pTileY] && room.grid[pTileY][pTileX] !== TILE.WALL) {
+  if (getTileType(room, pTileX, pTileY) !== TILE.WALL) {
     drawTileHighlight(pTileX, pTileY);
   }
   // 3. Murs (depth-sorted) — on masque les 2 murs avant (sud + est) pour voir l'intérieur
   const walls = [];
   for (let y = 0; y < room.height; y++) {
     for (let x = 0; x < room.width; x++) {
-      if (room.grid[y][x] !== TILE.WALL) continue;
-      // Skip murs avant : y == max (sud) et x == max (est)
-      if (y === room.height - 1) continue;
-      if (x === room.width - 1) continue;
-      walls.push({x, y});
+      const cell = getCell(room, x, y);
+      if (cell.t !== TILE.WALL) continue;
+      if (y === room.height - 1) continue; // mur sud (avant)
+      if (x === room.width - 1) continue;  // mur est (avant)
+      walls.push({ x, y, cell });
     }
   }
   walls.sort((a, b) => (a.x + a.y) - (b.x + b.y));
-  walls.forEach(w => drawWall(w.x, w.y));
+  walls.forEach(w => drawWall(w.x, w.y, w.cell));
 
   // 4. Décors (depth-sorted)
   const decor = [...(room.decor || [])].sort((a, b) => (a.x + a.y) - (b.x + b.y));
@@ -598,7 +788,7 @@ function isBlocked(tx, ty) {
   const room = MAP1.rooms[gameState.currentRoom];
   if (!room) return true;
   if (tx < 0 || ty < 0 || tx >= room.width || ty >= room.height) return true;
-  if (room.grid[ty][tx] === TILE.WALL) return true;
+  if (getTileType(room, tx, ty) === TILE.WALL) return true;
   if ((room.decor || []).some(d => d.x === tx && d.y === ty && d.block)) return true;
   return false;
 }
@@ -654,6 +844,8 @@ function tryPickupItem(tx, ty) {
   gameState.inventory.push(item.id);
   room.items.splice(i, 1);
   updateInventoryHUD();
+  // P5b : maj cards (passage de "A trouver" -> "Tu l'as")
+  if (typeof renderObjectivePanel === 'function') renderObjectivePanel();
   return true;
 }
 
@@ -713,18 +905,18 @@ function transitionToRoom(roomId, spawnX, spawnY) {
 function checkSpecialTile(tx, ty) {
   const room = MAP1.rooms[gameState.currentRoom];
   if (!room) return;
-  const tile = (room.grid[ty] || [])[tx];
-  if (tile === TILE.DOOR || tile === TILE.ESCALIER || tile === TILE.TRAPPE) {
-    const doors = room.doors || [];
-    const doorIndex = doors.findIndex(d => d.x === tx && d.y === ty);
-    if (doorIndex === -1) return;
-    const door = doors[doorIndex];
-    if (door.guardian && door.guardian.active) {
-      resolveGuardian(door, gameState.currentRoom, doorIndex);
-    } else {
-      transitionToRoom(door.target, door.spawnAt.x, door.spawnAt.y);
-    }
-  } else if (tile === TILE.EXIT) {
+  const t = getTileType(room, tx, ty);
+  // Gardien actif barrant cette tile (porte OU EXIT) ?
+  const guardianIndex = findGuardianIndexForDoor(room, tx, ty);
+  if (guardianIndex !== -1) {
+    resolveGuardian(room.guardians[guardianIndex], gameState.currentRoom, guardianIndex);
+    return;
+  }
+  if (t === TILE.DOOR || t === TILE.ESCALIER || t === TILE.TRAPPE) {
+    const door = (room.doors || []).find(d => d.x === tx && d.y === ty);
+    if (!door) return;
+    transitionToRoom(door.target, door.spawnAt.x, door.spawnAt.y);
+  } else if (t === TILE.EXIT) {
     triggerVictory();
   }
 }
@@ -745,66 +937,246 @@ function bouncePlayer() {
 
 // ─── Journal interne des objectifs (P5a) ────────────────────────
 
-function registerObjective(roomId, doorIndex) {
-  const key = roomId + '-' + doorIndex;
-  if (!gameState.objectives.some(o => o.key === key)) {
-    gameState.objectives.push({ key, roomId, doorIndex, status: 'pending' });
+function registerObjective(roomId, guardianIndex) {
+  const key = roomId + '-G' + guardianIndex;
+  const exists = gameState.objectives.some(o => o.key === key);
+  if (!exists) {
+    gameState.objectives.push({ key, roomId, guardianIndex, status: 'pending' });
+    renderObjectivePanel();
+    if (!gameState.objPanelAutoOpened) {
+      gameState.objPanelAutoOpened = true;
+      togglePanel(true);
+    }
+  } else {
+    renderObjectivePanel();
   }
 }
 
-function markObjectiveResolved(roomId, doorIndex) {
-  const key = roomId + '-' + doorIndex;
+function markObjectiveResolved(roomId, guardianIndex) {
+  const key = roomId + '-G' + guardianIndex;
   const entry = gameState.objectives.find(o => o.key === key);
   if (entry) entry.status = 'resolved';
+  renderObjectivePanel();
 }
 
-function resolveGuardian(door, roomId, doorIndex) {
-  // Nouvelle mecanique : marcher sur la porte gardee ne consomme JAMAIS.
-  // L'eleve doit cliquer sur le gardien pour interagir.
-  // Ici on enregistre juste l'objectif et on fait rebondir.
-  registerObjective(roomId, doorIndex);
+function resolveGuardian(guardian, roomId, guardianIndex) {
+  // Marcher sur la tile gardee : enregistre l'objectif et fait rebondir le joueur.
+  // (Le clic sur le gardien declenche le modal pour resoudre.)
+  registerObjective(roomId, guardianIndex);
   bouncePlayer();
 }
 
 // Appelee depuis le modal quand l'eleve clique sur DONNER (item) ou VALIDER (math correct)
-function giveItemToGuardian(door, roomId, doorIndex) {
-  const g = door.guardian;
-  const obj = g && g.objective;
+function giveItemToGuardian(guardian, roomId, guardianIndex) {
+  const obj = guardian && guardian.objective;
   if (obj && obj.type === 'item') {
     const idx = gameState.inventory.indexOf(obj.required);
-    if (idx === -1) return false;  // securite
+    if (idx === -1) return false;
     gameState.inventory.splice(idx, 1);
     updateInventoryHUD();
   }
-  // Desactive immediatement + lance le fade-out visuel (1s)
-  g.active = false;
-  g.fadeOutStart = performance.now();
-  markObjectiveResolved(roomId, doorIndex);
+  guardian.active = false;
+  guardian.fadeOutStart = performance.now();
+  markObjectiveResolved(roomId, guardianIndex);
   closeGuardianModal();
   return true;
+}
+
+// ─── P5b : Panneau journal lateral retractable ──────────────────
+
+function ensureObjectiveUI() {
+  if (document.getElementById('obj-panel')) return;
+
+  // Hamburger 3-traits (toggle), positionne a droite, animation right 0 -> 360px
+  const toggle = document.createElement('div');
+  toggle.id = 'obj-toggle';
+  toggle.style.cssText =
+    'position:fixed;top:50%;right:0;transform:translateY(-50%);' +
+    'width:40px;height:60px;background:#1a1208;border:1px solid #f5d070;' +
+    'border-right:none;display:flex;flex-direction:column;align-items:center;' +
+    'justify-content:center;gap:5px;cursor:pointer;z-index:7500;' +
+    'transition:right 400ms ease;';
+  for (let i = 0; i < 3; i++) {
+    const bar = document.createElement('div');
+    bar.style.cssText = 'width:20px;height:2px;background:#f5d070;';
+    toggle.appendChild(bar);
+  }
+  toggle.addEventListener('click', () => togglePanel());
+  document.body.appendChild(toggle);
+
+  // Panneau lateral 360x100vh, slide depuis la droite
+  const panel = document.createElement('div');
+  panel.id = 'obj-panel';
+  panel.style.cssText =
+    'position:fixed;top:0;right:0;width:360px;height:100vh;' +
+    'background:rgba(8,5,3,0.96);border-left:1px solid #f5d070;' +
+    'transform:translateX(100%);transition:transform 400ms ease;' +
+    'z-index:7400;overflow-y:auto;font-family:Georgia,serif;color:#d4b078;' +
+    'box-sizing:border-box;';
+
+  // Header sticky
+  const header = document.createElement('div');
+  header.style.cssText =
+    'position:sticky;top:0;background:#1a1208;padding:16px 20px;' +
+    'border-bottom:1px solid #3d2810;letter-spacing:3px;font-size:16px;' +
+    'color:#f5d070;z-index:1;';
+  header.textContent = 'JOURNAL';
+  panel.appendChild(header);
+
+  // Body (sera rempli par renderObjectivePanel)
+  const body = document.createElement('div');
+  body.id = 'obj-panel-body';
+  body.style.cssText = 'padding:16px 20px 32px;';
+  panel.appendChild(body);
+
+  document.body.appendChild(panel);
+}
+
+function togglePanel(force) {
+  const panel = document.getElementById('obj-panel');
+  const toggle = document.getElementById('obj-toggle');
+  if (!panel || !toggle) return;
+  const isOpen = panel.classList.contains('open');
+  const willOpen = (force === true) ? true : (force === false ? false : !isOpen);
+  if (willOpen) {
+    panel.classList.add('open');
+    panel.style.transform = 'translateX(0)';
+    toggle.style.right = '360px';
+  } else {
+    panel.classList.remove('open');
+    panel.style.transform = 'translateX(100%)';
+    toggle.style.right = '0';
+  }
+}
+
+function safeKey(s) {
+  return String(s).replace(/[^a-zA-Z0-9_-]/g, '_');
+}
+
+function renderTaskCard(obj) {
+  const room = MAP1.rooms[obj.roomId];
+  if (!room || !room.guardians) return '';
+  const g = room.guardians[obj.guardianIndex];
+  if (!g) return '';
+  const objective = g.objective;
+  const info = (typeof GUARDIANS !== 'undefined' && GUARDIANS[g.id]) || { name: 'Gardien', color: '#a0a0c0' };
+  const resolved = obj.status === 'resolved';
+  const borderColor = resolved ? '#3d2810' : info.color;
+
+  let inner = '';
+  inner += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">';
+  inner += '<div style="width:10px;height:10px;background:' + info.color + ';border-radius:50%;"></div>';
+  inner += '<div style="color:' + info.color + ';font-size:14px;letter-spacing:1px;">' + (info.name || 'Gardien') + '</div>';
+  inner += '<div style="color:#6a5030;font-size:11px;margin-left:auto;font-style:italic;">' + (room.name || obj.roomId) + '</div>';
+  inner += '</div>';
+
+  if (!objective) {
+    inner += '<p style="margin:0;font-style:italic;color:#88806a;font-size:12px;">Aucun moyen connu de le faire partir.</p>';
+  } else if (objective.type === 'item') {
+    const item = (typeof OBJECTS !== 'undefined' && OBJECTS[objective.required]) || { name: objective.required, desc: '' };
+    inner += '<div style="background:#2a1a08;padding:10px 12px;border:1px solid #3d2810;margin:0 0 10px;">';
+    inner += '<div style="color:#f5d070;font-size:14px;">' + item.name + '</div>';
+    if (item.desc) inner += '<div style="font-style:italic;color:#88806a;font-size:11px;margin-top:3px;">' + item.desc + '</div>';
+    inner += '</div>';
+    if (resolved) {
+      inner += '<div style="color:#88c060;font-size:12px;">&#10003; Donne au gardien.</div>';
+    } else if (gameState.inventory.indexOf(objective.required) !== -1) {
+      inner += '<div style="color:#88c060;font-size:12px;">&#10003; Tu l\'as. Reviens cliquer sur le gardien.</div>';
+    } else {
+      inner += '<div style="color:#c87060;font-size:12px;">&#10007; A trouver.</div>';
+    }
+  } else if (objective.type === 'math') {
+    inner += '<div style="font-size:11px;color:#88806a;letter-spacing:1px;margin-bottom:4px;">ENIGME</div>';
+    inner += '<div style="text-align:center;font-size:22px;color:#f5d070;margin:10px 0;">' + objective.question + '</div>';
+    if (objective.hint) inner += '<div style="font-style:italic;color:#88806a;font-size:11px;text-align:center;margin-bottom:8px;">' + objective.hint + '</div>';
+    if (resolved) {
+      inner += '<div style="color:#88c060;font-size:12px;text-align:center;">&#10003; Resolue.</div>';
+    } else {
+      const inputId = 'obj-math-input-' + safeKey(obj.key);
+      const btnId = 'obj-math-btn-' + safeKey(obj.key);
+      inner += '<input type="number" id="' + inputId + '" style="width:100%;padding:8px;background:#2a1a08;border:1px solid #f5d070;color:#f5d070;font-size:15px;text-align:center;font-family:inherit;box-sizing:border-box;" />';
+      inner += '<button id="' + btnId + '" data-room="' + obj.roomId + '" data-guardian="' + obj.guardianIndex + '" data-input="' + inputId + '" style="width:100%;padding:8px;margin-top:8px;background:#f5d070;border:1px solid #f5d070;color:#1a1208;font-family:inherit;font-size:13px;letter-spacing:1px;cursor:pointer;font-weight:bold;">VALIDER</button>';
+    }
+  }
+
+  const opacity = resolved ? 'opacity:0.65;' : '';
+  return '<div style="background:rgba(26,18,8,0.6);border:1px solid ' + borderColor + ';padding:12px 14px;margin-bottom:12px;' + opacity + '">' + inner + '</div>';
+}
+
+function renderObjectivePanel() {
+  ensureObjectiveUI();
+  const body = document.getElementById('obj-panel-body');
+  if (!body) return;
+  const pending = gameState.objectives.filter(o => o.status === 'pending');
+  const resolved = gameState.objectives.filter(o => o.status === 'resolved');
+
+  let html = '';
+  html += '<div style="font-size:12px;color:#f5d070;letter-spacing:2px;margin:6px 0 10px;">TACHES EN COURS</div>';
+  if (pending.length === 0) {
+    html += '<div style="font-style:italic;color:#6a5030;font-size:12px;margin-bottom:18px;">(aucune pour l\'instant)</div>';
+  } else {
+    pending.forEach(o => { html += renderTaskCard(o); });
+  }
+  html += '<div style="font-size:12px;color:#88806a;letter-spacing:2px;margin:18px 0 10px;border-top:1px solid #3d2810;padding-top:14px;">RESOLU</div>';
+  if (resolved.length === 0) {
+    html += '<div style="font-style:italic;color:#6a5030;font-size:12px;">(aucune)</div>';
+  } else {
+    resolved.forEach(o => { html += renderTaskCard(o); });
+  }
+  body.innerHTML = html;
+
+  // Wire up math VALIDER buttons
+  const buttons = body.querySelectorAll('button[data-guardian]');
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      checkMathAnswer(btn.dataset.room, parseInt(btn.dataset.guardian, 10), btn.dataset.input);
+    });
+  });
+}
+
+function checkMathAnswer(roomId, guardianIndex, inputId) {
+  const room = MAP1.rooms[roomId];
+  if (!room || !room.guardians) return;
+  const g = room.guardians[guardianIndex];
+  if (!g || !g.objective) return;
+  const objective = g.objective;
+  if (objective.type !== 'math') return;
+  const inp = document.getElementById(inputId);
+  if (!inp) return;
+  const val = parseInt(inp.value, 10);
+  if (val === objective.answer) {
+    g.active = false;
+    g.fadeOutStart = performance.now();
+    markObjectiveResolved(roomId, guardianIndex);
+  } else {
+    inp.style.borderColor = '#c81e1e';
+    setTimeout(() => {
+      const stillThere = document.getElementById(inputId);
+      if (stillThere) stillThere.style.borderColor = '#f5d070';
+    }, 500);
+    gameState.startTime -= PENALTY_MS;
+  }
 }
 
 // ─── Interaction par clic sur un gardien ────────────────────────
 
 function findClickedGuardian(clickX, clickY) {
   const room = MAP1.rooms[gameState.currentRoom];
-  if (!room || !room.doors) return null;
-  for (let i = 0; i < room.doors.length; i++) {
-    const d = room.doors[i];
-    if (!d.guardian || !d.guardian.active) continue;
-    const g = d.guardian;
+  if (!room || !room.guardians) return null;
+  for (let i = 0; i < room.guardians.length; i++) {
+    const g = room.guardians[i];
+    if (!g.active) continue;
     const centreX = g.x + (g.w - 1) / 2;
     const centreY = g.y + (g.h - 1) / 2;
     const { x: sx, y: sy } = tileToScreen(centreX, centreY);
     const s = TILE_W / 128;
     const sg = s * Math.max(g.w, g.h);
-    // Bounding box visuel : aura au sol jusqu'au sommet de la tete
     const left   = sx - 40 * sg;
     const right  = sx + 40 * sg;
     const top    = sy - 50 * sg - 40 * sg;
     const bottom = sy + 14 * sg;
     if (clickX >= left && clickX <= right && clickY >= top && clickY <= bottom) {
-      return { door: d, doorIndex: i, guardian: g };
+      return { guardian: g, guardianIndex: i };
     }
   }
   return null;
@@ -817,14 +1189,14 @@ function closeGuardianModal() {
   if (b) b.remove();
 }
 
-function showGuardianModal(door, doorIndex) {
-  const g = door.guardian;
+function showGuardianModal(guardian, guardianIndex) {
+  const g = guardian;
   if (!g || !g.active) return;
   const obj = g.objective;
   const info = (typeof GUARDIANS !== 'undefined' && GUARDIANS[g.id]) || { name: 'Gardien', desc: '', color: '#a0a0c0' };
 
   // Premier clic = ajoute l'objectif au journal
-  registerObjective(gameState.currentRoom, doorIndex);
+  registerObjective(gameState.currentRoom, guardianIndex);
 
   // Nettoyer ancien modal
   closeGuardianModal();
@@ -897,14 +1269,14 @@ function showGuardianModal(door, doorIndex) {
         const inp = document.getElementById('guardian-modal-input');
         const val = parseInt(inp.value, 10);
         if (val === obj.answer) {
-          giveItemToGuardian(door, gameState.currentRoom, doorIndex);
+          giveItemToGuardian(g, gameState.currentRoom, guardianIndex);
         } else {
           inp.style.borderColor = '#c81e1e';
           setTimeout(() => { inp.style.borderColor = '#f5d070'; }, 500);
           gameState.startTime -= PENALTY_MS;
         }
       } else {
-        giveItemToGuardian(door, gameState.currentRoom, doorIndex);
+        giveItemToGuardian(g, gameState.currentRoom, guardianIndex);
       }
     });
   }
@@ -922,6 +1294,11 @@ function triggerVictory() {
   if (gearBtn) gearBtn.style.display = 'none';
   const gearMenu = document.getElementById('gear-menu');
   if (gearMenu) gearMenu.style.display = 'none';
+  // Masquer panneau journal + hamburger (P5b)
+  const objToggle = document.getElementById('obj-toggle');
+  if (objToggle) objToggle.style.display = 'none';
+  const objPanel = document.getElementById('obj-panel');
+  if (objPanel) objPanel.style.display = 'none';
 
   // #blackout-overlay : fond noir au-dessus du canvas (z 8500)
   const blackout = document.createElement('div');
@@ -1027,6 +1404,11 @@ function loop() {
 function triggerGameOver() {
   gameState.gameOver = true;
   document.getElementById('gameover').classList.add('show');
+  // Masquer panneau journal + hamburger (P5b)
+  const objToggle = document.getElementById('obj-toggle');
+  if (objToggle) objToggle.style.display = 'none';
+  const objPanel = document.getElementById('obj-panel');
+  if (objPanel) objPanel.style.display = 'none';
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1034,6 +1416,7 @@ function triggerGameOver() {
 // ═══════════════════════════════════════════════════════════════
 
 function init() {
+  preloadAllImages();
   const startRoom = MAP1.rooms[MAP1.startRoom];
   gameState.player.x = startRoom.spawn.x;
   gameState.player.y = startRoom.spawn.y;
@@ -1109,6 +1492,10 @@ function init() {
   // Barre de vie hantise (top centre)
   ensureHauntingBar();
 
+  // Panneau journal + hamburger (P5b) : ferme au demarrage, ouvert auto a la 1ere decouverte
+  ensureObjectiveUI();
+  renderObjectivePanel();
+
   // Clic sur le canvas : detecter clic sur un gardien actif et ouvrir le modal
   canvas.addEventListener('click', (e) => {
     if (gameState.gameOver || gameState.inTransition) return;
@@ -1116,7 +1503,7 @@ function init() {
     const cx = e.clientX - rect.left;
     const cy = e.clientY - rect.top;
     const hit = findClickedGuardian(cx, cy);
-    if (hit) showGuardianModal(hit.door, hit.doorIndex);
+    if (hit) showGuardianModal(hit.guardian, hit.guardianIndex);
   });
 
   loop();

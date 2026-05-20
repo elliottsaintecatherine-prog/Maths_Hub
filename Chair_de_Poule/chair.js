@@ -32,6 +32,7 @@ const gameState = {
   objectives: [], // { key, roomId, guardianIndex, status: 'pending'|'resolved' }
   lastVectorTrace: null, // { from:{x,y}, to:{x,y}, t0 } — trace au sol 3s
   objPanelAutoOpened: false, // P5b : 1ere decouverte auto-ouvre le panneau
+  playerFacing: 'right',
 };
 
 // =================================================================
@@ -74,6 +75,13 @@ function itemBrightImagePath(id, v) { return ASSETS_BASE + 'items/'     + id   +
 function guardianImagePath(id)      { return ASSETS_BASE + 'guardians/' + id   + '.png'; }
 function playerImagePath()          { return ASSETS_BASE + 'player/player.png'; }
 
+// Sprites du joueur : facing in {'left','right'}, pose in {'stand','walk_1','walk_2'}
+function playerSpritePath(facing, pose) {
+  return ASSETS_BASE + 'player/player_' + facing + '_' + pose + '.png';
+}
+const PLAYER_POSES = ['stand', 'walk_1', 'walk_2'];
+const PLAYER_FACINGS = ['left', 'right'];
+
 // ─── Cache + loader d'images (silencieux sur 404) ───────────────
 // MODE DEV : ASSETS_VERSION = timestamp du chargement de la page.
 // Chaque reload (F5) → nouvelle version → toutes les images sont
@@ -104,7 +112,11 @@ function getImage(path) {
 }
 
 function preloadAllImages() {
+  // Joueur : fallback + 6 sprites (left/right x stand/walk_1/walk_2)
   loadImage(playerImagePath());
+  PLAYER_FACINGS.forEach(f => {
+    PLAYER_POSES.forEach(p => loadImage(playerSpritePath(f, p)));
+  });
   if (typeof MAP1 === 'undefined' || !MAP1.rooms) return;
   Object.keys(MAP1.rooms).forEach(roomId => {
     const room = MAP1.rooms[roomId];
@@ -678,27 +690,53 @@ function getPlayerScreenPos() {
 function drawPlayer() {
   const { x: sx, y: sy } = getPlayerScreenPos();
   const s = TILE_W / 128;
-  const img = getImage(playerImagePath());
-  
+
+  // Determine facing direction
+  const facing = gameState.playerFacing || 'right';
+
+  // Determine animation frame
+  let frame = 'stand';
+  if (gameState.isMoving && gameState.moveAnim) {
+    const elapsed = performance.now() - gameState.moveAnim.t0;
+    // Walk cycle: stand -> walk_1 -> stand -> walk_2 -> stand
+    // Alternating between stand (neutral), walk_1 (one step), and walk_2 (opposite step)
+    const stepTime = 100; // ms per frame
+    const frameIndex = Math.floor(elapsed / stepTime) % 4;
+    if (frameIndex === 0) frame = 'walk_1';
+    else if (frameIndex === 1) frame = 'stand';
+    else if (frameIndex === 2) frame = 'walk_2';
+    else frame = 'stand';
+  }
+
+  let img = getImage(playerSpritePath(facing, frame));
+  if (!img) {
+    // Fallback to default player.png if specific frame not loaded
+    img = getImage(playerImagePath());
+  }
+
   if (img) {
     // Ombre au sol
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
     ctx.beginPath();
     ctx.ellipse(sx, sy + 4*s, 18*s, 8*s, 0, 0, Math.PI*2);
     ctx.fill();
-    
+
     // Corps joueur
     const width = TILE_W / 2;
     const height = width * (img.naturalHeight / img.naturalWidth);
     ctx.drawImage(img, sx - width / 2, sy - height, width, height);
-    
+
     // Halo (lanterne) - toujours par-dessus, procedural
-    const grad = ctx.createRadialGradient(sx, sy - 30*s, 0, sx, sy - 30*s, 60*s);
+    // Decale le halo selon l'orientation pour qu'il soit sur la lanterne
+    const lanternOffsetX = (facing === 'left') ? -12 * s : 12 * s;
+    const lanternOffsetY = -24 * s;
+
+    const grad = ctx.createRadialGradient(sx + lanternOffsetX, sy + lanternOffsetY, 0, sx + lanternOffsetX, sy + lanternOffsetY, 60*s);
     grad.addColorStop(0, 'rgba(245, 208, 112, 0.35)');
     grad.addColorStop(1, 'rgba(245, 208, 112, 0)');
     ctx.fillStyle = grad;
     ctx.beginPath();
-    ctx.arc(sx, sy - 30*s, 60*s, 0, Math.PI*2);
+    ctx.arc(sx + lanternOffsetX, sy + lanternOffsetY, 60*s, 0, Math.PI*2);
     ctx.fill();
   } else {
     // Ombre au sol
@@ -821,6 +859,13 @@ function playVector(vx, vy) {
     flashError();
     return;
   }
+  // Direction du sprite : on regarde le delta x ECRAN (projection iso).
+  // En iso : screenDx = (gridDx - gridDy). gridDx = vx, gridDy = -vy (flip math).
+  // => screenDx = vx + vy. Si > 0 face droite, si < 0 face gauche, sinon on garde.
+  const screenDx = vx + vy;
+  if (screenDx > 0) gameState.playerFacing = 'right';
+  else if (screenDx < 0) gameState.playerFacing = 'left';
+
   // Stocker la position avant l'animation (pour rebond eventuel sur porte gardee)
   gameState.lastPlayerPos = { x: gameState.player.x, y: gameState.player.y };
   // Trace au sol du dernier vecteur (P6) — visible 3s
@@ -935,6 +980,13 @@ function checkSpecialTile(tx, ty) {
 
 function bouncePlayer() {
   // Anim retour vers lastPlayerPos en 500ms ease-out (drapeau isBounce)
+  // Facing iso : screenDx = gridDx - gridDy
+  const dx = gameState.lastPlayerPos.x - gameState.player.x;
+  const dy = gameState.lastPlayerPos.y - gameState.player.y;
+  const screenDx = dx - dy;
+  if (screenDx > 0) gameState.playerFacing = 'right';
+  else if (screenDx < 0) gameState.playerFacing = 'left';
+
   gameState.isMoving = true;
   gameState.moveAnim = {
     fromX: gameState.player.x,

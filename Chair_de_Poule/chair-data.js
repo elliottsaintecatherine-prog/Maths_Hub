@@ -98,15 +98,20 @@ const ROOMS = {
     items: [
       // TEST : objet pour exercer le ramassage + l'objectif spectre. A retirer en PZ.
       { x:5, y:1, id:'cle_rouillee' },
+      // Bougie didacticielle : sprite items/bougie.png (anciennement table_de_nuit)
+      { x:4, y:2, id:'bougie' },
     ],
     doors: [
       { x:4, y:0, target:'S3', spawnAt:{ x:4, y:5 } },
     ],
     guardians: [
-      // TEST : spectre 2x2 devant la porte (4,0). A retirer/deplacer en PZ.
+      // Spectre 1x1 pose DIRECTEMENT sur la case porte (4,0). Tant qu'il est actif,
+      // la tile est infranchissable -> il faut cliquer sur le spectre pour ouvrir
+      // le modal et lui donner la cle rouillee. Une fois resolu il disparait et
+      // la porte (TILE.DOOR=2) declenche la transition vers S3.
       {
         id: 'spectre_gris',
-        x: 3, y: 1, w: 2, h: 2,
+        x: 4, y: 0, w: 1, h: 1,
         active: true,
         blocksDoor: { x:4, y:0 },
         objective: { type:'item', required:'cle_rouillee' }

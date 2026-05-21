@@ -19,17 +19,61 @@ Chair_de_Poule/
     └── images/      # PNG par salle + fallback procédural si absent
 ```
 
-## Audio
-- **Actif uniquement en mode tuto** (`Sound.setEnabled(mode === 'tuto')` dans init).
-  Chaque mode aura son propre profil sonore — `jeu` reste muet en attendant.
-- 4 nappes ambiance (loop, 1 par salle via `ROOM_TO_AMBIANCE` dans `sound.js`)
-- Tous les SFX (move, execute, error, transition, win, death, screamer) générés en WebAudio
-- Phase MALAISE = 30 dernières secondes avant `hauntingTimeMs` :
-  - Vision-overlay : vignette qui se ferme, teinte rouge sang, clignote (multi-fréquences + erratique)
-  - Malaise-pulse : sursauts rouges synchronisés avec heartbeat (lub-dub)
-  - Heartbeat WebAudio : 60→160 BPM crescendo
-  - Ambiance baisse à 15% sur la fenêtre
-- Préférences volume + mute persistées dans `localStorage`
+## Audio — système de profils (`sound.js`)
+
+Analogue au système d'images (catalogue + convention de chemin + fallback procédural).
+
+**Structure :**
+- `FILES` : catalogue des 4 .wav du manoir (seuls fichiers audio physiques).
+- `PROFILES` : 1 entrée par mode (`tuto`, `jeu`, …) déclarant la bande son du mode.
+  - `ambianceByRoom: { S1: 'spectral_whispers', … }` — quelle nappe boucler par salle
+  - `sfx: { event: 'proc:NAME' | 'file:NAME' }` — `proc:` = générateur WebAudio, `file:` = lecture one-shot d'un fichier
+  - `malaise: { heartbeat: bool, ambianceFadeTo: 0..1 }` — comportement des 30 dernières secondes
+- `SFX_PROC` : générateurs WebAudio (move, execute, error, transition, win, death, screamer).
+- Profil actif sélectionné via `Sound.setProfile(modeId)` dans `init()`.
+
+**État actuel :**
+- `tuto` : profil complet (4 nappes manor + SFX procedural + heartbeat + fade malaise à 15 %).
+- `jeu` : profil vide (placeholder) — silencieux jusqu'à ce qu'on y ajoute fichiers + mappings.
+
+**Ajouter des sons à un mode :**
+1. Déposer les fichiers dans `assets/audio/`.
+2. Étendre `FILES` (nom court → chemin + volume par défaut).
+3. Renseigner `PROFILES.<mode>.ambianceByRoom` et `.sfx` avec les nouveaux noms.
+4. Rien d'autre. Le moteur reste actif, `Sound.setProfile(mode)` continue d'orchestrer.
+
+**Phase MALAISE** (30 dernières secondes avant `hauntingTimeMs`) :
+- `#vision-overlay` : vignette rouge qui se ferme + clignotement multi-fréquences erratique
+- `#malaise-pulse` : sursauts rouges synchronisés avec heartbeat
+- Heartbeat WebAudio : 60→160 BPM crescendo (`malaise.heartbeat: true`)
+- Ambiance baisse à `malaise.ambianceFadeTo` (15 % par défaut)
+
+Volume + mute (slider/bouton du menu engrenage) persistés dans `localStorage`.
+
+## Joueur — 3 orientations
+
+3 facings × 3 poses = 9 sprites dans `assets/images/player/player_{facing}_{pose}.png`.
+
+| facing  | Visuel ressenti                                 | Origine                       |
+|---------|--------------------------------------------------|-------------------------------|
+| `left`  | Dos, marche vers haut-gauche écran               | sprite original               |
+| `front` | Dos, marche vers haut-droite écran               | miroir horizontal de `left`   |
+| `right` | Face caméra, marche vers bas-droite              | sprite original               |
+
+Poses : `stand` | `walk_1` | `walk_2` (cycle 4 phases : walk_1 → stand → walk_2 → stand, 180 ms/phase).
+
+**Mapping vecteur (vx, vy) → facing** (cf. `playVector` + `getAnimFacing`) :
+
+| Composante | Signe | Direction écran | Facing  |
+|------------|-------|------------------|---------|
+| `gridDx`   | `> 0` | bas-droite        | `right` |
+| `gridDx`   | `< 0` | haut-gauche       | `left`  |
+| `gridDy`   | `< 0` | haut-droite       | `front` |
+| `gridDy`   | `> 0` | bas-gauche (fallback) | `left`  |
+
+**Trajet L-shape** : `getAnimFacing(anim, now, fallback)` bascule l'orientation **au coin** de la trajectoire (passage de la jambe X à la jambe Y). Le facing résiduel après l'animation est figé via `gameState.playerFacing`.
+
+Convention de chemin : `playerSpritePath(facing, pose)` = `assets/images/player/player_{facing}_{pose}.png` — fallback `player.png` si une frame spécifique n'est pas chargée.
 
 ## Règles STRICTES
 1. Lire TOUS les fichiers concernés avant d'écrire quoi que ce soit
@@ -56,58 +100,49 @@ Chair_de_Poule/
 
 ## ÉTAT DU PROJET
 
-**GROUPE COURANT : a1→a2** (Infrastructure transition + S2 Salon) — enchaîner automatiquement
+Le projet est **fonctionnel** : moteur multi-map prêt, MAP1 (manoir) jouable
+de bout en bout en mode tuto et en mode jeu.
 
-Quand tu termines un micro-prompt du groupe courant : coche [x], passe au suivant automatiquement, update PROCHAINE ACTION. Quand tout le groupe est [x], mets à jour GROUPE COURANT avec le groupe suivant et arrête.
+### ✅ Ce qui est fait
 
-Groupes restants (dans l'ordre) :
-1. **a1→a2** (Infrastructure + S2 Salon) ← COURANT
-2. a3→b1 (S3 Bibliothèque + S4 Cuisine)
-3. b2→b3 (S5 Chapelle + S6 Cave)
-4. b4→c1 (S7 Jardin + E1 Chambre Maître)
-5. c2→c3 (E2 Chambre Enfant + E3 Bureau)
-6. d1→d2 (Exit aléatoire + Monstre)
-7. d3→d4 (Polish UI + Sons)
+| Bloc | État |
+|------|------|
+| Moteur iso (rendu, transitions, fades) | ✅ |
+| 10 salles du manoir (S1-S7, E1-E3) — données complètes | ✅ |
+| Système d'images par tile + fallback procédural | ✅ |
+| Inventaire + items + gardiens + objectifs | ✅ |
+| Tutoriel contextuel 5 étapes (mode tuto) | ✅ |
+| Système audio : 4 nappes manor + SFX procedural + heartbeat malaise | ✅ |
+| Phase malaise (30 dernières secondes : clignotement + heartbeat) | ✅ |
+| **Refacto multi-map** : MAPS registry, getCurrentMap(), soundProfiles, tutorialSteps par map | ✅ |
+| Stub MAP2 cimetière + routage `?map=` | ✅ |
+| Joueur : 3 orientations × 3 poses (9 sprites) | ✅ |
+| Mouvement L-shape (uniquement via panneau vectoriel — aucun raccourci clavier) | ✅ |
+| Sortie unique fixée à S2 (5,0) | ✅ |
 
-| ID | Titre | Statut |
-|----|-------|--------|
-| P5b | Panneau journal rétractable + résolution 'math' | [x] |
-| P7  | Système d'images + variantes + refacto schéma data | [x] |
-| a1 | Transition salles (DOOR/TRAPPE/ESCALIER) | [x] |
-| a2 | S2 Salon (données + décors) | [ ] |
-| a3 | S3 Bibliothèque (données + décors) | [ ] |
-| b1 | S4 Cuisine (données + décors) | [ ] |
-| b2 | S5 Chapelle (données + décors) | [ ] |
-| b3 | S6 Cave (données + décors) | [ ] |
-| b4 | S7 Jardin (données + décors) | [ ] |
-| c1 | E1 Chambre Maître + escalier S1→E1 | [ ] |
-| c2 | E2 Chambre Enfant (données + décors) | [ ] |
-| c3 | E3 Bureau du Maître (données + décors) | [ ] |
-| d1 | Sortie aléatoire + overlay victoire | [ ] |
-| d2 | Monstre (spawn/BFS/contact) | [ ] |
-| d3 | HUD vectoriel + flèche + timer | [ ] |
-| d4 | Sons WebAudio + mute + thumbnail | [/] partiel — sound.js OK, thumbnail TODO |
+### 🔨 Ce qui reste pour finaliser le manoir
 
-> Texte complet de chaque prompt : voir `escbrain/wiki/games/chair-de-poule-prompts.md`
+Pas de groupes ni de plan détaillé — à décider au coup par coup. Pistes :
 
----
+1. **Gardiens math** : actuellement seul S1 a un gardien (spectre). Ajouter
+   des gardiens dans les autres salles avec énigmes vectorielles, pour que
+   le mode jeu offre une vraie progression mathématique.
+2. **Images manquantes** : la plupart des salles utilisent encore le fallback
+   procédural. Génération via Gemini selon le workflow
+   `escbrain/wiki/games/chair-de-poule-workflow-images.md`.
+3. **HUD** : flèche directionnelle vers la sortie + timer textuel restant.
+4. **Thumbnail hub** : `Chair_de_Poule/chair-de-poule.png` pour la grille
+   du Maths_Hub.
 
-## PROCHAINE ACTION
+### Wiki Obsidian (références conservées)
 
-**Phase 2 — Construire les salles une par une (S2 → E3)**
+- `escbrain/wiki/games/chair-de-poule.md` — page principale du jeu
+- `escbrain/wiki/games/manoir-blackwood-salles.md` — agencement des salles
+- `escbrain/wiki/games/chair-de-poule-workflow-images.md` — procédure de génération d'images
 
-Phase 1 (systèmes de jeu) terminée. Toutes les salles existent en stub dans `chair-data.js` mais sans rendu visuel. La suite consiste à :
-
-1. **Générer les images** une salle à la fois en suivant les 4 prompt files :
-   - `PROMPTS/_COMMUN.md` — règles partagées (palette, perspective, détourage exhaustif)
-   - `PROMPTS/TILES.md` — sol, mur, porte/escalier/trappe/exit par salle
-   - `PROMPTS/DECOR.md` — mobilier par salle
-   - `PROMPTS/ITEMS.md` — objets ramassables
-   - `PROMPTS/GUARDIANS.md` — monstres
-2. **Vérifier en jeu** : la salle doit être traversable, les transitions OK, le rendu satisfaisant.
-3. **Ajouter objectifs / gardiens** : 1 ligne dans `guardians[]` de la salle avec `blocksDoor`.
-
-Ordre suggéré : S2 (Salon) → S3 (Bibliothèque) → S4 (Cuisine) → S5 (Chapelle) → S6 (Cave) → S7 (Jardin/Exit) → E1 (Chambre Maître) → E2 (Chambre Enfant) → E3 (Bureau).
+Tous les autres prompts micro-tasks (P1-P17, R1-R6) ont été supprimés
+le 2026-05-22 — le jeu est trop avancé pour les conserver, ils créaient
+de la confusion entre étapes faites et obsolètes.
 
 ---
 
@@ -137,6 +172,3 @@ Si l'image n'existe pas : **fallback procédural automatique**, aucune erreur vi
 
 ---
 
-## ÉTAT RÉEL PHASE 2 (note 2026-05-20)
-
-L'utilisateur a confirmé que les salles S2-E3 marquées [x] dans le tableau étaient **fausses** : aucune salle hors S1 n'est implémentée (S3 est un placeholder squelette). On reset à [ ] pour repartir proprement après P7.

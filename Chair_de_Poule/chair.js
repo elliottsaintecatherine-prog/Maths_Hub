@@ -18,6 +18,7 @@ const canvas = document.getElementById('game-canvas');
 const ctx    = canvas.getContext('2d');
 
 const gameState = {
+  currentMapId: 'manor',         // R1 : registre MAPS dans chair-data.js (manor = MAP1)
   currentRoom: 'S1',
   player: { x: 0, y: 0 }, // tile coords
   startTime: Date.now(),
@@ -33,6 +34,8 @@ const gameState = {
   lastVectorTrace: null, // { from:{x,y}, to:{x,y}, t0 } — trace au sol 3s
   objPanelAutoOpened: false, // P5b : 1ere decouverte auto-ouvre le panneau
   playerFacing: 'front',
+  // Eclairage : ambiance generale sombre, halo lumineux quand la bougie est prise
+  hasBougie: false,
   // ─── Tutoriel (mode=tuto uniquement) ───
   mode: 'tuto',                  // 'tuto' | 'jeu' — lu depuis ?mode= dans init()
   tutorialActive: true,          // false = passe ou termine
@@ -42,6 +45,16 @@ const gameState = {
 // =================================================================
 // SECTION 1b — Helpers schema + Systeme d'Images (P7)
 // =================================================================
+
+// ─── Multi-map (R1) ─────────────────────────────────────────────
+// Retourne la map active. Fallback sur MAP1 si MAPS n'est pas defini ou si
+// l'ID est inconnu — garantit qu'on a toujours un objet non-null.
+function getCurrentMap() {
+  if (typeof MAPS !== 'undefined' && MAPS[gameState.currentMapId]) {
+    return MAPS[gameState.currentMapId];
+  }
+  return MAP1;
+}
 
 // ─── Normalisation cell grid (int OU {t,v}) ─────────────────────
 function getCell(room, x, y) {
@@ -79,11 +92,16 @@ function itemBrightImagePath(id, v) { return ASSETS_BASE + 'items/'     + id   +
 function guardianImagePath(id)      { return ASSETS_BASE + 'guardians/' + id   + '.png'; }
 function playerImagePath()          { return ASSETS_BASE + 'player/player.png'; }
 
-// Sprites du joueur : facing in {'left','front'}, pose in {'stand','walk_1','walk_2'}
+// Sprites du joueur : 3 orientations × 3 poses = 9 PNG.
+//   facing : 'left'  -> dos vers nous, marche en haut-gauche
+//            'front' -> dos vers nous, marche en haut-droite (miroir horizontal de 'left')
+//            'right' -> face camera, marche en bas-droite
+//   pose   : 'stand' | 'walk_1' | 'walk_2'
+// Chemin : assets/images/player/player_{facing}_{pose}.png
 function playerSpritePath(facing, pose) {
   return ASSETS_BASE + 'player/player_' + facing + '_' + pose + '.png';
 }
-const PLAYER_POSES = ['stand', 'walk_1', 'walk_2'];
+const PLAYER_POSES = ['stand', 'walk_1', 'walk_2', 'walk_3', 'walk_4'];
 const PLAYER_FACINGS = ['left', 'front', 'right'];
 
 // ─── Cache + loader d'images (silencieux sur 404) ───────────────
@@ -121,9 +139,9 @@ function preloadAllImages() {
   PLAYER_FACINGS.forEach(f => {
     PLAYER_POSES.forEach(p => loadImage(playerSpritePath(f, p)));
   });
-  if (typeof MAP1 === 'undefined' || !MAP1.rooms) return;
-  Object.keys(MAP1.rooms).forEach(roomId => {
-    const room = MAP1.rooms[roomId];
+  if (typeof MAPS === 'undefined' || !getCurrentMap() || !getCurrentMap().rooms) return;
+  Object.keys(getCurrentMap().rooms).forEach(roomId => {
+    const room = getCurrentMap().rooms[roomId];
     // Tiles : un chargement par couple (t, v) utilise dans la grille
     const seen = {};
     for (let y = 0; y < room.height; y++) {
@@ -154,7 +172,7 @@ function resizeCanvas() {
   fitRoomToScreen();
 }
 function fitRoomToScreen() {
-  const room = MAP1 && MAP1.rooms[gameState.currentRoom];
+  const room = getCurrentMap() && getCurrentMap().rooms[gameState.currentRoom];
   if (!room) return;
   // Iso projection : pour une salle WxH tiles
   //   iso_width  = (W + H) * TILE_W / 2
@@ -181,7 +199,7 @@ resizeCanvas();
 
 function tileToScreen(tx, ty) {
   // Caméra centrée sur la salle (pas sur le joueur) — vue immersive fixe par room
-  const room = MAP1.rooms[gameState.currentRoom];
+  const room = getCurrentMap().rooms[gameState.currentRoom];
   const cx = canvas.width / 2;
   const cy = canvas.height / 2; // salle centrée plein écran
   const rcx = (room.width - 1) / 2;  // centre tile X
@@ -750,7 +768,10 @@ function getAnimPos(a, now) {
   return { x: a.midX, y: a.midY + (a.toY - a.midY) * ee };
 }
 
-// Renvoie la direction du sprite ('left'/'front') pour la jambe en cours.
+// Renvoie l'orientation du sprite ('left' | 'front' | 'right') pour la jambe
+// active du deplacement L-shape. Mapping (cf. bilan orientations) :
+//   gridDx > 0 -> 'right' (bas-droite ecran) | gridDx < 0 -> 'left'  (haut-gauche)
+//   gridDy < 0 -> 'front' (haut-droite)     | gridDy > 0 -> 'left'  (fallback)
 // Si pas d'anim ou anim rectiligne : conserve gameState.playerFacing.
 function getAnimFacing(a, now, fallback) {
   if (!a || a.midX === undefined) return fallback;
@@ -797,13 +818,13 @@ function drawPlayer() {
   let frame = 'stand';
   if (gameState.isMoving && gameState.moveAnim) {
     const elapsed = performance.now() - gameState.moveAnim.t0;
-    // Walk cycle: walk_1 -> stand -> walk_2 -> stand (4 phases)
-    const stepTime = 180; // ms par phase (ralenti pour une marche plus posee)
+    // Walk cycle: walk_1 -> walk_2 -> walk_3 -> walk_4 (4 phases continues)
+    const stepTime = 150; // ms par phase (légèrement accéléré pour la fluidité)
     const frameIndex = Math.floor(elapsed / stepTime) % 4;
     if (frameIndex === 0) frame = 'walk_1';
-    else if (frameIndex === 1) frame = 'stand';
-    else if (frameIndex === 2) frame = 'walk_2';
-    else frame = 'stand';
+    else if (frameIndex === 1) frame = 'walk_2';
+    else if (frameIndex === 2) frame = 'walk_3';
+    else frame = 'walk_4';
   }
 
   let img = getImage(playerSpritePath(facing, frame));
@@ -867,7 +888,7 @@ function render() {
   ctx.fillStyle = '#080503';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  const room = MAP1.rooms[gameState.currentRoom];
+  const room = getCurrentMap().rooms[gameState.currentRoom];
   if (!room) return;
 
   // Position joueur (animation interpolée pour highlight)
@@ -923,6 +944,48 @@ function render() {
 
   // 5. Joueur
   drawPlayer();
+
+  // 6. Eclairage (voile sombre + halo bougie le cas echeant) — DOIT etre le
+  //    dernier element dessine, mais reste sous les overlays DOM (vision,
+  //    malaise-pulse, panneau vecteur, HUD...).
+  drawLighting();
+}
+
+// ─── Eclairage : ambiance sombre + halo de bougie ───────────────────
+// Sans bougie : voile noir uniforme couvrant tout le canvas.
+// Avec bougie : voile noir + trou clair en degrade radial centre sur le
+//               joueur, eclairant ~2-3 tiles autour de lui.
+function drawLighting() {
+  // Constantes d'eclairage : a ajuster pour rendre plus ou moins sombre.
+  const DARK_ALPHA  = 0.55;   // intensite du voile (0=clair, 1=opaque)
+  const HALO_RADIUS_TILES = 2.6;  // rayon du halo bougie (en nombre de tiles)
+
+  if (!gameState.hasBougie) {
+    // Voile uniforme : le joueur ne voit presque rien sans bougie.
+    ctx.fillStyle = 'rgba(8, 5, 3, ' + DARK_ALPHA.toFixed(2) + ')';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    return;
+  }
+
+  // Avec bougie : radial gradient. Centre sur la position ecran du joueur
+  // (interpolee durant l'animation pour que le halo suive le deplacement).
+  const { x: px, y: py } = getPlayerScreenPos();
+  // Conversion tiles -> pixels ecran : on prend la diagonale moyenne d'une
+  // tile iso comme unite (TILE_W est la largeur de la base diamant).
+  const radius = HALO_RADIUS_TILES * TILE_W;
+
+  // Petit flicker organique pour donner vie a la flamme : intensite et
+  // rayon oscillent legerement.
+  const t = performance.now() / 1000;
+  const flicker = 1 + Math.sin(t * 6.3) * 0.04 + Math.sin(t * 11.7) * 0.025;
+  const r = radius * flicker;
+
+  const grad = ctx.createRadialGradient(px, py, 0, px, py, r);
+  grad.addColorStop(0,    'rgba(8, 5, 3, 0)');      // centre : pleine lumiere
+  grad.addColorStop(0.45, 'rgba(8, 5, 3, ' + (DARK_ALPHA * 0.25).toFixed(2) + ')');
+  grad.addColorStop(1,    'rgba(8, 5, 3, ' + DARK_ALPHA.toFixed(2) + ')');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -930,7 +993,7 @@ function render() {
 // ═══════════════════════════════════════════════════════════════
 
 function isBlocked(tx, ty) {
-  const room = MAP1.rooms[gameState.currentRoom];
+  const room = getCurrentMap().rooms[gameState.currentRoom];
   if (!room) return true;
   if (tx < 0 || ty < 0 || tx >= room.width || ty >= room.height) return true;
   if (getTileType(room, tx, ty) === TILE.WALL) return true;
@@ -950,7 +1013,7 @@ function playVector(vx, vy) {
   const fromY = gameState.player.y;
   const targetX = fromX + vx;
   const targetY = fromY - vy;
-  const room = MAP1.rooms[gameState.currentRoom];
+  const room = getCurrentMap().rooms[gameState.currentRoom];
   if (isBlocked(targetX, targetY)) {
     flashError();
     return;
@@ -1016,7 +1079,7 @@ function flashError() {
 }
 
 function tryPickupItem(tx, ty) {
-  const room = MAP1.rooms[gameState.currentRoom];
+  const room = getCurrentMap().rooms[gameState.currentRoom];
   if (!room || !room.items) return false;
   const i = room.items.findIndex(it => it.x === tx && it.y === ty);
   if (i === -1) return false;
@@ -1030,6 +1093,8 @@ function tryPickupItem(tx, ty) {
   if (window.Sound) Sound.play('execute', { volume: 0.7 });
   // Tuto : si on vient de ramasser la cle rouillee, etape 'cleAcquired'
   if (item.id === 'cle_rouillee') maybeFireTutorialEvent('cleAcquired');
+  // Eclairage : la bougie illumine tout autour du joueur a partir d'ici
+  if (item.id === 'bougie') gameState.hasBougie = true;
   return true;
 }
 
@@ -1067,12 +1132,15 @@ function loadRoom(roomId, spawnX, spawnY) {
   gameState.moveAnim = null;
   gameState.lastVectorTrace = null;  // pas de trace residuelle dans la nouvelle salle
   fitRoomToScreen();
-  document.getElementById('room-label').textContent = '— ' + MAP1.rooms[roomId].name + ' —';
+  // R6 : prefixe le label avec le nom de la map (coherent avec init).
+  const mapLabel = (getCurrentMap() && getCurrentMap().displayName) || '';
+  document.getElementById('room-label').textContent =
+    (mapLabel ? mapLabel + ' — ' : '— ') + getCurrentMap().rooms[roomId].name + ' —';
 }
 
 function transitionToRoom(roomId, spawnX, spawnY) {
   // Securite : si la salle cible n'existe pas encore (Phase 2 a creer), on ne fait rien
-  if (!MAP1.rooms[roomId]) {
+  if (!getCurrentMap().rooms[roomId]) {
     console.warn('[chair] Salle "' + roomId + '" pas encore implementee, transition annulee.');
     return;
   }
@@ -1085,14 +1153,17 @@ function transitionToRoom(roomId, spawnX, spawnY) {
     loadRoom(roomId, spawnX, spawnY);
     if (window.Sound) Sound.playRoomAmbiance(roomId);
     overlay.style.opacity = '0';
-    // Tuto : entree dans S3 (Bibliotheque) = derniere etape
+    // Tuto : entree dans S3 (Bibliotheque) = derniere etape du tutoriel manoir.
+    // R5 : ce hook est specifique au manoir. Pour une autre map, si son
+    // tutorialSteps ne contient pas d'etape `showOn:'enteredS3'`,
+    // maybeFireTutorialEvent retourne no-op (safe).
     if (roomId === 'S3') maybeFireTutorialEvent('enteredS3');
     setTimeout(() => { gameState.inTransition = false; }, 500);
   }, 500);
 }
 
 function checkSpecialTile(tx, ty) {
-  const room = MAP1.rooms[gameState.currentRoom];
+  const room = getCurrentMap().rooms[gameState.currentRoom];
   if (!room) return;
   const t = getTileType(room, tx, ty);
   // Gardien actif barrant cette tile (porte OU EXIT) ?
@@ -1253,7 +1324,7 @@ function safeKey(s) {
 }
 
 function renderTaskCard(obj) {
-  const room = MAP1.rooms[obj.roomId];
+  const room = getCurrentMap().rooms[obj.roomId];
   if (!room || !room.guardians) return '';
   const g = room.guardians[obj.guardianIndex];
   if (!g) return '';
@@ -1334,7 +1405,7 @@ function renderObjectivePanel() {
 }
 
 function checkMathAnswer(roomId, guardianIndex, inputId) {
-  const room = MAP1.rooms[roomId];
+  const room = getCurrentMap().rooms[roomId];
   if (!room || !room.guardians) return;
   const g = room.guardians[guardianIndex];
   if (!g || !g.objective) return;
@@ -1360,7 +1431,7 @@ function checkMathAnswer(roomId, guardianIndex, inputId) {
 // ─── Interaction par clic sur un gardien ────────────────────────
 
 function findClickedGuardian(clickX, clickY) {
-  const room = MAP1.rooms[gameState.currentRoom];
+  const room = getCurrentMap().rooms[gameState.currentRoom];
   if (!room || !room.guardians) return null;
   for (let i = 0; i < room.guardians.length; i++) {
     const g = room.guardians[i];
@@ -1543,7 +1614,9 @@ Le compte a rebours commence.
   btnSuite.style.cssText = 'border:2px solid #4ec5f0;background:#4ec5f0;color:#001a2e;padding:12px 28px;font-size:16px;cursor:pointer;letter-spacing:1px;';
   btnSuite.addEventListener('mouseover', () => { btnSuite.style.background = 'transparent'; btnSuite.style.color = '#4ec5f0'; });
   btnSuite.addEventListener('mouseout',  () => { btnSuite.style.background = '#4ec5f0'; btnSuite.style.color = '#001a2e'; });
-  btnSuite.addEventListener('click', () => { window.location.href = '../Complexe_Sous_Marin/index.html'; });
+  // R3 : URL dynamique depuis la metadata de la map active (fallback vers le hub)
+  const nextUrl = (getCurrentMap() && getCurrentMap().nextMapUrl) || '../index.html';
+  btnSuite.addEventListener('click', () => { window.location.href = nextUrl; });
 
   document.getElementById('vict-btns').appendChild(btnRetour);
   document.getElementById('vict-btns').appendChild(btnSuite);
@@ -1591,10 +1664,11 @@ function update() {
   // Effet : ecran qui clignote (sinusoide rapide + spikes), vignette qui se ferme,
   //         ambiance qui baisse + heartbeat WebAudio (gere par sound.js).
   const elapsed = Date.now() - gameState.startTime;
-  const MALAISE_WINDOW_MS = 30000;
-  const malaiseStart = MAP1.hauntingTimeMs - MALAISE_WINDOW_MS;
+  // R3 : fenetre malaise lue depuis la metadata de la map (fallback 30s)
+  const MALAISE_WINDOW_MS = getCurrentMap().malaiseWindowMs || 30000;
+  const malaiseStart = getCurrentMap().hauntingTimeMs - MALAISE_WINDOW_MS;
   const overlay = document.getElementById('vision-overlay');
-  if (elapsed >= MAP1.hauntingTimeMs) {
+  if (elapsed >= getCurrentMap().hauntingTimeMs) {
     if (!gameState.gameOver) triggerGameOver();
   } else if (elapsed >= malaiseStart) {
     // progress lineaire 0 -> 1 sur les 30 dernieres secondes
@@ -1657,14 +1731,18 @@ function triggerGameOver() {
 // ═══════════════════════════════════════════════════════════════
 // SECTION 5b — Tutoriel contextuel
 // ═══════════════════════════════════════════════════════════════
-// Catalogue TUTORIAL_STEPS defini dans chair-data.js. Chaque etape a un
-// trigger 'showOn' (init | firstMove | cleAcquired | spectreResolved | enteredS3).
-// maybeFireTutorialEvent('xxx') appele depuis les hooks correspondants.
+// R5 : les etapes du tutoriel sont desormais lues depuis la map active
+// (`getCurrentMap().tutorialSteps`). Chaque map peut avoir sa propre sequence.
+// Si la map n'a pas de tutorialSteps -> tableau vide -> aucune note ne se
+// declenche (no-op safe).
+// Chaque etape a un trigger 'showOn' (init | firstMove | cleAcquired |
+// spectreResolved | enteredS3 | ...) declenche depuis maybeFireTutorialEvent().
 
 function showTutorialNote(stepIdx) {
   if (gameState.mode !== 'tuto') return;
-  if (typeof TUTORIAL_STEPS === 'undefined') return;
-  const step = TUTORIAL_STEPS[stepIdx];
+  const steps = (getCurrentMap() && getCurrentMap().tutorialSteps) || [];
+  if (!steps.length) return;
+  const step = steps[stepIdx];
   if (!step) { gameState.tutorialActive = false; return; }
   let el = document.getElementById('tutorial-note');
   if (!el) {
@@ -1672,9 +1750,9 @@ function showTutorialNote(stepIdx) {
     el.id = 'tutorial-note';
     document.body.appendChild(el);
   }
-  const last = (stepIdx === TUTORIAL_STEPS.length - 1);
+  const last = (stepIdx === steps.length - 1);
   el.innerHTML =
-    '<div class="tut-step">ETAPE ' + (stepIdx + 1) + ' / ' + TUTORIAL_STEPS.length + '</div>' +
+    '<div class="tut-step">ETAPE ' + (stepIdx + 1) + ' / ' + steps.length + '</div>' +
     '<div class="tut-title">' + step.title + '</div>' +
     '<div class="tut-text">' + step.text + '</div>' +
     (step.hint ? '<div class="tut-hint">' + step.hint + '</div>' : '') +
@@ -1699,9 +1777,10 @@ function showTutorialNote(stepIdx) {
 function maybeFireTutorialEvent(eventType) {
   if (gameState.mode !== 'tuto' || !gameState.tutorialActive) return;
   if (gameState.tutorialFiredEvents[eventType]) return;
-  if (typeof TUTORIAL_STEPS === 'undefined') return;
-  const idx = TUTORIAL_STEPS.findIndex(s => s.showOn === eventType);
-  if (idx === -1) return;
+  const steps = (getCurrentMap() && getCurrentMap().tutorialSteps) || [];
+  if (!steps.length) return;
+  const idx = steps.findIndex(s => s.showOn === eventType);
+  if (idx === -1) return; // event inconnu pour cette map -> no-op safe
   gameState.tutorialFiredEvents[eventType] = true;
   showTutorialNote(idx);
 }
@@ -1711,35 +1790,47 @@ function maybeFireTutorialEvent(eventType) {
 // ═══════════════════════════════════════════════════════════════
 
 function init() {
-  // Lire ?mode= depuis l'URL (depuis la landing page index.html)
+  // Lire ?mode= et ?map= depuis l'URL (depuis la landing page index.html)
   try {
     const params = new URLSearchParams(location.search);
     const m = params.get('mode');
     if (m === 'jeu' || m === 'tuto') gameState.mode = m;
-  } catch (_) { /* fallback : reste sur 'tuto' */ }
+    // R6 : routage ?map= — bascule sur une autre map si l'ID est connu,
+    // sinon fallback silencieux sur 'manor' (defaut).
+    const mp = params.get('map');
+    if (mp && typeof MAPS !== 'undefined' && MAPS[mp]) {
+      gameState.currentMapId = mp;
+    }
+  } catch (_) { /* fallback : reste sur tuto + manor */ }
   gameState.tutorialActive = (gameState.mode === 'tuto');
 
-  // Sons : actifs uniquement en mode tuto pour l'instant.
-  // Chaque mode aura son propre profil sonore (mode 'jeu' reste muet
-  // jusqu'a ce qu'on lui ait designe une bande son specifique).
-  if (window.Sound) Sound.setEnabled(gameState.mode === 'tuto');
+  // R4 : profil sonore attache a la map active. Le moteur lit
+  //   MAPS[currentMapId].soundProfiles[mode]   (declare dans chair-data.js)
+  // Si la combinaison n'existe pas -> silence total (engine reste pret).
+  // Pour ajouter des sons a un autre mode/map : completer la table
+  // `soundProfiles` de la map concernee dans chair-data.js.
+  if (window.Sound) Sound.setProfile(gameState.currentMapId, gameState.mode);
 
   preloadAllImages();
-  const startRoom = MAP1.rooms[MAP1.startRoom];
+  const startRoom = getCurrentMap().rooms[getCurrentMap().startRoom];
   gameState.player.x = startRoom.spawn.x;
   gameState.player.y = startRoom.spawn.y;
-  gameState.currentRoom = MAP1.startRoom;
-  document.getElementById('room-label').textContent = '— ' + startRoom.name + ' —';
+  gameState.currentRoom = getCurrentMap().startRoom;
+  // R6 : prefixe le label avec le nom de la map (utile en multi-map).
+  const mapLabel = (getCurrentMap() && getCurrentMap().displayName) || '';
+  document.getElementById('room-label').textContent =
+    (mapLabel ? mapLabel + ' — ' : '— ') + startRoom.name + ' —';
   // Lancer l'ambiance de la salle de depart (sera unlock au 1er clic/touche)
-  if (window.Sound) Sound.playRoomAmbiance(MAP1.startRoom);
+  if (window.Sound) Sound.playRoomAmbiance(getCurrentMap().startRoom);
 
   // Tutoriel : 1ere note ('init') apres 800ms pour laisser le decor charger
   if (gameState.mode === 'tuto') {
     setTimeout(() => maybeFireTutorialEvent('init'), 800);
   }
 
-  // Bouton invoquer vecteur
-  document.getElementById('btn-play-vec').addEventListener('click', () => {
+  // Bouton invoquer vecteur (souris)
+  const btnPlayVec = document.getElementById('btn-play-vec');
+  btnPlayVec.addEventListener('click', () => {
     if (gameState.inTransition) return;
     const vx = parseInt(document.getElementById('vec-x').value, 10) || 0;
     const vy = parseInt(document.getElementById('vec-y').value, 10) || 0;
@@ -1747,16 +1838,19 @@ function init() {
     playVector(vx, vy);
   });
 
-  // Touches clavier rapides (pour test)
-  document.addEventListener('keydown', e => {
-    if (gameState.isMoving || gameState.gameOver || gameState.inTransition) return;
-    if (e.target.tagName === 'INPUT') return;
-    // Convention math : ArrowUp envoie +y (player.y diminue grace au flip dans playVector)
-    if (e.key === 'ArrowUp')    playVector(0,  1);
-    if (e.key === 'ArrowDown')  playVector(0, -1);
-    if (e.key === 'ArrowLeft')  playVector(-1, 0);
-    if (e.key === 'ArrowRight') playVector(1,  0);
+  // Validation Entree depuis les inputs vec-x / vec-y : declenche le clic sur
+  // le bouton. C'est juste un raccourci ergonomique du PANNEAU vecteur, pas
+  // un bypass de la saisie (le joueur doit toujours composer un vecteur).
+  ['vec-x', 'vec-y'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); btnPlayVec.click(); }
+    });
   });
+
+  // Pas de raccourcis clavier de deplacement (fleches, ZQSD, WASD, ...) :
+  // le jeu enseigne les vecteurs, donc le SEUL moyen de bouger est de
+  // saisir un vecteur (x, y) dans le panneau ♦ DEPLACEMENT VECTORIEL puis
+  // cliquer ▶ INVOQUER LE VECTEUR (ou appuyer sur Entree).
 
   // Panneau replié au démarrage
   // (l'utilisateur clique sur la poignée pour ouvrir)

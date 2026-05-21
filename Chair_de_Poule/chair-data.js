@@ -99,8 +99,9 @@ const ROOMS = {
     items: [
       // TEST : objet pour exercer le ramassage + l'objectif spectre. A retirer en PZ.
       { x:5, y:1, id:'cle_rouillee' },
-      // Bougie didacticielle : sprite items/bougie.png (anciennement table_de_nuit)
-      { x:4, y:2, id:'bougie' },
+      // Bougie didacticielle : posee directement devant le joueur (spawn 3,4 / facing 'front'
+      // qui regarde haut-droite ecran -> case devant = (3,3)). Premier vecteur a invoquer (0,1).
+      { x:3, y:3, id:'bougie' },
     ],
     doors: [
       { x:4, y:0, target:'S3', spawnAt:{ x:4, y:5 } },
@@ -446,49 +447,159 @@ const ROOMS = {
 };
 
 // ============================================================
-// TUTORIEL (uniquement en mode ?mode=tuto)
+// TUTORIEL (R5 : maintenant attache a MAP1.tutorialSteps)
 // ============================================================
-// Chaque etape se declenche sur un evenement (showOn) et affiche
-// une carte gothique en haut de l'ecran. L'ordre des etapes est
-// fige : on ne peut pas sauter en arriere.
-const TUTORIAL_STEPS = [
-  {
-    showOn: 'init',
-    title: 'Bienvenue au Manoir Blackwood',
-    text: "Tu es prisonnier du Hall d'Entree. Pour te deplacer, tape un vecteur (x, y) dans le panneau ♦ DEPLACEMENT VECTORIEL en bas de l'ecran, puis clique sur ▶ INVOQUER LE VECTEUR.",
-    hint: "Convention de maths : +y est vers le HAUT (comme sur tes cours). Essaie par exemple (1, 0) pour bouger d'un pas a droite, ou (0, 1) pour monter d'un pas."
-  },
-  {
-    showOn: 'firstMove',
-    title: 'Tu te deplaces en L',
-    text: "Bien joue ! Le vecteur deplace ton personnage en deux temps : d'abord toute la composante x, puis toute la composante y. C'est une marche en L. Maintenant ramasse la CLE ROUILLEE qui scintille en (5, 1) — marche dessus.",
-    hint: "Depuis ta position actuelle, calcule le vecteur (Δx, Δy) qui t'y mene. Tu peux invoquer un vecteur diagonal d'un coup, sans repasser plusieurs fois."
-  },
-  {
-    showOn: 'cleAcquired',
-    title: 'La cle est dans ton sac',
-    text: "Un SPECTRE vaporeux flotte devant l'unique porte au nord. Il bloque le passage. Pour lui parler, CLIQUE directement sur lui avec la souris : un dialogue va s'ouvrir et tu pourras lui donner la cle.",
-    hint: "Tu peux aussi ouvrir le 📓 journal (icone en haut a droite) pour voir tes objectifs en cours."
-  },
-  {
-    showOn: 'spectreResolved',
-    title: 'La porte est libre',
-    text: "Le spectre s'estompe. La case (4, 0) au nord est maintenant traversable. Invoque le vecteur qui t'y emmene pour quitter le Hall et entrer dans la BIBLIOTHEQUE.",
-    hint: "Rappel : +y monte vers la porte. Calcule (4 − x_actuel, y_actuel − 0)."
-  },
-  {
-    showOn: 'enteredS3',
-    title: 'Tutoriel termine !',
-    text: "Bienvenue dans la BIBLIOTHEQUE. Tu maitrises maintenant les vecteurs, le ramassage d'objets et la gestion des gardiens. La suite du Manoir reste a ecrire — la sortie victoire se trouve quelque part dans le Salon Principal.",
-    hint: "Bonne chance, et evite que la hantise ne t'engloutisse..."
-  },
-];
+// Le tableau d'etapes est declare DANS MAP1 ci-dessous. Un alias global
+// `const TUTORIAL_STEPS` est conserve apres la declaration de MAP1 pour
+// retrocompat (sera supprime ulterieurement quand plus aucun code n'y refere).
+// Pour ajouter un tutoriel a une autre map : completer MAPX.tutorialSteps.
 
 // Map 1 active
 const MAP1 = {
+  id: 'manor',
   name: "Le Manoir Blackwood",
+  displayName: "Le Manoir Blackwood",
+  nextMapUrl: '../Complexe_Sous_Marin/index.html', // R3 : enchainement vers le prochain episode
   startRoom: 'S1',
-  hauntingTimeMs: 10 * 60 * 1000, // 10 minutes
-  blackoutStartMs: 7 * 60 * 1000, // début blackouts à 7 min
-  rooms: ROOMS
+  hauntingTimeMs: 10 * 60 * 1000,   // 10 minutes total avant mort
+  malaiseWindowMs: 30000,           // R3 : 30 dernieres secondes = phase malaise
+  blackoutStartMs: 7 * 60 * 1000,   // hérité, plus utilise depuis le refacto malaise (peut etre retire plus tard)
+  rooms: ROOMS,
+
+  // R4 : profil audio attache a la map (au lieu d'etre global dans sound.js).
+  // Chaque mode (tuto / jeu / ...) a son propre mapping ambiance + SFX.
+  // - ambianceByRoom : { roomId -> nom court referencant FILES dans sound.js }
+  // - sfx            : { event -> 'proc:NAME' (WebAudio) | 'file:NAME' (lecture fichier) }
+  // - malaise        : { heartbeat: bool, ambianceFadeTo: 0..1 }
+  // Si un mode est absent ou vide -> silence total (engine sound reste actif).
+  soundProfiles: {
+    tuto: {
+      ambianceByRoom: {
+        S1: 'spectral_whispers',  // Hall didactique
+        S2: 'storm_outside',      // Salon (hub)
+        S3: 'cursed_music_box',   // Bibliotheque
+        S4: 'spectral_whispers',  // Cuisine
+        S5: 'midnight_bell',      // Chapelle
+        S6: 'storm_outside',      // Cave
+        S7: 'storm_outside',      // Jardin
+        E1: 'midnight_bell',      // Chambre Maitre
+        E2: 'cursed_music_box',   // Chambre Enfant
+        E3: 'spectral_whispers',  // Bureau
+      },
+      sfx: {
+        move:       'proc:move',
+        execute:    'proc:execute',
+        error:      'proc:error',
+        transition: 'proc:transition',
+        win:        'proc:win',
+        death:      'proc:death',
+        screamer:   'proc:screamer',
+      },
+      malaise: { heartbeat: true, ambianceFadeTo: 0.15 },
+    },
+    jeu: {
+      // Placeholder vide pour le mode jeu — silence total pour l'instant.
+      // A completer plus tard avec des fichiers/SFX specifiques au mode jeu.
+      ambianceByRoom: {},
+      sfx: {},
+      malaise: { heartbeat: false, ambianceFadeTo: 1 },
+    },
+  },
+
+  // R5 : tutoriel attache a la map (au lieu d'etre global).
+  // Chaque etape se declenche sur un evenement (showOn) et affiche une carte
+  // gothique en haut de l'ecran. L'ordre est fige : on ne peut pas reculer.
+  // Une autre map peut definir sa propre sequence ; les evenements absents
+  // d'une map ne declenchent rien (no-op safe).
+  tutorialSteps: [
+    {
+      showOn: 'init',
+      title: 'Bienvenue au Manoir Blackwood',
+      text: "Tu es prisonnier du Hall d'Entree. Pour te deplacer, tape un vecteur (x, y) dans le panneau ♦ DEPLACEMENT VECTORIEL en bas de l'ecran, puis clique sur ▶ INVOQUER LE VECTEUR.",
+      hint: "Convention de maths : +y est vers le HAUT (comme sur tes cours). Essaie par exemple (1, 0) pour bouger d'un pas a droite, ou (0, 1) pour monter d'un pas."
+    },
+    {
+      showOn: 'firstMove',
+      title: 'Tu te deplaces en L',
+      text: "Bien joue ! Le vecteur deplace ton personnage en deux temps : d'abord toute la composante x, puis toute la composante y. C'est une marche en L. Maintenant ramasse la CLE ROUILLEE qui scintille en (5, 1) — marche dessus.",
+      hint: "Depuis ta position actuelle, calcule le vecteur (Δx, Δy) qui t'y mene. Tu peux invoquer un vecteur diagonal d'un coup, sans repasser plusieurs fois."
+    },
+    {
+      showOn: 'cleAcquired',
+      title: 'La cle est dans ton sac',
+      text: "Un SPECTRE vaporeux flotte devant l'unique porte au nord. Il bloque le passage. Pour lui parler, CLIQUE directement sur lui avec la souris : un dialogue va s'ouvrir et tu pourras lui donner la cle.",
+      hint: "Tu peux aussi ouvrir le 📓 journal (icone en haut a droite) pour voir tes objectifs en cours."
+    },
+    {
+      showOn: 'spectreResolved',
+      title: 'La porte est libre',
+      text: "Le spectre s'estompe. La case (4, 0) au nord est maintenant traversable. Invoque le vecteur qui t'y emmene pour quitter le Hall et entrer dans la BIBLIOTHEQUE.",
+      hint: "Rappel : +y monte vers la porte. Calcule (4 − x_actuel, y_actuel − 0)."
+    },
+    {
+      showOn: 'enteredS3',
+      title: 'Tutoriel termine !',
+      text: "Bienvenue dans la BIBLIOTHEQUE. Tu maitrises maintenant les vecteurs, le ramassage d'objets et la gestion des gardiens. La suite du Manoir reste a ecrire — la sortie victoire se trouve quelque part dans le Salon Principal.",
+      hint: "Bonne chance, et evite que la hantise ne t'engloutisse..."
+    },
+  ],
 };
+
+// R5 : alias global rétrocompat — pointe vers MAP1.tutorialSteps.
+// Tout code qui lit encore TUTORIAL_STEPS directement continue de fonctionner.
+const TUTORIAL_STEPS = MAP1.tutorialSteps;
+
+// ============================================================
+// MAP 2 — Le Cimetière de Blackwood (R6 : stub minimaliste)
+// ============================================================
+// Sert de PREUVE que le refacto multi-map fonctionne : 1 salle vide 8x8,
+// aucun asset image (fallback procedural), aucun son (profil vide),
+// aucun tutoriel. URL d'accès :  chair.html?map=cemetery&mode=jeu
+// Pour la transformer en vraie map : remplir rooms, soundProfiles, tutorialSteps.
+const MAP2 = {
+  id: 'cemetery',
+  name: "Le Cimetière de Blackwood",
+  displayName: "Le Cimetière de Blackwood",
+  nextMapUrl: '../index.html',
+  startRoom: 'C1',
+  hauntingTimeMs: 8 * 60 * 1000,   // 8 minutes (plus court car stub)
+  malaiseWindowMs: 30000,
+  rooms: {
+    C1: {
+      name: "Entrée du cimetière",
+      width: 8, height: 8,
+      spawn: { x: 4, y: 4 },
+      grid: [
+        [1, 1, 1, 1, 1, 1, 1, 1],
+        [1, 0, 0, 0, 0, 0, 0, 1],
+        [1, 0, 0, 0, 0, 0, 0, 1],
+        [1, 0, 0, 0, 0, 0, 0, 1],
+        [1, 0, 0, 0, 0, 0, 0, 1],
+        [1, 0, 0, 0, 0, 0, 0, 1],
+        [1, 0, 0, 0, 0, 0, 0, 1],
+        [1, 1, 1, 1, 1, 1, 1, 1]
+      ],
+      decor: [],
+      items: [],
+      doors: [],
+      guardians: [],
+    }
+  },
+  soundProfiles: {
+    tuto: { ambianceByRoom: {}, sfx: {}, malaise: { heartbeat: false, ambianceFadeTo: 1 } },
+    jeu:  { ambianceByRoom: {}, sfx: {}, malaise: { heartbeat: false, ambianceFadeTo: 1 } },
+  },
+  tutorialSteps: [],
+};
+
+// ============================================================
+// REGISTRE MULTI-MAP (R1 + R6)
+// ============================================================
+// Index de toutes les maps connues. Pour ajouter une nouvelle map :
+//   1. Creer un const MAPX = { ... } avec la meme structure que MAP1
+//      (id, name, startRoom, hauntingTimeMs, rooms, soundProfiles, tutorialSteps).
+//   2. L'enregistrer ici :   const MAPS = { manor: MAP1, MAPX: MAPX };
+//   3. URL :   chair.html?map=MAPX&mode=jeu
+// La map courante est selectionnee via gameState.currentMapId dans chair.js
+// (helper getCurrentMap()).
+const MAPS = { manor: MAP1, cemetery: MAP2 };

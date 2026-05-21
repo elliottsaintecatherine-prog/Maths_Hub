@@ -123,30 +123,34 @@ const ROOMS = {
   S2: {
     name: "Salon Principal",
     width: 10, height: 8,
-    spawn: { x: 4, y: 6 },
+    spawn: { x: 5, y: 5 },
     grid: [
-      [1, 1, 1, 1, 2, 3, 1, 1, 2, 1], // y=0 : portes vers S5 (4,0), S4 (8,0) ; EXIT victoire (5,0)
+      [1, 1, 1, 1, 2, 3, 1, 1, 2, 1], // y=0 : portes S5 (4,0), EXIT victoire (5,0), S4 (8,0)
       [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
       [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
       [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-      [1, 0, 0, 0, 4, 0, 0, 0, 0, 1], // y=4 : trappe (4,4) vers S6
+      [5, 0, 0, 0, 4, 0, 0, 0, 0, 1], // y=4 : escalier vers E1 (0,4), trappe vers S6 (4,4)
       [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
       [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
       [1, 1, 1, 1, 2, 1, 1, 1, 1, 1], // y=7 : porte vers S3 (4,7)
     ],
     decor: [
-      { x:3, y:3, type:'sofa', block:true },
-      { x:6, y:3, type:'sofa', block:true },
+      // Coin salon : 2 sofas face-a-face avec table basse au centre
+      { x:3, y:3, type:'sofa',        block:true },
       { x:4, y:3, type:'table_basse', block:true },
-      { x:9, y:4, type:'cheminee', block:true },
-      { x:9, y:7, type:'horloge', block:true },
+      { x:6, y:3, type:'sofa',        block:true },
+      // Cheminee contre le mur Est (interieur, donc x=8 et pas x=9)
+      { x:8, y:2, type:'cheminee',    block:true },
+      // Horloge grand-pere coin sud-est
+      { x:8, y:6, type:'horloge',     block:true },
     ],
     items: [],
     doors: [
-      { x:4, y:7, target:'S3', spawnAt:{ x:4, y:1 } },
-      { x:4, y:0, target:'S5', spawnAt:{ x:4, y:10 } },
-      { x:8, y:0, target:'S4', spawnAt:{ x:8, y:8 } },
-      { x:4, y:4, target:'S6', spawnAt:{ x:3, y:4 } },
+      { x:4, y:7, target:'S3', spawnAt:{ x:4, y:1 } },  // sud -> Bibliotheque
+      { x:4, y:0, target:'S5', spawnAt:{ x:4, y:10 } }, // nord -> Chapelle
+      { x:8, y:0, target:'S4', spawnAt:{ x:8, y:8 } },  // nord-est -> Cuisine
+      { x:4, y:4, target:'S6', spawnAt:{ x:3, y:4 } },  // trappe sol -> Cave
+      { x:0, y:4, target:'E1', spawnAt:{ x:1, y:4 } },  // escalier ouest -> Etage Chambre Maitre
     ],
     guardians: [],
   },
@@ -154,9 +158,9 @@ const ROOMS = {
   S3: {
     name: "Bibliothèque",
     width: 8, height: 7,
-    spawn: { x: 3, y: 5 },
+    spawn: { x: 4, y: 5 },
     grid: [
-      [1, 1, 1, 1, 1, 1, 1, 1], // y=0 : mur N (EXIT deplace dans S2 — unique en (5,0))
+      [1, 1, 1, 1, 2, 1, 1, 1], // y=0 : porte vers S2 (4,0)
       [1, 0, 0, 0, 0, 0, 0, 1],
       [1, 0, 0, 0, 0, 0, 0, 1],
       [1, 0, 0, 0, 0, 0, 0, 1],
@@ -165,19 +169,27 @@ const ROOMS = {
       [1, 1, 1, 2, 1, 1, 1, 1], // y=6 : porte vers S1 (3,6)
     ],
     decor: [
-      { x:2, y:3, type:'bureau', block:true },
+      // Rayonnages sol-plafond le long du mur Nord (sauf devant la porte (4,0))
       { x:1, y:1, type:'rayonnage', block:true },
+      { x:3, y:1, type:'rayonnage', block:true },
       { x:6, y:1, type:'rayonnage', block:true },
+      // Rayonnages mur Ouest (x=1) et mur Est (x=6)
+      { x:1, y:3, type:'rayonnage', block:true },
+      { x:6, y:3, type:'rayonnage', block:true },
       { x:1, y:5, type:'rayonnage', block:true },
       { x:6, y:5, type:'rayonnage', block:true },
-      { x:3, y:4, type:'globe', block:true },
-      { x:5, y:3, type:'echelle', block:true },
+      // Bureau central + globe sur le cote + echelle de bibliotheque
+      { x:4, y:3, type:'bureau',  block:true },
+      { x:3, y:2, type:'globe',   block:true },
+      { x:5, y:4, type:'echelle', block:true },
     ],
     items: [
-      { x:2, y:3, id:'livre_noir' },
+      // Le livre noir est pose a cote du bureau (et plus DESSUS comme avant)
+      { x:3, y:3, id:'livre_noir' },
     ],
     doors: [
-      { x:3, y:6, target:'S1', spawnAt:{ x:4, y:1 } },
+      { x:4, y:0, target:'S2', spawnAt:{ x:4, y:6 } }, // nord -> Salon
+      { x:3, y:6, target:'S1', spawnAt:{ x:4, y:1 } }, // sud  -> Hall (didact)
     ],
     guardians: [],
   },
@@ -185,7 +197,7 @@ const ROOMS = {
   S4: {
     name: "Cuisine / Salle à Manger",
     width: 12, height: 10,
-    spawn: { x: 8, y: 8 },
+    spawn: { x: 6, y: 7 },
     grid: [
       [1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1], // y=0 : porte vers S7 (5,0)
       [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
@@ -199,16 +211,20 @@ const ROOMS = {
       [1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1], // y=9 : porte vers S2 (8,9)
     ],
     decor: [
-      { x:3, y:1, type:'evier', block:true },
-      { x:6, y:5, type:'table_cuisine', block:true },
-      { x:1, y:3, type:'cuisiniere', block:true },
+      // Paillasse Nord : evier en pierre contre le mur N
+      { x:2, y:1, type:'evier',         block:true },
+      // Cuisiniere a bois contre le mur Ouest
+      { x:1, y:3, type:'cuisiniere',    block:true },
+      // Grande table chene 4 places au centre
+      { x:6, y:4, type:'table_cuisine', block:true },
+      // Garde-manger ouvert contre le mur Est
       { x:10, y:2, type:'garde_manger', block:true },
     ],
     items: [],
     doors: [
-      { x:8, y:9, target:'S2', spawnAt:{ x:8, y:1 } },
-      { x:0, y:5, target:'S5', spawnAt:{ x:8, y:5 } },
-      { x:5, y:0, target:'S7', spawnAt:{ x:10, y:10 } },
+      { x:8, y:9, target:'S2', spawnAt:{ x:8, y:1 } },  // sud  -> Salon
+      { x:0, y:5, target:'S5', spawnAt:{ x:8, y:5 } },  // ouest -> Chapelle
+      { x:5, y:0, target:'S7', spawnAt:{ x:10, y:10 } },// nord -> Jardin/Cimetiere
     ],
     guardians: [],
   },
@@ -218,12 +234,12 @@ const ROOMS = {
     width: 10, height: 12,
     spawn: { x: 4, y: 10 },
     grid: [
-      [1, 1, 1, 1, 2, 1, 1, 1, 1, 1], // y=0 : porte vers S7 (4,0)
+      [1, 1, 1, 1, 2, 1, 1, 1, 1, 1], // y=0  : porte vers S7 (4,0)
       [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
       [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
       [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
       [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-      [1, 0, 0, 0, 0, 0, 0, 0, 0, 2], // y=5 : porte vers S4 (9,5)
+      [1, 0, 0, 0, 0, 0, 0, 0, 0, 2], // y=5  : porte vers S4 (9,5)
       [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
       [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
       [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
@@ -232,24 +248,30 @@ const ROOMS = {
       [1, 1, 1, 1, 2, 1, 1, 1, 1, 1], // y=11 : porte vers S2 (4,11)
     ],
     decor: [
-      { x:4, y:2, type:'autel', block:true },
+      // Autel central au nord, encadre de 2 statues erodees
+      { x:4, y:2, type:'autel',          block:true },
       { x:2, y:2, type:'statue_erosion', block:true },
       { x:6, y:2, type:'statue_erosion', block:true },
-      { x:3, y:5, type:'banc_eglise', block:true },
-      { x:5, y:5, type:'banc_eglise', block:true },
-      { x:3, y:7, type:'banc_eglise', block:true },
-      { x:5, y:7, type:'banc_eglise', block:true },
-      { x:3, y:9, type:'banc_eglise', block:true },
-      { x:5, y:9, type:'banc_eglise', block:true },
-      { x:3, y:10, type:'benitier', block:true },
+      // 4 rangees de 2 bancs (8 bancs total) le long de l'allee centrale
+      { x:3, y:4,  type:'banc_eglise', block:true },
+      { x:5, y:4,  type:'banc_eglise', block:true },
+      { x:3, y:6,  type:'banc_eglise', block:true },
+      { x:5, y:6,  type:'banc_eglise', block:true },
+      { x:3, y:8,  type:'banc_eglise', block:true },
+      { x:5, y:8,  type:'banc_eglise', block:true },
+      { x:3, y:10, type:'banc_eglise', block:true },
+      { x:5, y:10, type:'banc_eglise', block:true },
+      // Benitier a l'entree sud (a cote du spawn)
+      { x:1, y:10, type:'benitier', block:true },
     ],
     items: [
-      { x:4, y:2, id:'bougie' },
+      // Bougie pose JUSTE A COTE de l'autel (et plus DESSUS comme avant)
+      { x:4, y:3, id:'bougie' },
     ],
     doors: [
-      { x:4, y:11, target:'S2', spawnAt:{ x:4, y:1 } },
-      { x:9, y:5, target:'S4', spawnAt:{ x:1, y:5 } },
-      { x:4, y:0, target:'S7', spawnAt:{ x:3, y:10 } },
+      { x:4, y:11, target:'S2', spawnAt:{ x:4, y:1 } },  // sud  -> Salon
+      { x:9, y:5,  target:'S4', spawnAt:{ x:1, y:5 } },  // est  -> Cuisine
+      { x:4, y:0,  target:'S7', spawnAt:{ x:3, y:10 } }, // nord -> Jardin/Cimetiere
     ],
     guardians: [],
   },
@@ -257,24 +279,29 @@ const ROOMS = {
   S6: {
     name: "Cave Secrète",
     width: 8, height: 6,
-    spawn: { x: 3, y: 4 },
+    spawn: { x: 4, y: 4 },
     grid: [
       [1, 1, 1, 1, 1, 1, 1, 1],
       [1, 0, 0, 0, 0, 0, 0, 1],
       [1, 0, 0, 0, 0, 0, 0, 1],
       [1, 0, 0, 0, 0, 0, 0, 1],
       [1, 0, 0, 0, 0, 0, 0, 1],
-      [1, 1, 1, 4, 1, 1, 1, 1], // y=5 : trappe retour (3,5)
+      [1, 1, 1, 4, 1, 1, 1, 1], // y=5 : trappe retour vers S2 (3,5)
     ],
     decor: [
-      { x:2, y:1, type:'etabli', block:true },
+      // Pierre brute en cul-de-sac. Etabli alchimiste contre mur N
+      { x:2, y:1, type:'etabli',        block:true },
+      // Cage rouillee a cote, vide
       { x:5, y:1, type:'cage_rouillee', block:true },
-      { x:1, y:3, type:'coffre_ferme', block:true },
-      { x:6, y:3, type:'tonneau', block:true },
+      // Coffre ferme contre mur Ouest
+      { x:1, y:3, type:'coffre_ferme',  block:true },
+      // 2 tonneaux contre mur Est
+      { x:6, y:2, type:'tonneau',       block:true },
+      { x:6, y:4, type:'tonneau',       block:true },
     ],
     items: [],
     doors: [
-      { x:3, y:5, target:'S2', spawnAt:{ x:4, y:5 } },
+      { x:3, y:5, target:'S2', spawnAt:{ x:4, y:5 } }, // escalier retour -> Salon
     ],
     guardians: [],
   },
@@ -282,14 +309,14 @@ const ROOMS = {
   S7: {
     name: "Jardin / Cimetière",
     width: 14, height: 12,
-    spawn: { x: 3, y: 10 },
+    spawn: { x: 7, y: 10 },
     grid: [
       [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
       [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
       [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
       [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
       [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-      [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], // y=5 : (EXIT deplacee dans S3 — la case gagnante est unique et dans la 2eme salle)
+      [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], // y=5  : (EXIT deplacee dans S2 — case gagnante unique en S2 (5,0))
       [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
       [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
       [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
@@ -298,58 +325,56 @@ const ROOMS = {
       [1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1], // y=11 : portes vers S5 (3,11) et S4 (10,11)
     ],
     decor: [
-      { x:3, y:3, type:'tombe', block:true },
-      { x:5, y:3, type:'tombe', block:true },
-      { x:11, y:3, type:'tombe', block:true },
-      { x:7, y:2, type:'statue_ange', block:true },
-      { x:7, y:5, type:'fontaine_seche', block:true },
-      { x:2, y:8, type:'arbre_mort', block:true },
-      { x:11, y:8, type:'banc_pierre', block:true },
+      // Cimetiere N : 3 tombes alignees + statue ange en pleurs
+      { x:3,  y:3, type:'tombe',         block:true },
+      { x:5,  y:3, type:'tombe', v:2,    block:true }, // variante 2 (penchee/fissuree)
+      { x:11, y:3, type:'tombe', v:3,    block:true }, // variante 3 (brisee)
+      { x:8,  y:2, type:'statue_ange',   block:true },
+      // Jardin S : fontaine seche centrale + arbre mort + 2 bancs en pierre
+      { x:7,  y:6, type:'fontaine_seche',block:true },
+      { x:2,  y:8, type:'arbre_mort',    block:true },
+      { x:4,  y:8, type:'banc_pierre',   block:true },
+      { x:11, y:8, type:'banc_pierre',   block:true },
     ],
     items: [],
     doors: [
-      { x:3, y:11, target:'S5', spawnAt:{ x:4, y:1 } },
-      { x:10, y:11, target:'S4', spawnAt:{ x:5, y:1 } },
+      { x:3,  y:11, target:'S5', spawnAt:{ x:4, y:1 } }, // sud-ouest -> Chapelle
+      { x:10, y:11, target:'S4', spawnAt:{ x:5, y:1 } }, // sud-est   -> Cuisine
     ],
-    guardians: [
-      // La gargouille gardait la sortie en S7. La sortie est maintenant unique
-      // dans S3 (Bibliotheque). On garde la gargouille en standby pour la
-      // re-implanter ailleurs ou la deplacer vers S3 plus tard.
-      //
-      // {
-      //   id: 'gargouille',
-      //   x: 6, y: 4, w: 2, h: 2,
-      //   active: true,
-      //   blocksDoor: { x:7, y:5 },
-      //   objective: { type:'math', question:'37 + 56', answer:93, hint:'Additionne les dizaines et les unités.' }
-      // },
-    ],
+    guardians: [],
   },
 
   E1: {
     name: "Chambre du Maître",
     width: 9, height: 8,
-    spawn: { x: 1, y: 4 },
+    spawn: { x: 4, y: 5 },
     grid: [
       [1, 1, 1, 1, 1, 1, 1, 1, 1],
       [1, 0, 0, 0, 0, 0, 0, 0, 1],
       [1, 0, 0, 0, 0, 0, 0, 0, 1],
       [1, 0, 0, 0, 0, 0, 0, 0, 1],
-      [5, 0, 0, 0, 0, 0, 0, 0, 2], // y=4 : escalier (0,4), porte vers E2 (8,4)
+      [5, 0, 0, 0, 0, 0, 0, 0, 2], // y=4 : escalier vers S2 (0,4), porte vers E2 (8,4)
       [1, 0, 0, 0, 0, 0, 0, 0, 1],
       [1, 0, 0, 0, 0, 0, 0, 0, 1],
       [1, 1, 1, 1, 1, 1, 1, 1, 1],
     ],
     decor: [
+      // Grand lit baldaquin 2 places, centre E-W, flanque de 2 chevets
+      { x:3, y:1, type:'table_de_nuit', block:true },
       { x:4, y:1, type:'lit_baldaquin', block:true },
-      { x:1, y:2, type:'armoire', block:true },
-      { x:7, y:2, type:'coiffeuse', block:true },
-      { x:4, y:3, type:'coffre_lit', block:true },
+      { x:5, y:1, type:'table_de_nuit', block:true },
+      // Armoire a miroir contre le mur Ouest
+      { x:1, y:2, type:'armoire',       block:true },
+      // Coiffeuse + miroir ovale contre le mur Est
+      { x:7, y:2, type:'coiffeuse',     block:true },
+      // Coffre au pied du lit
+      { x:4, y:3, type:'coffre_lit',    block:true },
     ],
     items: [],
     doors: [
-      { x:0, y:4, target:'S1', spawnAt:{ x:1, y:4 } },
-      { x:8, y:4, target:'E2', spawnAt:{ x:1, y:4 } },
+      // L'escalier ne va plus vers S1 (didact) mais vers S2 (Salon), point d'entree etage en jeu mode
+      { x:0, y:4, target:'S2', spawnAt:{ x:1, y:4 } }, // ouest -> escalier descendant Salon
+      { x:8, y:4, target:'E2', spawnAt:{ x:1, y:4 } }, // est   -> Chambre d'Enfant
     ],
     guardians: [],
   },
@@ -357,7 +382,7 @@ const ROOMS = {
   E2: {
     name: "Chambre d'Enfant",
     width: 9, height: 8,
-    spawn: { x: 1, y: 4 },
+    spawn: { x: 4, y: 5 },
     grid: [
       [1, 1, 1, 1, 1, 1, 1, 1, 1],
       [1, 0, 0, 0, 0, 0, 0, 0, 1],
@@ -369,16 +394,21 @@ const ROOMS = {
       [1, 1, 1, 1, 1, 1, 1, 1, 1],
     ],
     decor: [
-      { x:4, y:1, type:'lit_enfant', block:true },
-      { x:1, y:2, type:'bureau_ecole', block:true },
-      { x:7, y:2, type:'cheval_bascule', block:true },
-      { x:2, y:5, type:'maison_poupee', block:true },
+      // Lit d'enfant baldaquin 1 place avec peluche, au nord
+      { x:4, y:1, type:'lit_enfant',         block:true },
+      // Bureau d'ecolier + cahier ouvert sur le mur Ouest
+      { x:1, y:2, type:'bureau_ecole',       block:true },
+      // Cheval a bascule yeux rouges, mur Est
+      { x:7, y:2, type:'cheval_bascule',     block:true },
+      // Maison de poupee replique du manoir (sud-ouest)
+      { x:2, y:5, type:'maison_poupee',      block:true },
+      // Etagere poupees porcelaine au sol (sud-est)
       { x:6, y:5, type:'poupees_porcelaine', block:true },
     ],
     items: [],
     doors: [
-      { x:0, y:4, target:'E1', spawnAt:{ x:7, y:4 } },
-      { x:8, y:4, target:'E3', spawnAt:{ x:1, y:3 } },
+      { x:0, y:4, target:'E1', spawnAt:{ x:7, y:4 } }, // ouest -> Chambre Maitre
+      { x:8, y:4, target:'E3', spawnAt:{ x:1, y:3 } }, // est   -> Bureau
     ],
     guardians: [],
   },
@@ -386,7 +416,7 @@ const ROOMS = {
   E3: {
     name: "Bureau du Maître",
     width: 8, height: 7,
-    spawn: { x: 1, y: 3 },
+    spawn: { x: 4, y: 4 },
     grid: [
       [1, 1, 1, 1, 1, 1, 1, 1],
       [1, 0, 0, 0, 0, 0, 0, 1],
@@ -397,14 +427,18 @@ const ROOMS = {
       [1, 1, 1, 1, 1, 1, 1, 1],
     ],
     decor: [
-      { x:3, y:3, type:'grand_bureau', block:true },
+      // Cabinet de curiosites (cranes, papillons, bocaux) coin NW
       { x:1, y:1, type:'cabinet_curiosites', block:true },
-      { x:6, y:1, type:'carte_murale', block:true },
-      { x:6, y:5, type:'bibliotheque_L', block:true },
+      // Carte murale du domaine, mur Nord
+      { x:4, y:1, type:'carte_murale',       block:true },
+      // Grand bureau directorial central
+      { x:3, y:3, type:'grand_bureau',       block:true },
+      // Bibliotheque L-shape coin SE
+      { x:6, y:5, type:'bibliotheque_L',     block:true },
     ],
     items: [],
     doors: [
-      { x:0, y:3, target:'E2', spawnAt:{ x:7, y:4 } },
+      { x:0, y:3, target:'E2', spawnAt:{ x:7, y:4 } }, // ouest -> Chambre Enfant
     ],
     guardians: [],
   },

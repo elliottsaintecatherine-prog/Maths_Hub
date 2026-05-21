@@ -29,8 +29,24 @@
 
   /* Bouton retour hub : retire, deplace dans le menu engrenage (coin haut-droit). */
 
-  /* Effet vision noire (game over progressif) */
-  #vision-overlay { position:fixed; inset:0; pointer-events:none; background:radial-gradient(circle, transparent 30%, #000 100%); opacity:0; transition:opacity 0.5s; z-index:30; }
+  /* Effet vision noire (malaise / game over progressif) */
+  /* Pendant les 30 dernieres secondes : vignette qui se ferme avec teinte rouge sang. */
+  #vision-overlay {
+    position:fixed; inset:0; pointer-events:none; z-index:30;
+    background:
+      radial-gradient(ellipse at center, transparent 18%, rgba(40,0,0,0.55) 55%, #000 95%),
+      radial-gradient(circle at 50% 50%, transparent 25%, #000 100%);
+    opacity:0;
+    transition:opacity 0.08s linear; /* transitions rapides pour flicker */
+    mix-blend-mode: multiply;
+  }
+  /* Overlay supplementaire : sursauts rouges du malaise (controle via JS) */
+  #malaise-pulse {
+    position:fixed; inset:0; pointer-events:none; z-index:31;
+    background: radial-gradient(circle at center, rgba(120,0,0,0.0) 40%, rgba(120,0,0,0.35) 100%);
+    opacity:0;
+    transition:opacity 0.05s linear;
+  }
 
   /* Game over scene */
   #gameover { position:fixed; inset:0; background:#000; z-index:100; display:none; align-items:center; justify-content:center; flex-direction:column; gap:20px; }
@@ -119,6 +135,7 @@
 </div>
 
 <div id="vision-overlay"></div>
+<div id="malaise-pulse"></div>
 
 <div id="gameover">
   <h1>HANTÉ</h1>
@@ -126,8 +143,9 @@
   <button onclick="window.location.reload()">Recommencer</button>
 </div>
 
-<script src="chair-data.js?v=19"></script>
-<script src="chair.js?v=19"></script>
+<script src="sound.js?v=22"></script>
+<script src="chair-data.js?v=22"></script>
+<script src="chair.js?v=22"></script>
 
 </body>
 </html>

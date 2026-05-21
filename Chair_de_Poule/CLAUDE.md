@@ -11,12 +11,25 @@
 Chair_de_Poule/
 ├── index.html       # landing page : menu Tuto / Jeu (entrée depuis hub)
 ├── chair.html       # structure + CSS du jeu (HUD, panneau vecteurs, overlays)
-├── chair.js         # logique + rendu iso (~420 lignes actuellement)
+├── chair.js         # logique + rendu iso (~1800 lignes)
 ├── chair-data.js    # données salles (MAP1, ROOMS, TILE types)
+├── sound.js         # moteur audio : 4 nappes manor + SFX WebAudio + heartbeat
 └── assets/
-    ├── audio/       # vide — sons générés via WebAudio
-    └── images/      # vide — rendu procédural Canvas
+    ├── audio/       # 4 .wav du manoir Vecthorreur (cursed_music_box, midnight_bell, spectral_whispers, storm_outside)
+    └── images/      # PNG par salle + fallback procédural si absent
 ```
+
+## Audio
+- **Actif uniquement en mode tuto** (`Sound.setEnabled(mode === 'tuto')` dans init).
+  Chaque mode aura son propre profil sonore — `jeu` reste muet en attendant.
+- 4 nappes ambiance (loop, 1 par salle via `ROOM_TO_AMBIANCE` dans `sound.js`)
+- Tous les SFX (move, execute, error, transition, win, death, screamer) générés en WebAudio
+- Phase MALAISE = 30 dernières secondes avant `hauntingTimeMs` :
+  - Vision-overlay : vignette qui se ferme, teinte rouge sang, clignote (multi-fréquences + erratique)
+  - Malaise-pulse : sursauts rouges synchronisés avec heartbeat (lub-dub)
+  - Heartbeat WebAudio : 60→160 BPM crescendo
+  - Ambiance baisse à 15% sur la fenêtre
+- Préférences volume + mute persistées dans `localStorage`
 
 ## Règles STRICTES
 1. Lire TOUS les fichiers concernés avant d'écrire quoi que ce soit
@@ -73,7 +86,7 @@ Groupes restants (dans l'ordre) :
 | d1 | Sortie aléatoire + overlay victoire | [ ] |
 | d2 | Monstre (spawn/BFS/contact) | [ ] |
 | d3 | HUD vectoriel + flèche + timer | [ ] |
-| d4 | Sons WebAudio + mute + thumbnail | [ ] |
+| d4 | Sons WebAudio + mute + thumbnail | [/] partiel — sound.js OK, thumbnail TODO |
 
 > Texte complet de chaque prompt : voir `escbrain/wiki/games/chair-de-poule-prompts.md`
 

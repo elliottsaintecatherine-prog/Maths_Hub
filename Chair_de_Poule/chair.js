@@ -84,7 +84,7 @@ function playerSpritePath(facing, pose) {
   return ASSETS_BASE + 'player/player_' + facing + '_' + pose + '.png';
 }
 const PLAYER_POSES = ['stand', 'walk_1', 'walk_2'];
-const PLAYER_FACINGS = ['left', 'front'];
+const PLAYER_FACINGS = ['left', 'front', 'right'];
 
 // ─── Cache + loader d'images (silencieux sur 404) ───────────────
 // MODE DEV : ASSETS_VERSION = timestamp du chargement de la page.
@@ -761,15 +761,15 @@ function getAnimFacing(a, now, fallback) {
   if (split <= 0) inLegY = true;
   else if (split >= 1) inLegY = false;
   else inLegY = (t >= split);
-  // Iso : screenDx = gridDx - gridDy
+  
   if (inLegY) {
-    const screenDx = -(a.toY - a.midY); // gridDx=0
-    if (screenDx > 0) return 'front';
-    if (screenDx < 0) return 'left';
+    const gridDy = a.toY - a.midY;
+    if (gridDy < 0) return 'front'; // moving up-right
+    if (gridDy > 0) return 'left';  // moving down-left
   } else {
-    const screenDx = (a.midX - a.fromX); // gridDy=0
-    if (screenDx > 0) return 'front';
-    if (screenDx < 0) return 'left';
+    const gridDx = a.midX - a.fromX;
+    if (gridDx > 0) return 'right'; // moving down-right
+    if (gridDx < 0) return 'left';  // moving up-left
   }
   return fallback;
 }
@@ -975,7 +975,7 @@ function playVector(vx, vy) {
   // Facing initial = direction de la 1ere jambe.
   // Leg X (gridDy=0) : screenDx = vx -> sign(vx)
   // Leg Y (gridDx=0) : screenDx = -gridDy = vy -> sign(vy)
-  if (legX > 0)      gameState.playerFacing = (vx > 0) ? 'front' : 'left';
+  if (legX > 0)      gameState.playerFacing = (vx > 0) ? 'right' : 'left';
   else if (legY > 0) gameState.playerFacing = (vy > 0) ? 'front' : 'left';
 
   // Stocker la position avant l'animation (pour rebond eventuel sur porte gardee)
@@ -998,6 +998,12 @@ function playVector(vx, vy) {
     legSplit
   };
 
+  // SFX : execute = invocation vecteur, move boucle leger pendant le deplacement
+  if (window.Sound) {
+    Sound.play('execute');
+    Sound.play('move', { volume: 0.6 });
+  }
+
   // Tuto : 1er mouvement reussi -> etape 'firstMove'
   maybeFireTutorialEvent('firstMove');
 }
@@ -1006,6 +1012,7 @@ function flashError() {
   const el = document.getElementById('panel-vectors');
   el.style.borderColor = '#5a0000';
   setTimeout(() => { el.style.borderColor = '#3d2810'; }, 300);
+  if (window.Sound) Sound.play('error');
 }
 
 function tryPickupItem(tx, ty) {
@@ -1019,6 +1026,8 @@ function tryPickupItem(tx, ty) {
   updateInventoryHUD();
   // P5b : maj cards (passage de "A trouver" -> "Tu l'as")
   if (typeof renderObjectivePanel === 'function') renderObjectivePanel();
+  // SFX pickup (le execute fait un son sec satisfaisant qui marche bien)
+  if (window.Sound) Sound.play('execute', { volume: 0.7 });
   // Tuto : si on vient de ramasser la cle rouillee, etape 'cleAcquired'
   if (item.id === 'cle_rouillee') maybeFireTutorialEvent('cleAcquired');
   return true;
@@ -1070,8 +1079,11 @@ function transitionToRoom(roomId, spawnX, spawnY) {
   gameState.inTransition = true;
   const overlay = document.getElementById('fade-overlay');
   overlay.style.opacity = '1';
+  // SFX whoosh + change ambiance a mi-chemin du fade
+  if (window.Sound) Sound.play('transition');
   setTimeout(() => {
     loadRoom(roomId, spawnX, spawnY);
+    if (window.Sound) Sound.playRoomAmbiance(roomId);
     overlay.style.opacity = '0';
     // Tuto : entree dans S3 (Bibliotheque) = derniere etape
     if (roomId === 'S3') maybeFireTutorialEvent('enteredS3');
@@ -1103,9 +1115,10 @@ function bouncePlayer() {
   // Facing iso : screenDx = gridDx - gridDy
   const dx = gameState.lastPlayerPos.x - gameState.player.x;
   const dy = gameState.lastPlayerPos.y - gameState.player.y;
-  const screenDx = dx - dy;
-  if (screenDx > 0) gameState.playerFacing = 'front';
-  else if (screenDx < 0) gameState.playerFacing = 'left';
+  if (dx > 0) gameState.playerFacing = 'right';
+  else if (dx < 0) gameState.playerFacing = 'left';
+  else if (dy < 0) gameState.playerFacing = 'front';
+  else if (dy > 0) gameState.playerFacing = 'left';
 
   gameState.isMoving = true;
   gameState.moveAnim = {
@@ -1470,6 +1483,8 @@ function showGuardianModal(guardian, guardianIndex) {
 
 function triggerVictory() {
   gameState.gameOver = true;
+  // Audio : stop ambiance + jingle victoire
+  if (window.Sound) { Sound.stopAll(); Sound.play('win'); }
   const t = (Date.now() - gameState.startTime) / 1000;
   const m = Math.floor(t / 60);
   const s = Math.round(t % 60);
@@ -1554,9 +1569,9 @@ function update() {
       gameState.player.y = a.toY;
       // En L-shape : le facing final = direction de la 2e jambe (Y) si elle existe.
       if (!a.isBounce && a.midX !== undefined && a.legSplit < 1) {
-        const screenDx = -(a.toY - a.midY);
-        if (screenDx > 0) gameState.playerFacing = 'front';
-        else if (screenDx < 0) gameState.playerFacing = 'left';
+        const gridDy = a.toY - a.midY;
+        if (gridDy < 0) gameState.playerFacing = 'front';
+        else if (gridDy > 0) gameState.playerFacing = 'left';
       }
       const wasBounce = a.isBounce;
       gameState.moveAnim = null;
@@ -1572,18 +1587,48 @@ function update() {
   }
   // MAJ barre de vie hantise (P6) — chaque frame
   updateHauntingBar();
-  // Hantise (vision blackouts dans les dernières minutes)
+  // ─── Phase MALAISE : 30 dernieres secondes avant le game over ───
+  // Effet : ecran qui clignote (sinusoide rapide + spikes), vignette qui se ferme,
+  //         ambiance qui baisse + heartbeat WebAudio (gere par sound.js).
   const elapsed = Date.now() - gameState.startTime;
+  const MALAISE_WINDOW_MS = 30000;
+  const malaiseStart = MAP1.hauntingTimeMs - MALAISE_WINDOW_MS;
   const overlay = document.getElementById('vision-overlay');
   if (elapsed >= MAP1.hauntingTimeMs) {
     if (!gameState.gameOver) triggerGameOver();
-  } else if (elapsed >= MAP1.blackoutStartMs) {
-    const progress = (elapsed - MAP1.blackoutStartMs) / (MAP1.hauntingTimeMs - MAP1.blackoutStartMs);
-    const flickerFreq = 1 + progress * 8;
-    const flicker = Math.sin(performance.now() / 1000 * flickerFreq) * 0.5 + 0.5;
-    overlay.style.opacity = (progress * 0.6 + flicker * progress * 0.4).toFixed(2);
+  } else if (elapsed >= malaiseStart) {
+    // progress lineaire 0 -> 1 sur les 30 dernieres secondes
+    const progress = (elapsed - malaiseStart) / MALAISE_WINDOW_MS;
+    // Flicker double (basse freq + spikes erratiques pour effet malaise)
+    const t = performance.now() / 1000;
+    const slowPulse = Math.sin(t * (2 + progress * 4)) * 0.5 + 0.5; // 2..6 Hz
+    const fastSpike = Math.pow(Math.sin(t * (8 + progress * 20)) * 0.5 + 0.5, 6); // pic court
+    const erratic = Math.sin(t * 13.7) * Math.cos(t * 7.3) * 0.5 + 0.5; // perturbation
+    // Combinaison : opacity de base monte avec progress, modulée par les pulses
+    const baseDark   = 0.35 + progress * 0.55;       // 0.35 -> 0.90
+    const flickerAmp = 0.25 * progress;              // amplitude clignotement
+    const opacity = Math.min(1,
+      baseDark + flickerAmp * (slowPulse * 0.5 + fastSpike * 0.7 + erratic * 0.3 - 0.5)
+    );
+    overlay.style.opacity = opacity.toFixed(3);
+    // Pulse rouge synchro heartbeat (BPM = 60 + progress*100, ici on simule un battement)
+    const pulseEl = document.getElementById('malaise-pulse');
+    if (pulseEl) {
+      const bpm = 60 + progress * 100;
+      const beatPhase = (t * bpm / 60) % 1; // 0..1 par battement
+      // 2 pulses tres rapproches (lub-dub) au debut du cycle
+      const lub = Math.exp(-Math.pow((beatPhase - 0.02) * 18, 2));
+      const dub = Math.exp(-Math.pow((beatPhase - 0.15) * 22, 2));
+      const beatIntensity = Math.max(lub * 0.85, dub * 0.55);
+      pulseEl.style.opacity = (beatIntensity * (0.4 + progress * 0.6)).toFixed(3);
+    }
+    // Audio : ambiance baisse + heartbeat qui s'amplifie
+    if (window.Sound) Sound.setMalaiseProgress(progress);
   } else {
     overlay.style.opacity = 0;
+    const pulseEl = document.getElementById('malaise-pulse');
+    if (pulseEl) pulseEl.style.opacity = 0;
+    if (window.Sound) Sound.setMalaiseProgress(0);
   }
 }
 
@@ -1595,6 +1640,12 @@ function loop() {
 
 function triggerGameOver() {
   gameState.gameOver = true;
+  // Audio : screamer + death + arret ambiance
+  if (window.Sound) {
+    Sound.play('screamer');
+    setTimeout(() => { Sound.play('death'); }, 250);
+    Sound.stopAll();
+  }
   document.getElementById('gameover').classList.add('show');
   // Masquer panneau journal + hamburger (P5b)
   const objToggle = document.getElementById('obj-toggle');
@@ -1668,12 +1719,19 @@ function init() {
   } catch (_) { /* fallback : reste sur 'tuto' */ }
   gameState.tutorialActive = (gameState.mode === 'tuto');
 
+  // Sons : actifs uniquement en mode tuto pour l'instant.
+  // Chaque mode aura son propre profil sonore (mode 'jeu' reste muet
+  // jusqu'a ce qu'on lui ait designe une bande son specifique).
+  if (window.Sound) Sound.setEnabled(gameState.mode === 'tuto');
+
   preloadAllImages();
   const startRoom = MAP1.rooms[MAP1.startRoom];
   gameState.player.x = startRoom.spawn.x;
   gameState.player.y = startRoom.spawn.y;
   gameState.currentRoom = MAP1.startRoom;
   document.getElementById('room-label').textContent = '— ' + startRoom.name + ' —';
+  // Lancer l'ambiance de la salle de depart (sera unlock au 1er clic/touche)
+  if (window.Sound) Sound.playRoomAmbiance(MAP1.startRoom);
 
   // Tutoriel : 1ere note ('init') apres 800ms pour laisser le decor charger
   if (gameState.mode === 'tuto') {
@@ -1726,12 +1784,35 @@ function init() {
   gearBtnEl.addEventListener('click', () => {
     gearMenuEl.style.display = gearMenuEl.style.display === 'none' ? 'block' : 'none';
   });
-  document.getElementById('vol-slider').addEventListener('change', function () {
-    gameState.audioVolume = parseInt(this.value);
-  });
+  // Restaure les preferences audio depuis localStorage
+  try {
+    const savedVol = localStorage.getItem('chair_audio_vol');
+    if (savedVol !== null) {
+      gameState.audioVolume = parseInt(savedVol, 10) || 50;
+      document.getElementById('vol-slider').value = gameState.audioVolume;
+    }
+    const savedMute = localStorage.getItem('chair_audio_muted');
+    if (savedMute === '1') {
+      gameState.muted = true;
+      document.getElementById('mute-btn').textContent = 'UNMUTE';
+    }
+  } catch (_) {}
+  if (window.Sound) {
+    Sound.setVolume(gameState.audioVolume);
+    Sound.setMuted(gameState.muted);
+  }
+  const volSlider = document.getElementById('vol-slider');
+  // 'input' = live, 'change' = relachement souris (on prend les deux)
+  const onVolChange = function () {
+    gameState.audioVolume = parseInt(this.value, 10) || 0;
+    if (window.Sound) Sound.setVolume(gameState.audioVolume);
+  };
+  volSlider.addEventListener('input', onVolChange);
+  volSlider.addEventListener('change', onVolChange);
   document.getElementById('mute-btn').addEventListener('click', function () {
     gameState.muted = !gameState.muted;
     this.textContent = gameState.muted ? 'UNMUTE' : 'MUTE';
+    if (window.Sound) Sound.setMuted(gameState.muted);
   });
   document.getElementById('planque-btn').addEventListener('click', () => {
     if (confirm('Quitter la partie ?')) location.href = '../index.html';

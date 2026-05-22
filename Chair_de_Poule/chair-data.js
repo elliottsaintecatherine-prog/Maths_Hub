@@ -93,8 +93,8 @@ const ROOMS = {
     decor: [
       { x:1, y:1, type:'armure',  block:true },
       { x:6, y:1, type:'armure',  block:true },
-      { x:1, y:3, type:'console', block:true },
-      { x:6, y:3, type:'console', block:true },
+      { x:1, y:3, type:'console', block:true, wall:'W' },
+      { x:6, y:3, type:'console', v:2, block:true, wall:'E' },
     ],
     items: [
       // TEST : objet pour exercer le ramassage + l'objectif spectre. A retirer en PZ.
@@ -361,13 +361,13 @@ const ROOMS = {
     ],
     decor: [
       // Grand lit baldaquin 2 places, centre E-W, flanque de 2 chevets
-      { x:3, y:1, type:'table_de_nuit', block:true },
-      { x:4, y:1, type:'lit_baldaquin', block:true },
-      { x:5, y:1, type:'table_de_nuit', block:true },
+      { x:3, y:1, type:'table_de_nuit', block:true, wall:'N' },
+      { x:4, y:1, type:'lit_baldaquin', block:true, wall:'N' },
+      { x:5, y:1, type:'table_de_nuit', block:true, wall:'N' },
       // Armoire a miroir contre le mur Ouest
-      { x:1, y:2, type:'armoire',       block:true },
+      { x:1, y:2, type:'armoire',       block:true, wall:'W' },
       // Coiffeuse + miroir ovale contre le mur Est
-      { x:7, y:2, type:'coiffeuse',     block:true },
+      { x:7, y:2, type:'coiffeuse',     block:true, wall:'E' },
       // Coffre au pied du lit
       { x:4, y:3, type:'coffre_lit',    block:true },
     ],

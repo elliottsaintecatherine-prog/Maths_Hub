@@ -33,7 +33,7 @@ const gameState = {
   objectives: [], // { key, roomId, guardianIndex, status: 'pending'|'resolved' }
   lastVectorTrace: null, // { from:{x,y}, to:{x,y}, t0 } — trace au sol 3s
   objPanelAutoOpened: false, // P5b : 1ere decouverte auto-ouvre le panneau
-  playerFacing: 'front',
+  playerFacing: 'se',
   // Eclairage : ambiance generale sombre, halo lumineux quand la bougie est prise
   hasBougie: false,
   // ─── Tutoriel (mode=tuto uniquement) ───
@@ -92,17 +92,19 @@ function itemBrightImagePath(id, v) { return ASSETS_BASE + 'items/'     + id   +
 function guardianImagePath(id)      { return ASSETS_BASE + 'guardians/' + id   + '.png'; }
 function playerImagePath()          { return ASSETS_BASE + 'player/player.png'; }
 
-// Sprites du joueur : 3 orientations × 3 poses = 9 PNG.
-//   facing : 'left'  -> dos vers nous, marche en haut-gauche
-//            'front' -> dos vers nous, marche en haut-droite (miroir horizontal de 'left')
-//            'right' -> face camera, marche en bas-droite
-//   pose   : 'stand' | 'walk_1' | 'walk_2'
+// Sprites du joueur : 4 directions iso × 5 poses = 20 PNG.
+//   facing : 'nw' -> dos camera, marche vers haut-gauche
+//            'ne' -> dos camera, marche vers haut-droite
+//            'se' -> face camera, marche vers bas-droite
+//            'sw' -> face camera, marche vers bas-gauche
+//   pose   : 'stand' (immobile) | 'right_1' (jambe D levee) | 'right_2' (jambe D posee)
+//                                | 'left_1'  (jambe G levee) | 'left_2'  (jambe G posee)
 // Chemin : assets/images/player/player_{facing}_{pose}.png
 function playerSpritePath(facing, pose) {
   return ASSETS_BASE + 'player/player_' + facing + '_' + pose + '.png';
 }
-const PLAYER_POSES = ['stand', 'walk_1', 'walk_2', 'walk_3', 'walk_4'];
-const PLAYER_FACINGS = ['left', 'front', 'right'];
+const PLAYER_POSES = ['stand', 'right_1', 'right_2', 'left_1', 'left_2'];
+const PLAYER_FACINGS = ['nw', 'ne', 'se', 'sw'];
 
 // ─── Cache + loader d'images (silencieux sur 404) ───────────────
 // MODE DEV : ASSETS_VERSION = timestamp du chargement de la page.
@@ -368,8 +370,29 @@ function drawWall(tx, ty, cell) {
   }
 }
 
+// Offset iso pour pousser un decor contre un mur :
+//   'W' (ouest) -> coin nord-ouest de la tile (haut-gauche ecran)
+//   'N' (nord)  -> coin nord-est           (haut-droite ecran)
+//   'E' (est)   -> coin sud-est            (bas-droite ecran)
+//   'S' (sud)   -> coin sud-ouest          (bas-gauche ecran)
+// Distance = TILE_W/4 horizontal, TILE_H/4 vertical (mi-chemin centre <-> bord).
+function wallOffset(wall) {
+  if (!wall) return { dx: 0, dy: 0 };
+  const hx = TILE_W / 4, hy = TILE_H / 4;
+  switch (wall) {
+    case 'W': return { dx: -hx, dy: -hy };
+    case 'N': return { dx:  hx, dy: -hy };
+    case 'E': return { dx:  hx, dy:  hy };
+    case 'S': return { dx: -hx, dy:  hy };
+    default:  return { dx: 0,   dy: 0   };
+  }
+}
+
 function drawDecor(d) {
-  const { x, y } = tileToScreen(d.x, d.y);
+  const base = tileToScreen(d.x, d.y);
+  const off  = wallOffset(d.wall);
+  const x = base.x + off.dx;
+  const y = base.y + off.dy;
   const img = getImage(decorImagePath(d.type, d.v || 1));
   if (img) {
     const width = TILE_W;
@@ -390,16 +413,52 @@ function drawDecor(d) {
       ctx.arc(0, -90*s, 7*s, 0, Math.PI*2);
       ctx.fill();
     } else if (d.type === 'console') {
-      ctx.fillStyle = '#3d2010';
-      ctx.fillRect(-22*s, -32*s, 44*s, 32*s);
+      // Table de chevet/console iso : losange du dessus + faces ouest/sud,
+      // dimensions occupant ~80% de la tile, hauteur ~60px (echelle s).
+      // Couleurs : bois sombre verni avec arete eclairee.
+      const topW = 56 * s;     // demi-largeur du losange du dessus
+      const topH = 28 * s;     // demi-hauteur du losange du dessus
+      const bodyH = 60 * s;    // hauteur du corps
+      // Face ouest (gauche) — la plus eclairee
+      ctx.fillStyle = '#4a2f15';
+      ctx.beginPath();
+      ctx.moveTo(-topW, -topH);
+      ctx.lineTo(0, 0);
+      ctx.lineTo(0, -bodyH);
+      ctx.lineTo(-topW, -topH - bodyH);
+      ctx.closePath();
+      ctx.fill();
+      // Face sud (droite) — plus sombre
+      ctx.fillStyle = '#2a1a08';
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(topW, -topH);
+      ctx.lineTo(topW, -topH - bodyH);
+      ctx.lineTo(0, -bodyH);
+      ctx.closePath();
+      ctx.fill();
+      // Dessus (losange) — bois clair
       ctx.fillStyle = '#5a3815';
-      ctx.fillRect(-22*s, -32*s, 44*s, 5*s);
-      // bougeoir
+      ctx.beginPath();
+      ctx.moveTo(0, -bodyH - topH * 2);
+      ctx.lineTo(topW, -topH - bodyH);
+      ctx.lineTo(0, -bodyH);
+      ctx.lineTo(-topW, -topH - bodyH);
+      ctx.closePath();
+      ctx.fill();
+      // Tiroir suggere : ligne horizontale sur la face ouest
+      ctx.strokeStyle = '#1a0e04';
+      ctx.lineWidth = 2 * s;
+      ctx.beginPath();
+      ctx.moveTo(-topW * 0.85, -topH * 0.85 - bodyH * 0.55);
+      ctx.lineTo(-topW * 0.15, -bodyH * 0.55);
+      ctx.stroke();
+      // Petit bougeoir pose dessus (decoration discrete)
       ctx.fillStyle = '#8a6a2a';
-      ctx.fillRect(-3*s, -42*s, 6*s, 10*s);
+      ctx.fillRect(-2 * s, -bodyH - topH * 2 - 10 * s, 4 * s, 10 * s);
       ctx.fillStyle = '#f5d070';
       ctx.beginPath();
-      ctx.arc(0, -46*s, 3*s, 0, Math.PI*2);
+      ctx.arc(0, -bodyH - topH * 2 - 13 * s, 2.5 * s, 0, Math.PI * 2);
       ctx.fill();
     } else if (d.type === 'porte') {
       ctx.fillStyle = '#2a1a08';
@@ -768,10 +827,10 @@ function getAnimPos(a, now) {
   return { x: a.midX, y: a.midY + (a.toY - a.midY) * ee };
 }
 
-// Renvoie l'orientation du sprite ('left' | 'front' | 'right') pour la jambe
-// active du deplacement L-shape. Mapping (cf. bilan orientations) :
-//   gridDx > 0 -> 'right' (bas-droite ecran) | gridDx < 0 -> 'left'  (haut-gauche)
-//   gridDy < 0 -> 'front' (haut-droite)     | gridDy > 0 -> 'left'  (fallback)
+// Renvoie l'orientation du sprite ('nw' | 'ne' | 'se' | 'sw') pour la jambe
+// active du deplacement L-shape. Mapping iso :
+//   gridDx > 0 -> 'se' (bas-droite ecran) | gridDx < 0 -> 'nw' (haut-gauche)
+//   gridDy < 0 -> 'ne' (haut-droite)      | gridDy > 0 -> 'sw' (bas-gauche)
 // Si pas d'anim ou anim rectiligne : conserve gameState.playerFacing.
 function getAnimFacing(a, now, fallback) {
   if (!a || a.midX === undefined) return fallback;
@@ -782,15 +841,15 @@ function getAnimFacing(a, now, fallback) {
   if (split <= 0) inLegY = true;
   else if (split >= 1) inLegY = false;
   else inLegY = (t >= split);
-  
+
   if (inLegY) {
     const gridDy = a.toY - a.midY;
-    if (gridDy < 0) return 'front'; // moving up-right
-    if (gridDy > 0) return 'left';  // moving down-left
+    if (gridDy < 0) return 'ne'; // moving up-right
+    if (gridDy > 0) return 'sw'; // moving down-left
   } else {
     const gridDx = a.midX - a.fromX;
-    if (gridDx > 0) return 'right'; // moving down-right
-    if (gridDx < 0) return 'left';  // moving up-left
+    if (gridDx > 0) return 'se'; // moving down-right
+    if (gridDx < 0) return 'nw'; // moving up-left
   }
   return fallback;
 }
@@ -811,20 +870,19 @@ function drawPlayer() {
 
   // Determine facing direction (peut basculer au coin pour un trajet L-shape)
   const facing = gameState.moveAnim && !gameState.moveAnim.isBounce
-    ? getAnimFacing(gameState.moveAnim, performance.now(), gameState.playerFacing || 'front')
-    : (gameState.playerFacing || 'front');
+    ? getAnimFacing(gameState.moveAnim, performance.now(), gameState.playerFacing || 'se')
+    : (gameState.playerFacing || 'se');
 
-  // Determine animation frame
+  // Determine animation frame : cycle pied D leve -> pose -> pied G leve -> pose.
   let frame = 'stand';
   if (gameState.isMoving && gameState.moveAnim) {
     const elapsed = performance.now() - gameState.moveAnim.t0;
-    // Walk cycle: walk_1 -> walk_2 -> walk_3 -> walk_4 (4 phases continues)
-    const stepTime = 150; // ms par phase (légèrement accéléré pour la fluidité)
+    const stepTime = 150; // ms par phase
     const frameIndex = Math.floor(elapsed / stepTime) % 4;
-    if (frameIndex === 0) frame = 'walk_1';
-    else if (frameIndex === 1) frame = 'walk_2';
-    else if (frameIndex === 2) frame = 'walk_3';
-    else frame = 'walk_4';
+    if (frameIndex === 0) frame = 'right_1';
+    else if (frameIndex === 1) frame = 'right_2';
+    else if (frameIndex === 2) frame = 'left_1';
+    else frame = 'left_2';
   }
 
   let img = getImage(playerSpritePath(facing, frame));
@@ -845,10 +903,12 @@ function drawPlayer() {
     const height = width * (img.naturalHeight / img.naturalWidth);
     ctx.drawImage(img, sx - width / 2, sy - height, width, height);
 
-    // Halo (lanterne) - toujours par-dessus, procedural
-    // Decale le halo selon l'orientation pour qu'il soit sur la lanterne
-    const lanternOffsetX = (facing === 'left') ? -12 * s : 12 * s;
-    const lanternOffsetY = -24 * s;
+    // Halo (lanterne) - toujours par-dessus, procedural.
+    // La lanterne est tenue par la main gauche du personnage. Quand le perso
+    // tourne le dos (nw/ne), cette main apparait cote GAUCHE ecran. Quand il
+    // fait face (se/sw), elle apparait cote DROIT ecran (mirroir corporel).
+    const lanternOffsetX = (facing === 'nw' || facing === 'ne') ? -12 * s : 12 * s;
+    const lanternOffsetY = (facing === 'nw' || facing === 'ne') ? -24 * s : -16 * s;
 
     const grad = ctx.createRadialGradient(sx + lanternOffsetX, sy + lanternOffsetY, 0, sx + lanternOffsetX, sy + lanternOffsetY, 60*s);
     grad.addColorStop(0, 'rgba(245, 208, 112, 0.35)');
@@ -951,41 +1011,100 @@ function render() {
   drawLighting();
 }
 
-// ─── Eclairage : ambiance sombre + halo de bougie ───────────────────
-// Sans bougie : voile noir uniforme couvrant tout le canvas.
-// Avec bougie : voile noir + trou clair en degrade radial centre sur le
-//               joueur, eclairant ~2-3 tiles autour de lui.
-function drawLighting() {
-  // Constantes d'eclairage : a ajuster pour rendre plus ou moins sombre.
-  const DARK_ALPHA  = 0.55;   // intensite du voile (0=clair, 1=opaque)
-  const HALO_RADIUS_TILES = 2.6;  // rayon du halo bougie (en nombre de tiles)
+// ─── Eclairage : ambiance sombre + sources de lumiere ───────────────
+// Voile sombre par defaut, perce de halos lumineux pour les sources actives :
+//   - bougie tenue par le joueur : halo 3x3 (la case du joueur + les 8 voisines)
+//   - bougie encore posee dans la salle (non ramassee) : halo 1 case sur sa
+//     position, pour que le joueur la repere a l'ecran des le debut
+// On utilise un canvas offscreen pour appliquer destination-out (creuser le
+// voile) sans abimer les tiles/decor/joueur dessines sur le canvas principal.
+let lightingCanvas = null;
 
-  if (!gameState.hasBougie) {
-    // Voile uniforme : le joueur ne voit presque rien sans bougie.
+function drawLighting() {
+  const DARK_ALPHA = 0.82;  // voile sombre (0=clair, 1=opaque)
+  const room = getCurrentMap().rooms[gameState.currentRoom];
+  if (!room) return;
+
+  // Flicker organique : toutes les flammes respirent legerement.
+  const t = performance.now() / 1000;
+  const flicker = 1 + Math.sin(t * 6.3) * 0.04 + Math.sin(t * 11.7) * 0.025;
+
+  // 1. Construit la liste des sources de lumiere (tile + rayon + intensite).
+  const lightSources = [];
+
+  if (gameState.hasBougie) {
+    // Position discrete (arrondie) pour que la grille 3x3 reste alignee
+    // meme pendant l'animation de deplacement.
+    let cx, cy;
+    if (gameState.moveAnim) {
+      const p = getAnimPos(gameState.moveAnim, performance.now());
+      cx = Math.round(p.x);
+      cy = Math.round(p.y);
+    } else {
+      cx = gameState.player.x;
+      cy = gameState.player.y;
+    }
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const tx = cx + dx;
+        const ty = cy + dy;
+        if (tx < 0 || ty < 0 || tx >= room.width || ty >= room.height) continue;
+        const isCenter = (dx === 0 && dy === 0);
+        lightSources.push({
+          tx, ty,
+          radiusMul: isCenter ? 1.0 : 0.92,
+          intensity: isCenter ? 1.0 : 0.85,
+        });
+      }
+    }
+  } else {
+    // Sans bougie : toute bougie encore posee dans la salle emet sa propre
+    // lueur. Halo aussi large que la case du joueur quand il la tient, pour
+    // qu'on voie clairement la bougie et son environnement immediat.
+    for (const it of (room.items || [])) {
+      if (it.id === 'bougie') {
+        lightSources.push({ tx: it.x, ty: it.y, radiusMul: 1.0, intensity: 1.0 });
+      }
+    }
+  }
+
+  // 2. Voile uniforme si aucune source.
+  if (lightSources.length === 0) {
     ctx.fillStyle = 'rgba(8, 5, 3, ' + DARK_ALPHA.toFixed(2) + ')';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     return;
   }
 
-  // Avec bougie : radial gradient. Centre sur la position ecran du joueur
-  // (interpolee durant l'animation pour que le halo suive le deplacement).
-  const { x: px, y: py } = getPlayerScreenPos();
-  // Conversion tiles -> pixels ecran : on prend la diagonale moyenne d'une
-  // tile iso comme unite (TILE_W est la largeur de la base diamant).
-  const radius = HALO_RADIUS_TILES * TILE_W;
+  // 3. Sinon : voile + trous lumineux via canvas offscreen.
+  if (!lightingCanvas || lightingCanvas.width !== canvas.width || lightingCanvas.height !== canvas.height) {
+    lightingCanvas = document.createElement('canvas');
+    lightingCanvas.width = canvas.width;
+    lightingCanvas.height = canvas.height;
+  }
+  const lctx = lightingCanvas.getContext('2d');
+  lctx.clearRect(0, 0, lightingCanvas.width, lightingCanvas.height);
+  lctx.fillStyle = 'rgba(8, 5, 3, ' + DARK_ALPHA.toFixed(2) + ')';
+  lctx.fillRect(0, 0, lightingCanvas.width, lightingCanvas.height);
 
-  // Petit flicker organique pour donner vie a la flamme : intensite et
-  // rayon oscillent legerement.
-  const t = performance.now() / 1000;
-  const flicker = 1 + Math.sin(t * 6.3) * 0.04 + Math.sin(t * 11.7) * 0.025;
-  const r = radius * flicker;
+  lctx.globalCompositeOperation = 'destination-out';
+  const baseRadius = TILE_W * 0.72 * flicker;
+  for (const s of lightSources) {
+    // tileToScreen retourne deja le CENTRE du losange iso de la tile,
+    // pas son sommet superieur — donc on l'utilise tel quel comme centre
+    // du halo (ajouter TILE_H/2 le placait sur le sommet du bas, qui est
+    // le point de rencontre de 4 tiles : artefact visible).
+    const { x: sx, y: sy } = tileToScreen(s.tx, s.ty);
+    const radius = baseRadius * s.radiusMul;
+    const grad = lctx.createRadialGradient(sx, sy, 0, sx, sy, radius);
+    grad.addColorStop(0,    'rgba(0, 0, 0, ' + s.intensity.toFixed(2) + ')');
+    grad.addColorStop(0.55, 'rgba(0, 0, 0, ' + (s.intensity * 0.55).toFixed(2) + ')');
+    grad.addColorStop(1,    'rgba(0, 0, 0, 0)');
+    lctx.fillStyle = grad;
+    lctx.fillRect(sx - radius, sy - radius, radius * 2, radius * 2);
+  }
+  lctx.globalCompositeOperation = 'source-over';
 
-  const grad = ctx.createRadialGradient(px, py, 0, px, py, r);
-  grad.addColorStop(0,    'rgba(8, 5, 3, 0)');      // centre : pleine lumiere
-  grad.addColorStop(0.45, 'rgba(8, 5, 3, ' + (DARK_ALPHA * 0.25).toFixed(2) + ')');
-  grad.addColorStop(1,    'rgba(8, 5, 3, ' + DARK_ALPHA.toFixed(2) + ')');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(lightingCanvas, 0, 0);
 }
 
 // ═══════════════════════════════════════════════════════════════

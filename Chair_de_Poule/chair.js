@@ -1006,9 +1006,13 @@ function render() {
   drawPlayer();
 
   // 6. Eclairage (voile sombre + halo bougie le cas echeant) — DOIT etre le
-  //    dernier element dessine, mais reste sous les overlays DOM (vision,
+  //    dernier element canvas dessine, mais reste sous les overlays DOM (vision,
   //    malaise-pulse, panneau vecteur, HUD...).
   drawLighting();
+
+  // 7. Indicateur de sortie (mode tuto uniquement) — dessine APRES le voile
+  //    pour rester visible dans la penombre.
+  drawExitIndicator(room);
 }
 
 // ─── Eclairage : ambiance sombre + sources de lumiere ───────────────
@@ -1105,6 +1109,59 @@ function drawLighting() {
   lctx.globalCompositeOperation = 'source-over';
 
   ctx.drawImage(lightingCanvas, 0, 0);
+}
+
+// ─── Indicateur de sortie (mode tuto) ───────────────────────────────
+// Petite veilleuse verte qui scintille discretement sur la tile EXIT, comme
+// la diode d'un panneau de sortie de secours qui se reflete au sol.
+// Dessine apres drawLighting() pour rester visible dans la penombre, mais
+// volontairement faible en intensite et en amplitude.
+function drawExitIndicator(room) {
+  if (gameState.mode !== 'tuto' || !room) return;
+
+  let ex = -1, ey = -1;
+  for (let y = 0; y < room.height && ex === -1; y++) {
+    for (let x = 0; x < room.width; x++) {
+      if (getTileType(room, x, y) === TILE.EXIT) { ex = x; ey = y; break; }
+    }
+  }
+  if (ex === -1) return;
+
+  const { x: sx, y: sy } = tileToScreen(ex, ey);
+  const t = performance.now() / 1000;
+  // Scintillement irregulier doux : superposition de deux sinus a frequences
+  // incommensurables. Plage 0.78 .. 1.0 -> variation perceptible mais discrete.
+  const flicker = 0.89 + 0.07 * Math.sin(t * 5.3) + 0.04 * Math.sin(t * 13.1);
+
+  ctx.save();
+
+  // 1. Reflet vert doux au sol — halo radial bas, fond de teinte tres faible.
+  const reflectR = TILE_W * 0.42;
+  const reflect = ctx.createRadialGradient(sx, sy, 0, sx, sy, reflectR);
+  reflect.addColorStop(0,    'rgba(140, 210, 120, ' + (0.24 * flicker).toFixed(3) + ')');
+  reflect.addColorStop(0.55, 'rgba(110, 180, 95, ' + (0.10 * flicker).toFixed(3) + ')');
+  reflect.addColorStop(1,    'rgba(80, 140, 70, 0)');
+  ctx.fillStyle = reflect;
+  ctx.fillRect(sx - reflectR, sy - reflectR, reflectR * 2, reflectR * 2);
+
+  // 2. Diode : petit point vert avec mini-halo qui scintille legerement.
+  const lampR = 2.4 + 0.7 * flicker;
+  // Halo serre autour de la diode
+  const lampGrad = ctx.createRadialGradient(sx, sy, 0, sx, sy, lampR * 3.5);
+  lampGrad.addColorStop(0,   'rgba(180, 245, 160, ' + (0.55 * flicker).toFixed(3) + ')');
+  lampGrad.addColorStop(0.5, 'rgba(140, 220, 130, ' + (0.18 * flicker).toFixed(3) + ')');
+  lampGrad.addColorStop(1,   'rgba(120, 200, 110, 0)');
+  ctx.fillStyle = lampGrad;
+  ctx.beginPath();
+  ctx.arc(sx, sy, lampR * 3.5, 0, Math.PI * 2);
+  ctx.fill();
+  // Coeur de la diode (point plein)
+  ctx.fillStyle = 'rgba(200, 250, 180, ' + (0.85 * flicker).toFixed(3) + ')';
+  ctx.beginPath();
+  ctx.arc(sx, sy, lampR, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1222,11 +1279,15 @@ function updateInventoryHUD() {
   if (!panel) {
     panel = document.createElement('div');
     panel.id = 'inventory-panel';
-    panel.style.cssText = 'position:fixed;bottom:16px;left:16px;width:auto;min-width:120px;padding:12px;background:rgba(26,18,8,0.85);border:1px solid #f5d070;z-index:7000;font-family:Georgia,serif;';
+    panel.style.cssText = 'position:fixed;bottom:16px;left:16px;width:auto;min-width:120px;padding:12px;background:rgba(26,18,8,0.85);border:1px solid #f5d070;z-index:7000;font-family:Georgia,serif;cursor:pointer;transition:background 0.15s ease;';
+    panel.title = 'Cliquer pour ouvrir le sac';
+    panel.addEventListener('click', openBagModal);
+    panel.addEventListener('mouseenter', () => { panel.style.background = 'rgba(40,28,12,0.95)'; });
+    panel.addEventListener('mouseleave', () => { panel.style.background = 'rgba(26,18,8,0.85)'; });
     document.body.appendChild(panel);
   }
   const items = gameState.inventory;
-  let html = '<div style="color:#f5d070;font-size:14px;letter-spacing:2px;margin-bottom:8px;">SAC</div>';
+  let html = '<div style="color:#f5d070;font-size:14px;letter-spacing:2px;margin-bottom:8px;">SAC <span style="font-size:10px;color:#8a6a2a;letter-spacing:1px;">(clic)</span></div>';
   if (items.length === 0) {
     html += '<div style="font-style:italic;color:#6a5030;font-size:13px;">(vide)</div>';
   } else {
@@ -1239,6 +1300,60 @@ function updateInventoryHUD() {
   }
   panel.innerHTML = html;
 }
+
+// ─── Modal d'ouverture du sac ───────────────────────────────────────
+// Sur clic du HUD inventaire : ouvre un panneau central listant chaque
+// item avec son sprite et sa description. Click sur le fond ou sur FERMER
+// pour quitter.
+function openBagModal() {
+  let modal = document.getElementById('bag-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'bag-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(8,5,3,0.82);z-index:9000;display:none;align-items:center;justify-content:center;';
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeBagModal(); });
+    document.body.appendChild(modal);
+  }
+
+  const items = gameState.inventory;
+  let html = '<div style="background:rgba(26,18,8,0.98);border:2px solid #f5d070;border-radius:8px;padding:24px;min-width:380px;max-width:90vw;max-height:80vh;overflow-y:auto;font-family:Georgia,serif;box-shadow:0 6px 32px rgba(0,0,0,0.7);">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;border-bottom:1px solid #3d2810;padding-bottom:12px;">';
+  html += '<h2 style="color:#f5d070;font-size:18px;letter-spacing:3px;margin:0;font-family:\'Courier New\',monospace;">&#9830; SAC &#9830;</h2>';
+  html += '<button onclick="closeBagModal()" style="background:transparent;border:1px solid #3d2810;color:#8a6a2a;cursor:pointer;font-family:\'Courier New\',monospace;font-size:11px;padding:6px 12px;border-radius:4px;letter-spacing:1px;">FERMER</button>';
+  html += '</div>';
+
+  if (items.length === 0) {
+    html += '<div style="color:#6a5030;font-style:italic;text-align:center;padding:24px 12px;font-size:14px;">Ton sac est vide.</div>';
+  } else {
+    html += '<div style="display:flex;flex-direction:column;gap:14px;">';
+    items.forEach(id => {
+      const obj = OBJECTS[id];
+      if (!obj) return;
+      const imgUrl = bustedUrl(itemImagePath(id));
+      html += '<div style="display:flex;gap:14px;align-items:center;padding:10px;border:1px solid #3d2810;border-radius:4px;background:rgba(8,5,3,0.45);">';
+      html += '<img src="' + imgUrl + '" style="width:48px;height:48px;object-fit:contain;background:rgba(26,18,8,0.5);border-radius:4px;border:1px solid #2a1a08;" onerror="this.style.opacity=0.3">';
+      html += '<div style="flex:1;">';
+      html += '<div style="color:#f5d070;font-size:14px;letter-spacing:1px;margin-bottom:4px;">' + obj.name + '</div>';
+      html += '<div style="color:#d4b078;font-size:12px;line-height:1.5;">' + (obj.desc || '') + '</div>';
+      html += '</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+
+  html += '</div>';
+  modal.innerHTML = html;
+  modal.style.display = 'flex';
+}
+
+function closeBagModal() {
+  const modal = document.getElementById('bag-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+// Expose les handlers pour les onclick inline du modal.
+window.openBagModal  = openBagModal;
+window.closeBagModal = closeBagModal;
 
 // ═══════════════════════════════════════════════════════════════
 // SECTION 4b — Transitions de salles

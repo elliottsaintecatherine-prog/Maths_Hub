@@ -1112,55 +1112,106 @@ function drawLighting() {
 }
 
 // ─── Indicateur de sortie (mode tuto) ───────────────────────────────
-// Petite veilleuse verte qui scintille discretement sur la tile EXIT, comme
-// la diode d'un panneau de sortie de secours qui se reflete au sol.
+// Petite LED verte qui scintille au sol, style "veilleuse de sortie de
+// secours". Strategie : on la place sur la tile dont la traversee rapproche
+// le joueur de la sortie finale (BFS sur le graphe des salles).
+//   - Si la salle courante contient la tile EXIT : LED sur cette tile.
+//   - Sinon : LED sur la porte qui mene a la salle suivante du chemin BFS.
 // Dessine apres drawLighting() pour rester visible dans la penombre, mais
 // volontairement faible en intensite et en amplitude.
 function drawExitIndicator(room) {
   if (gameState.mode !== 'tuto' || !room) return;
 
-  let ex = -1, ey = -1;
-  for (let y = 0; y < room.height && ex === -1; y++) {
-    for (let x = 0; x < room.width; x++) {
-      if (getTileType(room, x, y) === TILE.EXIT) { ex = x; ey = y; break; }
+  const exitRoomId = findRoomContainingExit();
+  if (!exitRoomId) return;
+
+  const targetTiles = [];
+
+  if (gameState.currentRoom === exitRoomId) {
+    // On y est : pointer la tile EXIT elle-meme.
+    for (let y = 0; y < room.height; y++) {
+      for (let x = 0; x < room.width; x++) {
+        if (getTileType(room, x, y) === TILE.EXIT) {
+          targetTiles.push({ x, y });
+        }
+      }
+    }
+  } else {
+    // Trouve le prochain saut sur le chemin vers la salle d'exit.
+    const path = findPathToRoom(gameState.currentRoom, exitRoomId);
+    if (!path || path.length < 2) return;
+    const nextRoomId = path[1];
+    for (const door of (room.doors || [])) {
+      if (door.target === nextRoomId) targetTiles.push({ x: door.x, y: door.y });
     }
   }
-  if (ex === -1) return;
 
-  const { x: sx, y: sy } = tileToScreen(ex, ey);
+  for (const tile of targetTiles) drawExitLED(tile.x, tile.y);
+}
+
+// Trouve la premiere salle du MAP courante qui contient une tile TILE.EXIT.
+function findRoomContainingExit() {
+  const rooms = (getCurrentMap() || {}).rooms || {};
+  for (const id in rooms) {
+    const r = rooms[id];
+    for (let y = 0; y < r.height; y++) {
+      for (let x = 0; x < r.width; x++) {
+        if (getTileType(r, x, y) === TILE.EXIT) return id;
+      }
+    }
+  }
+  return null;
+}
+
+// BFS sur le graphe des salles via les portes. Retourne le chemin sous forme
+// de liste d'ID de salles (start inclus, end inclus), ou null si pas de
+// connexion.
+function findPathToRoom(startId, endId) {
+  if (startId === endId) return [startId];
+  const rooms = (getCurrentMap() || {}).rooms || {};
+  if (!rooms[startId] || !rooms[endId]) return null;
+  const visited = new Set([startId]);
+  const queue = [[startId]];
+  while (queue.length) {
+    const path = queue.shift();
+    const last = path[path.length - 1];
+    const doors = (rooms[last] && rooms[last].doors) || [];
+    for (const door of doors) {
+      const target = door.target;
+      if (!target || visited.has(target) || !rooms[target]) continue;
+      const newPath = path.concat(target);
+      if (target === endId) return newPath;
+      visited.add(target);
+      queue.push(newPath);
+    }
+  }
+  return null;
+}
+
+// "Lueur de sortie de secours tamisee" : seules les 4 aretes du losange
+// iso sont eclairees. Stroke fin vert + shadowBlur -> la ligne elle-meme
+// est subtile, mais elle rayonne legerement de part et d'autre. L'interieur
+// du losange reste dans la penombre.
+function drawExitLED(tx, ty) {
+  const { x: sx, y: sy } = tileToScreen(tx, ty);
   const t = performance.now() / 1000;
-  // Scintillement irregulier doux : superposition de deux sinus a frequences
-  // incommensurables. Plage 0.78 .. 1.0 -> variation perceptible mais discrete.
-  const flicker = 0.89 + 0.07 * Math.sin(t * 5.3) + 0.04 * Math.sin(t * 13.1);
+  // Scintillement irregulier (2 sinus incommensurables) — plage 0.44 .. 1.00.
+  const flicker = 0.72 + 0.18 * Math.sin(t * 5.3) + 0.10 * Math.sin(t * 13.1);
 
   ctx.save();
-
-  // 1. Reflet vert doux au sol — halo radial bas, fond de teinte tres faible.
-  const reflectR = TILE_W * 0.42;
-  const reflect = ctx.createRadialGradient(sx, sy, 0, sx, sy, reflectR);
-  reflect.addColorStop(0,    'rgba(140, 210, 120, ' + (0.24 * flicker).toFixed(3) + ')');
-  reflect.addColorStop(0.55, 'rgba(110, 180, 95, ' + (0.10 * flicker).toFixed(3) + ')');
-  reflect.addColorStop(1,    'rgba(80, 140, 70, 0)');
-  ctx.fillStyle = reflect;
-  ctx.fillRect(sx - reflectR, sy - reflectR, reflectR * 2, reflectR * 2);
-
-  // 2. Diode : petit point vert avec mini-halo qui scintille legerement.
-  const lampR = 2.4 + 0.7 * flicker;
-  // Halo serre autour de la diode
-  const lampGrad = ctx.createRadialGradient(sx, sy, 0, sx, sy, lampR * 3.5);
-  lampGrad.addColorStop(0,   'rgba(180, 245, 160, ' + (0.55 * flicker).toFixed(3) + ')');
-  lampGrad.addColorStop(0.5, 'rgba(140, 220, 130, ' + (0.18 * flicker).toFixed(3) + ')');
-  lampGrad.addColorStop(1,   'rgba(120, 200, 110, 0)');
-  ctx.fillStyle = lampGrad;
+  // Glow autour de la ligne (rayonnement de la bordure).
+  ctx.shadowColor = 'rgba(140, 220, 120, ' + (0.55 * flicker).toFixed(3) + ')';
+  ctx.shadowBlur  = 7;
+  // Trait lui-meme : fin et semi-transparent.
+  ctx.strokeStyle = 'rgba(170, 230, 140, ' + (0.32 * flicker).toFixed(3) + ')';
+  ctx.lineWidth   = 1.3;
   ctx.beginPath();
-  ctx.arc(sx, sy, lampR * 3.5, 0, Math.PI * 2);
-  ctx.fill();
-  // Coeur de la diode (point plein)
-  ctx.fillStyle = 'rgba(200, 250, 180, ' + (0.85 * flicker).toFixed(3) + ')';
-  ctx.beginPath();
-  ctx.arc(sx, sy, lampR, 0, Math.PI * 2);
-  ctx.fill();
-
+  ctx.moveTo(sx,              sy - TILE_H / 2);
+  ctx.lineTo(sx + TILE_W / 2, sy);
+  ctx.lineTo(sx,              sy + TILE_H / 2);
+  ctx.lineTo(sx - TILE_W / 2, sy);
+  ctx.closePath();
+  ctx.stroke();
   ctx.restore();
 }
 
@@ -1214,8 +1265,8 @@ function playVector(vx, vy) {
   // Facing initial = direction de la 1ere jambe.
   // Leg X (gridDy=0) : screenDx = vx -> sign(vx)
   // Leg Y (gridDx=0) : screenDx = -gridDy = vy -> sign(vy)
-  if (legX > 0)      gameState.playerFacing = (vx > 0) ? 'right' : 'left';
-  else if (legY > 0) gameState.playerFacing = (vy > 0) ? 'front' : 'left';
+  if (legX > 0)      gameState.playerFacing = (vx > 0) ? 'se' : 'nw';
+  else if (legY > 0) gameState.playerFacing = (vy > 0) ? 'ne' : 'sw';
 
   // Stocker la position avant l'animation (pour rebond eventuel sur porte gardee)
   gameState.lastPlayerPos = { x: fromX, y: fromY };
@@ -1420,10 +1471,10 @@ function bouncePlayer() {
   // Facing iso : screenDx = gridDx - gridDy
   const dx = gameState.lastPlayerPos.x - gameState.player.x;
   const dy = gameState.lastPlayerPos.y - gameState.player.y;
-  if (dx > 0) gameState.playerFacing = 'right';
-  else if (dx < 0) gameState.playerFacing = 'left';
-  else if (dy < 0) gameState.playerFacing = 'front';
-  else if (dy > 0) gameState.playerFacing = 'left';
+  if (dx > 0) gameState.playerFacing = 'se';
+  else if (dx < 0) gameState.playerFacing = 'nw';
+  else if (dy < 0) gameState.playerFacing = 'ne';
+  else if (dy > 0) gameState.playerFacing = 'sw';
 
   gameState.isMoving = true;
   gameState.moveAnim = {
@@ -1877,8 +1928,8 @@ function update() {
       // En L-shape : le facing final = direction de la 2e jambe (Y) si elle existe.
       if (!a.isBounce && a.midX !== undefined && a.legSplit < 1) {
         const gridDy = a.toY - a.midY;
-        if (gridDy < 0) gameState.playerFacing = 'front';
-        else if (gridDy > 0) gameState.playerFacing = 'left';
+        if (gridDy < 0) gameState.playerFacing = 'ne';
+        else if (gridDy > 0) gameState.playerFacing = 'sw';
       }
       const wasBounce = a.isBounce;
       gameState.moveAnim = null;

@@ -56,18 +56,22 @@ function createIsolationModule(playerInstru, playerOrig, volSlider) {
   function toggle() {
     if (!initialized) return isIsolating;
 
-    const now = ctx.currentTime;
+    const now      = ctx.currentTime;
+    const gainOrig = window.gainOrig;
 
     // cancelScheduledValues avant toute modification pour éviter les conflits
     gainInstru.gain.cancelScheduledValues(now);
+    if (gainOrig) gainOrig.gain.cancelScheduledValues(now);
 
     if (!isIsolating) {
-      // Mode guide vocal ON : estomper le karaoké, laisser la voix originale
+      // Mode guide vocal ON : estomper le karaoké, monter la voix originale à 100 %
       gainInstru.gain.setTargetAtTime(0, now, FADE_TC);
+      if (gainOrig) gainOrig.gain.setTargetAtTime(1, now, FADE_TC);
       isIsolating = true;
     } else {
-      // Mode guide vocal OFF : rétablir le karaoké
+      // Mode guide vocal OFF : rétablir le karaoké et le mix voix du curseur
       gainInstru.gain.setTargetAtTime(1, now, FADE_TC);
+      if (gainOrig) gainOrig.gain.setTargetAtTime(+volSlider.value, now, FADE_TC);
       isIsolating = false;
     }
 
@@ -102,10 +106,15 @@ function createIsolationModule(playerInstru, playerOrig, volSlider) {
     if (resyncInterval) { clearInterval(resyncInterval); resyncInterval = null; }
     if (!initialized) return;
 
-    // Rétablir gainInstru immédiatement
-    const now = ctx.currentTime;
+    // Rétablir gainInstru et le mix voix immédiatement
+    const now      = ctx.currentTime;
+    const gainOrig = window.gainOrig;
     gainInstru.gain.cancelScheduledValues(now);
     gainInstru.gain.setValueAtTime(1, now);
+    if (gainOrig) {
+      gainOrig.gain.cancelScheduledValues(now);
+      gainOrig.gain.setValueAtTime(+volSlider.value, now);
+    }
     isIsolating = false;
 
     updateButton();

@@ -711,15 +711,42 @@ btnHarmonyPlay.addEventListener('click', async () => {
     }
     try {
       if (!routingReady) await initRouting();
-      try { gainOrig.disconnect(); } catch {}
-      gainOrig.connect(pitchShift.input);
+      // Tone.connect fait le pont nœud natif → nœud Tone.js (un connect() natif
+      // sur pitchShift.input lève une exception). On branche AVANT de débrancher
+      // la sortie directe : si la connexion échoue, le son reste intact.
+      Tone.connect(gainOrig, pitchShift);
+      try { gainOrig.disconnect(Tone.context.rawContext.destination); } catch {}
       harmonyMode = 'original';
       btnHarmonyStop.disabled = false;
       btnHarmonyPlay.textContent = '🎵 En cours…';
-    } catch(e) { alert('Erreur harmonie voix artiste : ' + e.message); }
+    } catch(e) {
+      // Quoi qu'il arrive, rétablir la sortie directe de la voix
+      try { gainOrig.disconnect(); } catch {}
+      try { gainOrig.connect(Tone.context.rawContext.destination); } catch {}
+      alert('Erreur harmonie voix artiste : ' + e.message);
+    }
   }
 });
 btnHarmonyStop.addEventListener('click', stopHarmony);
+
+/* ===== MODE GUIDE VOCAL (isolation.js) ===== */
+const isolation = (typeof createIsolationModule === 'function')
+  ? createIsolationModule(playerInstru, playerOrig, volSlider)
+  : null;
+
+document.getElementById('btn-isolate-voice')?.addEventListener('click', async () => {
+  if (!isolation) return;
+  if (location.protocol === 'file:') {
+    alert('Le guide vocal nécessite un serveur HTTP (GitHub Pages ou Live Server).');
+    return;
+  }
+  try {
+    if (!isolation.ready) await isolation.init();
+    isolation.toggle();
+  } catch (e) {
+    alert('Guide vocal indisponible : ' + e.message);
+  }
+});
 
 /* ===== VISUALISEUR PITCH (canvas temps réel) ===== */
 // Constantes de l'axe
@@ -748,7 +775,23 @@ function autoCorrelate(buf, sr) {
   let d = 0; while (c[d] > c[d + 1]) d++;
   let mv = -1, mp = -1;
   for (let i = d; i < SIZE; i++) if (c[i] > mv) { mv = c[i]; mp = i; }
+  if (mp <= 0) return -1;
+  // Clarté : rapport pic de corrélation / énergie, compensé du nombre de termes.
+  // Les attaques de notes (consonnes, transitoires) sont apériodiques → clarté
+  // faible → rejetées, ce qui évite les pics parasites en début de note.
+  const clarity = c[mp] / ((c[0] * (SIZE - mp)) / SIZE || 1);
+  if (clarity < 0.8) return -1;
   return sr / mp;
+}
+
+// Médiane de la fenêtre de lissage — null tant que la fenêtre n'est pas assez
+// remplie (anti-pic : on attend quelques trames stables après un silence avant
+// d'afficher ou de scorer quoi que ce soit).
+const PITCH_WIN        = 5;  // taille de la fenêtre de lissage
+const PITCH_MIN_STABLE = 3;  // trames valides minimum avant affichage
+function medianNote(arr) {
+  if (arr.length < PITCH_MIN_STABLE) return null;
+  return [...arr].sort((a, b) => a - b)[Math.floor(arr.length / 2)];
 }
 
 // Dessin des axes (fond transparent → le CSS du .pitch-wrap est visible)
@@ -870,10 +913,7 @@ function renderLoop() {
   resizeCanvas();
   const nowSec = playerInstru.currentTime || 0;
   if (ghMode) {
-    const userMidi = pitchSmooth.length
-      ? [...pitchSmooth].sort((a,b)=>a-b)[Math.floor(pitchSmooth.length/2)]
-      : null;
-    drawGuitarHero(canvasCtx, canvas.width, canvas.height, nowSec, userMidi);
+    drawGuitarHero(canvasCtx, canvas.width, canvas.height, nowSec, medianNote(pitchSmooth));
   } else {
     drawPitchAxes(canvasCtx, canvas.width, canvas.height, nowSec);
     drawCurrentNote();
@@ -887,12 +927,17 @@ function renderLoop() {
     const valid = pitch !== -1 && pitch >= 60 && pitch <= 1100;
     if (valid) {
       const rawNote = Math.round(12 * (Math.log(pitch / 440) / Math.log(2))) + 69;
-      pitchSmooth.push(rawNote); if (pitchSmooth.length > 3) pitchSmooth.shift();
-      const note = [...pitchSmooth].sort((a, b) => a - b)[Math.floor(pitchSmooth.length / 2)];
-      noteBadge.textContent = NOTE_NAMES[note % 12];
-      pitchData.push(pitchNoteToY(note, canvas.height));
-      pitchMidi1.push(note);
-      updateDeviationBadge(pitch);
+      pitchSmooth.push(rawNote); if (pitchSmooth.length > PITCH_WIN) pitchSmooth.shift();
+      const note = medianNote(pitchSmooth);
+      if (note !== null) {
+        noteBadge.textContent = NOTE_NAMES[note % 12];
+        pitchData.push(pitchNoteToY(note, canvas.height));
+        pitchMidi1.push(note);
+        updateDeviationBadge(pitch);
+      } else {
+        // Attaque de note : on attend que la détection se stabilise avant d'afficher
+        pitchData.push(null); pitchMidi1.push(null);
+      }
     } else {
       if (pitch === -1) { pitchSmooth.length = 0; updateDeviationBadge(null); }
       noteBadge.textContent = '--'; pitchData.push(null); pitchMidi1.push(null);
@@ -917,7 +962,7 @@ function renderLoop() {
 
     // ---- Feature 9 : pitch log + score en temps réel ----
     const tNow   = playerInstru.currentTime || 0;
-    const curMidi = pitchSmooth.length ? [...pitchSmooth].sort((a,b)=>a-b)[Math.floor(pitchSmooth.length/2)] : null;
+    const curMidi = medianNote(pitchSmooth);
     let artistMidi = null;
     if (artistAnalyser) {
       const abuf = new Float32Array(artistAnalyser.fftSize);
@@ -953,15 +998,17 @@ function renderLoop() {
     const v2    = p2 !== -1 && p2 >= 60 && p2 <= 1100;
     if (v2) {
       const raw2 = Math.round(12*(Math.log(p2/440)/Math.log(2)))+69;
-      pitchSmooth2.push(raw2); if (pitchSmooth2.length>3) pitchSmooth2.shift();
-      const note2 = [...pitchSmooth2].sort((a,b)=>a-b)[Math.floor(pitchSmooth2.length/2)];
-      const cvs2  = document.getElementById('duo-canvas2');
-      pitchData2.push(cvs2 ? pitchNoteToY(note2, cvs2.offsetHeight||100) : null);
-      pitchMidi2.push(note2);
-      // Duo score 2
-      const t2   = playerInstru.currentTime||0;
-      const tgt2 = song?.lanes?.[0]?.notes?.find(n=>t2>=n.t0&&t2<=n.t0+n.d);
-      if (tgt2 && isPlaying) { duoScore2.total++; if(Math.abs(note2-tgt2.midi)<=2) duoScore2.correct++; }
+      pitchSmooth2.push(raw2); if (pitchSmooth2.length>PITCH_WIN) pitchSmooth2.shift();
+      const note2 = medianNote(pitchSmooth2);
+      if (note2 !== null) {
+        const cvs2  = document.getElementById('duo-canvas2');
+        pitchData2.push(cvs2 ? pitchNoteToY(note2, cvs2.offsetHeight||100) : null);
+        pitchMidi2.push(note2);
+        // Duo score 2
+        const t2   = playerInstru.currentTime||0;
+        const tgt2 = song?.lanes?.[0]?.notes?.find(n=>t2>=n.t0&&t2<=n.t0+n.d);
+        if (tgt2 && isPlaying) { duoScore2.total++; if(Math.abs(note2-tgt2.midi)<=2) duoScore2.correct++; }
+      } else { pitchData2.push(null); pitchMidi2.push(null); }
     } else { pitchData2.push(null); pitchMidi2.push(null); pitchSmooth2.length=0; }
     const max2 = 200;
     if (pitchData2.length>max2) { pitchData2.shift(); pitchMidi2.shift(); }

@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+<meta name="theme-color" content="#050d09" />
+<title>Lecture Musique — Arcade</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../shared/classement.css" />
+<style>
+  :root {
+    --bg: #050d09;
+    --bg-elev: #0b1a12;
+    --bg-card: #10231a;
+    --border: #1e3a2c;
+    --border-hi: #2e5a42;
+    --text: #e8f5ec;
+    --text-dim: #7fa38e;
+    --text-faint: #4a6656;
+    --accent: #3ddc84;
+    --accent-soft: rgba(61, 220, 132, 0.14);
+    --gold: #f5cb5c;
+    --gold-soft: rgba(245, 203, 92, 0.12);
+    --error: #ff5470;
+    --staff-line: #3a5a4c;
+    --note: #e8f5ec;
+    --shadow: 0 20px 60px -20px rgba(61, 220, 132, 0.18);
+
+    --font-arcade: 'Bungee', 'Manrope', system-ui, sans-serif;
+    --font-body: 'Manrope', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100dvh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    background-image:
+      radial-gradient(ellipse at top, rgba(61, 220, 132, 0.07) 0%, transparent 55%),
+      radial-gradient(ellipse at bottom, rgba(245, 203, 92, 0.04) 0%, transparent 60%);
+  }
+
+  /* petites "étoiles" scintillantes façon salle d'arcade */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image:
+      radial-gradient(1px 1px at 15% 25%, rgba(232, 245, 236, 0.35), transparent 50%),
+      radial-gradient(1px 1px at 78% 82%, rgba(245, 203, 92, 0.3), transparent 50%),
+      radial-gradient(1px 1px at 42% 68%, rgba(232, 245, 236, 0.2), transparent 50%),
+      radial-gradient(1px 1px at 88% 12%, rgba(61, 220, 132, 0.3), transparent 50%),
+      radial-gradient(1px 1px at 8% 88%, rgba(232, 245, 236, 0.2), transparent 50%),
+      radial-gradient(1px 1px at 62% 42%, rgba(245, 203, 92, 0.18), transparent 50%);
+    opacity: 0.8;
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 20px 20px 40px;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ─── Screens ─── */
+  .screen { display: none; flex-direction: column; flex: 1; animation: fadeIn 0.35s ease; }
+  .screen.active { display: flex; }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ─── Typographie ─── */
+  .title {
+    font-family: var(--font-arcade);
+    font-size: clamp(30px, 8.5vw, 44px);
+    line-height: 1.05;
+    letter-spacing: 0.01em;
+    margin: 0;
+    color: var(--text);
+    text-shadow: 0 0 24px rgba(61, 220, 132, 0.35);
+  }
+  .title .accent { color: var(--accent); }
+  .title .gold { color: var(--gold); }
+  .subtitle {
+    font-size: 14px;
+    color: var(--text-dim);
+    margin: 12px 0 0;
+    line-height: 1.55;
+    max-width: 34ch;
+  }
+  .eyebrow {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    color: var(--text-faint);
+    margin-bottom: 12px;
+    font-weight: 700;
+  }
+
+  .hub-link {
+    align-self: flex-start;
+    font-size: 12px;
+    color: var(--text-dim);
+    text-decoration: none;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 14px;
+    margin-bottom: 18px;
+    transition: all 0.15s;
+  }
+  .hub-link:hover { color: var(--text); border-color: var(--border-hi); }
+
+  /* ─── Home ─── */
+  .home-header { padding: 6px 0 26px; }
+  .option-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--text-faint);
+    font-weight: 700;
+    margin: 18px 0 8px;
+  }
+  .chip-group { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 100px;
+    flex: 1;
+  }
+  .chip small { font-size: 10.5px; color: var(--text-dim); font-weight: 500; }
+  .chip:hover { border-color: var(--border-hi); transform: translateY(-1px); }
+  .chip.selected {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    box-shadow: var(--shadow);
+  }
+  .chip.selected small { color: var(--accent); }
+
+  .primary-btn {
+    background: var(--accent);
+    color: #04140b;
+    border: none;
+    border-radius: 14px;
+    padding: 18px 28px;
+    font-family: var(--font-arcade);
+    font-size: 17px;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: all 0.18s;
+    width: 100%;
+    margin-top: 26px;
+    box-shadow: 0 6px 30px -6px rgba(61, 220, 132, 0.5);
+  }
+  .primary-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 36px -6px rgba(61, 220, 132, 0.6); }
+  .primary-btn:active { transform: scale(0.98); }
+  .primary-btn.gold { background: var(--gold); box-shadow: 0 6px 30px -6px rgba(245, 203, 92, 0.45); }
+
+  .ghost-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    border-radius: 14px;
+    padding: 15px 24px;
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    width: 100%;
+  }
+  .ghost-btn:hover { color: var(--text); border-color: var(--border-hi); }
+
+  .button-row { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+
+  .badge-row { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+
+  /* ─── HUD de jeu ─── */
+  .hud {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .hud-quit {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    border-radius: 10px;
+    width: 36px; height: 36px;
+    font-size: 15px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .hud-quit:hover { color: var(--error); border-color: var(--error); }
+  .hud-progress {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+  .hud-lives { font-size: 15px; letter-spacing: 2px; white-space: nowrap; }
+  .hud-lives .lost { opacity: 0.18; }
+  .hud-score {
+    font-family: var(--font-mono);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--gold);
+    white-space: nowrap;
+    min-width: 64px;
+    text-align: right;
+  }
+
+  /* ─── Combo ─── */
+  .combo {
+    text-align: center;
+    font-family: var(--font-arcade);
+    font-size: 15px;
+    color: var(--gold);
+    min-height: 22px;
+    margin-bottom: 6px;
+    opacity: 0;
+    transform: scale(0.8);
+    transition: opacity 0.15s, transform 0.15s;
+    text-shadow: 0 0 18px rgba(245, 203, 92, 0.5);
+  }
+  .combo.on { opacity: 1; transform: scale(1); }
+  .combo.pop { animation: comboPop 0.3s ease; }
+  @keyframes comboPop {
+    0% { transform: scale(1); }
+    45% { transform: scale(1.28); }
+    100% { transform: scale(1); }
+  }
+
+  /* ─── Portée ─── */
+  .staff-card {
+    position: relative;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 8px 6px 2px;
+    box-shadow: 0 14px 44px -18px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+  }
+  .staff-card.correct { animation: glowOk 0.55s ease; }
+  .staff-card.wrong   { animation: shake 0.4s ease; }
+  @keyframes glowOk {
+    0% { box-shadow: 0 0 0 rgba(61, 220, 132, 0); }
+    35% { box-shadow: 0 0 46px rgba(61, 220, 132, 0.55); border-color: var(--accent); }
+    100% { box-shadow: 0 14px 44px -18px rgba(0, 0, 0, 0.6); }
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-7px); }
+    45% { transform: translateX(6px); }
+    70% { transform: translateX(-4px); }
+    90% { transform: translateX(2px); }
+  }
+  .staff-card svg { width: 100%; height: auto; display: block; }
+  .clef-tag {
+    position: absolute;
+    top: 10px; right: 12px;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-weight: 700;
+    color: var(--text-dim);
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 10px;
+  }
+  .note-reveal {
+    position: absolute;
+    left: 0; right: 0; bottom: 8px;
+    text-align: center;
+    font-family: var(--font-arcade);
+    font-size: 22px;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.18s, transform 0.18s;
+  }
+  .note-reveal.show { opacity: 1; transform: translateY(0); }
+  .note-reveal.ok  { color: var(--accent); text-shadow: 0 0 20px rgba(61, 220, 132, 0.6); }
+  .note-reveal.ko  { color: var(--error); text-shadow: 0 0 20px rgba(255, 84, 112, 0.6); }
+
+  /* points flottants */
+  .float-pts {
+    position: absolute;
+    top: 18px; left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--gold);
+    pointer-events: none;
+    opacity: 0;
+  }
+  .float-pts.go { animation: floatUp 0.9s ease forwards; }
+  @keyframes floatUp {
+    0% { opacity: 0; transform: translate(-50%, 8px); }
+    25% { opacity: 1; }
+    100% { opacity: 0; transform: translate(-50%, -26px); }
+  }
+
+  /* ─── Chrono ─── */
+  .timer-track {
+    height: 7px;
+    background: var(--bg-elev);
+    border-radius: 6px;
+    margin: 12px 2px 4px;
+    overflow: hidden;
+  }
+  .timer-bar {
+    height: 100%;
+    width: 100%;
+    border-radius: 6px;
+    background: linear-gradient(90deg, var(--accent), var(--gold));
+  }
+  body.mode-loisir .timer-track { visibility: hidden; }
+
+  /* ─── Réponses ─── */
+  .answers {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .answer-btn {
+    position: relative;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 4px 13px;
+    color: var(--text);
+    font-family: var(--font-arcade);
+    font-size: 15px;
+    cursor: pointer;
+    transition: transform 0.12s, border-color 0.12s, background 0.12s;
+  }
+  .answer-btn:hover { border-color: var(--border-hi); transform: translateY(-2px); }
+  .answer-btn:active { transform: scale(0.96); }
+  .answer-btn .key {
+    position: absolute;
+    top: 3px; left: 6px;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--text-faint);
+  }
+  .answer-btn.ok {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 22px rgba(61, 220, 132, 0.35);
+  }
+  .answer-btn.ko {
+    background: rgba(255, 84, 112, 0.12);
+    border-color: var(--error);
+    color: var(--error);
+  }
+  .answer-btn:disabled { cursor: default; }
+  .answers-hint {
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-faint);
+    margin-top: 10px;
+  }
+
+  /* ─── Éléments conditionnels selon le mode ─── */
+  body.mode-loisir .scoring-only { display: none !important; }
+  body.mode-competitif .loisir-only { display: none !important; }
+
+  /* ─── Écran de fin ─── */
+  .end-stats {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 22px 20px;
+    margin: 18px 0;
+  }
+  .final-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--text-faint);
+    font-weight: 700;
+  }
+  .final-score {
+    font-family: var(--font-arcade);
+    font-size: clamp(40px, 12vw, 58px);
+    color: var(--gold);
+    line-height: 1.1;
+    text-shadow: 0 0 30px rgba(245, 203, 92, 0.4);
+  }
+  .loisir-label {
+    font-family: var(--font-arcade);
+    font-size: 22px;
+    color: var(--accent);
+  }
+  .stats-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px;
+  }
+  .stat { flex: 1; text-align: center; background: var(--bg-elev); border-radius: 12px; padding: 12px 6px; }
+  .stat-value { font-family: var(--font-mono); font-size: 16px; font-weight: 700; }
+  .stat-label { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 4px; }
+
+  .name-input-wrap { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+  .name-input-wrap label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.16em; color: var(--text-faint); font-weight: 700; }
+  .name-input {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .name-input:focus { border-color: var(--accent); }
+
+  /* ─── Classement ─── */
+  .lb-tabs { display: flex; gap: 8px; margin: 4px 0 14px; }
+  .lb-tab {
+    flex: 1;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+    color: var(--text-dim);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .lb-tab.selected { border-color: var(--accent); color: var(--text); background: var(--accent-soft); }
+  .leaderboard-list { flex: 1; }
+  .lb-back { margin-top: 18px; }
+
+  /* flash plein écran */
+  .flash {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 50;
+    opacity: 0;
+    background: radial-gradient(ellipse at center, rgba(61, 220, 132, 0.16), transparent 65%);
+  }
+  .flash.ok { background: radial-gradient(ellipse at center, rgba(61, 220, 132, 0.18), transparent 65%); animation: flashAnim 0.4s ease; }
+  .flash.ko { background: radial-gradient(ellipse at center, rgba(255, 84, 112, 0.18), transparent 65%); animation: flashAnim 0.45s ease; }
+  @keyframes flashAnim { 0% { opacity: 0; } 30% { opacity: 1; } 100% { opacity: 0; } }
+
+  @media (max-width: 380px) {
+    .answers { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .answer-btn { font-size: 13px; padding: 14px 2px 11px; }
+  }
+</style>
+</head>
+<body class="mode-competitif">
+<div class="app">
+
+  <!-- ─────────── ACCUEIL ─────────── -->
+  <section id="screen-home" class="screen active">
+    <a class="hub-link" href="../index.html?hub=secret">← Retour au hub</a>
+    <header class="home-header">
+      <div class="eyebrow">Arcade · Solfège</div>
+      <h1 class="title">Lecture <span class="accent">Musique</span> <span class="gold">♪</span></h1>
+      <p class="subtitle">Une note apparaît sur la portée : identifie-la avant la fin du chrono. Enchaîne les combos, garde tes vies, grimpe au classement.</p>
+      <div class="badge-row"><span id="home-badge" style="display:none;"></span></div>
+    </header>
+
+    <div class="option-label">Clé</div>
+    <div class="chip-group" id="clef-group">
+      <button class="chip selected" data-clef="sol">Clé de Sol<small>les aigus · violon</small></button>
+      <button class="chip" data-clef="fa">Clé de Fa<small>les graves · basse</small></button>
+      <button class="chip" data-clef="ut3">Clé d'Ut 3<small>alto · médium</small></button>
+      <button class="chip" data-clef="melange">Mélange<small>clé aléatoire</small></button>
+    </div>
+
+    <div class="option-label">Étendue</div>
+    <div class="chip-group" id="range-group">
+      <button class="chip selected" data-range="facile">Facile<small>notes sur la portée</small></button>
+      <button class="chip" data-range="normal">Normal<small>+1 ligne supplémentaire</small></button>
+      <button class="chip" data-range="expert">Expert<small>+2 lignes supplémentaires</small></button>
+    </div>
+
+    <div class="option-label">Mode</div>
+    <div class="chip-group" id="mode-group">
+      <button class="chip" data-mode="loisir">Loisir<small>sans chrono, sans score</small></button>
+      <button class="chip selected" data-mode="competitif">Compétitif<small>chrono · combos · 3 vies</small></button>
+    </div>
+
+    <button class="primary-btn" id="btn-start">▶ Jouer</button>
+    <div class="button-row">
+      <button class="ghost-btn" id="btn-home-lb">Voir le classement</button>
+    </div>
+  </section>
+
+  <!-- ─────────── JEU ─────────── -->
+  <section id="screen-game" class="screen">
+    <div class="hud">
+      <button class="hud-quit" id="btn-quit" title="Abandonner">✕</button>
+      <div class="hud-progress" id="hud-progress">1 / 20</div>
+      <div class="hud-lives scoring-only" id="hud-lives">♥♥♥</div>
+      <div class="hud-score scoring-only" id="hud-score">0</div>
+    </div>
+
+    <div class="combo" id="combo">COMBO ×2</div>
+
+    <div class="staff-card" id="staff-card">
+      <div class="clef-tag" id="clef-tag">Clé de Sol</div>
+      <div id="staff-svg"></div>
+      <div class="note-reveal" id="note-reveal"></div>
+      <div class="float-pts" id="float-pts"></div>
+    </div>
+
+    <div class="timer-track scoring-only"><div class="timer-bar" id="timer-bar"></div></div>
+
+    <div class="answers" id="answers"></div>
+    <div class="answers-hint">Clavier : touches 1 à 7</div>
+  </section>
+
+  <!-- ─────────── FIN ─────────── -->
+  <section id="screen-end" class="screen">
+    <header class="home-header" style="padding-bottom: 0;">
+      <div class="eyebrow" id="end-eyebrow">Partie terminée</div>
+      <h2 class="title" id="end-title">Bien <span class="accent">joué</span> !</h2>
+    </header>
+
+    <div class="end-stats">
+      <div class="scoring-only">
+        <div class="final-label">Score final</div>
+        <div class="final-score" id="final-score">0</div>
+      </div>
+      <div class="loisir-label loisir-only">Entraînement terminé</div>
+      <div class="stats-row">
+        <div class="stat">
+          <div class="stat-value" id="stat-correct">0/20</div>
+          <div class="stat-label">Réussite</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="stat-combo">×0</div>
+          <div class="stat-label">Meilleur combo</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="stat-avgtime">0.00 s</div>
+          <div class="stat-label">Temps moyen</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="name-input-wrap scoring-only" id="name-input-wrap">
+      <label for="player-name">Nom</label>
+      <input class="name-input" id="player-name" type="text" maxlength="14" placeholder="Anonyme" autocomplete="off" />
+    </div>
+
+    <div class="button-row">
+      <button class="primary-btn gold scoring-only" id="btn-save-replay" style="margin-top:0;">Enregistrer & Rejouer</button>
+      <button class="primary-btn loisir-only" id="btn-replay-loisir" style="margin-top:0;">Rejouer</button>
+      <button class="ghost-btn scoring-only" id="btn-end-lb">Voir le classement</button>
+      <button class="ghost-btn" id="btn-end-home">Retour à l'accueil</button>
+    </div>
+  </section>
+
+  <!-- ─────────── CLASSEMENT ─────────── -->
+  <section id="screen-lb" class="screen">
+    <header class="home-header" style="padding-bottom: 10px;">
+      <div class="eyebrow">Classement</div>
+      <h2 class="title"><span class="accent">Meilleurs</span> scores</h2>
+    </header>
+
+    <div class="lb-tabs" id="lb-scope-tabs">
+      <button class="lb-tab selected" data-scope="local">Local · cet appareil</button>
+      <button class="lb-tab" data-scope="global">Mondial · joueurs connectés</button>
+    </div>
+    <div class="leaderboard-list" id="leaderboard-list"></div>
+
+    <div class="button-row lb-back">
+      <button class="ghost-btn" id="btn-lb-home">Retour à l'accueil</button>
+    </div>
+  </section>
+
+</div>
+
+<div class="flash" id="flash"></div>
+
+<!-- Classement partagé (template tous-jeux) -->
+<script src="../shared/classement.js"></script>
+
+<!-- Auth Supabase (optionnelle : si non disponible, fallback localStorage uniquement) -->
+<script type="module">
+  try {
+    const mod = await import('../auth/supabase.js');
+    const user = await mod.getCurrentUser().catch(() => null);
+    window._scolarisAuth = {
+      saveGameScore: mod.saveGameScore,
+      getLeaderboard: mod.getLeaderboard,
+      getCurrentUser: mod.getCurrentUser,
+    };
+    window._scolarisUser = user;
+  } catch (e) {
+    console.info('[lecture-musique] Supabase indisponible — mode local seul.', e && e.message);
+  } finally {
+    window.dispatchEvent(new Event('scolaris-auth-ready'));
+  }
+</script>
+
+<script>
+/* ════════════════════════════════════════════════════════════
+   LECTURE MUSIQUE — arcade de lecture de notes
+   Clés : Sol (2e ligne), Fa (4e ligne), Ut (3e ligne)
+   ════════════════════════════════════════════════════════════ */
+'use strict';
+
+// Calibration du classement partagé.
+// Score par note : 500·e^(−t/6) + bonus de combo (min(combo,10)×10).
+// 20 notes parfaites instantanées → 20×500 + 1550 = 11 550.
+// Plafond humain ≈ 1 s de moyenne par note → ~10 000.
+ScolarisRanking.init({
+  gameId:    'lecture-musique',
+  gameLabel: 'Lecture Musique',
+  maxScore:  11550,
+  humanCap:  10000,
+});
+
+// ─── Constantes musicales ──────────────────────────────────
+// Index diatonique : Do0 = 0, Ré0 = 1, … (7 pas par octave).
+const NOTE_NAMES = ['Do', 'Ré', 'Mi', 'Fa', 'Sol', 'La', 'Si'];
+const SEMITONES  = [0, 2, 4, 5, 7, 9, 11]; // Do Ré Mi Fa Sol La Si
+
+// Chaque clé fixe l'index diatonique de la 1re ligne (ligne du bas).
+// Sol : 1re ligne = Mi4 (30) · Fa : 1re ligne = Sol2 (18) · Ut3 : 1re ligne = Fa3 (24)
+const CLEFS = {
+  sol: { label: 'Clé de Sol', line1: 30 },
+  fa:  { label: 'Clé de Fa',  line1: 18 },
+  ut3: { label: "Clé d'Ut 3", line1: 24 },
+};
+const CLEF_KEYS = ['sol', 'fa', 'ut3'];
+
+// Étendue en "positions" p au-dessus de la 1re ligne (1 pas diatonique = 1 position).
+// La portée couvre p ∈ [0, 8] (5 lignes / 4 interlignes).
+const RANGES = {
+  facile: { label: 'Facile', min: 0,  max: 8  },
+  normal: { label: 'Normal', min: -2, max: 10 },
+  expert: { label: 'Expert', min: -4, max: 12 },
+};
+
+// ─── Constantes de partie ──────────────────────────────────
+const NOTES_PER_RUN = 20;
+const MAX_LIVES     = 3;
+const TIMER_MS      = 6000;
+const SCORE_MAX_PER_NOTE = 500;
+const SCORE_TAU     = 6;   // secondes
+const SETTINGS_KEY  = 'lecture-musique-settings';
+
+function speedScore(elapsedMs) {
+  const t = elapsedMs / 1000;
+  return Math.round(SCORE_MAX_PER_NOTE * Math.exp(-t / SCORE_TAU));
+}
+function streakBonus(streak) {
+  return Math.min(streak, 10) * 10;
+}
+
+// ─── Helpers notes ─────────────────────────────────────────
+function noteName(diatonic)   { return NOTE_NAMES[((diatonic % 7) + 7) % 7]; }
+function noteOctave(diatonic) { return Math.floor(diatonic / 7); }
+function noteFreq(diatonic) {
+  const midi = 12 * (noteOctave(diatonic) + 1) + SEMITONES[((diatonic % 7) + 7) % 7];
+  return 440 * Math.pow(2, (midi - 69) / 12);
+}
+
+// ─── State ─────────────────────────────────────────────────
+const state = {
+  clef: 'sol',        // 'sol' | 'fa' | 'ut3' | 'melange'
+  range: 'facile',    // 'facile' | 'normal' | 'expert'
+  mode: 'competitif', // 'loisir' | 'competitif'
+  idx: 0,             // note courante (1-based pendant la partie)
+  score: 0,
+  streak: 0,
+  bestStreak: 0,
+  lives: MAX_LIVES,
+  results: [],        // [{correct, timeMs}]
+  current: null,      // {clefKey, p, diatonic}
+  startTs: 0,
+  answered: true,
+  timerId: null,
+  nextId: null,
+};
+
+const $  = (s, root = document) => root.querySelector(s);
+const $$ = (s, root = document) => Array.from(root.querySelectorAll(s));
+
+function vibrate(pattern) {
+  try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (e) {}
+}
+
+// ─── Audio (WebAudio, généré — aucun asset) ────────────────
+let actx = null;
+function audioCtx() {
+  if (!actx) {
+    try { actx = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch (e) { return null; }
+  }
+  if (actx.state === 'suspended') actx.resume();
+  return actx;
+}
+function playFreq(freq, dur = 0.55, type = 'triangle', vol = 0.16, delay = 0) {
+  const ctx = audioCtx();
+  if (!ctx) return;
+  const t0 = ctx.currentTime + delay;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(0.0001, t0);
+  gain.gain.exponentialRampToValueAtTime(vol, t0 + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  osc.connect(gain).connect(ctx.destination);
+  osc.start(t0);
+  osc.stop(t0 + dur + 0.05);
+}
+function sndCorrect(diatonic, streak) {
+  const f = noteFreq(diatonic);
+  playFreq(f, 0.5);
+  if (streak > 0 && streak % 5 === 0) { // petit jingle de palier de combo
+    playFreq(f * 1.5, 0.22, 'triangle', 0.1, 0.1);
+    playFreq(f * 2,   0.3,  'triangle', 0.1, 0.22);
+  }
+}
+function sndWrong(diatonic) {
+  playFreq(98, 0.22, 'sawtooth', 0.1);
+  playFreq(noteFreq(diatonic), 0.55, 'triangle', 0.14, 0.3); // on fait entendre la bonne note
+}
+function sndGameOver(win) {
+  const base = win ? 523.25 : 392;
+  playFreq(base, 0.25);
+  playFreq(base * (win ? 1.25 : 0.84), 0.25, 'triangle', 0.14, 0.22);
+  playFreq(base * (win ? 1.5 : 0.75), 0.5, 'triangle', 0.14, 0.44);
+}
+
+// ─── Portée SVG ────────────────────────────────────────────
+// Géométrie : lignes y = 76..140 (pas 16), position p → y = 140 − 8p.
+const STAFF = { x1: 24, x2: 296, noteX: 210, line1Y: 140, step: 8 };
+
+function clefGlyph(clefKey) {
+  const C = 'var(--note)';
+  if (clefKey === 'sol') return `
+    <path d="M 53 121 C 55 112, 46 105, 38 111 C 30 117, 31 130, 40 136
+             C 50 142, 61 135, 61 122 C 61 108, 51 100, 47 88
+             C 44 79, 44 68, 47 57 C 49 49, 56 46, 58 54
+             C 60 62, 55 72, 50 84 C 46 94, 44 106, 44 120
+             L 44 152 C 44 162, 34 166, 30 159 C 27 153, 33 148, 38 151"
+          fill="none" stroke="${C}" stroke-width="4.6" stroke-linecap="round"/>`;
+  if (clefKey === 'fa') return `
+    <circle cx="38" cy="92" r="5" fill="${C}"/>
+    <path d="M 38 92 C 37 82, 46 76, 54 80 C 63 85, 65 98, 58 112 C 53 122, 45 130, 36 136"
+          fill="none" stroke="${C}" stroke-width="4.6" stroke-linecap="round"/>
+    <circle cx="70" cy="86" r="3.4" fill="${C}"/>
+    <circle cx="70" cy="100" r="3.4" fill="${C}"/>`;
+  // ut3
+  return `
+    <rect x="30" y="76" width="7" height="64" rx="2" fill="${C}"/>
+    <line x1="43" y1="76" x2="43" y2="140" stroke="${C}" stroke-width="3.4" stroke-linecap="round"/>
+    <path d="M 46 108 C 56 106, 62 102, 62 92 C 62 82, 54 78, 50 84 C 47 88, 49 93, 53 92"
+          fill="none" stroke="${C}" stroke-width="4.2" stroke-linecap="round"/>
+    <path d="M 46 108 C 56 110, 62 114, 62 124 C 62 134, 54 138, 50 132 C 47 128, 49 123, 53 124"
+          fill="none" stroke="${C}" stroke-width="4.2" stroke-linecap="round"/>`;
+}
+
+function renderStaff(clefKey, p, noteColor) {
+  const color = noteColor || 'var(--note)';
+  const y = STAFF.line1Y - p * STAFF.step;
+
+  // 5 lignes de portée
+  let lines = '';
+  for (let i = 0; i < 5; i++) {
+    const ly = STAFF.line1Y - i * 16;
+    lines += `<line x1="${STAFF.x1}" y1="${ly}" x2="${STAFF.x2}" y2="${ly}" stroke="var(--staff-line)" stroke-width="1.6"/>`;
+  }
+
+  // lignes supplémentaires (positions paires hors de la portée)
+  let ledgers = '';
+  if (p <= -2) {
+    for (let q = -2; q >= p; q -= 2) {
+      const qy = STAFF.line1Y - q * STAFF.step;
+      ledgers += `<line x1="${STAFF.noteX - 17}" y1="${qy}" x2="${STAFF.noteX + 17}" y2="${qy}" stroke="var(--staff-line)" stroke-width="1.8"/>`;
+    }
+  }
+  if (p >= 10) {
+    for (let q = 10; q <= p; q += 2) {
+      const qy = STAFF.line1Y - q * STAFF.step;
+      ledgers += `<line x1="${STAFF.noteX - 17}" y1="${qy}" x2="${STAFF.noteX + 17}" y2="${qy}" stroke="var(--staff-line)" stroke-width="1.8"/>`;
+    }
+  }
+
+  // note : tête + hampe (vers le haut si la note est basse, vers le bas sinon)
+  const stemUp = p < 4;
+  const stemX = stemUp ? STAFF.noteX + 8.6 : STAFF.noteX - 8.6;
+  const stemY2 = stemUp ? y - 46 : y + 46;
+  const note = `
+    <line x1="${stemX}" y1="${y + (stemUp ? -2 : 2)}" x2="${stemX}" y2="${stemY2}"
+          stroke="${color}" stroke-width="2.6" stroke-linecap="round"/>
+    <ellipse cx="${STAFF.noteX}" cy="${y}" rx="9.5" ry="6.8" fill="${color}"
+             transform="rotate(-18 ${STAFF.noteX} ${y})"/>`;
+
+  return `<svg viewBox="0 0 320 210" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Note à identifier">
+    ${lines}
+    ${clefGlyph(clefKey)}
+    ${ledgers}
+    ${note}
+  </svg>`;
+}
+
+// ─── Écrans ────────────────────────────────────────────────
+function showScreen(id) {
+  $$('.screen').forEach(s => s.classList.remove('active'));
+  $('#' + id).classList.add('active');
+}
+
+// ─── Options accueil ───────────────────────────────────────
+function bindChipGroup(groupId, dataKey, onPick) {
+  $('#' + groupId).addEventListener('click', e => {
+    const btn = e.target.closest('.chip');
+    if (!btn) return;
+    $$('#' + groupId + ' .chip').forEach(b => b.classList.toggle('selected', b === btn));
+    onPick(btn.dataset[dataKey]);
+    saveSettings();
+  });
+}
+function saveSettings() {
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+      clef: state.clef, range: state.range, mode: state.mode,
+      name: $('#player-name').value || '',
+    }));
+  } catch (e) {}
+}
+function loadSettings() {
+  let s = null;
+  try { s = JSON.parse(localStorage.getItem(SETTINGS_KEY)); } catch (e) {}
+  if (!s) return;
+  if (CLEFS[s.clef] || s.clef === 'melange') state.clef = s.clef;
+  if (RANGES[s.range]) state.range = s.range;
+  if (s.mode === 'loisir' || s.mode === 'competitif') state.mode = s.mode;
+  if (s.name) $('#player-name').value = s.name;
+  $$('#clef-group .chip').forEach(b => b.classList.toggle('selected', b.dataset.clef === state.clef));
+  $$('#range-group .chip').forEach(b => b.classList.toggle('selected', b.dataset.range === state.range));
+  $$('#mode-group .chip').forEach(b => b.classList.toggle('selected', b.dataset.mode === state.mode));
+}
+function applyModeClass() {
+  document.body.classList.toggle('mode-loisir', state.mode === 'loisir');
+  document.body.classList.toggle('mode-competitif', state.mode === 'competitif');
+}
+
+// ─── Génération d'une note ─────────────────────────────────
+function buildNote() {
+  const clefKey = state.clef === 'melange'
+    ? CLEF_KEYS[Math.floor(Math.random() * CLEF_KEYS.length)]
+    : state.clef;
+  const range = RANGES[state.range];
+  let p, tries = 0;
+  do {
+    p = range.min + Math.floor(Math.random() * (range.max - range.min + 1));
+    tries++;
+  } while (state.current && state.current.clefKey === clefKey && state.current.p === p && tries < 10);
+  return { clefKey, p, diatonic: CLEFS[clefKey].line1 + p };
+}
+
+// ─── HUD ───────────────────────────────────────────────────
+function renderHud() {
+  $('#hud-progress').textContent = state.idx + ' / ' + NOTES_PER_RUN;
+  $('#hud-score').textContent = state.score;
+  let hearts = '';
+  for (let i = 0; i < MAX_LIVES; i++) {
+    hearts += i < state.lives ? '♥' : '<span class="lost">♥</span>';
+  }
+  $('#hud-lives').innerHTML = hearts;
+}
+function renderCombo(pop) {
+  const el = $('#combo');
+  if (state.mode === 'competitif' && state.streak >= 2) {
+    el.textContent = 'COMBO ×' + state.streak;
+    el.classList.add('on');
+    if (pop) { el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
+  } else {
+    el.classList.remove('on');
+  }
+}
+
+// ─── Chrono ────────────────────────────────────────────────
+function startTimer() {
+  const bar = $('#timer-bar');
+  bar.style.transition = 'none';
+  bar.style.width = '100%';
+  void bar.offsetWidth;
+  bar.style.transition = 'width ' + TIMER_MS + 'ms linear';
+  bar.style.width = '0%';
+  state.timerId = setTimeout(onTimeout, TIMER_MS);
+}
+function stopTimer() {
+  if (state.timerId) { clearTimeout(state.timerId); state.timerId = null; }
+  const bar = $('#timer-bar');
+  bar.style.transition = 'none';
+  bar.style.width = bar.getBoundingClientRect().width /
+    bar.parentElement.getBoundingClientRect().width * 100 + '%';
+}
+
+// ─── Réponses ──────────────────────────────────────────────
+function renderAnswers() {
+  const wrap = $('#answers');
+  wrap.innerHTML = '';
+  NOTE_NAMES.forEach((name, i) => {
+    const b = document.createElement('button');
+    b.className = 'answer-btn';
+    b.dataset.idx = i;
+    b.innerHTML = '<span class="key">' + (i + 1) + '</span>' + name;
+    b.addEventListener('click', () => answer(i));
+    wrap.appendChild(b);
+  });
+}
+function setAnswersEnabled(on) {
+  $$('#answers .answer-btn').forEach(b => { b.disabled = !on; });
+}
+
+// ─── Flux de jeu ───────────────────────────────────────────
+function startGame() {
+  applyModeClass();
+  state.idx = 0;
+  state.score = 0;
+  state.streak = 0;
+  state.bestStreak = 0;
+  state.lives = MAX_LIVES;
+  state.results = [];
+  state.current = null;
+  renderAnswers();
+  renderCombo(false);
+  showScreen('screen-game');
+  nextNote();
+}
+
+function nextNote() {
+  if (state.nextId) { clearTimeout(state.nextId); state.nextId = null; }
+  if (state.idx >= NOTES_PER_RUN || (state.mode === 'competitif' && state.lives <= 0)) {
+    endGame();
+    return;
+  }
+  state.idx++;
+  state.current = buildNote();
+  state.answered = false;
+
+  $('#clef-tag').textContent = CLEFS[state.current.clefKey].label;
+  $('#staff-svg').innerHTML = renderStaff(state.current.clefKey, state.current.p);
+  $('#note-reveal').className = 'note-reveal';
+  $('#staff-card').classList.remove('correct', 'wrong');
+  renderHud();
+  setAnswersEnabled(true);
+  $$('#answers .answer-btn').forEach(b => b.classList.remove('ok', 'ko'));
+
+  state.startTs = performance.now();
+  if (state.mode === 'competitif') startTimer();
+}
+
+function resolveNote(pickedIdx, timedOut) {
+  if (state.answered) return;
+  state.answered = true;
+  stopTimer();
+  setAnswersEnabled(false);
+
+  const elapsed = timedOut ? TIMER_MS : performance.now() - state.startTs;
+  const d = state.current.diatonic;
+  const correctIdx = ((d % 7) + 7) % 7;
+  const isCorrect = !timedOut && pickedIdx === correctIdx;
+
+  const btns = $$('#answers .answer-btn');
+  const reveal = $('#note-reveal');
+  const card = $('#staff-card');
+  const flash = $('#flash');
+  flash.className = 'flash';
+  void flash.offsetWidth;
+
+  state.results.push({ correct: isCorrect, timeMs: elapsed });
+
+  if (isCorrect) {
+    state.streak++;
+    state.bestStreak = Math.max(state.bestStreak, state.streak);
+    let earned = 0;
+    if (state.mode === 'competitif') {
+      earned = speedScore(elapsed) + streakBonus(state.streak);
+      state.score += earned;
+      const fp = $('#float-pts');
+      fp.textContent = '+' + earned;
+      fp.classList.remove('go'); void fp.offsetWidth; fp.classList.add('go');
+    }
+    btns[correctIdx].classList.add('ok');
+    $('#staff-svg').innerHTML = renderStaff(state.current.clefKey, state.current.p, 'var(--accent)');
+    reveal.textContent = noteName(d);
+    reveal.className = 'note-reveal show ok';
+    card.classList.add('correct');
+    flash.classList.add('ok');
+    sndCorrect(d, state.streak);
+    vibrate(18);
+    renderHud();
+    renderCombo(true);
+    state.nextId = setTimeout(nextNote, 700);
+  } else {
+    state.streak = 0;
+    if (state.mode === 'competitif') state.lives--;
+    if (pickedIdx != null && btns[pickedIdx]) btns[pickedIdx].classList.add('ko');
+    btns[correctIdx].classList.add('ok');
+    $('#staff-svg').innerHTML = renderStaff(state.current.clefKey, state.current.p, 'var(--error)');
+    reveal.textContent = timedOut ? '⏱ ' + noteName(d) : noteName(d);
+    reveal.className = 'note-reveal show ko';
+    card.classList.add('wrong');
+    flash.classList.add('ko');
+    sndWrong(d);
+    vibrate([40, 40, 40]);
+    renderHud();
+    renderCombo(false);
+    state.nextId = setTimeout(nextNote, 1200);
+  }
+}
+
+function answer(idx)  { resolveNote(idx, false); }
+function onTimeout()  { resolveNote(null, true); }
+
+function endGame() {
+  stopTimer();
+  const total = state.results.length;
+  const nOk = state.results.filter(r => r.correct).length;
+  const avg = total ? state.results.reduce((s, r) => s + r.timeMs, 0) / total / 1000 : 0;
+  const dead = state.mode === 'competitif' && state.lives <= 0;
+
+  $('#end-eyebrow').textContent = dead ? 'Plus de vies…' : 'Partie terminée';
+  $('#end-title').innerHTML = dead
+    ? 'Game <span style="color:var(--error)">Over</span>'
+    : (nOk === total && total === NOTES_PER_RUN
+        ? 'Sans <span class="gold">faute</span> !'
+        : 'Bien <span class="accent">joué</span> !');
+  $('#final-score').textContent = state.score;
+  $('#stat-correct').textContent = nOk + '/' + total;
+  $('#stat-combo').textContent = '×' + state.bestStreak;
+  $('#stat-avgtime').textContent = avg.toFixed(2) + ' s';
+  sndGameOver(!dead && nOk >= total * 0.7);
+  showScreen('screen-end');
+}
+
+// ─── Sauvegarde & classement ───────────────────────────────
+let lbScope = 'local';
+let lastSaved = null;
+
+async function saveAndReplay() {
+  const btn = $('#btn-save-replay');
+  btn.disabled = true;
+  const name = ($('#player-name').value || '').trim() || 'Anonyme';
+  saveSettings();
+  try {
+    lastSaved = await ScolarisRanking.saveScore({
+      name,
+      score: state.score,
+      clef: state.clef,
+      range: state.range,
+    });
+  } catch (e) {
+    console.warn('[lecture-musique] saveScore:', e && e.message);
+  }
+  btn.disabled = false;
+  startGame();
+}
+
+async function openLeaderboard(highlight) {
+  showScreen('screen-lb');
+  await ScolarisRanking.renderLeaderboard($('#leaderboard-list'), {
+    scope: lbScope,
+    highlight: highlight || undefined,
+  });
+}
+
+$('#lb-scope-tabs').addEventListener('click', e => {
+  const tab = e.target.closest('.lb-tab');
+  if (!tab) return;
+  lbScope = tab.dataset.scope;
+  $$('#lb-scope-tabs .lb-tab').forEach(t => t.classList.toggle('selected', t === tab));
+  openLeaderboard(lastSaved);
+});
+
+// ─── Bindings ──────────────────────────────────────────────
+bindChipGroup('clef-group',  'clef',  v => { state.clef = v; });
+bindChipGroup('range-group', 'range', v => { state.range = v; });
+bindChipGroup('mode-group',  'mode',  v => { state.mode = v; applyModeClass(); });
+
+$('#btn-start').addEventListener('click', () => { audioCtx(); saveSettings(); startGame(); });
+$('#btn-quit').addEventListener('click', () => {
+  stopTimer();
+  if (state.nextId) { clearTimeout(state.nextId); state.nextId = null; }
+  state.answered = true;
+  showScreen('screen-home');
+  ScolarisRanking.renderGradeBadge($('#home-badge'));
+});
+$('#btn-home-lb').addEventListener('click', async () => {
+  await ScolarisRanking.loadOnline().catch(() => {});
+  openLeaderboard(null);
+});
+$('#btn-end-lb').addEventListener('click', async () => {
+  const name = ($('#player-name').value || '').trim() || 'Anonyme';
+  if (state.mode === 'competitif' && !lastSaved) {
+    try { lastSaved = await ScolarisRanking.saveScore({ name, score: state.score, clef: state.clef, range: state.range }); }
+    catch (e) {}
+  }
+  openLeaderboard(lastSaved);
+});
+$('#btn-save-replay').addEventListener('click', () => { lastSaved = null; saveAndReplay(); });
+$('#btn-replay-loisir').addEventListener('click', startGame);
+$('#btn-end-home').addEventListener('click', () => {
+  lastSaved = null;
+  showScreen('screen-home');
+  ScolarisRanking.renderGradeBadge($('#home-badge'));
+});
+$('#btn-lb-home').addEventListener('click', () => {
+  showScreen('screen-home');
+  ScolarisRanking.renderGradeBadge($('#home-badge'));
+});
+
+// Clavier : 1–7 → Do…Si
+document.addEventListener('keydown', e => {
+  if (!$('#screen-game').classList.contains('active')) return;
+  const n = parseInt(e.key, 10);
+  if (n >= 1 && n <= 7 && !state.answered) answer(n - 1);
+});
+
+// ─── Init ──────────────────────────────────────────────────
+loadSettings();
+applyModeClass();
+ScolarisRanking.renderGradeBadge($('#home-badge'));
+window.addEventListener('scolaris-auth-ready', () => {
+  ScolarisRanking.loadOnline().then(() => ScolarisRanking.renderGradeBadge($('#home-badge'))).catch(() => {});
+});
+</script>
+</body>
+</html>

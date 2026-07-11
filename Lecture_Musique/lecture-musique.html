@@ -556,6 +556,102 @@
     margin-top: 10px;
   }
 
+  /* ─── Saisie : cercle de notes ─── */
+  .answers.circle { display: block; position: relative; height: 290px; }
+  .answers.circle::before {
+    content: '';
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 66%;
+    aspect-ratio: 1;
+    transform: translate(-50%, -50%);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+  }
+  .circle-btn {
+    position: absolute;
+    width: 62px; height: 62px;
+    border-radius: 50%;
+    padding: 0;
+    transform: translate(-50%, -50%);
+    display: grid;
+    place-items: center;
+    font-size: 14px;
+  }
+  .circle-btn:hover { transform: translate(-50%, -50%) scale(1.06); }
+  .circle-btn:active { transform: translate(-50%, -50%) scale(0.95); }
+
+  /* ─── Saisie : clavier de piano ─── */
+  .answers.piano-zone { display: block; }
+  .octave-row { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 10px; }
+  .oct-chip {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    border-radius: 10px;
+    padding: 9px 12px;
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 12.5px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .oct-chip.selected { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+  .oct-chip.ok { border-color: var(--accent); color: var(--accent); box-shadow: var(--shadow); }
+  .oct-chip.ko { border-color: var(--error); color: var(--error); }
+  .piano { display: flex; overflow-x: auto; padding: 2px 2px 10px; -webkit-overflow-scrolling: touch; }
+  .p-key {
+    position: relative;
+    flex: 0 0 42px;
+    height: 128px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 0 0 8px 8px;
+    cursor: pointer;
+    padding: 0;
+    transition: background 0.12s, border-color 0.12s;
+  }
+  .p-key:hover { border-color: var(--border-hi); }
+  .p-key .p-label {
+    position: absolute;
+    left: 0; right: 0; bottom: 8px;
+    text-align: center;
+    font-family: var(--font-arcade);
+    font-size: 11px;
+    color: var(--text-dim);
+    pointer-events: none;
+  }
+  .p-key .p-oct { font-size: 9px; color: var(--gold); }
+  .p-key .p-black {
+    position: absolute;
+    top: -1px; right: -11px;
+    width: 20px; height: 58%;
+    background: var(--bg);
+    border: 1px solid var(--border-hi);
+    border-radius: 0 0 5px 5px;
+    z-index: 2;
+    pointer-events: none;
+  }
+  .p-key.ok { background: var(--accent-soft); border-color: var(--accent); }
+  .p-key.ok .p-label { color: var(--accent); }
+  .p-key.ko { border-color: var(--error); background: var(--gold-soft); }
+  .p-key.ko .p-label { color: var(--error); }
+
+  /* ─── Saisie : manche de guitare ─── */
+  .answers.guitar-zone { display: block; }
+  .fret-wrap {
+    overflow-x: auto;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 6px 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .fret-wrap svg { display: block; height: auto; min-width: 560px; }
+  .fret-wrap [data-s] { cursor: pointer; }
+  .answers.disabled svg { pointer-events: none; }
+  .answers.disabled .p-key, .answers.disabled .oct-chip, .answers.disabled .circle-btn { cursor: default; }
+
   /* ─── Éléments conditionnels selon le type de partie ─── */
   body:not(.mode-scoring) .scoring-only { display: none !important; }
   body:not(.mode-loisir)  .loisir-only  { display: none !important; }
@@ -710,6 +806,23 @@
       <button class="chip" data-range="expert">Expert<small>+2 lignes supplémentaires</small></button>
     </div>
 
+    <div class="option-label">Réponse</div>
+    <div class="chip-group" id="input-group">
+      <button class="chip selected" data-input="boutons">Boutons<small>grille de noms</small></button>
+      <button class="chip" data-input="cercle">Cercle<small>notes disposées en rond</small></button>
+      <button class="chip" data-input="clavier">Clavier<small>piano virtuel</small></button>
+      <button class="chip" data-input="guitare">Guitare<small>manche 12 cases</small></button>
+    </div>
+
+    <div id="kbopt-wrap" style="display:none;">
+      <div class="option-label">Octaves du clavier</div>
+      <div class="chip-group" id="kbopt-group">
+        <button class="chip selected" data-kb="simple">Nom seul<small>1 octave, l'octave ne compte pas</small></button>
+        <button class="chip" data-kb="octaves">Octave + touche<small>choisis l'octave, puis la note exacte</small></button>
+        <button class="chip" data-kb="etendu">Clavier étendu<small>toutes les octaves, défilable, note exacte</small></button>
+      </div>
+    </div>
+
     <div class="option-label">Jeux personnalisés</div>
     <div class="custom-list" id="custom-list"></div>
     <div class="custom-sync" id="custom-sync"></div>
@@ -825,7 +938,7 @@
     <div class="timer-track" id="timer-track"><div class="timer-bar" id="timer-bar"></div></div>
 
     <div class="answers" id="answers"></div>
-    <div class="answers-hint">Clavier : touches 1 à 7</div>
+    <div class="answers-hint" id="answers-hint">Clavier : touches 1 à 7</div>
   </section>
 
   <!-- ─────────── FIN ─────────── -->
@@ -1017,6 +1130,11 @@ const state = {
   range: 'facile',
   gameMode: 'classique', // 'loisir' | 'classique' | 'infini' | 'sprint' | 'custom'
   customCfg: null,
+  inputMode: 'boutons',  // 'boutons' | 'cercle' | 'clavier' | 'guitare'
+  kbOpt: 'simple',       // 'simple' | 'octaves' | 'etendu'
+  selOctave: 4,          // octave sélectionnée (variante 'octaves')
+  kbRange: { min: 28, max: 38 },
+  kbOctaves: [4],
 
   // config de la manche en cours
   run: null,
@@ -1274,11 +1392,15 @@ function backHome() {
 function updateClefChangeVisibility() {
   $('#clefchange-wrap').style.display = state.clefs.length > 1 ? '' : 'none';
 }
+function updateKbOptVisibility() {
+  $('#kbopt-wrap').style.display = state.inputMode === 'clavier' ? '' : 'none';
+}
 function saveSettings() {
   try {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify({
       clefs: state.clefs, clefChange: state.clefChangeSel,
       range: state.range, mode: state.gameMode,
+      input: state.inputMode, kbOpt: state.kbOpt,
       name: $('#player-name').value || '',
     }));
   } catch (e) {}
@@ -1298,12 +1420,17 @@ function loadSettings() {
   if (s.clefChange === 'note' || s.clefChange === 'altern4') state.clefChangeSel = s.clefChange;
   if (RANGES[s.range]) state.range = s.range;
   if (['loisir', 'classique', 'infini', 'sprint'].includes(s.mode)) state.gameMode = s.mode;
+  if (['boutons', 'cercle', 'clavier', 'guitare'].includes(s.input)) state.inputMode = s.input;
+  if (['simple', 'octaves', 'etendu'].includes(s.kbOpt)) state.kbOpt = s.kbOpt;
   if (s.name) $('#player-name').value = s.name;
   $$('#clef-group .chip').forEach(b => b.classList.toggle('selected', state.clefs.includes(b.dataset.clef)));
   $$('#clefchange-group .chip').forEach(b => b.classList.toggle('selected', b.dataset.change === state.clefChangeSel));
   $$('#range-group .chip').forEach(b => b.classList.toggle('selected', b.dataset.range === state.range));
   $$('#mode-group .chip').forEach(b => b.classList.toggle('selected', b.dataset.mode === state.gameMode));
+  $$('#input-group .chip').forEach(b => b.classList.toggle('selected', b.dataset.input === state.inputMode));
+  $$('#kbopt-group .chip').forEach(b => b.classList.toggle('selected', b.dataset.kb === state.kbOpt));
   updateClefChangeVisibility();
+  updateKbOptVisibility();
 }
 
 // ─── Jeux personnalisés : stockage local + compte ──────────
@@ -1653,21 +1780,257 @@ function stopScroll() {
   if (state.rafId) { cancelAnimationFrame(state.rafId); state.rafId = null; }
 }
 
-// ─── Réponses ──────────────────────────────────────────────
-function renderAnswers() {
-  const wrap = $('#answers');
-  wrap.innerHTML = '';
-  NOTE_NAMES.forEach((name, i) => {
-    const b = document.createElement('button');
-    b.className = 'answer-btn';
-    b.dataset.idx = i;
-    b.innerHTML = '<span class="key">' + (i + 1) + '</span>' + name;
-    b.addEventListener('click', () => answer(i));
-    wrap.appendChild(b);
+// ─── Saisie de la réponse ──────────────────────────────────
+// Quatre modes : boutons (grille), cercle, clavier de piano
+// (3 variantes d'octaves), manche de guitare (accordage standard).
+const GUITAR_OPEN_MIDI = [64, 59, 55, 50, 45, 40]; // mi aigu → mi grave
+const GUITAR_STRINGS = ['Mi', 'Si', 'Sol', 'Ré', 'La', 'Mi'];
+const GUITAR_FRETS = 12;
+
+function nameIdxOf(d) { return ((d % 7) + 7) % 7; }
+function isExactInput() { return state.inputMode === 'clavier' && state.kbOpt !== 'simple'; }
+function guitarNameIdx(s, f) {
+  // -1 si la case joue une altération (dièse/bémol) — toujours faux ici
+  return SEMITONES.indexOf((GUITAR_OPEN_MIDI[s] + f) % 12);
+}
+
+// Étendue du clavier = union des étendues des clés de la manche.
+function computeKbRange() {
+  const r = state.run;
+  const range = RANGES[r.rangeKey];
+  let min = Infinity, max = -Infinity;
+  r.clefPool.forEach(k => {
+    min = Math.min(min, CLEFS[k].line1 + range.min);
+    max = Math.max(max, CLEFS[k].line1 + range.max);
+  });
+  state.kbRange = { min, max };
+  const octs = [];
+  for (let o = Math.floor(min / 7); o <= Math.floor(max / 7); o++) octs.push(o);
+  state.kbOctaves = octs;
+  if (!octs.includes(state.selOctave)) state.selOctave = octs[Math.floor(octs.length / 2)];
+}
+
+function fretCx(f) { return f === 0 ? 24 : 46 + 40 * f - 20; }
+function stringY(s) { return 22 + s * 27; }
+
+function renderFretboard(picked, correctNameIdx) {
+  const X0 = 46, W = X0 + 40 * GUITAR_FRETS + 8, H = 186;
+  const bottomY = stringY(5);
+  let s = '<div class="fret-wrap"><svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg">';
+  // sillet + frettes
+  s += '<line x1="' + X0 + '" y1="' + (stringY(0) - 8) + '" x2="' + X0 + '" y2="' + (bottomY + 8) + '" stroke="var(--note)" stroke-width="5"/>';
+  for (let f = 1; f <= GUITAR_FRETS; f++) {
+    const x = X0 + 40 * f;
+    s += '<line x1="' + x + '" y1="' + (stringY(0) - 6) + '" x2="' + x + '" y2="' + (bottomY + 6) + '" stroke="var(--border-hi)" stroke-width="2"/>';
+  }
+  // repères de cases
+  [3, 5, 7, 9].forEach(f => {
+    s += '<circle cx="' + fretCx(f) + '" cy="' + (H - 10) + '" r="3.5" fill="var(--text-faint)"/>';
+  });
+  s += '<circle cx="' + (fretCx(12) - 6) + '" cy="' + (H - 10) + '" r="3.5" fill="var(--text-faint)"/>';
+  s += '<circle cx="' + (fretCx(12) + 6) + '" cy="' + (H - 10) + '" r="3.5" fill="var(--text-faint)"/>';
+  // cordes + noms
+  for (let i = 0; i < 6; i++) {
+    const y = stringY(i);
+    s += '<text x="6" y="' + (y + 4) + '" font-size="11" fill="var(--text-faint)" font-family="JetBrains Mono, monospace">' + GUITAR_STRINGS[i] + '</text>';
+    s += '<line x1="' + (X0 - 16) + '" y1="' + y + '" x2="' + (W - 4) + '" y2="' + y + '" stroke="var(--staff-line)" stroke-width="' + (1 + i * 0.35) + '"/>';
+  }
+  // révélation : toutes les cases qui jouent la bonne note
+  if (correctNameIdx != null) {
+    for (let st = 0; st < 6; st++) {
+      for (let f = 0; f <= GUITAR_FRETS; f++) {
+        if (guitarNameIdx(st, f) === correctNameIdx) {
+          s += '<circle cx="' + fretCx(f) + '" cy="' + stringY(st) + '" r="9" fill="var(--accent)" opacity="0.9"/>';
+        }
+      }
+    }
+  }
+  // case touchée (si fausse)
+  if (picked && !(correctNameIdx != null && guitarNameIdx(picked.s, picked.f) === correctNameIdx)) {
+    s += '<circle cx="' + fretCx(picked.f) + '" cy="' + stringY(picked.s) + '" r="9" fill="var(--error)" opacity="0.9"/>';
+  }
+  // zones cliquables
+  for (let st = 0; st < 6; st++) {
+    for (let f = 0; f <= GUITAR_FRETS; f++) {
+      const x = f === 0 ? 4 : X0 + 40 * (f - 1);
+      const w = f === 0 ? X0 - 4 : 40;
+      s += '<rect x="' + x + '" y="' + (stringY(st) - 13) + '" width="' + w + '" height="26" fill="transparent" data-s="' + st + '" data-f="' + f + '"/>';
+    }
+  }
+  s += '</svg></div>';
+  return s;
+}
+function bindFretboard() {
+  const svg = $('#answers svg');
+  if (!svg) return;
+  svg.addEventListener('click', e => {
+    const t = e.target.closest('[data-s]');
+    if (!t || state.answered) return;
+    answerGuitar(parseInt(t.dataset.s, 10), parseInt(t.dataset.f, 10));
   });
 }
+
+function renderInput() {
+  const wrap = $('#answers');
+  const hint = $('#answers-hint');
+  wrap.classList.remove('circle', 'piano-zone', 'guitar-zone', 'disabled');
+  wrap.innerHTML = '';
+
+  if (state.inputMode === 'cercle') {
+    wrap.classList.add('circle');
+    NOTE_NAMES.forEach((name, i) => {
+      const b = document.createElement('button');
+      b.className = 'answer-btn circle-btn';
+      b.dataset.idx = i;
+      const ang = i * 2 * Math.PI / 7;
+      b.style.left = (50 + 40 * Math.sin(ang)) + '%';
+      b.style.top  = (50 - 40 * Math.cos(ang)) + '%';
+      b.textContent = name;
+      b.addEventListener('click', () => answer(i));
+      wrap.appendChild(b);
+    });
+    hint.textContent = 'Clavier : touches 1 à 7';
+
+  } else if (state.inputMode === 'clavier') {
+    wrap.classList.add('piano-zone');
+    if (state.kbOpt === 'octaves') {
+      const row = document.createElement('div');
+      row.className = 'octave-row';
+      state.kbOctaves.forEach(o => {
+        const c = document.createElement('button');
+        c.className = 'oct-chip' + (o === state.selOctave ? ' selected' : '');
+        c.dataset.oct = o;
+        c.textContent = 'Octave ' + o;
+        c.addEventListener('click', () => {
+          if (state.answered) return;
+          state.selOctave = o;
+          row.querySelectorAll('.oct-chip').forEach(x => x.classList.toggle('selected', x === c));
+        });
+        row.appendChild(c);
+      });
+      wrap.appendChild(row);
+    }
+    const piano = document.createElement('div');
+    piano.className = 'piano';
+    const dMin = state.kbOpt === 'etendu' ? state.kbRange.min : 0;
+    const dMax = state.kbOpt === 'etendu' ? state.kbRange.max : 6;
+    for (let d = dMin; d <= dMax; d++) {
+      const i = nameIdxOf(d);
+      const key = document.createElement('button');
+      key.className = 'p-key';
+      key.dataset.d = d;
+      key.dataset.idx = i;
+      const lbl = (state.kbOpt === 'etendu' && i === 0)
+        ? 'Do<span class="p-oct">' + noteOctave(d) + '</span>'
+        : NOTE_NAMES[i];
+      key.innerHTML = '<span class="p-label">' + lbl + '</span>' +
+        ([0, 1, 3, 4, 5].includes(i) && d < dMax ? '<span class="p-black"></span>' : '');
+      key.addEventListener('click', () => {
+        if (state.kbOpt === 'simple') answer(i);
+        else if (state.kbOpt === 'octaves') answerExact(state.selOctave * 7 + i);
+        else answerExact(d);
+      });
+      piano.appendChild(key);
+    }
+    wrap.appendChild(piano);
+    if (state.kbOpt === 'etendu') {
+      requestAnimationFrame(() => { piano.scrollLeft = (piano.scrollWidth - piano.clientWidth) / 2; });
+      hint.textContent = 'Fais défiler le clavier ↔ · note ET octave exactes';
+    } else if (state.kbOpt === 'octaves') {
+      hint.textContent = 'Choisis l\'octave puis la touche · note ET octave exactes';
+    } else {
+      hint.textContent = 'Clavier : touches 1 à 7 · l\'octave ne compte pas';
+    }
+
+  } else if (state.inputMode === 'guitare') {
+    wrap.classList.add('guitar-zone');
+    wrap.innerHTML = renderFretboard(null, null);
+    bindFretboard();
+    hint.textContent = 'Accordage Mi La Ré Sol Si Mi · touche une case qui joue cette note';
+
+  } else {
+    NOTE_NAMES.forEach((name, i) => {
+      const b = document.createElement('button');
+      b.className = 'answer-btn';
+      b.dataset.idx = i;
+      b.innerHTML = '<span class="key">' + (i + 1) + '</span>' + name;
+      b.addEventListener('click', () => answer(i));
+      wrap.appendChild(b);
+    });
+    hint.textContent = 'Clavier : touches 1 à 7';
+  }
+}
+
 function setAnswersEnabled(on) {
-  $$('#answers .answer-btn').forEach(b => { b.disabled = !on; });
+  $$('#answers button').forEach(b => { b.disabled = !on; });
+  $('#answers').classList.toggle('disabled', !on);
+}
+function clearInputFeedback() {
+  if (state.inputMode === 'guitare') {
+    $('#answers').innerHTML = renderFretboard(null, null);
+    bindFretboard();
+    return;
+  }
+  $$('#answers .ok, #answers .ko').forEach(el => el.classList.remove('ok', 'ko'));
+}
+
+// Vérifie la réponse selon le mode de saisie.
+function pickIsCorrect(pick, item) {
+  if (!pick) return false;
+  if (pick.kind === 'name')   return pick.idx === nameIdxOf(item.diatonic);
+  if (pick.kind === 'exact')  return pick.d === item.diatonic;
+  if (pick.kind === 'guitar') return guitarNameIdx(pick.s, pick.f) === nameIdxOf(item.diatonic);
+  return false;
+}
+
+// Coloration de la bonne (et mauvaise) réponse selon le mode de saisie.
+function showAnswerFeedback(pick, item, isCorrect) {
+  const nIdx = nameIdxOf(item.diatonic);
+  if (state.inputMode === 'guitare') {
+    $('#answers').innerHTML = renderFretboard(pick && pick.kind === 'guitar' ? pick : null, nIdx);
+    return;
+  }
+  if (isExactInput()) {
+    const dOk = item.diatonic;
+    if (state.kbOpt === 'etendu') {
+      const kOk = $('#answers .p-key[data-d="' + dOk + '"]');
+      if (kOk) {
+        kOk.classList.add('ok');
+        try { kOk.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); } catch (e) {}
+      }
+    } else {
+      const kOk = $('#answers .p-key[data-idx="' + nIdx + '"]');
+      if (kOk) kOk.classList.add('ok');
+      const oc = $('#answers .oct-chip[data-oct="' + noteOctave(dOk) + '"]');
+      if (oc) oc.classList.add('ok');
+    }
+    if (pick && pick.kind === 'exact' && !isCorrect) {
+      if (state.kbOpt === 'etendu') {
+        const kp = $('#answers .p-key[data-d="' + pick.d + '"]');
+        if (kp) kp.classList.add('ko');
+      } else {
+        if (nameIdxOf(pick.d) !== nIdx) {
+          const kp = $('#answers .p-key[data-idx="' + nameIdxOf(pick.d) + '"]');
+          if (kp) kp.classList.add('ko');
+        }
+        if (noteOctave(pick.d) !== noteOctave(dOk)) {
+          const op = $('#answers .oct-chip[data-oct="' + noteOctave(pick.d) + '"]');
+          if (op) op.classList.add('ko');
+        }
+      }
+    }
+    return;
+  }
+  // modes par nom : boutons, cercle, clavier simple
+  const okEl = $('#answers [data-idx="' + nIdx + '"]');
+  if (okEl) okEl.classList.add('ok');
+  if (pick && !isCorrect) {
+    const pIdx = pick.kind === 'name' ? pick.idx : (pick.kind === 'exact' ? nameIdxOf(pick.d) : null);
+    if (pIdx != null) {
+      const koEl = $('#answers [data-idx="' + pIdx + '"]');
+      if (koEl) koEl.classList.add('ko');
+    }
+  }
 }
 
 // ─── Annonce de changement de clé ──────────────────────────
@@ -1704,7 +2067,8 @@ function startGame() {
   state.lastTs = 0;
   stopAllTimers();
   stopScroll();
-  renderAnswers();
+  computeKbRange();
+  renderInput();
   renderCombo(false);
   $('#clef-banner').classList.remove('show');
   $('#timer-track').style.visibility = (state.run.noteTimerMs || state.run.globalMs) ? 'visible' : 'hidden';
@@ -1754,8 +2118,8 @@ function nextNote() {
   }
   renderStrip();
   renderHud();
+  clearInputFeedback();
   setAnswersEnabled(true);
-  $$('#answers .answer-btn').forEach(b => b.classList.remove('ok', 'ko'));
 
   // annonce le changement de clé (alternance uniquement — sinon la clé
   // insérée dans le flux suffit)
@@ -1764,7 +2128,7 @@ function nextNote() {
   }
 }
 
-function resolveNote(pickedIdx, timedOut) {
+function resolveNote(pick, timedOut) {
   if (state.answered) return;
   state.answered = true;
   stopNoteTimer();
@@ -1774,10 +2138,10 @@ function resolveNote(pickedIdx, timedOut) {
   const elapsed = timedOut ? (r.noteTimerMs || 0) : performance.now() - state.startTs;
   const item = state.current;
   const d = item.diatonic;
-  const correctIdx = ((d % 7) + 7) % 7;
-  const isCorrect = !timedOut && pickedIdx === correctIdx;
+  const isCorrect = !timedOut && pickIsCorrect(pick, item);
+  // en saisie exacte, on révèle aussi l'octave
+  const revealTxt = isExactInput() ? noteName(d) + noteOctave(d) : noteName(d);
 
-  const btns = $$('#answers .answer-btn');
   const reveal = $('#note-reveal');
   const card = $('#staff-card');
   const flash = $('#flash');
@@ -1787,6 +2151,7 @@ function resolveNote(pickedIdx, timedOut) {
   state.results.push({ correct: isCorrect, timeMs: elapsed });
   item.status = isCorrect ? 'ok' : 'ko';
   renderStrip();
+  showAnswerFeedback(pick, item, isCorrect);
 
   if (isCorrect) {
     state.streak++;
@@ -1798,8 +2163,7 @@ function resolveNote(pickedIdx, timedOut) {
       fp.textContent = '+' + earned;
       fp.classList.remove('go'); void fp.offsetWidth; fp.classList.add('go');
     }
-    btns[correctIdx].classList.add('ok');
-    reveal.textContent = noteName(d);
+    reveal.textContent = revealTxt;
     reveal.className = 'note-reveal show ok';
     card.classList.add('correct');
     flash.classList.add('ok');
@@ -1812,9 +2176,7 @@ function resolveNote(pickedIdx, timedOut) {
     state.streak = 0;
     state.faults++;
     if (r.penaltyMs) state.globalEndTs -= r.penaltyMs;
-    if (pickedIdx != null && btns[pickedIdx]) btns[pickedIdx].classList.add('ko');
-    btns[correctIdx].classList.add('ok');
-    reveal.textContent = timedOut ? '⏱ ' + noteName(d) : noteName(d);
+    reveal.textContent = timedOut ? '⏱ ' + revealTxt : revealTxt;
     reveal.className = 'note-reveal show ko';
     card.classList.add('wrong');
     flash.classList.add('ko');
@@ -1826,8 +2188,10 @@ function resolveNote(pickedIdx, timedOut) {
   }
 }
 
-function answer(idx)  { resolveNote(idx, false); }
-function onTimeout()  { resolveNote(null, true); }
+function answer(idx)          { resolveNote({ kind: 'name', idx }, false); }
+function answerExact(d)       { resolveNote({ kind: 'exact', d }, false); }
+function answerGuitar(s, f)   { resolveNote({ kind: 'guitar', s, f }, false); }
+function onTimeout()          { resolveNote(null, true); }
 
 function endGame(reason) {
   stopAllTimers();
@@ -1958,6 +2322,21 @@ $('#mode-group').addEventListener('click', e => {
   $$('#mode-group .chip').forEach(b => b.classList.toggle('selected', b === btn));
   saveSettings();
 });
+$('#input-group').addEventListener('click', e => {
+  const btn = e.target.closest('.chip');
+  if (!btn) return;
+  state.inputMode = btn.dataset.input;
+  $$('#input-group .chip').forEach(b => b.classList.toggle('selected', b === btn));
+  updateKbOptVisibility();
+  saveSettings();
+});
+$('#kbopt-group').addEventListener('click', e => {
+  const btn = e.target.closest('.chip');
+  if (!btn) return;
+  state.kbOpt = btn.dataset.kb;
+  $$('#kbopt-group .chip').forEach(b => b.classList.toggle('selected', b === btn));
+  saveSettings();
+});
 
 // Thèmes
 $('#btn-theme').addEventListener('click', () => { themeLight = !themeLight; applyTheme(); });
@@ -2021,9 +2400,10 @@ $('#btn-edit-custom').addEventListener('click', () => {
 $('#btn-end-home').addEventListener('click', backHome);
 $('#btn-lb-home').addEventListener('click', backHome);
 
-// Clavier : 1–7 → Do…Si
+// Clavier physique : 1–7 → Do…Si (uniquement pour les saisies par nom)
 document.addEventListener('keydown', e => {
   if (!$('#screen-game').classList.contains('active')) return;
+  if (state.inputMode === 'guitare' || isExactInput()) return;
   const n = parseInt(e.key, 10);
   if (n >= 1 && n <= 7 && !state.answered) answer(n - 1);
 });

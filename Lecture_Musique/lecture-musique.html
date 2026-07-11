@@ -10,6 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="../shared/classement.css" />
 <style>
+  /* ─── Thème sombre (défaut) ─── */
   :root {
     --bg: #050d09;
     --bg-elev: #0b1a12;
@@ -27,10 +28,82 @@
     --staff-line: #3a5a4c;
     --note: #e8f5ec;
     --shadow: 0 20px 60px -20px rgba(61, 220, 132, 0.18);
+    --stars-opacity: 0.8;
+    --glow1: rgba(61, 220, 132, 0.07);
+    --glow2: rgba(245, 203, 92, 0.04);
 
     --font-arcade: 'Bungee', 'Manrope', system-ui, sans-serif;
     --font-body: 'Manrope', system-ui, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  /* ─── Thème sombre + protection des yeux (tons chauds, moins de bleu) ─── */
+  :root[data-eye="1"] {
+    --bg: #0d0a04;
+    --bg-elev: #17120a;
+    --bg-card: #1e180c;
+    --border: #3a2f16;
+    --border-hi: #574821;
+    --text: #f2e5c9;
+    --text-dim: #a99a72;
+    --text-faint: #6d6142;
+    --accent: #e0b04b;
+    --accent-soft: rgba(224, 176, 75, 0.15);
+    --gold: #f5cb5c;
+    --gold-soft: rgba(245, 203, 92, 0.12);
+    --error: #e07856;
+    --staff-line: #5a4d2a;
+    --note: #f2e5c9;
+    --shadow: 0 20px 60px -20px rgba(224, 176, 75, 0.16);
+    --stars-opacity: 0.4;
+    --glow1: rgba(224, 176, 75, 0.06);
+    --glow2: rgba(245, 203, 92, 0.04);
+  }
+
+  /* ─── Thème clair ─── */
+  :root[data-theme="light"] {
+    --bg: #f3f7f4;
+    --bg-elev: #e7efe9;
+    --bg-card: #ffffff;
+    --border: #d5e2d9;
+    --border-hi: #b0c9ba;
+    --text: #12281a;
+    --text-dim: #55705f;
+    --text-faint: #8aa392;
+    --accent: #12934f;
+    --accent-soft: rgba(18, 147, 79, 0.1);
+    --gold: #a87b06;
+    --gold-soft: rgba(168, 123, 6, 0.1);
+    --error: #d63757;
+    --staff-line: #9db3a5;
+    --note: #17301f;
+    --shadow: 0 20px 60px -20px rgba(18, 147, 79, 0.18);
+    --stars-opacity: 0.15;
+    --glow1: rgba(18, 147, 79, 0.05);
+    --glow2: rgba(168, 123, 6, 0.04);
+  }
+
+  /* ─── Thème clair + protection des yeux (papier sépia) ─── */
+  :root[data-theme="light"][data-eye="1"] {
+    --bg: #f6efdd;
+    --bg-elev: #eee3c8;
+    --bg-card: #fdf7e6;
+    --border: #e0d3b0;
+    --border-hi: #c6b587;
+    --text: #3c3115;
+    --text-dim: #7a6b45;
+    --text-faint: #a3946b;
+    --accent: #8a6a08;
+    --accent-soft: rgba(138, 106, 8, 0.1);
+    --gold: #8f6500;
+    --gold-soft: rgba(143, 101, 0, 0.1);
+    --error: #c05a3c;
+    --staff-line: #b3a37b;
+    --note: #3c3115;
+    --shadow: 0 20px 60px -20px rgba(138, 106, 8, 0.15);
+    --stars-opacity: 0.1;
+    --glow1: rgba(138, 106, 8, 0.05);
+    --glow2: rgba(143, 101, 0, 0.04);
   }
 
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -43,8 +116,9 @@
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
     background-image:
-      radial-gradient(ellipse at top, rgba(61, 220, 132, 0.07) 0%, transparent 55%),
-      radial-gradient(ellipse at bottom, rgba(245, 203, 92, 0.04) 0%, transparent 60%);
+      radial-gradient(ellipse at top, var(--glow1) 0%, transparent 55%),
+      radial-gradient(ellipse at bottom, var(--glow2) 0%, transparent 60%);
+    transition: background-color 0.25s, color 0.25s;
   }
 
   /* petites "étoiles" scintillantes façon salle d'arcade */
@@ -55,13 +129,13 @@
     pointer-events: none;
     z-index: 0;
     background-image:
-      radial-gradient(1px 1px at 15% 25%, rgba(232, 245, 236, 0.35), transparent 50%),
-      radial-gradient(1px 1px at 78% 82%, rgba(245, 203, 92, 0.3), transparent 50%),
-      radial-gradient(1px 1px at 42% 68%, rgba(232, 245, 236, 0.2), transparent 50%),
-      radial-gradient(1px 1px at 88% 12%, rgba(61, 220, 132, 0.3), transparent 50%),
-      radial-gradient(1px 1px at 8% 88%, rgba(232, 245, 236, 0.2), transparent 50%),
-      radial-gradient(1px 1px at 62% 42%, rgba(245, 203, 92, 0.18), transparent 50%);
-    opacity: 0.8;
+      radial-gradient(1px 1px at 15% 25%, rgba(150, 170, 155, 0.35), transparent 50%),
+      radial-gradient(1px 1px at 78% 82%, rgba(200, 170, 90, 0.3), transparent 50%),
+      radial-gradient(1px 1px at 42% 68%, rgba(150, 170, 155, 0.2), transparent 50%),
+      radial-gradient(1px 1px at 88% 12%, rgba(100, 190, 130, 0.3), transparent 50%),
+      radial-gradient(1px 1px at 8% 88%, rgba(150, 170, 155, 0.2), transparent 50%),
+      radial-gradient(1px 1px at 62% 42%, rgba(200, 170, 90, 0.18), transparent 50%);
+    opacity: var(--stars-opacity);
   }
 
   .app {
@@ -91,7 +165,7 @@
     letter-spacing: 0.01em;
     margin: 0;
     color: var(--text);
-    text-shadow: 0 0 24px rgba(61, 220, 132, 0.35);
+    text-shadow: 0 0 24px var(--accent-soft);
   }
   .title .accent { color: var(--accent); }
   .title .gold { color: var(--gold); }
@@ -111,18 +185,37 @@
     font-weight: 700;
   }
 
+  .top-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 18px;
+  }
   .hub-link {
-    align-self: flex-start;
     font-size: 12px;
     color: var(--text-dim);
     text-decoration: none;
     border: 1px solid var(--border);
     border-radius: 20px;
     padding: 6px 14px;
-    margin-bottom: 18px;
     transition: all 0.15s;
   }
   .hub-link:hover { color: var(--text); border-color: var(--border-hi); }
+  .top-spacer { flex: 1; }
+  .icon-btn {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    border-radius: 50%;
+    width: 36px; height: 36px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: grid;
+    place-items: center;
+  }
+  .icon-btn:hover { border-color: var(--border-hi); color: var(--text); }
+  .icon-btn.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
 
   /* ─── Home / options ─── */
   .home-header { padding: 6px 0 20px; }
@@ -164,7 +257,7 @@
 
   .primary-btn {
     background: var(--accent);
-    color: #04140b;
+    color: var(--bg);
     border: none;
     border-radius: 14px;
     padding: 18px 28px;
@@ -175,11 +268,11 @@
     transition: all 0.18s;
     width: 100%;
     margin-top: 26px;
-    box-shadow: 0 6px 30px -6px rgba(61, 220, 132, 0.5);
+    box-shadow: var(--shadow);
   }
-  .primary-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 36px -6px rgba(61, 220, 132, 0.6); }
+  .primary-btn:hover { transform: translateY(-2px); }
   .primary-btn:active { transform: scale(0.98); }
-  .primary-btn.gold { background: var(--gold); box-shadow: 0 6px 30px -6px rgba(245, 203, 92, 0.45); }
+  .primary-btn.gold { background: var(--gold); }
   .primary-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
   .ghost-btn {
@@ -226,7 +319,7 @@
     flex-shrink: 0;
     transition: all 0.15s;
   }
-  .custom-play:hover { background: var(--accent); color: #04140b; }
+  .custom-play:hover { background: var(--accent); color: var(--bg); }
   .custom-info { flex: 1; min-width: 0; cursor: pointer; }
   .custom-name { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .custom-desc { font-size: 11px; color: var(--text-dim); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -297,7 +390,7 @@
     opacity: 0;
     transform: scale(0.8);
     transition: opacity 0.15s, transform 0.15s;
-    text-shadow: 0 0 18px rgba(245, 203, 92, 0.5);
+    text-shadow: 0 0 18px var(--gold-soft);
   }
   .combo.on { opacity: 1; transform: scale(1); }
   .combo.pop { animation: comboPop 0.3s ease; }
@@ -314,15 +407,15 @@
     border: 1px solid var(--border);
     border-radius: 18px;
     padding: 8px 6px 2px;
-    box-shadow: 0 14px 44px -18px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 14px 44px -18px rgba(0, 0, 0, 0.35);
     overflow: hidden;
   }
   .staff-card.correct { animation: glowOk 0.55s ease; }
   .staff-card.wrong   { animation: shake 0.4s ease; }
   @keyframes glowOk {
-    0% { box-shadow: 0 0 0 rgba(61, 220, 132, 0); }
-    35% { box-shadow: 0 0 46px rgba(61, 220, 132, 0.55); border-color: var(--accent); }
-    100% { box-shadow: 0 14px 44px -18px rgba(0, 0, 0, 0.6); }
+    0% { box-shadow: 0 0 0 transparent; }
+    35% { box-shadow: 0 0 46px var(--accent-soft); border-color: var(--accent); }
+    100% { box-shadow: 0 14px 44px -18px rgba(0, 0, 0, 0.35); }
   }
   @keyframes shake {
     0%, 100% { transform: translateX(0); }
@@ -359,8 +452,8 @@
     transition: opacity 0.18s, transform 0.18s;
   }
   .note-reveal.show { opacity: 1; transform: translateY(0); }
-  .note-reveal.ok  { color: var(--accent); text-shadow: 0 0 20px rgba(61, 220, 132, 0.6); }
-  .note-reveal.ko  { color: var(--error); text-shadow: 0 0 20px rgba(255, 84, 112, 0.6); }
+  .note-reveal.ok  { color: var(--accent); text-shadow: 0 0 20px var(--accent-soft); }
+  .note-reveal.ko  { color: var(--error); }
 
   /* bandeau changement de clé */
   .clef-banner {
@@ -370,16 +463,16 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(5, 13, 9, 0.78);
+    background: var(--bg-elev);
+    opacity: 0;
     font-family: var(--font-arcade);
     font-size: 21px;
     color: var(--gold);
-    text-shadow: 0 0 22px rgba(245, 203, 92, 0.6);
-    opacity: 0;
+    text-shadow: 0 0 22px var(--gold-soft);
     pointer-events: none;
     transition: opacity 0.18s;
   }
-  .clef-banner.show { opacity: 1; }
+  .clef-banner.show { opacity: 0.94; }
 
   /* points flottants */
   .float-pts {
@@ -448,10 +541,10 @@
     background: var(--accent-soft);
     border-color: var(--accent);
     color: var(--accent);
-    box-shadow: 0 0 22px rgba(61, 220, 132, 0.35);
+    box-shadow: var(--shadow);
   }
   .answer-btn.ko {
-    background: rgba(255, 84, 112, 0.12);
+    background: var(--gold-soft);
     border-color: var(--error);
     color: var(--error);
   }
@@ -488,7 +581,7 @@
     font-size: clamp(40px, 12vw, 58px);
     color: var(--gold);
     line-height: 1.1;
-    text-shadow: 0 0 30px rgba(245, 203, 92, 0.4);
+    text-shadow: 0 0 30px var(--gold-soft);
   }
   .loisir-label {
     font-family: var(--font-arcade);
@@ -558,10 +651,9 @@
     pointer-events: none;
     z-index: 50;
     opacity: 0;
-    background: radial-gradient(ellipse at center, rgba(61, 220, 132, 0.16), transparent 65%);
   }
-  .flash.ok { background: radial-gradient(ellipse at center, rgba(61, 220, 132, 0.18), transparent 65%); animation: flashAnim 0.4s ease; }
-  .flash.ko { background: radial-gradient(ellipse at center, rgba(255, 84, 112, 0.18), transparent 65%); animation: flashAnim 0.45s ease; }
+  .flash.ok { background: radial-gradient(ellipse at center, var(--accent-soft), transparent 65%); animation: flashAnim 0.4s ease; }
+  .flash.ko { background: radial-gradient(ellipse at center, var(--gold-soft), transparent 65%); animation: flashAnim 0.45s ease; }
   @keyframes flashAnim { 0% { opacity: 0; } 30% { opacity: 1; } 100% { opacity: 0; } }
 
   @media (max-width: 380px) {
@@ -575,11 +667,16 @@
 
   <!-- ─────────── ACCUEIL ─────────── -->
   <section id="screen-home" class="screen active">
-    <a class="hub-link" href="../index.html?hub=secret">← Retour au hub</a>
+    <div class="top-row">
+      <a class="hub-link" href="../index.html?hub=secret">← Retour au hub</a>
+      <span class="top-spacer"></span>
+      <button class="icon-btn" id="btn-theme" title="Mode clair / sombre">🌙</button>
+      <button class="icon-btn" id="btn-eye" title="Protection des yeux">👁</button>
+    </div>
     <header class="home-header">
       <div class="eyebrow">Arcade · Solfège</div>
       <h1 class="title">Lecture <span class="accent">Musique</span> <span class="gold">♪</span></h1>
-      <p class="subtitle">Une note apparaît sur la portée : identifie-la avant la fin du chrono. Enchaîne les combos, garde tes vies, grimpe au classement.</p>
+      <p class="subtitle">La portée défile comme une vraie partition : lis chaque note avant qu'elle ne s'arrête. Combos, vies, classements.</p>
       <div class="badge-row"><span id="home-badge" style="display:none;"></span></div>
     </header>
 
@@ -591,13 +688,19 @@
       <button class="chip" data-mode="sprint">Sprint 60 s<small>vitesse de lecture pure</small></button>
     </div>
 
-    <div class="option-label">Clé</div>
+    <div class="option-label">Clés <span style="text-transform:none;letter-spacing:0;">(plusieurs = aléatoire automatique)</span></div>
     <div class="chip-group" id="clef-group">
       <button class="chip selected" data-clef="sol">Clé de Sol<small>les aigus · violon</small></button>
       <button class="chip" data-clef="fa">Clé de Fa<small>les graves · basse</small></button>
       <button class="chip" data-clef="ut3">Clé d'Ut 3<small>alto · médium</small></button>
-      <button class="chip" data-clef="melange">Mélange<small>clé aléatoire à chaque note</small></button>
-      <button class="chip" data-clef="alternance">Alternance<small>la clé change toutes les 4 notes</small></button>
+    </div>
+
+    <div id="clefchange-wrap" style="display:none;">
+      <div class="option-label">Changement de clé</div>
+      <div class="chip-group" id="clefchange-group">
+        <button class="chip selected" data-change="note">À chaque note<small>aléatoire en continu</small></button>
+        <button class="chip" data-change="altern4">Toutes les 4 notes<small>annoncé pendant le jeu</small></button>
+      </div>
     </div>
 
     <div class="option-label">Étendue</div>
@@ -824,7 +927,9 @@
 <script>
 /* ════════════════════════════════════════════════════════════
    LECTURE MUSIQUE — arcade de lecture de notes
-   Clés : Sol (2e ligne), Fa (4e ligne), Ut (3e ligne)
+   Portée défilante : les notes arrivent de la droite et le
+   défilement ralentit (vitesse ∝ distance restante) jusqu'à
+   l'arrêt total sur la zone de lecture, comme une vraie lecture.
    Modes : Loisir · Classique · Infini · Sprint 60 s · Personnalisé
    ════════════════════════════════════════════════════════════ */
 'use strict';
@@ -865,9 +970,6 @@ function streakBonus(streak) {
 }
 
 // ─── Modes standards & classements ─────────────────────────
-// Chaque mode classé a son propre classement (gameId distinct).
-// Classique : 20 notes parfaites instantanées → 20×500 + 1550 = 11 550.
-// Infini / Sprint : bornes calibrées sur un très bon lecteur (~1 s/note).
 const RANKS = {
   classique: { gameId: 'lecture-musique',        label: 'Classique',  maxScore: 11550, humanCap: 10000 },
   infini:    { gameId: 'lecture-musique-infini', label: 'Infini',     maxScore: 60000, humanCap: 22000 },
@@ -885,12 +987,19 @@ function initRanking(modeKey) {
 initRanking('classique');
 
 // ─── Constantes de partie ──────────────────────────────────
-const ALTERN_EVERY  = 4;      // alternance : changement de clé toutes les N notes
-const SPRINT_MS     = 60000;  // durée du sprint standard
-const SPRINT_PENALTY_MS = 3000; // pénalité de temps par erreur en sprint
+const ALTERN_EVERY  = 4;
+const SPRINT_MS     = 60000;
+const SPRINT_PENALTY_MS = 3000;
 const SETTINGS_KEY  = 'lecture-musique-settings';
 const CUSTOMS_KEY   = 'lecture-musique-customs';
 const CLOUD_GAME_ID = 'lecture-musique';
+
+// ─── Défilement de la portée ───────────────────────────────
+const READ_X   = 118;  // position de lecture (juste après la clé)
+const NOTE_GAP = 66;   // espacement horizontal entre deux notes
+const CLEF_GAP = 48;   // espace supplémentaire quand une clé s'insère
+const AHEAD    = 4;    // notes générées / affichées en avance
+const SCROLL_RATE = 5.5; // vitesse ∝ distance : dx/dt = diff × rate
 
 // ─── Helpers notes ─────────────────────────────────────────
 function noteName(diatonic)   { return NOTE_NAMES[((diatonic % 7) + 7) % 7]; }
@@ -903,13 +1012,14 @@ function noteFreq(diatonic) {
 // ─── State ─────────────────────────────────────────────────
 const state = {
   // options accueil
-  clef: 'sol',          // 'sol' | 'fa' | 'ut3' | 'melange' | 'alternance'
+  clefs: ['sol'],        // multi-sélection ; plusieurs = aléatoire automatique
+  clefChangeSel: 'note', // 'note' | 'altern4' (utilisé si plusieurs clés)
   range: 'facile',
-  gameMode: 'classique',// 'loisir' | 'classique' | 'infini' | 'sprint' | 'custom'
-  customCfg: null,      // config du jeu personnalisé en cours
+  gameMode: 'classique', // 'loisir' | 'classique' | 'infini' | 'sprint' | 'custom'
+  customCfg: null,
 
-  // config de la manche en cours (calculée au lancement)
-  run: null,            // voir buildRunConfig()
+  // config de la manche en cours
+  run: null,
 
   // progression
   idx: 0,
@@ -917,15 +1027,23 @@ const state = {
   streak: 0,
   bestStreak: 0,
   faults: 0,
-  results: [],          // [{correct, timeMs}]
-  current: null,        // {clefKey, p, diatonic}
-  runClef: null,        // clé courante (modes fixe / alternance)
+  results: [],
+  current: null,         // item de queue courant {clefKey, p, diatonic, ...}
+  runClef: null,
   startTs: 0,
   answered: true,
   timerId: null,
   nextId: null,
   globalEndTs: 0,
   globalIntId: null,
+
+  // défilement
+  queue: [],             // [{clefKey, p, diatonic, worldX, inline, status}]
+  qIndex: 0,
+  tx: 0,
+  arrived: false,
+  rafId: null,
+  lastTs: 0,
 };
 
 const $  = (s, root = document) => root.querySelector(s);
@@ -933,6 +1051,33 @@ const $$ = (s, root = document) => Array.from(root.querySelectorAll(s));
 
 function vibrate(pattern) {
   try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (e) {}
+}
+
+// ─── Thèmes : sombre / clair + protection des yeux ─────────
+const THEME_KEY = 'theme';        // partagé avec le hub Scolaris
+const EYE_KEY   = 'scolaris_eye';
+let themeLight = false;
+let eyeOn = false;
+
+function applyTheme() {
+  document.documentElement.setAttribute('data-theme', themeLight ? 'light' : 'dark');
+  if (eyeOn) document.documentElement.setAttribute('data-eye', '1');
+  else document.documentElement.removeAttribute('data-eye');
+  const tb = $('#btn-theme');
+  if (tb) tb.textContent = themeLight ? '☀️' : '🌙';
+  const eb = $('#btn-eye');
+  if (eb) eb.classList.toggle('on', eyeOn);
+  try {
+    localStorage.setItem(THEME_KEY, themeLight ? 'light' : 'dark');
+    localStorage.setItem(EYE_KEY, eyeOn ? '1' : '0');
+  } catch (e) {}
+}
+function loadTheme() {
+  try {
+    themeLight = localStorage.getItem(THEME_KEY) === 'light';
+    eyeOn = localStorage.getItem(EYE_KEY) === '1';
+  } catch (e) {}
+  applyTheme();
 }
 
 // ─── Audio (WebAudio, généré — aucun asset) ────────────────
@@ -963,14 +1108,14 @@ function playFreq(freq, dur = 0.55, type = 'triangle', vol = 0.16, delay = 0) {
 function sndCorrect(diatonic, streak) {
   const f = noteFreq(diatonic);
   playFreq(f, 0.5);
-  if (streak > 0 && streak % 5 === 0) { // petit jingle de palier de combo
+  if (streak > 0 && streak % 5 === 0) {
     playFreq(f * 1.5, 0.22, 'triangle', 0.1, 0.1);
     playFreq(f * 2,   0.3,  'triangle', 0.1, 0.22);
   }
 }
 function sndWrong(diatonic) {
   playFreq(98, 0.22, 'sawtooth', 0.1);
-  playFreq(noteFreq(diatonic), 0.55, 'triangle', 0.14, 0.3); // on fait entendre la bonne note
+  playFreq(noteFreq(diatonic), 0.55, 'triangle', 0.14, 0.3);
 }
 function sndClefChange() {
   playFreq(523.25, 0.14, 'triangle', 0.13);
@@ -985,7 +1130,7 @@ function sndGameOver(win) {
 
 // ─── Portée SVG ────────────────────────────────────────────
 // Géométrie : lignes y = 76..140 (pas 16), position p → y = 140 − 8p.
-const STAFF = { x1: 24, x2: 296, noteX: 210, line1Y: 140, step: 8 };
+const STAFF = { x1: 0, x2: 320, line1Y: 140, step: 8 };
 
 function clefGlyph(clefKey) {
   const C = 'var(--note)';
@@ -1012,48 +1157,105 @@ function clefGlyph(clefKey) {
           fill="none" stroke="${C}" stroke-width="4.2" stroke-linecap="round"/>`;
 }
 
-function renderStaff(clefKey, p, noteColor) {
-  const color = noteColor || 'var(--note)';
+// Dessine une note (tête + hampe + lignes supplémentaires) à x donné.
+function noteMarkup(x, p, color, opacity) {
   const y = STAFF.line1Y - p * STAFF.step;
-
-  // 5 lignes de portée
-  let lines = '';
-  for (let i = 0; i < 5; i++) {
-    const ly = STAFF.line1Y - i * 16;
-    lines += `<line x1="${STAFF.x1}" y1="${ly}" x2="${STAFF.x2}" y2="${ly}" stroke="var(--staff-line)" stroke-width="1.6"/>`;
-  }
-
-  // lignes supplémentaires (positions paires hors de la portée)
-  let ledgers = '';
+  let out = `<g opacity="${opacity}">`;
   if (p <= -2) {
     for (let q = -2; q >= p; q -= 2) {
       const qy = STAFF.line1Y - q * STAFF.step;
-      ledgers += `<line x1="${STAFF.noteX - 17}" y1="${qy}" x2="${STAFF.noteX + 17}" y2="${qy}" stroke="var(--staff-line)" stroke-width="1.8"/>`;
+      out += `<line x1="${x - 17}" y1="${qy}" x2="${x + 17}" y2="${qy}" stroke="var(--staff-line)" stroke-width="1.8"/>`;
     }
   }
   if (p >= 10) {
     for (let q = 10; q <= p; q += 2) {
       const qy = STAFF.line1Y - q * STAFF.step;
-      ledgers += `<line x1="${STAFF.noteX - 17}" y1="${qy}" x2="${STAFF.noteX + 17}" y2="${qy}" stroke="var(--staff-line)" stroke-width="1.8"/>`;
+      out += `<line x1="${x - 17}" y1="${qy}" x2="${x + 17}" y2="${qy}" stroke="var(--staff-line)" stroke-width="1.8"/>`;
     }
   }
-
-  // note : tête + hampe (vers le haut si la note est basse, vers le bas sinon)
   const stemUp = p < 4;
-  const stemX = stemUp ? STAFF.noteX + 8.6 : STAFF.noteX - 8.6;
+  const stemX = stemUp ? x + 8.6 : x - 8.6;
   const stemY2 = stemUp ? y - 46 : y + 46;
-  const note = `
+  out += `
     <line x1="${stemX}" y1="${y + (stemUp ? -2 : 2)}" x2="${stemX}" y2="${stemY2}"
           stroke="${color}" stroke-width="2.6" stroke-linecap="round"/>
-    <ellipse cx="${STAFF.noteX}" cy="${y}" rx="9.5" ry="6.8" fill="${color}"
-             transform="rotate(-18 ${STAFF.noteX} ${y})"/>`;
+    <ellipse cx="${x}" cy="${y}" rx="9.5" ry="6.8" fill="${color}"
+             transform="rotate(-18 ${x} ${y})"/></g>`;
+  return out;
+}
 
-  return `<svg viewBox="0 0 320 210" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Note à identifier">
-    ${lines}
-    ${clefGlyph(clefKey)}
-    ${ledgers}
-    ${note}
-  </svg>`;
+// Rendu complet de la portée défilante (appelé à chaque évènement,
+// pas à chaque frame — la frame ne met à jour que la translation).
+function renderStrip() {
+  const cur = state.queue[state.qIndex];
+  if (!cur) return;
+
+  let fixed = '';
+  for (let i = 0; i < 5; i++) {
+    const ly = STAFF.line1Y - i * 16;
+    fixed += `<line x1="${STAFF.x1}" y1="${ly}" x2="${STAFF.x2}" y2="${ly}" stroke="var(--staff-line)" stroke-width="1.6"/>`;
+  }
+  // zone de lecture (halo discret là où la note s'arrête)
+  fixed += `<rect x="${READ_X - 20}" y="34" width="40" height="146" rx="10" fill="var(--accent)" opacity="0.07"/>`;
+  // clé courante, fixe à gauche
+  fixed += clefGlyph(cur.clefKey);
+
+  let layer = '';
+  const from = Math.max(0, state.qIndex - 2);
+  const to = Math.min(state.queue.length - 1, state.qIndex + AHEAD);
+  for (let i = from; i <= to; i++) {
+    const item = state.queue[i];
+    // clé insérée dans le flux quand la clé change (comme sur une vraie partition)
+    if (item.inline && i > state.qIndex) {
+      layer += `<g transform="translate(${item.worldX - 86},0)" opacity="0.75">${clefGlyph(item.clefKey)}</g>`;
+    }
+    let color, opacity;
+    if (item.status === 'ok')      { color = 'var(--accent)'; opacity = 1; }
+    else if (item.status === 'ko') { color = 'var(--error)';  opacity = 1; }
+    else if (i === state.qIndex)   { color = 'var(--note)';   opacity = 1; }
+    else                           { color = 'var(--note)';   opacity = 0.4; }
+    layer += noteMarkup(item.worldX, item.p, color, opacity);
+  }
+
+  $('#staff-svg').innerHTML =
+    `<svg viewBox="0 0 320 210" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Portée défilante">
+      <defs><clipPath id="stripclip"><rect x="84" y="0" width="236" height="210"/></clipPath></defs>
+      ${fixed}
+      <g clip-path="url(#stripclip)">
+        <g id="notes-layer" transform="translate(${state.tx},0)">${layer}</g>
+      </g>
+    </svg>`;
+}
+
+// Boucle de défilement : vitesse proportionnelle à la distance
+// restante (dx/dt = diff × SCROLL_RATE) → décélération fluide
+// jusqu'à l'arrêt total sur la zone de lecture.
+function scrollLoop(ts) {
+  state.rafId = null;
+  if (!$('#screen-game').classList.contains('active')) return;
+  const dt = Math.min(0.05, state.lastTs ? (ts - state.lastTs) / 1000 : 0.016);
+  state.lastTs = ts;
+
+  const cur = state.queue[state.qIndex];
+  if (cur) {
+    const target = READ_X - cur.worldX;
+    const diff = target - state.tx;
+    if (Math.abs(diff) > 0.4) {
+      state.tx += diff * (1 - Math.exp(-SCROLL_RATE * dt));
+    } else if (!state.arrived) {
+      state.tx = target;
+      state.arrived = true;
+      onNoteArrived();
+    }
+    const layer = document.getElementById('notes-layer');
+    if (layer) layer.setAttribute('transform', 'translate(' + state.tx + ',0)');
+  }
+  state.rafId = requestAnimationFrame(scrollLoop);
+}
+
+function onNoteArrived() {
+  if (state.answered) return; // déjà répondu pendant le défilement
+  startNoteTimer();           // le chrono par note démarre à l'arrêt de la portée
 }
 
 // ─── Écrans ────────────────────────────────────────────────
@@ -1069,19 +1271,14 @@ function backHome() {
 }
 
 // ─── Options accueil ───────────────────────────────────────
-function bindChipGroup(groupId, dataKey, onPick) {
-  $('#' + groupId).addEventListener('click', e => {
-    const btn = e.target.closest('.chip');
-    if (!btn) return;
-    $$('#' + groupId + ' .chip').forEach(b => b.classList.toggle('selected', b === btn));
-    onPick(btn.dataset[dataKey]);
-    saveSettings();
-  });
+function updateClefChangeVisibility() {
+  $('#clefchange-wrap').style.display = state.clefs.length > 1 ? '' : 'none';
 }
 function saveSettings() {
   try {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify({
-      clef: state.clef, range: state.range, mode: state.gameMode,
+      clefs: state.clefs, clefChange: state.clefChangeSel,
+      range: state.range, mode: state.gameMode,
       name: $('#player-name').value || '',
     }));
   } catch (e) {}
@@ -1090,13 +1287,23 @@ function loadSettings() {
   let s = null;
   try { s = JSON.parse(localStorage.getItem(SETTINGS_KEY)); } catch (e) {}
   if (!s) return;
-  if (CLEFS[s.clef] || s.clef === 'melange' || s.clef === 'alternance') state.clef = s.clef;
+  if (Array.isArray(s.clefs) && s.clefs.every(k => CLEFS[k]) && s.clefs.length) {
+    state.clefs = s.clefs;
+  } else if (s.clef) {
+    // migration ancien format (clé unique / melange / alternance)
+    if (CLEFS[s.clef]) state.clefs = [s.clef];
+    else if (s.clef === 'melange')    { state.clefs = CLEF_KEYS.slice(); state.clefChangeSel = 'note'; }
+    else if (s.clef === 'alternance') { state.clefs = CLEF_KEYS.slice(); state.clefChangeSel = 'altern4'; }
+  }
+  if (s.clefChange === 'note' || s.clefChange === 'altern4') state.clefChangeSel = s.clefChange;
   if (RANGES[s.range]) state.range = s.range;
   if (['loisir', 'classique', 'infini', 'sprint'].includes(s.mode)) state.gameMode = s.mode;
   if (s.name) $('#player-name').value = s.name;
-  $$('#clef-group .chip').forEach(b => b.classList.toggle('selected', b.dataset.clef === state.clef));
+  $$('#clef-group .chip').forEach(b => b.classList.toggle('selected', state.clefs.includes(b.dataset.clef)));
+  $$('#clefchange-group .chip').forEach(b => b.classList.toggle('selected', b.dataset.change === state.clefChangeSel));
   $$('#range-group .chip').forEach(b => b.classList.toggle('selected', b.dataset.range === state.range));
   $$('#mode-group .chip').forEach(b => b.classList.toggle('selected', b.dataset.mode === state.gameMode));
+  updateClefChangeVisibility();
 }
 
 // ─── Jeux personnalisés : stockage local + compte ──────────
@@ -1124,7 +1331,6 @@ async function loadCustomsFromCloud() {
   try {
     const data = await auth.loadUserGameData(CLOUD_GAME_ID);
     if (data && Array.isArray(data.customs)) {
-      // fusion par id — la version la plus récente gagne
       const byId = new Map();
       for (const c of [...customs, ...data.customs]) {
         const prev = byId.get(c.id);
@@ -1134,7 +1340,6 @@ async function loadCustomsFromCloud() {
       saveCustomsLocal();
       renderCustomList();
       setSyncLabel(true);
-      // repousse la fusion vers le cloud pour aligner les deux côtés
       syncCustomsToCloud();
     } else if (data !== null) {
       setSyncLabel(true);
@@ -1153,7 +1358,7 @@ function setSyncLabel(cloudOk) {
 }
 
 function customSummary(c) {
-  const clefs = c.clefs.map(k => CLEFS[k].label.replace("Clé de ", '').replace("Clé d'", '')).join('+');
+  const clefs = c.clefs.map(k => CLEFS[k].label.replace('Clé de ', '').replace("Clé d'", '')).join('+');
   const chg = c.clefChange === 'note' ? 'clé/note' : c.clefChange === 'altern4' ? 'clé/4 notes' : '';
   const fin = c.structure === 'notes' ? c.notesCount + ' notes'
             : c.structure === 'temps' ? c.durationS + ' s'
@@ -1216,7 +1421,6 @@ function openEditor(cfg) {
   $('#editor-eyebrow').textContent = cfg ? 'Modifier « ' + cfg.name + ' »' : 'Nouveau jeu';
   $('#editor-msg').textContent = '';
   $('#e-name').value = cfg ? cfg.name : '';
-  // clés (multi-sélection)
   const clefs = cfg ? cfg.clefs : ['sol'];
   $$('#e-clefs .chip').forEach(b => b.classList.toggle('selected', clefs.includes(b.dataset.v)));
   pickChip('e-change',    cfg ? cfg.clefChange : 'jamais');
@@ -1245,6 +1449,7 @@ function saveEditor() {
   }
   let clefChange = chipValue('e-change');
   if (clefs.length === 1) clefChange = 'jamais';
+  else if (clefChange === 'jamais') clefChange = 'note'; // plusieurs clés = aléatoire automatique
 
   const cfg = {
     id: editingId || ('c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)),
@@ -1270,7 +1475,6 @@ function saveEditor() {
 }
 
 // ─── Config de manche ──────────────────────────────────────
-// Normalise tous les modes vers une même config moteur.
 function buildRunConfig() {
   if (state.gameMode === 'custom' && state.customCfg) {
     const c = state.customCfg;
@@ -1278,7 +1482,7 @@ function buildRunConfig() {
       kind: 'custom',
       customId: c.id,
       clefPool: c.clefs,
-      clefChange: c.clefChange,          // 'jamais' | 'note' | 'altern4'
+      clefChange: c.clefChange,
       rangeKey: c.range,
       totalNotes: c.structure === 'notes' ? c.notesCount : Infinity,
       maxFaults: c.faults == null ? Infinity : c.faults,
@@ -1286,16 +1490,13 @@ function buildRunConfig() {
       globalMs: c.structure === 'temps' ? c.durationS * 1000 : null,
       penaltyMs: 0,
       scoring: true,
-      rankKey: null,                     // pas de classement mondial pour les customs
+      rankKey: null,
     };
   }
 
-  const clefChange = state.clef === 'melange' ? 'note'
-                   : state.clef === 'alternance' ? 'altern4'
-                   : 'jamais';
-  const clefPool = (state.clef === 'melange' || state.clef === 'alternance')
-    ? CLEF_KEYS.slice()
-    : [state.clef];
+  // plusieurs clés sélectionnées = changement de clé automatique
+  const clefPool = state.clefs.slice();
+  const clefChange = clefPool.length > 1 ? state.clefChangeSel : 'jamais';
   const base = { kind: state.gameMode, clefPool, clefChange, rangeKey: state.range, penaltyMs: 0 };
 
   switch (state.gameMode) {
@@ -1305,7 +1506,6 @@ function buildRunConfig() {
       // Jeu infini : 3 fautes max, plus de 5 s pour répondre = une faute.
       return { ...base, totalNotes: Infinity, maxFaults: 3, noteTimerMs: 5000, globalMs: null, scoring: true, rankKey: 'infini' };
     case 'sprint':
-      // Vitesse de lecture : 60 s au total, une erreur coûte 3 s.
       return { ...base, totalNotes: Infinity, maxFaults: Infinity, noteTimerMs: null, globalMs: SPRINT_MS, penaltyMs: SPRINT_PENALTY_MS, scoring: true, rankKey: 'sprint' };
     case 'classique':
     default:
@@ -1320,32 +1520,46 @@ function applyBodyMode() {
   document.body.classList.toggle('mode-custom',  !!(r && r.kind === 'custom'));
 }
 
-// ─── Génération d'une note ─────────────────────────────────
-function pickClefForNote() {
+// ─── Génération de la file de notes ────────────────────────
+function genNextQueueItem() {
   const r = state.run;
-  if (r.clefChange === 'note') {
-    return r.clefPool[Math.floor(Math.random() * r.clefPool.length)];
-  }
-  if (r.clefChange === 'altern4') {
-    // change de clé toutes les ALTERN_EVERY notes (état déjà avancé dans nextNote)
-    if ((state.idx - 1) % ALTERN_EVERY === 0) {
-      const others = r.clefPool.filter(k => k !== state.runClef);
-      state.runClef = (others.length ? others : r.clefPool)[Math.floor(Math.random() * (others.length ? others.length : r.clefPool.length))];
-    }
-    return state.runClef;
-  }
-  return state.runClef; // fixe
-}
+  const i = state.queue.length;
+  const prev = i > 0 ? state.queue[i - 1] : null;
 
-function buildNote() {
-  const clefKey = pickClefForNote();
-  const range = RANGES[state.run.rangeKey];
+  let clefKey;
+  if (r.clefChange === 'note') {
+    clefKey = r.clefPool[Math.floor(Math.random() * r.clefPool.length)];
+  } else if (r.clefChange === 'altern4') {
+    if (!prev) {
+      clefKey = state.runClef;
+    } else if (i % ALTERN_EVERY === 0) {
+      const others = r.clefPool.filter(k => k !== prev.clefKey);
+      clefKey = others.length ? others[Math.floor(Math.random() * others.length)] : prev.clefKey;
+    } else {
+      clefKey = prev.clefKey;
+    }
+  } else {
+    clefKey = state.runClef;
+  }
+
+  const range = RANGES[r.rangeKey];
   let p, tries = 0;
   do {
     p = range.min + Math.floor(Math.random() * (range.max - range.min + 1));
     tries++;
-  } while (state.current && state.current.clefKey === clefKey && state.current.p === p && tries < 10);
-  return { clefKey, p, diatonic: CLEFS[clefKey].line1 + p };
+  } while (prev && prev.clefKey === clefKey && prev.p === p && tries < 10);
+
+  const inline = !!(prev && prev.clefKey !== clefKey);
+  const worldX = prev ? prev.worldX + NOTE_GAP + (inline ? CLEF_GAP : 0) : READ_X;
+  state.queue.push({
+    clefKey, p,
+    diatonic: CLEFS[clefKey].line1 + p,
+    worldX, inline,
+    status: 'pending',
+  });
+}
+function ensureQueue() {
+  while (state.queue.length < state.qIndex + 1 + AHEAD) genNextQueueItem();
 }
 
 // ─── HUD ───────────────────────────────────────────────────
@@ -1421,7 +1635,6 @@ function startGlobalTimer() {
     if (left <= 0) {
       bar.style.width = '0%';
       stopAllTimers();
-      // résout la note en cours comme non comptée et termine
       state.answered = true;
       if (state.nextId) { clearTimeout(state.nextId); state.nextId = null; }
       endGame('time');
@@ -1435,6 +1648,9 @@ function startGlobalTimer() {
 function stopAllTimers() {
   stopNoteTimer();
   if (state.globalIntId) { clearInterval(state.globalIntId); state.globalIntId = null; }
+}
+function stopScroll() {
+  if (state.rafId) { cancelAnimationFrame(state.rafId); state.rafId = null; }
 }
 
 // ─── Réponses ──────────────────────────────────────────────
@@ -1481,7 +1697,13 @@ function startGame() {
   state.results = [];
   state.current = null;
   state.runClef = state.run.clefPool[Math.floor(Math.random() * state.run.clefPool.length)];
+  state.queue = [];
+  state.qIndex = 0;
+  state.tx = 0;
+  state.arrived = false;
+  state.lastTs = 0;
   stopAllTimers();
+  stopScroll();
   renderAnswers();
   renderCombo(false);
   $('#clef-banner').classList.remove('show');
@@ -1490,6 +1712,7 @@ function startGame() {
   $('#timer-bar').classList.remove('danger');
   showScreen('screen-game');
   if (state.run.globalMs != null) startGlobalTimer();
+  state.rafId = requestAnimationFrame(scrollLoop);
   nextNote();
 }
 
@@ -1512,25 +1735,33 @@ function nextNote() {
     return;
   }
   state.idx++;
-  const prevClef = state.current ? state.current.clefKey : null;
-  state.current = buildNote();
+  state.qIndex = state.idx - 1;
+  ensureQueue();
+  const item = state.queue[state.qIndex];
+  const prevItem = state.qIndex > 0 ? state.queue[state.qIndex - 1] : null;
+  state.current = item;
   state.answered = false;
+  state.arrived = false;
+  state.startTs = performance.now(); // la lecture commence dès que la note approche
 
-  $('#clef-tag').textContent = CLEFS[state.current.clefKey].label;
-  $('#staff-svg').innerHTML = renderStaff(state.current.clefKey, state.current.p);
+  $('#clef-tag').textContent = CLEFS[item.clefKey].label;
   $('#note-reveal').className = 'note-reveal';
   $('#staff-card').classList.remove('correct', 'wrong');
+  if (r.noteTimerMs) {
+    const bar = $('#timer-bar');
+    bar.style.transition = 'none';
+    bar.style.width = '100%';
+  }
+  renderStrip();
   renderHud();
   setAnswersEnabled(true);
   $$('#answers .answer-btn').forEach(b => b.classList.remove('ok', 'ko'));
 
-  // annonce le changement de clé (modes alternance uniquement)
-  if (r.clefChange === 'altern4' && prevClef && state.current.clefKey !== prevClef) {
-    announceClef(state.current.clefKey);
+  // annonce le changement de clé (alternance uniquement — sinon la clé
+  // insérée dans le flux suffit)
+  if (r.clefChange === 'altern4' && prevItem && item.clefKey !== prevItem.clefKey) {
+    announceClef(item.clefKey);
   }
-
-  state.startTs = performance.now();
-  startNoteTimer();
 }
 
 function resolveNote(pickedIdx, timedOut) {
@@ -1541,7 +1772,8 @@ function resolveNote(pickedIdx, timedOut) {
 
   const r = state.run;
   const elapsed = timedOut ? (r.noteTimerMs || 0) : performance.now() - state.startTs;
-  const d = state.current.diatonic;
+  const item = state.current;
+  const d = item.diatonic;
   const correctIdx = ((d % 7) + 7) % 7;
   const isCorrect = !timedOut && pickedIdx === correctIdx;
 
@@ -1553,6 +1785,8 @@ function resolveNote(pickedIdx, timedOut) {
   void flash.offsetWidth;
 
   state.results.push({ correct: isCorrect, timeMs: elapsed });
+  item.status = isCorrect ? 'ok' : 'ko';
+  renderStrip();
 
   if (isCorrect) {
     state.streak++;
@@ -1565,7 +1799,6 @@ function resolveNote(pickedIdx, timedOut) {
       fp.classList.remove('go'); void fp.offsetWidth; fp.classList.add('go');
     }
     btns[correctIdx].classList.add('ok');
-    $('#staff-svg').innerHTML = renderStaff(state.current.clefKey, state.current.p, 'var(--accent)');
     reveal.textContent = noteName(d);
     reveal.className = 'note-reveal show ok';
     card.classList.add('correct');
@@ -1574,14 +1807,13 @@ function resolveNote(pickedIdx, timedOut) {
     vibrate(18);
     renderHud();
     renderCombo(true);
-    state.nextId = setTimeout(nextNote, r.globalMs != null ? 450 : 700);
+    state.nextId = setTimeout(nextNote, r.globalMs != null ? 400 : 600);
   } else {
     state.streak = 0;
     state.faults++;
-    if (r.penaltyMs) state.globalEndTs -= r.penaltyMs; // sprint : erreur = temps perdu
+    if (r.penaltyMs) state.globalEndTs -= r.penaltyMs;
     if (pickedIdx != null && btns[pickedIdx]) btns[pickedIdx].classList.add('ko');
     btns[correctIdx].classList.add('ok');
-    $('#staff-svg').innerHTML = renderStaff(state.current.clefKey, state.current.p, 'var(--error)');
     reveal.textContent = timedOut ? '⏱ ' + noteName(d) : noteName(d);
     reveal.className = 'note-reveal show ko';
     card.classList.add('wrong');
@@ -1590,7 +1822,7 @@ function resolveNote(pickedIdx, timedOut) {
     vibrate([40, 40, 40]);
     renderHud();
     renderCombo(false);
-    state.nextId = setTimeout(nextNote, r.globalMs != null ? 900 : 1200);
+    state.nextId = setTimeout(nextNote, r.globalMs != null ? 800 : 1100);
   }
 }
 
@@ -1599,6 +1831,7 @@ function onTimeout()  { resolveNote(null, true); }
 
 function endGame(reason) {
   stopAllTimers();
+  stopScroll();
   const r = state.run;
   const total = state.results.length;
   const nOk = state.results.filter(x => x.correct).length;
@@ -1623,7 +1856,6 @@ function endGame(reason) {
   $('#stat-combo').textContent = '×' + state.bestStreak;
   $('#stat-avgtime').textContent = avg.toFixed(2) + ' s';
 
-  // record personnel pour les jeux personnalisés
   if (r.kind === 'custom' && state.customCfg) {
     const cfg = customs.find(x => x.id === r.customId) || state.customCfg;
     const prevBest = cfg.best ? cfg.best.score : null;
@@ -1657,7 +1889,7 @@ async function saveCurrentScore() {
     lastSaved = await ScolarisRanking.saveScore({
       name,
       score: state.score,
-      clef: state.clef,
+      clef: state.clefs.join('+'),
       range: state.range,
     });
   } catch (e) {
@@ -1690,13 +1922,49 @@ $('#lb-scope-tabs').addEventListener('click', e => {
 });
 
 // ─── Bindings ──────────────────────────────────────────────
-bindChipGroup('clef-group',  'clef',  v => { state.clef = v; });
-bindChipGroup('range-group', 'range', v => { state.range = v; });
-bindChipGroup('mode-group',  'mode',  v => { state.gameMode = v; });
+// Clés : multi-sélection (au moins une)
+$('#clef-group').addEventListener('click', e => {
+  const btn = e.target.closest('.chip');
+  if (!btn) return;
+  const k = btn.dataset.clef;
+  if (state.clefs.includes(k)) {
+    if (state.clefs.length === 1) return; // toujours au moins une clé
+    state.clefs = state.clefs.filter(x => x !== k);
+  } else {
+    state.clefs = [...state.clefs, k];
+  }
+  $$('#clef-group .chip').forEach(b => b.classList.toggle('selected', state.clefs.includes(b.dataset.clef)));
+  updateClefChangeVisibility();
+  saveSettings();
+});
+$('#clefchange-group').addEventListener('click', e => {
+  const btn = e.target.closest('.chip');
+  if (!btn) return;
+  state.clefChangeSel = btn.dataset.change;
+  $$('#clefchange-group .chip').forEach(b => b.classList.toggle('selected', b === btn));
+  saveSettings();
+});
+$('#range-group').addEventListener('click', e => {
+  const btn = e.target.closest('.chip');
+  if (!btn) return;
+  state.range = btn.dataset.range;
+  $$('#range-group .chip').forEach(b => b.classList.toggle('selected', b === btn));
+  saveSettings();
+});
+$('#mode-group').addEventListener('click', e => {
+  const btn = e.target.closest('.chip');
+  if (!btn) return;
+  state.gameMode = btn.dataset.mode;
+  $$('#mode-group .chip').forEach(b => b.classList.toggle('selected', b === btn));
+  saveSettings();
+});
+
+// Thèmes
+$('#btn-theme').addEventListener('click', () => { themeLight = !themeLight; applyTheme(); });
+$('#btn-eye').addEventListener('click', () => { eyeOn = !eyeOn; applyTheme(); });
 
 $('#btn-start').addEventListener('click', () => {
   audioCtx();
-  // relit le mode sélectionné (l'état peut rester sur 'custom' après un jeu personnalisé)
   const sel = $('#mode-group .chip.selected');
   state.gameMode = sel ? sel.dataset.mode : 'classique';
   saveSettings();
@@ -1704,6 +1972,7 @@ $('#btn-start').addEventListener('click', () => {
 });
 $('#btn-quit').addEventListener('click', () => {
   stopAllTimers();
+  stopScroll();
   if (state.nextId) { clearTimeout(state.nextId); state.nextId = null; }
   state.answered = true;
   backHome();
@@ -1713,14 +1982,11 @@ $('#btn-quit').addEventListener('click', () => {
 $('#btn-new-custom').addEventListener('click', () => openEditor(null));
 $('#btn-editor-save').addEventListener('click', saveEditor);
 $('#btn-editor-cancel').addEventListener('click', () => { editingId = null; backHome(); });
-$('#e-structure').addEventListener('click', updateEditorVisibility);
-// clés de l'éditeur : multi-sélection (toggle)
 $('#e-clefs').addEventListener('click', e => {
   const btn = e.target.closest('.chip');
   if (!btn) return;
   btn.classList.toggle('selected');
 });
-// chips simples de l'éditeur
 ['e-change', 'e-range', 'e-structure', 'e-notes', 'e-duration', 'e-faults', 'e-notetimer'].forEach(gid => {
   $('#' + gid).addEventListener('click', e => {
     const btn = e.target.closest('.chip');
@@ -1746,7 +2012,7 @@ $('#btn-save-replay').addEventListener('click', async () => {
   btn.disabled = false;
   startGame();
 });
-$('#btn-replay').addEventListener('click', startGame);        // rejouer sans enregistrer
+$('#btn-replay').addEventListener('click', startGame);
 $('#btn-replay-loisir').addEventListener('click', startGame);
 $('#btn-replay-custom').addEventListener('click', startGame);
 $('#btn-edit-custom').addEventListener('click', () => {
@@ -1763,6 +2029,7 @@ document.addEventListener('keydown', e => {
 });
 
 // ─── Init ──────────────────────────────────────────────────
+loadTheme();
 loadSettings();
 loadCustomsLocal();
 renderCustomList();

@@ -49,6 +49,22 @@ CREATE POLICY "comp_read"   ON competency_scores FOR SELECT USING (true);
 CREATE POLICY "comp_insert" ON competency_scores FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 
+-- 3bis. TABLE DONNÉES DE JEU PAR UTILISATEUR (configs personnalisées, etc.)
+CREATE TABLE IF NOT EXISTS user_games (
+  user_id     UUID        REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  game_id     TEXT        NOT NULL,   -- 'lecture-musique' ...
+  data        JSONB       NOT NULL DEFAULT '{}'::jsonb,
+  updated_at  TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (user_id, game_id)
+);
+
+ALTER TABLE user_games ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "user_games_read"   ON user_games FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "user_games_insert" ON user_games FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "user_games_update" ON user_games FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "user_games_delete" ON user_games FOR DELETE USING (auth.uid() = user_id);
+
+
 -- 4. VUE — meilleur score par joueur par jeu
 CREATE OR REPLACE VIEW best_scores AS
 SELECT DISTINCT ON (gs.user_id, gs.game_id)

@@ -124,8 +124,8 @@
   }
   .hub-link:hover { color: var(--text); border-color: var(--border-hi); }
 
-  /* ─── Home ─── */
-  .home-header { padding: 6px 0 26px; }
+  /* ─── Home / options ─── */
+  .home-header { padding: 6px 0 20px; }
   .option-label {
     font-size: 11px;
     text-transform: uppercase;
@@ -149,7 +149,7 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
-    min-width: 100px;
+    min-width: 96px;
     flex: 1;
   }
   .chip small { font-size: 10.5px; color: var(--text-dim); font-weight: 500; }
@@ -160,6 +160,7 @@
     box-shadow: var(--shadow);
   }
   .chip.selected small { color: var(--accent); }
+  .chip:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
 
   .primary-btn {
     background: var(--accent);
@@ -179,6 +180,7 @@
   .primary-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 36px -6px rgba(61, 220, 132, 0.6); }
   .primary-btn:active { transform: scale(0.98); }
   .primary-btn.gold { background: var(--gold); box-shadow: 0 6px 30px -6px rgba(245, 203, 92, 0.45); }
+  .primary-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
   .ghost-btn {
     background: transparent;
@@ -198,6 +200,54 @@
   .button-row { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
 
   .badge-row { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+
+  /* ─── Jeux personnalisés (liste accueil) ─── */
+  .custom-list { display: flex; flex-direction: column; gap: 8px; }
+  .custom-empty { font-size: 12.5px; color: var(--text-faint); padding: 4px 2px; }
+  .custom-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 12px;
+    transition: border-color 0.15s;
+  }
+  .custom-item:hover { border-color: var(--border-hi); }
+  .custom-play {
+    background: var(--accent-soft);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    border-radius: 10px;
+    width: 40px; height: 40px;
+    font-size: 15px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.15s;
+  }
+  .custom-play:hover { background: var(--accent); color: #04140b; }
+  .custom-info { flex: 1; min-width: 0; cursor: pointer; }
+  .custom-name { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .custom-desc { font-size: 11px; color: var(--text-dim); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .custom-mini {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    border-radius: 8px;
+    width: 32px; height: 32px;
+    font-size: 13px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.15s;
+  }
+  .custom-mini:hover { color: var(--text); border-color: var(--border-hi); }
+  .custom-mini.del:hover { color: var(--error); border-color: var(--error); }
+  .custom-sync { font-size: 11px; color: var(--text-faint); margin-top: 8px; }
+  .custom-sync.ok { color: var(--text-dim); }
+
+  /* ─── Éditeur de jeu personnalisé ─── */
+  .editor-msg { font-size: 12.5px; color: var(--error); min-height: 18px; margin-top: 10px; font-weight: 600; }
 
   /* ─── HUD de jeu ─── */
   .hud {
@@ -294,7 +344,9 @@
     border: 1px solid var(--border);
     border-radius: 20px;
     padding: 4px 10px;
+    transition: color 0.2s, border-color 0.2s;
   }
+  .clef-tag.hot { color: var(--gold); border-color: var(--gold); }
   .note-reveal {
     position: absolute;
     left: 0; right: 0; bottom: 8px;
@@ -309,6 +361,25 @@
   .note-reveal.show { opacity: 1; transform: translateY(0); }
   .note-reveal.ok  { color: var(--accent); text-shadow: 0 0 20px rgba(61, 220, 132, 0.6); }
   .note-reveal.ko  { color: var(--error); text-shadow: 0 0 20px rgba(255, 84, 112, 0.6); }
+
+  /* bandeau changement de clé */
+  .clef-banner {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(5, 13, 9, 0.78);
+    font-family: var(--font-arcade);
+    font-size: 21px;
+    color: var(--gold);
+    text-shadow: 0 0 22px rgba(245, 203, 92, 0.6);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s;
+  }
+  .clef-banner.show { opacity: 1; }
 
   /* points flottants */
   .float-pts {
@@ -343,7 +414,7 @@
     border-radius: 6px;
     background: linear-gradient(90deg, var(--accent), var(--gold));
   }
-  body.mode-loisir .timer-track { visibility: hidden; }
+  .timer-bar.danger { background: linear-gradient(90deg, var(--error), var(--gold)); }
 
   /* ─── Réponses ─── */
   .answers {
@@ -392,9 +463,10 @@
     margin-top: 10px;
   }
 
-  /* ─── Éléments conditionnels selon le mode ─── */
-  body.mode-loisir .scoring-only { display: none !important; }
-  body.mode-competitif .loisir-only { display: none !important; }
+  /* ─── Éléments conditionnels selon le type de partie ─── */
+  body:not(.mode-scoring) .scoring-only { display: none !important; }
+  body:not(.mode-loisir)  .loisir-only  { display: none !important; }
+  body:not(.mode-custom)  .custom-only  { display: none !important; }
 
   /* ─── Écran de fin ─── */
   .end-stats {
@@ -423,6 +495,18 @@
     font-size: 22px;
     color: var(--accent);
   }
+  .custom-record {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-top: 8px;
+  }
+  .custom-record .new {
+    color: var(--gold);
+    font-family: var(--font-arcade);
+    animation: comboPop 0.5s ease;
+    display: inline-block;
+  }
   .stats-row {
     display: flex;
     gap: 10px;
@@ -448,13 +532,13 @@
   .name-input:focus { border-color: var(--accent); }
 
   /* ─── Classement ─── */
-  .lb-tabs { display: flex; gap: 8px; margin: 4px 0 14px; }
+  .lb-tabs { display: flex; gap: 8px; margin: 4px 0 10px; }
   .lb-tab {
     flex: 1;
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: 12px;
-    padding: 12px;
+    padding: 12px 6px;
     color: var(--text-dim);
     font-family: var(--font-body);
     font-size: 13px;
@@ -463,6 +547,7 @@
     transition: all 0.15s;
   }
   .lb-tab.selected { border-color: var(--accent); color: var(--text); background: var(--accent-soft); }
+  .lb-tab.gold.selected { border-color: var(--gold); background: var(--gold-soft); }
   .leaderboard-list { flex: 1; }
   .lb-back { margin-top: 18px; }
 
@@ -485,7 +570,7 @@
   }
 </style>
 </head>
-<body class="mode-competitif">
+<body>
 <div class="app">
 
   <!-- ─────────── ACCUEIL ─────────── -->
@@ -498,12 +583,21 @@
       <div class="badge-row"><span id="home-badge" style="display:none;"></span></div>
     </header>
 
+    <div class="option-label">Mode de jeu</div>
+    <div class="chip-group" id="mode-group">
+      <button class="chip" data-mode="loisir">Loisir<small>sans chrono ni score</small></button>
+      <button class="chip selected" data-mode="classique">Classique<small>20 notes · 3 vies · 6 s</small></button>
+      <button class="chip" data-mode="infini">Infini<small>survis · 3 fautes · 5 s/note</small></button>
+      <button class="chip" data-mode="sprint">Sprint 60 s<small>vitesse de lecture pure</small></button>
+    </div>
+
     <div class="option-label">Clé</div>
     <div class="chip-group" id="clef-group">
       <button class="chip selected" data-clef="sol">Clé de Sol<small>les aigus · violon</small></button>
       <button class="chip" data-clef="fa">Clé de Fa<small>les graves · basse</small></button>
       <button class="chip" data-clef="ut3">Clé d'Ut 3<small>alto · médium</small></button>
-      <button class="chip" data-clef="melange">Mélange<small>clé aléatoire</small></button>
+      <button class="chip" data-clef="melange">Mélange<small>clé aléatoire à chaque note</small></button>
+      <button class="chip" data-clef="alternance">Alternance<small>la clé change toutes les 4 notes</small></button>
     </div>
 
     <div class="option-label">Étendue</div>
@@ -513,15 +607,96 @@
       <button class="chip" data-range="expert">Expert<small>+2 lignes supplémentaires</small></button>
     </div>
 
-    <div class="option-label">Mode</div>
-    <div class="chip-group" id="mode-group">
-      <button class="chip" data-mode="loisir">Loisir<small>sans chrono, sans score</small></button>
-      <button class="chip selected" data-mode="competitif">Compétitif<small>chrono · combos · 3 vies</small></button>
-    </div>
+    <div class="option-label">Jeux personnalisés</div>
+    <div class="custom-list" id="custom-list"></div>
+    <div class="custom-sync" id="custom-sync"></div>
+    <button class="ghost-btn" id="btn-new-custom" style="margin-top:10px;">＋ Créer un jeu personnalisé</button>
 
     <button class="primary-btn" id="btn-start">▶ Jouer</button>
     <div class="button-row">
-      <button class="ghost-btn" id="btn-home-lb">Voir le classement</button>
+      <button class="ghost-btn" id="btn-home-lb">Voir les classements</button>
+    </div>
+  </section>
+
+  <!-- ─────────── ÉDITEUR DE JEU PERSONNALISÉ ─────────── -->
+  <section id="screen-editor" class="screen">
+    <header class="home-header" style="padding-bottom: 4px;">
+      <div class="eyebrow" id="editor-eyebrow">Nouveau jeu</div>
+      <h2 class="title">Jeu <span class="gold">personnalisé</span></h2>
+    </header>
+
+    <div class="option-label">Nom du jeu</div>
+    <input class="name-input" id="e-name" type="text" maxlength="20" placeholder="Mon défi" autocomplete="off" />
+
+    <div class="option-label">Clés utilisées <span style="text-transform:none;letter-spacing:0;">(plusieurs possibles)</span></div>
+    <div class="chip-group" id="e-clefs">
+      <button class="chip selected" data-v="sol">Sol</button>
+      <button class="chip" data-v="fa">Fa</button>
+      <button class="chip" data-v="ut3">Ut 3</button>
+    </div>
+
+    <div class="option-label">Changement de clé</div>
+    <div class="chip-group" id="e-change">
+      <button class="chip selected" data-v="jamais">Jamais<small>une clé fixe pour la partie</small></button>
+      <button class="chip" data-v="note">À chaque note<small>clé aléatoire en continu</small></button>
+      <button class="chip" data-v="altern4">Toutes les 4 notes<small>annoncé pendant le jeu</small></button>
+    </div>
+
+    <div class="option-label">Étendue</div>
+    <div class="chip-group" id="e-range">
+      <button class="chip selected" data-v="facile">Facile</button>
+      <button class="chip" data-v="normal">Normal</button>
+      <button class="chip" data-v="expert">Expert</button>
+    </div>
+
+    <div class="option-label">Fin de partie</div>
+    <div class="chip-group" id="e-structure">
+      <button class="chip selected" data-v="notes">Nombre de notes</button>
+      <button class="chip" data-v="temps">Contre la montre</button>
+      <button class="chip" data-v="infini">Infini<small>s'arrête aux fautes</small></button>
+    </div>
+
+    <div id="e-notes-wrap">
+      <div class="option-label">Nombre de notes</div>
+      <div class="chip-group" id="e-notes">
+        <button class="chip" data-v="10">10</button>
+        <button class="chip selected" data-v="20">20</button>
+        <button class="chip" data-v="30">30</button>
+        <button class="chip" data-v="50">50</button>
+      </div>
+    </div>
+
+    <div id="e-duration-wrap" style="display:none;">
+      <div class="option-label">Durée</div>
+      <div class="chip-group" id="e-duration">
+        <button class="chip" data-v="30">30 s</button>
+        <button class="chip selected" data-v="60">60 s</button>
+        <button class="chip" data-v="90">90 s</button>
+        <button class="chip" data-v="120">120 s</button>
+      </div>
+    </div>
+
+    <div class="option-label">Fautes autorisées</div>
+    <div class="chip-group" id="e-faults">
+      <button class="chip" data-v="1">1</button>
+      <button class="chip selected" data-v="3">3</button>
+      <button class="chip" data-v="5">5</button>
+      <button class="chip" data-v="inf">∞<small>illimitées</small></button>
+    </div>
+
+    <div class="option-label">Temps par note</div>
+    <div class="chip-group" id="e-notetimer">
+      <button class="chip" data-v="3">3 s</button>
+      <button class="chip selected" data-v="5">5 s</button>
+      <button class="chip" data-v="8">8 s</button>
+      <button class="chip" data-v="none">Aucun<small>pas de chrono par note</small></button>
+    </div>
+
+    <div class="editor-msg" id="editor-msg"></div>
+
+    <button class="primary-btn gold" id="btn-editor-save" style="margin-top:14px;">Enregistrer ce jeu</button>
+    <div class="button-row">
+      <button class="ghost-btn" id="btn-editor-cancel">Annuler</button>
     </div>
   </section>
 
@@ -530,8 +705,8 @@
     <div class="hud">
       <button class="hud-quit" id="btn-quit" title="Abandonner">✕</button>
       <div class="hud-progress" id="hud-progress">1 / 20</div>
-      <div class="hud-lives scoring-only" id="hud-lives">♥♥♥</div>
-      <div class="hud-score scoring-only" id="hud-score">0</div>
+      <div class="hud-lives" id="hud-lives">♥♥♥</div>
+      <div class="hud-score" id="hud-score">0</div>
     </div>
 
     <div class="combo" id="combo">COMBO ×2</div>
@@ -541,9 +716,10 @@
       <div id="staff-svg"></div>
       <div class="note-reveal" id="note-reveal"></div>
       <div class="float-pts" id="float-pts"></div>
+      <div class="clef-banner" id="clef-banner"></div>
     </div>
 
-    <div class="timer-track scoring-only"><div class="timer-bar" id="timer-bar"></div></div>
+    <div class="timer-track" id="timer-track"><div class="timer-bar" id="timer-bar"></div></div>
 
     <div class="answers" id="answers"></div>
     <div class="answers-hint">Clavier : touches 1 à 7</div>
@@ -557,9 +733,10 @@
     </header>
 
     <div class="end-stats">
-      <div class="scoring-only">
-        <div class="final-label">Score final</div>
+      <div id="end-score-block">
+        <div class="final-label" id="final-label">Score final</div>
         <div class="final-score" id="final-score">0</div>
+        <div class="custom-record custom-only" id="custom-record"></div>
       </div>
       <div class="loisir-label loisir-only">Entraînement terminé</div>
       <div class="stats-row">
@@ -585,8 +762,11 @@
 
     <div class="button-row">
       <button class="primary-btn gold scoring-only" id="btn-save-replay" style="margin-top:0;">Enregistrer & Rejouer</button>
-      <button class="primary-btn loisir-only" id="btn-replay-loisir" style="margin-top:0;">Rejouer</button>
+      <button class="primary-btn loisir-only" id="btn-replay-loisir" style="margin-top:0;">↻ Rejouer</button>
+      <button class="primary-btn custom-only" id="btn-replay-custom" style="margin-top:0;">↻ Rejouer</button>
+      <button class="ghost-btn scoring-only" id="btn-replay">↻ Rejouer sans enregistrer</button>
       <button class="ghost-btn scoring-only" id="btn-end-lb">Voir le classement</button>
+      <button class="ghost-btn custom-only" id="btn-edit-custom">✎ Modifier ce jeu</button>
       <button class="ghost-btn" id="btn-end-home">Retour à l'accueil</button>
     </div>
   </section>
@@ -598,6 +778,11 @@
       <h2 class="title"><span class="accent">Meilleurs</span> scores</h2>
     </header>
 
+    <div class="lb-tabs" id="lb-mode-tabs">
+      <button class="lb-tab gold selected" data-lbmode="classique">Classique</button>
+      <button class="lb-tab gold" data-lbmode="infini">Infini</button>
+      <button class="lb-tab gold" data-lbmode="sprint">Sprint 60 s</button>
+    </div>
     <div class="lb-tabs" id="lb-scope-tabs">
       <button class="lb-tab selected" data-scope="local">Local · cet appareil</button>
       <button class="lb-tab" data-scope="global">Mondial · joueurs connectés</button>
@@ -625,6 +810,8 @@
       saveGameScore: mod.saveGameScore,
       getLeaderboard: mod.getLeaderboard,
       getCurrentUser: mod.getCurrentUser,
+      saveUserGameData: mod.saveUserGameData,
+      loadUserGameData: mod.loadUserGameData,
     };
     window._scolarisUser = user;
   } catch (e) {
@@ -638,19 +825,9 @@
 /* ════════════════════════════════════════════════════════════
    LECTURE MUSIQUE — arcade de lecture de notes
    Clés : Sol (2e ligne), Fa (4e ligne), Ut (3e ligne)
+   Modes : Loisir · Classique · Infini · Sprint 60 s · Personnalisé
    ════════════════════════════════════════════════════════════ */
 'use strict';
-
-// Calibration du classement partagé.
-// Score par note : 500·e^(−t/6) + bonus de combo (min(combo,10)×10).
-// 20 notes parfaites instantanées → 20×500 + 1550 = 11 550.
-// Plafond humain ≈ 1 s de moyenne par note → ~10 000.
-ScolarisRanking.init({
-  gameId:    'lecture-musique',
-  gameLabel: 'Lecture Musique',
-  maxScore:  11550,
-  humanCap:  10000,
-});
 
 // ─── Constantes musicales ──────────────────────────────────
 // Index diatonique : Do0 = 0, Ré0 = 1, … (7 pas par octave).
@@ -674,13 +851,10 @@ const RANGES = {
   expert: { label: 'Expert', min: -4, max: 12 },
 };
 
-// ─── Constantes de partie ──────────────────────────────────
-const NOTES_PER_RUN = 20;
-const MAX_LIVES     = 3;
-const TIMER_MS      = 6000;
+// ─── Scoring ───────────────────────────────────────────────
+// Score par note : 500·e^(−t/6) + bonus de combo (min(combo,10)×10).
 const SCORE_MAX_PER_NOTE = 500;
-const SCORE_TAU     = 6;   // secondes
-const SETTINGS_KEY  = 'lecture-musique-settings';
+const SCORE_TAU = 6; // secondes
 
 function speedScore(elapsedMs) {
   const t = elapsedMs / 1000;
@@ -689,6 +863,34 @@ function speedScore(elapsedMs) {
 function streakBonus(streak) {
   return Math.min(streak, 10) * 10;
 }
+
+// ─── Modes standards & classements ─────────────────────────
+// Chaque mode classé a son propre classement (gameId distinct).
+// Classique : 20 notes parfaites instantanées → 20×500 + 1550 = 11 550.
+// Infini / Sprint : bornes calibrées sur un très bon lecteur (~1 s/note).
+const RANKS = {
+  classique: { gameId: 'lecture-musique',        label: 'Classique',  maxScore: 11550, humanCap: 10000 },
+  infini:    { gameId: 'lecture-musique-infini', label: 'Infini',     maxScore: 60000, humanCap: 22000 },
+  sprint:    { gameId: 'lecture-musique-sprint', label: 'Sprint 60 s', maxScore: 45000, humanCap: 22000 },
+};
+function initRanking(modeKey) {
+  const r = RANKS[modeKey] || RANKS.classique;
+  ScolarisRanking.init({
+    gameId:    r.gameId,
+    gameLabel: 'Lecture Musique · ' + r.label,
+    maxScore:  r.maxScore,
+    humanCap:  r.humanCap,
+  });
+}
+initRanking('classique');
+
+// ─── Constantes de partie ──────────────────────────────────
+const ALTERN_EVERY  = 4;      // alternance : changement de clé toutes les N notes
+const SPRINT_MS     = 60000;  // durée du sprint standard
+const SPRINT_PENALTY_MS = 3000; // pénalité de temps par erreur en sprint
+const SETTINGS_KEY  = 'lecture-musique-settings';
+const CUSTOMS_KEY   = 'lecture-musique-customs';
+const CLOUD_GAME_ID = 'lecture-musique';
 
 // ─── Helpers notes ─────────────────────────────────────────
 function noteName(diatonic)   { return NOTE_NAMES[((diatonic % 7) + 7) % 7]; }
@@ -700,20 +902,30 @@ function noteFreq(diatonic) {
 
 // ─── State ─────────────────────────────────────────────────
 const state = {
-  clef: 'sol',        // 'sol' | 'fa' | 'ut3' | 'melange'
-  range: 'facile',    // 'facile' | 'normal' | 'expert'
-  mode: 'competitif', // 'loisir' | 'competitif'
-  idx: 0,             // note courante (1-based pendant la partie)
+  // options accueil
+  clef: 'sol',          // 'sol' | 'fa' | 'ut3' | 'melange' | 'alternance'
+  range: 'facile',
+  gameMode: 'classique',// 'loisir' | 'classique' | 'infini' | 'sprint' | 'custom'
+  customCfg: null,      // config du jeu personnalisé en cours
+
+  // config de la manche en cours (calculée au lancement)
+  run: null,            // voir buildRunConfig()
+
+  // progression
+  idx: 0,
   score: 0,
   streak: 0,
   bestStreak: 0,
-  lives: MAX_LIVES,
-  results: [],        // [{correct, timeMs}]
-  current: null,      // {clefKey, p, diatonic}
+  faults: 0,
+  results: [],          // [{correct, timeMs}]
+  current: null,        // {clefKey, p, diatonic}
+  runClef: null,        // clé courante (modes fixe / alternance)
   startTs: 0,
   answered: true,
   timerId: null,
   nextId: null,
+  globalEndTs: 0,
+  globalIntId: null,
 };
 
 const $  = (s, root = document) => root.querySelector(s);
@@ -759,6 +971,10 @@ function sndCorrect(diatonic, streak) {
 function sndWrong(diatonic) {
   playFreq(98, 0.22, 'sawtooth', 0.1);
   playFreq(noteFreq(diatonic), 0.55, 'triangle', 0.14, 0.3); // on fait entendre la bonne note
+}
+function sndClefChange() {
+  playFreq(523.25, 0.14, 'triangle', 0.13);
+  playFreq(784,    0.2,  'triangle', 0.13, 0.12);
 }
 function sndGameOver(win) {
   const base = win ? 523.25 : 392;
@@ -845,6 +1061,12 @@ function showScreen(id) {
   $$('.screen').forEach(s => s.classList.remove('active'));
   $('#' + id).classList.add('active');
 }
+function backHome() {
+  showScreen('screen-home');
+  initRanking('classique');
+  ScolarisRanking.renderGradeBadge($('#home-badge'));
+  renderCustomList();
+}
 
 // ─── Options accueil ───────────────────────────────────────
 function bindChipGroup(groupId, dataKey, onPick) {
@@ -859,7 +1081,7 @@ function bindChipGroup(groupId, dataKey, onPick) {
 function saveSettings() {
   try {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify({
-      clef: state.clef, range: state.range, mode: state.mode,
+      clef: state.clef, range: state.range, mode: state.gameMode,
       name: $('#player-name').value || '',
     }));
   } catch (e) {}
@@ -868,25 +1090,256 @@ function loadSettings() {
   let s = null;
   try { s = JSON.parse(localStorage.getItem(SETTINGS_KEY)); } catch (e) {}
   if (!s) return;
-  if (CLEFS[s.clef] || s.clef === 'melange') state.clef = s.clef;
+  if (CLEFS[s.clef] || s.clef === 'melange' || s.clef === 'alternance') state.clef = s.clef;
   if (RANGES[s.range]) state.range = s.range;
-  if (s.mode === 'loisir' || s.mode === 'competitif') state.mode = s.mode;
+  if (['loisir', 'classique', 'infini', 'sprint'].includes(s.mode)) state.gameMode = s.mode;
   if (s.name) $('#player-name').value = s.name;
   $$('#clef-group .chip').forEach(b => b.classList.toggle('selected', b.dataset.clef === state.clef));
   $$('#range-group .chip').forEach(b => b.classList.toggle('selected', b.dataset.range === state.range));
-  $$('#mode-group .chip').forEach(b => b.classList.toggle('selected', b.dataset.mode === state.mode));
+  $$('#mode-group .chip').forEach(b => b.classList.toggle('selected', b.dataset.mode === state.gameMode));
 }
-function applyModeClass() {
-  document.body.classList.toggle('mode-loisir', state.mode === 'loisir');
-  document.body.classList.toggle('mode-competitif', state.mode === 'competitif');
+
+// ─── Jeux personnalisés : stockage local + compte ──────────
+let customs = [];
+function loadCustomsLocal() {
+  try {
+    const arr = JSON.parse(localStorage.getItem(CUSTOMS_KEY));
+    customs = Array.isArray(arr) ? arr : [];
+  } catch (e) { customs = []; }
+}
+function saveCustomsLocal() {
+  try { localStorage.setItem(CUSTOMS_KEY, JSON.stringify(customs)); } catch (e) {}
+}
+async function syncCustomsToCloud() {
+  const auth = window._scolarisAuth;
+  if (!auth || !auth.saveUserGameData) return;
+  try {
+    const ok = await auth.saveUserGameData(CLOUD_GAME_ID, { customs });
+    setSyncLabel(ok);
+  } catch (e) { setSyncLabel(false); }
+}
+async function loadCustomsFromCloud() {
+  const auth = window._scolarisAuth;
+  if (!auth || !auth.loadUserGameData) return;
+  try {
+    const data = await auth.loadUserGameData(CLOUD_GAME_ID);
+    if (data && Array.isArray(data.customs)) {
+      // fusion par id — la version la plus récente gagne
+      const byId = new Map();
+      for (const c of [...customs, ...data.customs]) {
+        const prev = byId.get(c.id);
+        if (!prev || (c.updated || 0) > (prev.updated || 0)) byId.set(c.id, c);
+      }
+      customs = Array.from(byId.values()).sort((a, b) => (b.updated || 0) - (a.updated || 0));
+      saveCustomsLocal();
+      renderCustomList();
+      setSyncLabel(true);
+      // repousse la fusion vers le cloud pour aligner les deux côtés
+      syncCustomsToCloud();
+    } else if (data !== null) {
+      setSyncLabel(true);
+    }
+  } catch (e) {}
+}
+function setSyncLabel(cloudOk) {
+  const el = $('#custom-sync');
+  if (cloudOk) {
+    el.textContent = '☁ Synchronisés avec ton compte';
+    el.classList.add('ok');
+  } else {
+    el.textContent = 'Sauvegardés sur cet appareil — connecte-toi pour les garder sur ton compte';
+    el.classList.remove('ok');
+  }
+}
+
+function customSummary(c) {
+  const clefs = c.clefs.map(k => CLEFS[k].label.replace("Clé de ", '').replace("Clé d'", '')).join('+');
+  const chg = c.clefChange === 'note' ? 'clé/note' : c.clefChange === 'altern4' ? 'clé/4 notes' : '';
+  const fin = c.structure === 'notes' ? c.notesCount + ' notes'
+            : c.structure === 'temps' ? c.durationS + ' s'
+            : 'infini';
+  const fautes = c.faults == null ? '∞ fautes' : c.faults + ' faute' + (c.faults > 1 ? 's' : '');
+  const parts = [clefs, chg, RANGES[c.range].label, fin, fautes].filter(Boolean);
+  if (c.best && c.best.score != null) parts.push('record ' + c.best.score);
+  return parts.join(' · ');
+}
+
+function renderCustomList() {
+  const wrap = $('#custom-list');
+  wrap.innerHTML = '';
+  if (!customs.length) {
+    wrap.innerHTML = '<div class="custom-empty">Aucun jeu personnalisé pour l\'instant — crée le tien !</div>';
+    return;
+  }
+  customs.forEach(c => {
+    const row = document.createElement('div');
+    row.className = 'custom-item';
+    row.innerHTML =
+      '<button class="custom-play" title="Jouer">▶</button>' +
+      '<div class="custom-info"><div class="custom-name"></div><div class="custom-desc"></div></div>' +
+      '<button class="custom-mini edit" title="Modifier">✎</button>' +
+      '<button class="custom-mini del" title="Supprimer">✕</button>';
+    row.querySelector('.custom-name').textContent = c.name;
+    row.querySelector('.custom-desc').textContent = customSummary(c);
+    row.querySelector('.custom-play').addEventListener('click', () => startCustom(c));
+    row.querySelector('.custom-info').addEventListener('click', () => startCustom(c));
+    row.querySelector('.edit').addEventListener('click', () => openEditor(c));
+    row.querySelector('.del').addEventListener('click', () => {
+      if (!confirm('Supprimer « ' + c.name + ' » ?')) return;
+      customs = customs.filter(x => x.id !== c.id);
+      saveCustomsLocal();
+      syncCustomsToCloud();
+      renderCustomList();
+    });
+    wrap.appendChild(row);
+  });
+}
+
+// ─── Éditeur de jeu personnalisé ───────────────────────────
+let editingId = null;
+
+function pickChip(groupId, value) {
+  $$('#' + groupId + ' .chip').forEach(b => b.classList.toggle('selected', b.dataset.v === String(value)));
+}
+function chipValue(groupId) {
+  const sel = $('#' + groupId + ' .chip.selected');
+  return sel ? sel.dataset.v : null;
+}
+function updateEditorVisibility() {
+  const structure = chipValue('e-structure');
+  $('#e-notes-wrap').style.display    = structure === 'notes' ? '' : 'none';
+  $('#e-duration-wrap').style.display = structure === 'temps' ? '' : 'none';
+}
+
+function openEditor(cfg) {
+  editingId = cfg ? cfg.id : null;
+  $('#editor-eyebrow').textContent = cfg ? 'Modifier « ' + cfg.name + ' »' : 'Nouveau jeu';
+  $('#editor-msg').textContent = '';
+  $('#e-name').value = cfg ? cfg.name : '';
+  // clés (multi-sélection)
+  const clefs = cfg ? cfg.clefs : ['sol'];
+  $$('#e-clefs .chip').forEach(b => b.classList.toggle('selected', clefs.includes(b.dataset.v)));
+  pickChip('e-change',    cfg ? cfg.clefChange : 'jamais');
+  pickChip('e-range',     cfg ? cfg.range : 'facile');
+  pickChip('e-structure', cfg ? cfg.structure : 'notes');
+  pickChip('e-notes',     cfg ? cfg.notesCount : 20);
+  pickChip('e-duration',  cfg ? cfg.durationS : 60);
+  pickChip('e-faults',    cfg ? (cfg.faults == null ? 'inf' : cfg.faults) : 3);
+  pickChip('e-notetimer', cfg ? (cfg.noteTimerS == null ? 'none' : cfg.noteTimerS) : 5);
+  updateEditorVisibility();
+  showScreen('screen-editor');
+}
+
+function saveEditor() {
+  const msg = $('#editor-msg');
+  const clefs = $$('#e-clefs .chip.selected').map(b => b.dataset.v);
+  if (!clefs.length) { msg.textContent = 'Choisis au moins une clé.'; return; }
+  const structure = chipValue('e-structure');
+  const faultsV = chipValue('e-faults');
+  const faults = faultsV === 'inf' ? null : parseInt(faultsV, 10);
+  const noteTimerV = chipValue('e-notetimer');
+  const noteTimerS = noteTimerV === 'none' ? null : parseInt(noteTimerV, 10);
+  if (structure === 'infini' && faults == null) {
+    msg.textContent = 'Un jeu infini doit avoir un nombre de fautes limité, sinon il ne s\'arrête jamais !';
+    return;
+  }
+  let clefChange = chipValue('e-change');
+  if (clefs.length === 1) clefChange = 'jamais';
+
+  const cfg = {
+    id: editingId || ('c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)),
+    name: ($('#e-name').value || '').trim() || 'Mon défi',
+    clefs,
+    clefChange,
+    range: chipValue('e-range'),
+    structure,
+    notesCount: parseInt(chipValue('e-notes'), 10) || 20,
+    durationS: parseInt(chipValue('e-duration'), 10) || 60,
+    faults,
+    noteTimerS,
+    best: null,
+    updated: Date.now(),
+  };
+  const prev = customs.find(x => x.id === cfg.id);
+  if (prev) cfg.best = prev.best || null;
+  customs = [cfg, ...customs.filter(x => x.id !== cfg.id)];
+  saveCustomsLocal();
+  syncCustomsToCloud();
+  editingId = null;
+  backHome();
+}
+
+// ─── Config de manche ──────────────────────────────────────
+// Normalise tous les modes vers une même config moteur.
+function buildRunConfig() {
+  if (state.gameMode === 'custom' && state.customCfg) {
+    const c = state.customCfg;
+    return {
+      kind: 'custom',
+      customId: c.id,
+      clefPool: c.clefs,
+      clefChange: c.clefChange,          // 'jamais' | 'note' | 'altern4'
+      rangeKey: c.range,
+      totalNotes: c.structure === 'notes' ? c.notesCount : Infinity,
+      maxFaults: c.faults == null ? Infinity : c.faults,
+      noteTimerMs: c.noteTimerS == null ? null : c.noteTimerS * 1000,
+      globalMs: c.structure === 'temps' ? c.durationS * 1000 : null,
+      penaltyMs: 0,
+      scoring: true,
+      rankKey: null,                     // pas de classement mondial pour les customs
+    };
+  }
+
+  const clefChange = state.clef === 'melange' ? 'note'
+                   : state.clef === 'alternance' ? 'altern4'
+                   : 'jamais';
+  const clefPool = (state.clef === 'melange' || state.clef === 'alternance')
+    ? CLEF_KEYS.slice()
+    : [state.clef];
+  const base = { kind: state.gameMode, clefPool, clefChange, rangeKey: state.range, penaltyMs: 0 };
+
+  switch (state.gameMode) {
+    case 'loisir':
+      return { ...base, totalNotes: 20, maxFaults: Infinity, noteTimerMs: null, globalMs: null, scoring: false, rankKey: null };
+    case 'infini':
+      // Jeu infini : 3 fautes max, plus de 5 s pour répondre = une faute.
+      return { ...base, totalNotes: Infinity, maxFaults: 3, noteTimerMs: 5000, globalMs: null, scoring: true, rankKey: 'infini' };
+    case 'sprint':
+      // Vitesse de lecture : 60 s au total, une erreur coûte 3 s.
+      return { ...base, totalNotes: Infinity, maxFaults: Infinity, noteTimerMs: null, globalMs: SPRINT_MS, penaltyMs: SPRINT_PENALTY_MS, scoring: true, rankKey: 'sprint' };
+    case 'classique':
+    default:
+      return { ...base, totalNotes: 20, maxFaults: 3, noteTimerMs: 6000, globalMs: null, scoring: true, rankKey: 'classique' };
+  }
+}
+
+function applyBodyMode() {
+  const r = state.run;
+  document.body.classList.toggle('mode-scoring', !!(r && r.scoring && r.kind !== 'custom'));
+  document.body.classList.toggle('mode-loisir',  !!(r && !r.scoring));
+  document.body.classList.toggle('mode-custom',  !!(r && r.kind === 'custom'));
 }
 
 // ─── Génération d'une note ─────────────────────────────────
+function pickClefForNote() {
+  const r = state.run;
+  if (r.clefChange === 'note') {
+    return r.clefPool[Math.floor(Math.random() * r.clefPool.length)];
+  }
+  if (r.clefChange === 'altern4') {
+    // change de clé toutes les ALTERN_EVERY notes (état déjà avancé dans nextNote)
+    if ((state.idx - 1) % ALTERN_EVERY === 0) {
+      const others = r.clefPool.filter(k => k !== state.runClef);
+      state.runClef = (others.length ? others : r.clefPool)[Math.floor(Math.random() * (others.length ? others.length : r.clefPool.length))];
+    }
+    return state.runClef;
+  }
+  return state.runClef; // fixe
+}
+
 function buildNote() {
-  const clefKey = state.clef === 'melange'
-    ? CLEF_KEYS[Math.floor(Math.random() * CLEF_KEYS.length)]
-    : state.clef;
-  const range = RANGES[state.range];
+  const clefKey = pickClefForNote();
+  const range = RANGES[state.run.rangeKey];
   let p, tries = 0;
   do {
     p = range.min + Math.floor(Math.random() * (range.max - range.min + 1));
@@ -897,17 +1350,35 @@ function buildNote() {
 
 // ─── HUD ───────────────────────────────────────────────────
 function renderHud() {
-  $('#hud-progress').textContent = state.idx + ' / ' + NOTES_PER_RUN;
-  $('#hud-score').textContent = state.score;
-  let hearts = '';
-  for (let i = 0; i < MAX_LIVES; i++) {
-    hearts += i < state.lives ? '♥' : '<span class="lost">♥</span>';
+  const r = state.run;
+  let prog;
+  if (r.globalMs != null) {
+    const left = Math.max(0, state.globalEndTs - performance.now());
+    prog = '⏱ ' + (left / 1000).toFixed(1) + ' s · ♪ ' + state.results.filter(x => x.correct).length;
+  } else if (r.totalNotes === Infinity) {
+    prog = 'Note ' + state.idx;
+  } else {
+    prog = state.idx + ' / ' + r.totalNotes;
   }
-  $('#hud-lives').innerHTML = hearts;
+  $('#hud-progress').textContent = prog;
+  $('#hud-score').textContent = state.score;
+  $('#hud-score').style.visibility = r.scoring ? 'visible' : 'hidden';
+
+  const livesEl = $('#hud-lives');
+  if (r.maxFaults === Infinity) {
+    livesEl.style.visibility = 'hidden';
+  } else {
+    livesEl.style.visibility = 'visible';
+    let hearts = '';
+    for (let i = 0; i < r.maxFaults; i++) {
+      hearts += i < (r.maxFaults - state.faults) ? '♥' : '<span class="lost">♥</span>';
+    }
+    livesEl.innerHTML = hearts;
+  }
 }
 function renderCombo(pop) {
   const el = $('#combo');
-  if (state.mode === 'competitif' && state.streak >= 2) {
+  if (state.run.scoring && state.streak >= 2) {
     el.textContent = 'COMBO ×' + state.streak;
     el.classList.add('on');
     if (pop) { el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
@@ -916,22 +1387,54 @@ function renderCombo(pop) {
   }
 }
 
-// ─── Chrono ────────────────────────────────────────────────
-function startTimer() {
+// ─── Chronos ───────────────────────────────────────────────
+function startNoteTimer() {
+  const ms = state.run.noteTimerMs;
+  if (!ms) return;
   const bar = $('#timer-bar');
   bar.style.transition = 'none';
   bar.style.width = '100%';
   void bar.offsetWidth;
-  bar.style.transition = 'width ' + TIMER_MS + 'ms linear';
+  bar.style.transition = 'width ' + ms + 'ms linear';
   bar.style.width = '0%';
-  state.timerId = setTimeout(onTimeout, TIMER_MS);
+  state.timerId = setTimeout(onTimeout, ms);
 }
-function stopTimer() {
+function stopNoteTimer() {
   if (state.timerId) { clearTimeout(state.timerId); state.timerId = null; }
   const bar = $('#timer-bar');
+  const track = bar.parentElement;
+  const tw = track.getBoundingClientRect().width;
+  if (tw > 0) {
+    bar.style.transition = 'none';
+    bar.style.width = (bar.getBoundingClientRect().width / tw * 100) + '%';
+  }
+}
+
+function startGlobalTimer() {
+  const r = state.run;
+  state.globalEndTs = performance.now() + r.globalMs;
+  const bar = $('#timer-bar');
   bar.style.transition = 'none';
-  bar.style.width = bar.getBoundingClientRect().width /
-    bar.parentElement.getBoundingClientRect().width * 100 + '%';
+  bar.classList.remove('danger');
+  state.globalIntId = setInterval(() => {
+    const left = state.globalEndTs - performance.now();
+    if (left <= 0) {
+      bar.style.width = '0%';
+      stopAllTimers();
+      // résout la note en cours comme non comptée et termine
+      state.answered = true;
+      if (state.nextId) { clearTimeout(state.nextId); state.nextId = null; }
+      endGame('time');
+      return;
+    }
+    bar.style.width = (left / r.globalMs * 100) + '%';
+    bar.classList.toggle('danger', left < 10000);
+    renderHud();
+  }, 100);
+}
+function stopAllTimers() {
+  stopNoteTimer();
+  if (state.globalIntId) { clearInterval(state.globalIntId); state.globalIntId = null; }
 }
 
 // ─── Réponses ──────────────────────────────────────────────
@@ -951,29 +1454,65 @@ function setAnswersEnabled(on) {
   $$('#answers .answer-btn').forEach(b => { b.disabled = !on; });
 }
 
+// ─── Annonce de changement de clé ──────────────────────────
+let bannerId = null;
+function announceClef(clefKey) {
+  const el = $('#clef-banner');
+  el.textContent = '♪ ' + CLEFS[clefKey].label + ' !';
+  el.classList.add('show');
+  $('#clef-tag').classList.add('hot');
+  sndClefChange();
+  if (bannerId) clearTimeout(bannerId);
+  bannerId = setTimeout(() => {
+    el.classList.remove('show');
+    $('#clef-tag').classList.remove('hot');
+  }, 850);
+}
+
 // ─── Flux de jeu ───────────────────────────────────────────
 function startGame() {
-  applyModeClass();
+  state.run = buildRunConfig();
+  applyBodyMode();
   state.idx = 0;
   state.score = 0;
   state.streak = 0;
   state.bestStreak = 0;
-  state.lives = MAX_LIVES;
+  state.faults = 0;
   state.results = [];
   state.current = null;
+  state.runClef = state.run.clefPool[Math.floor(Math.random() * state.run.clefPool.length)];
+  stopAllTimers();
   renderAnswers();
   renderCombo(false);
+  $('#clef-banner').classList.remove('show');
+  $('#timer-track').style.visibility = (state.run.noteTimerMs || state.run.globalMs) ? 'visible' : 'hidden';
+  $('#timer-bar').style.width = '100%';
+  $('#timer-bar').classList.remove('danger');
   showScreen('screen-game');
+  if (state.run.globalMs != null) startGlobalTimer();
   nextNote();
+}
+
+function startCustom(cfg) {
+  audioCtx();
+  state.gameMode = 'custom';
+  state.customCfg = cfg;
+  startGame();
 }
 
 function nextNote() {
   if (state.nextId) { clearTimeout(state.nextId); state.nextId = null; }
-  if (state.idx >= NOTES_PER_RUN || (state.mode === 'competitif' && state.lives <= 0)) {
-    endGame();
+  const r = state.run;
+  if (state.idx >= r.totalNotes || state.faults >= r.maxFaults) {
+    endGame(state.faults >= r.maxFaults ? 'faults' : 'done');
+    return;
+  }
+  if (r.globalMs != null && performance.now() >= state.globalEndTs) {
+    endGame('time');
     return;
   }
   state.idx++;
+  const prevClef = state.current ? state.current.clefKey : null;
   state.current = buildNote();
   state.answered = false;
 
@@ -985,17 +1524,23 @@ function nextNote() {
   setAnswersEnabled(true);
   $$('#answers .answer-btn').forEach(b => b.classList.remove('ok', 'ko'));
 
+  // annonce le changement de clé (modes alternance uniquement)
+  if (r.clefChange === 'altern4' && prevClef && state.current.clefKey !== prevClef) {
+    announceClef(state.current.clefKey);
+  }
+
   state.startTs = performance.now();
-  if (state.mode === 'competitif') startTimer();
+  startNoteTimer();
 }
 
 function resolveNote(pickedIdx, timedOut) {
   if (state.answered) return;
   state.answered = true;
-  stopTimer();
+  stopNoteTimer();
   setAnswersEnabled(false);
 
-  const elapsed = timedOut ? TIMER_MS : performance.now() - state.startTs;
+  const r = state.run;
+  const elapsed = timedOut ? (r.noteTimerMs || 0) : performance.now() - state.startTs;
   const d = state.current.diatonic;
   const correctIdx = ((d % 7) + 7) % 7;
   const isCorrect = !timedOut && pickedIdx === correctIdx;
@@ -1012,9 +1557,8 @@ function resolveNote(pickedIdx, timedOut) {
   if (isCorrect) {
     state.streak++;
     state.bestStreak = Math.max(state.bestStreak, state.streak);
-    let earned = 0;
-    if (state.mode === 'competitif') {
-      earned = speedScore(elapsed) + streakBonus(state.streak);
+    if (r.scoring) {
+      const earned = speedScore(elapsed) + streakBonus(state.streak);
       state.score += earned;
       const fp = $('#float-pts');
       fp.textContent = '+' + earned;
@@ -1030,10 +1574,11 @@ function resolveNote(pickedIdx, timedOut) {
     vibrate(18);
     renderHud();
     renderCombo(true);
-    state.nextId = setTimeout(nextNote, 700);
+    state.nextId = setTimeout(nextNote, r.globalMs != null ? 450 : 700);
   } else {
     state.streak = 0;
-    if (state.mode === 'competitif') state.lives--;
+    state.faults++;
+    if (r.penaltyMs) state.globalEndTs -= r.penaltyMs; // sprint : erreur = temps perdu
     if (pickedIdx != null && btns[pickedIdx]) btns[pickedIdx].classList.add('ko');
     btns[correctIdx].classList.add('ok');
     $('#staff-svg').innerHTML = renderStaff(state.current.clefKey, state.current.p, 'var(--error)');
@@ -1045,43 +1590,69 @@ function resolveNote(pickedIdx, timedOut) {
     vibrate([40, 40, 40]);
     renderHud();
     renderCombo(false);
-    state.nextId = setTimeout(nextNote, 1200);
+    state.nextId = setTimeout(nextNote, r.globalMs != null ? 900 : 1200);
   }
 }
 
 function answer(idx)  { resolveNote(idx, false); }
 function onTimeout()  { resolveNote(null, true); }
 
-function endGame() {
-  stopTimer();
+function endGame(reason) {
+  stopAllTimers();
+  const r = state.run;
   const total = state.results.length;
-  const nOk = state.results.filter(r => r.correct).length;
-  const avg = total ? state.results.reduce((s, r) => s + r.timeMs, 0) / total / 1000 : 0;
-  const dead = state.mode === 'competitif' && state.lives <= 0;
+  const nOk = state.results.filter(x => x.correct).length;
+  const avg = total ? state.results.reduce((s, x) => s + x.timeMs, 0) / total / 1000 : 0;
+  const dead = reason === 'faults';
+  const timeUp = reason === 'time';
 
-  $('#end-eyebrow').textContent = dead ? 'Plus de vies…' : 'Partie terminée';
-  $('#end-title').innerHTML = dead
-    ? 'Game <span style="color:var(--error)">Over</span>'
-    : (nOk === total && total === NOTES_PER_RUN
-        ? 'Sans <span class="gold">faute</span> !'
-        : 'Bien <span class="accent">joué</span> !');
+  $('#end-eyebrow').textContent =
+    dead ? 'Plus de vies…' :
+    timeUp ? 'Temps écoulé !' :
+    'Partie terminée';
+  $('#end-title').innerHTML =
+    dead ? 'Game <span style="color:var(--error)">Over</span>' :
+    timeUp ? '<span class="gold">' + nOk + '</span> notes lues !' :
+    (nOk === total && total > 0 && r.totalNotes !== Infinity
+      ? 'Sans <span class="gold">faute</span> !'
+      : 'Bien <span class="accent">joué</span> !');
+
+  $('#end-score-block').style.display = r.scoring ? '' : 'none';
   $('#final-score').textContent = state.score;
   $('#stat-correct').textContent = nOk + '/' + total;
   $('#stat-combo').textContent = '×' + state.bestStreak;
   $('#stat-avgtime').textContent = avg.toFixed(2) + ' s';
-  sndGameOver(!dead && nOk >= total * 0.7);
+
+  // record personnel pour les jeux personnalisés
+  if (r.kind === 'custom' && state.customCfg) {
+    const cfg = customs.find(x => x.id === r.customId) || state.customCfg;
+    const prevBest = cfg.best ? cfg.best.score : null;
+    const isRecord = prevBest == null || state.score > prevBest;
+    if (isRecord) {
+      cfg.best = { score: state.score, date: new Date().toISOString() };
+      cfg.updated = Date.now();
+      saveCustomsLocal();
+      syncCustomsToCloud();
+    }
+    $('#custom-record').innerHTML = isRecord
+      ? '<span class="new">★ NOUVEAU RECORD !</span>'
+      : 'Record personnel : ' + prevBest;
+  }
+
+  sndGameOver(!dead && nOk >= Math.max(1, total) * 0.7);
+  lastSaved = null;
   showScreen('screen-end');
 }
 
 // ─── Sauvegarde & classement ───────────────────────────────
 let lbScope = 'local';
+let lbMode = 'classique';
 let lastSaved = null;
 
-async function saveAndReplay() {
-  const btn = $('#btn-save-replay');
-  btn.disabled = true;
+async function saveCurrentScore() {
   const name = ($('#player-name').value || '').trim() || 'Anonyme';
   saveSettings();
+  initRanking(state.run.rankKey);
   try {
     lastSaved = await ScolarisRanking.saveScore({
       name,
@@ -1092,62 +1663,97 @@ async function saveAndReplay() {
   } catch (e) {
     console.warn('[lecture-musique] saveScore:', e && e.message);
   }
-  btn.disabled = false;
-  startGame();
 }
 
 async function openLeaderboard(highlight) {
   showScreen('screen-lb');
+  $$('#lb-mode-tabs .lb-tab').forEach(t => t.classList.toggle('selected', t.dataset.lbmode === lbMode));
+  $$('#lb-scope-tabs .lb-tab').forEach(t => t.classList.toggle('selected', t.dataset.scope === lbScope));
+  initRanking(lbMode);
   await ScolarisRanking.renderLeaderboard($('#leaderboard-list'), {
     scope: lbScope,
     highlight: highlight || undefined,
   });
 }
 
+$('#lb-mode-tabs').addEventListener('click', e => {
+  const tab = e.target.closest('.lb-tab');
+  if (!tab) return;
+  lbMode = tab.dataset.lbmode;
+  openLeaderboard(lastSaved);
+});
 $('#lb-scope-tabs').addEventListener('click', e => {
   const tab = e.target.closest('.lb-tab');
   if (!tab) return;
   lbScope = tab.dataset.scope;
-  $$('#lb-scope-tabs .lb-tab').forEach(t => t.classList.toggle('selected', t === tab));
   openLeaderboard(lastSaved);
 });
 
 // ─── Bindings ──────────────────────────────────────────────
 bindChipGroup('clef-group',  'clef',  v => { state.clef = v; });
 bindChipGroup('range-group', 'range', v => { state.range = v; });
-bindChipGroup('mode-group',  'mode',  v => { state.mode = v; applyModeClass(); });
+bindChipGroup('mode-group',  'mode',  v => { state.gameMode = v; });
 
-$('#btn-start').addEventListener('click', () => { audioCtx(); saveSettings(); startGame(); });
+$('#btn-start').addEventListener('click', () => {
+  audioCtx();
+  // relit le mode sélectionné (l'état peut rester sur 'custom' après un jeu personnalisé)
+  const sel = $('#mode-group .chip.selected');
+  state.gameMode = sel ? sel.dataset.mode : 'classique';
+  saveSettings();
+  startGame();
+});
 $('#btn-quit').addEventListener('click', () => {
-  stopTimer();
+  stopAllTimers();
   if (state.nextId) { clearTimeout(state.nextId); state.nextId = null; }
   state.answered = true;
-  showScreen('screen-home');
-  ScolarisRanking.renderGradeBadge($('#home-badge'));
+  backHome();
 });
-$('#btn-home-lb').addEventListener('click', async () => {
-  await ScolarisRanking.loadOnline().catch(() => {});
-  openLeaderboard(null);
+
+// Éditeur
+$('#btn-new-custom').addEventListener('click', () => openEditor(null));
+$('#btn-editor-save').addEventListener('click', saveEditor);
+$('#btn-editor-cancel').addEventListener('click', () => { editingId = null; backHome(); });
+$('#e-structure').addEventListener('click', updateEditorVisibility);
+// clés de l'éditeur : multi-sélection (toggle)
+$('#e-clefs').addEventListener('click', e => {
+  const btn = e.target.closest('.chip');
+  if (!btn) return;
+  btn.classList.toggle('selected');
 });
+// chips simples de l'éditeur
+['e-change', 'e-range', 'e-structure', 'e-notes', 'e-duration', 'e-faults', 'e-notetimer'].forEach(gid => {
+  $('#' + gid).addEventListener('click', e => {
+    const btn = e.target.closest('.chip');
+    if (!btn) return;
+    $$('#' + gid + ' .chip').forEach(b => b.classList.toggle('selected', b === btn));
+    if (gid === 'e-structure') updateEditorVisibility();
+  });
+});
+
+// Classements
+$('#btn-home-lb').addEventListener('click', () => { lbMode = 'classique'; openLeaderboard(null); });
 $('#btn-end-lb').addEventListener('click', async () => {
-  const name = ($('#player-name').value || '').trim() || 'Anonyme';
-  if (state.mode === 'competitif' && !lastSaved) {
-    try { lastSaved = await ScolarisRanking.saveScore({ name, score: state.score, clef: state.clef, range: state.range }); }
-    catch (e) {}
-  }
+  if (!lastSaved) await saveCurrentScore();
+  lbMode = state.run && state.run.rankKey ? state.run.rankKey : 'classique';
   openLeaderboard(lastSaved);
 });
-$('#btn-save-replay').addEventListener('click', () => { lastSaved = null; saveAndReplay(); });
+
+// Fin de partie
+$('#btn-save-replay').addEventListener('click', async () => {
+  const btn = $('#btn-save-replay');
+  btn.disabled = true;
+  await saveCurrentScore();
+  btn.disabled = false;
+  startGame();
+});
+$('#btn-replay').addEventListener('click', startGame);        // rejouer sans enregistrer
 $('#btn-replay-loisir').addEventListener('click', startGame);
-$('#btn-end-home').addEventListener('click', () => {
-  lastSaved = null;
-  showScreen('screen-home');
-  ScolarisRanking.renderGradeBadge($('#home-badge'));
+$('#btn-replay-custom').addEventListener('click', startGame);
+$('#btn-edit-custom').addEventListener('click', () => {
+  if (state.customCfg) openEditor(customs.find(x => x.id === state.customCfg.id) || state.customCfg);
 });
-$('#btn-lb-home').addEventListener('click', () => {
-  showScreen('screen-home');
-  ScolarisRanking.renderGradeBadge($('#home-badge'));
-});
+$('#btn-end-home').addEventListener('click', backHome);
+$('#btn-lb-home').addEventListener('click', backHome);
 
 // Clavier : 1–7 → Do…Si
 document.addEventListener('keydown', e => {
@@ -1158,9 +1764,13 @@ document.addEventListener('keydown', e => {
 
 // ─── Init ──────────────────────────────────────────────────
 loadSettings();
-applyModeClass();
+loadCustomsLocal();
+renderCustomList();
+setSyncLabel(false);
 ScolarisRanking.renderGradeBadge($('#home-badge'));
 window.addEventListener('scolaris-auth-ready', () => {
+  loadCustomsFromCloud();
+  initRanking('classique');
   ScolarisRanking.loadOnline().then(() => ScolarisRanking.renderGradeBadge($('#home-badge'))).catch(() => {});
 });
 </script>

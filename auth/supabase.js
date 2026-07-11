@@ -123,6 +123,44 @@ export async function getLeaderboard(gameId = null, limit = 50) {
   }
 }
 
+// ─── Données de jeu par utilisateur (configs personnalisées…) ────────────────
+
+/**
+ * Sauvegarde un blob JSON lié au compte pour un jeu donné (upsert).
+ * Table : user_games (voir schema.sql). Invité → retourne false.
+ * @param {string} gameId
+ * @param {Object} data - objet JSON sérialisable
+ */
+export async function saveUserGameData(gameId, data) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+  const { error } = await supabase.from('user_games').upsert({
+    user_id: user.id,
+    game_id: gameId,
+    data,
+    updated_at: new Date().toISOString()
+  });
+  if (error) { console.error('[user_games] save error:', error.message); return false; }
+  return true;
+}
+
+/**
+ * Recharge le blob JSON du compte pour un jeu donné, ou null (invité / vide).
+ * @param {string} gameId
+ */
+export async function loadUserGameData(gameId) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data, error } = await supabase
+    .from('user_games')
+    .select('data')
+    .eq('user_id', user.id)
+    .eq('game_id', gameId)
+    .maybeSingle();
+  if (error) { console.error('[user_games] load error:', error.message); return null; }
+  return data ? data.data : null;
+}
+
 /**
  * Toutes les entrées de compétences d'un joueur (pour le radar).
  * @param {string} userId

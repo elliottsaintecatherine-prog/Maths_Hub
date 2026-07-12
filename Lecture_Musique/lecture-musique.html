@@ -647,7 +647,7 @@
     padding: 6px 4px;
     -webkit-overflow-scrolling: touch;
   }
-  .fret-wrap svg { display: block; height: auto; min-width: 560px; }
+  .fret-wrap svg { display: block; height: auto; }
   .fret-wrap [data-s] { cursor: pointer; }
   .answers.disabled svg { pointer-events: none; }
   .answers.disabled .p-key, .answers.disabled .oct-chip, .answers.disabled .circle-btn { cursor: default; }
@@ -812,6 +812,7 @@
       <button class="chip" data-input="cercle">Cercle<small>notes disposées en rond</small></button>
       <button class="chip" data-input="clavier">Clavier<small>piano virtuel</small></button>
       <button class="chip" data-input="guitare">Guitare<small>manche 12 cases</small></button>
+      <button class="chip" data-input="violon">Violon<small>touché · 1re position</small></button>
     </div>
 
     <div id="kbopt-wrap" style="display:none;">
@@ -1420,7 +1421,7 @@ function loadSettings() {
   if (s.clefChange === 'note' || s.clefChange === 'altern4') state.clefChangeSel = s.clefChange;
   if (RANGES[s.range]) state.range = s.range;
   if (['loisir', 'classique', 'infini', 'sprint'].includes(s.mode)) state.gameMode = s.mode;
-  if (['boutons', 'cercle', 'clavier', 'guitare'].includes(s.input)) state.inputMode = s.input;
+  if (['boutons', 'cercle', 'clavier', 'guitare', 'violon'].includes(s.input)) state.inputMode = s.input;
   if (['simple', 'octaves', 'etendu'].includes(s.kbOpt)) state.kbOpt = s.kbOpt;
   if (s.name) $('#player-name').value = s.name;
   $$('#clef-group .chip').forEach(b => b.classList.toggle('selected', state.clefs.includes(b.dataset.clef)));
@@ -1781,17 +1782,35 @@ function stopScroll() {
 }
 
 // ─── Saisie de la réponse ──────────────────────────────────
-// Quatre modes : boutons (grille), cercle, clavier de piano
-// (3 variantes d'octaves), manche de guitare (accordage standard).
-const GUITAR_OPEN_MIDI = [64, 59, 55, 50, 45, 40]; // mi aigu → mi grave
-const GUITAR_STRINGS = ['Mi', 'Si', 'Sol', 'Ré', 'La', 'Mi'];
-const GUITAR_FRETS = 12;
+// Cinq modes : boutons (grille), cercle, clavier de piano
+// (3 variantes d'octaves), manche de guitare, touché de violon.
+const INSTRUMENTS = {
+  guitare: {
+    openMidi: [64, 59, 55, 50, 45, 40], // mi aigu → mi grave
+    strings: ['Mi', 'Si', 'Sol', 'Ré', 'La', 'Mi'],
+    frets: 12,
+    fretted: true,                      // frettes réelles
+    dots: [3, 5, 7, 9],
+    doubleDot: 12,
+    hint: 'Accordage Mi La Ré Sol Si Mi · touche une case qui joue cette note',
+  },
+  violon: {
+    openMidi: [76, 69, 62, 55],         // Mi5 La4 Ré4 Sol3 (aigu → grave)
+    strings: ['Mi', 'La', 'Ré', 'Sol'],
+    frets: 7,                           // 1re position (0 = corde à vide)
+    fretted: false,                     // repères pointillés façon "tapes"
+    dots: [2, 3, 5, 7],
+    doubleDot: null,
+    hint: 'Cordes Sol Ré La Mi · 1re position · touche l\'emplacement qui joue cette note',
+  },
+};
+function isFretInput() { return state.inputMode === 'guitare' || state.inputMode === 'violon'; }
 
 function nameIdxOf(d) { return ((d % 7) + 7) % 7; }
 function isExactInput() { return state.inputMode === 'clavier' && state.kbOpt !== 'simple'; }
-function guitarNameIdx(s, f) {
-  // -1 si la case joue une altération (dièse/bémol) — toujours faux ici
-  return SEMITONES.indexOf((GUITAR_OPEN_MIDI[s] + f) % 12);
+function stringNameIdx(instr, s, f) {
+  // -1 si l'emplacement joue une altération (dièse/bémol) — toujours faux ici
+  return SEMITONES.indexOf((INSTRUMENTS[instr].openMidi[s] + f) % 12);
 }
 
 // Étendue du clavier = union des étendues des clés de la manche.
@@ -1810,51 +1829,63 @@ function computeKbRange() {
   if (!octs.includes(state.selOctave)) state.selOctave = octs[Math.floor(octs.length / 2)];
 }
 
-function fretCx(f) { return f === 0 ? 24 : 46 + 40 * f - 20; }
-function stringY(s) { return 22 + s * 27; }
-
 function renderFretboard(picked, correctNameIdx) {
-  const X0 = 46, W = X0 + 40 * GUITAR_FRETS + 8, H = 186;
-  const bottomY = stringY(5);
-  let s = '<div class="fret-wrap"><svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg">';
-  // sillet + frettes
-  s += '<line x1="' + X0 + '" y1="' + (stringY(0) - 8) + '" x2="' + X0 + '" y2="' + (bottomY + 8) + '" stroke="var(--note)" stroke-width="5"/>';
-  for (let f = 1; f <= GUITAR_FRETS; f++) {
-    const x = X0 + 40 * f;
-    s += '<line x1="' + x + '" y1="' + (stringY(0) - 6) + '" x2="' + x + '" y2="' + (bottomY + 6) + '" stroke="var(--border-hi)" stroke-width="2"/>';
+  const cfg = INSTRUMENTS[state.inputMode];
+  const nStr = cfg.strings.length;
+  const cellW = cfg.frets <= 8 ? 56 : 40;
+  const X0 = 46;
+  const W = X0 + cellW * cfg.frets + 8;
+  const spacing = nStr <= 4 ? 36 : 27;
+  const sy = i => 22 + i * spacing;
+  const bottomY = sy(nStr - 1);
+  const H = bottomY + 40;
+  const cx = f => f === 0 ? 24 : X0 + cellW * f - cellW / 2;
+  const hitH = Math.min(spacing - 1, 30);
+
+  let s = '<div class="fret-wrap"><svg viewBox="0 0 ' + W + ' ' + H + '" style="min-width:' + W + 'px" xmlns="http://www.w3.org/2000/svg">';
+  // sillet
+  s += '<line x1="' + X0 + '" y1="' + (sy(0) - 8) + '" x2="' + X0 + '" y2="' + (bottomY + 8) + '" stroke="var(--note)" stroke-width="5"/>';
+  // frettes réelles (guitare) ou repères pointillés façon "tapes" (violon)
+  for (let f = 1; f <= cfg.frets; f++) {
+    const x = X0 + cellW * f;
+    s += cfg.fretted
+      ? '<line x1="' + x + '" y1="' + (sy(0) - 6) + '" x2="' + x + '" y2="' + (bottomY + 6) + '" stroke="var(--border-hi)" stroke-width="2"/>'
+      : '<line x1="' + x + '" y1="' + (sy(0) - 6) + '" x2="' + x + '" y2="' + (bottomY + 6) + '" stroke="var(--staff-line)" stroke-width="1.5" stroke-dasharray="4 5"/>';
   }
-  // repères de cases
-  [3, 5, 7, 9].forEach(f => {
-    s += '<circle cx="' + fretCx(f) + '" cy="' + (H - 10) + '" r="3.5" fill="var(--text-faint)"/>';
+  // repères de position
+  (cfg.dots || []).forEach(f => {
+    s += '<circle cx="' + cx(f) + '" cy="' + (H - 10) + '" r="3.5" fill="var(--text-faint)"/>';
   });
-  s += '<circle cx="' + (fretCx(12) - 6) + '" cy="' + (H - 10) + '" r="3.5" fill="var(--text-faint)"/>';
-  s += '<circle cx="' + (fretCx(12) + 6) + '" cy="' + (H - 10) + '" r="3.5" fill="var(--text-faint)"/>';
+  if (cfg.doubleDot) {
+    s += '<circle cx="' + (cx(cfg.doubleDot) - 6) + '" cy="' + (H - 10) + '" r="3.5" fill="var(--text-faint)"/>';
+    s += '<circle cx="' + (cx(cfg.doubleDot) + 6) + '" cy="' + (H - 10) + '" r="3.5" fill="var(--text-faint)"/>';
+  }
   // cordes + noms
-  for (let i = 0; i < 6; i++) {
-    const y = stringY(i);
-    s += '<text x="6" y="' + (y + 4) + '" font-size="11" fill="var(--text-faint)" font-family="JetBrains Mono, monospace">' + GUITAR_STRINGS[i] + '</text>';
+  for (let i = 0; i < nStr; i++) {
+    const y = sy(i);
+    s += '<text x="6" y="' + (y + 4) + '" font-size="11" fill="var(--text-faint)" font-family="JetBrains Mono, monospace">' + cfg.strings[i] + '</text>';
     s += '<line x1="' + (X0 - 16) + '" y1="' + y + '" x2="' + (W - 4) + '" y2="' + y + '" stroke="var(--staff-line)" stroke-width="' + (1 + i * 0.35) + '"/>';
   }
-  // révélation : toutes les cases qui jouent la bonne note
+  // révélation : tous les emplacements qui jouent la bonne note
   if (correctNameIdx != null) {
-    for (let st = 0; st < 6; st++) {
-      for (let f = 0; f <= GUITAR_FRETS; f++) {
-        if (guitarNameIdx(st, f) === correctNameIdx) {
-          s += '<circle cx="' + fretCx(f) + '" cy="' + stringY(st) + '" r="9" fill="var(--accent)" opacity="0.9"/>';
+    for (let st = 0; st < nStr; st++) {
+      for (let f = 0; f <= cfg.frets; f++) {
+        if (stringNameIdx(state.inputMode, st, f) === correctNameIdx) {
+          s += '<circle cx="' + cx(f) + '" cy="' + sy(st) + '" r="9" fill="var(--accent)" opacity="0.9"/>';
         }
       }
     }
   }
-  // case touchée (si fausse)
-  if (picked && !(correctNameIdx != null && guitarNameIdx(picked.s, picked.f) === correctNameIdx)) {
-    s += '<circle cx="' + fretCx(picked.f) + '" cy="' + stringY(picked.s) + '" r="9" fill="var(--error)" opacity="0.9"/>';
+  // emplacement touché (si faux)
+  if (picked && !(correctNameIdx != null && stringNameIdx(state.inputMode, picked.s, picked.f) === correctNameIdx)) {
+    s += '<circle cx="' + cx(picked.f) + '" cy="' + sy(picked.s) + '" r="9" fill="var(--error)" opacity="0.9"/>';
   }
   // zones cliquables
-  for (let st = 0; st < 6; st++) {
-    for (let f = 0; f <= GUITAR_FRETS; f++) {
-      const x = f === 0 ? 4 : X0 + 40 * (f - 1);
-      const w = f === 0 ? X0 - 4 : 40;
-      s += '<rect x="' + x + '" y="' + (stringY(st) - 13) + '" width="' + w + '" height="26" fill="transparent" data-s="' + st + '" data-f="' + f + '"/>';
+  for (let st = 0; st < nStr; st++) {
+    for (let f = 0; f <= cfg.frets; f++) {
+      const x = f === 0 ? 4 : X0 + cellW * (f - 1);
+      const w = f === 0 ? X0 - 4 : cellW;
+      s += '<rect x="' + x + '" y="' + (sy(st) - hitH / 2) + '" width="' + w + '" height="' + hitH + '" fill="transparent" data-s="' + st + '" data-f="' + f + '"/>';
     }
   }
   s += '</svg></div>';
@@ -1942,11 +1973,11 @@ function renderInput() {
       hint.textContent = 'Clavier : touches 1 à 7 · l\'octave ne compte pas';
     }
 
-  } else if (state.inputMode === 'guitare') {
+  } else if (isFretInput()) {
     wrap.classList.add('guitar-zone');
     wrap.innerHTML = renderFretboard(null, null);
     bindFretboard();
-    hint.textContent = 'Accordage Mi La Ré Sol Si Mi · touche une case qui joue cette note';
+    hint.textContent = INSTRUMENTS[state.inputMode].hint;
 
   } else {
     NOTE_NAMES.forEach((name, i) => {
@@ -1966,7 +1997,7 @@ function setAnswersEnabled(on) {
   $('#answers').classList.toggle('disabled', !on);
 }
 function clearInputFeedback() {
-  if (state.inputMode === 'guitare') {
+  if (isFretInput()) {
     $('#answers').innerHTML = renderFretboard(null, null);
     bindFretboard();
     return;
@@ -1979,14 +2010,14 @@ function pickIsCorrect(pick, item) {
   if (!pick) return false;
   if (pick.kind === 'name')   return pick.idx === nameIdxOf(item.diatonic);
   if (pick.kind === 'exact')  return pick.d === item.diatonic;
-  if (pick.kind === 'guitar') return guitarNameIdx(pick.s, pick.f) === nameIdxOf(item.diatonic);
+  if (pick.kind === 'guitar') return stringNameIdx(state.inputMode, pick.s, pick.f) === nameIdxOf(item.diatonic);
   return false;
 }
 
 // Coloration de la bonne (et mauvaise) réponse selon le mode de saisie.
 function showAnswerFeedback(pick, item, isCorrect) {
   const nIdx = nameIdxOf(item.diatonic);
-  if (state.inputMode === 'guitare') {
+  if (isFretInput()) {
     $('#answers').innerHTML = renderFretboard(pick && pick.kind === 'guitar' ? pick : null, nIdx);
     return;
   }
@@ -2403,7 +2434,7 @@ $('#btn-lb-home').addEventListener('click', backHome);
 // Clavier physique : 1–7 → Do…Si (uniquement pour les saisies par nom)
 document.addEventListener('keydown', e => {
   if (!$('#screen-game').classList.contains('active')) return;
-  if (state.inputMode === 'guitare' || isExactInput()) return;
+  if (isFretInput() || isExactInput()) return;
   const n = parseInt(e.key, 10);
   if (n >= 1 && n <= 7 && !state.answered) answer(n - 1);
 });

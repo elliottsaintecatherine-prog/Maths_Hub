@@ -64,8 +64,8 @@ body{
 .route{display:flex;align-items:center;gap:9px;padding:4px 0 14px;}
 .route-line{position:relative;flex:1;height:18px;}
 .route-line::before{content:"";position:absolute;left:0;right:0;top:9px;border-top:2px dashed rgba(38,49,61,.3);}
-.plane{position:absolute;top:-1px;left:0;transform:translateX(-50%);font-size:15px;line-height:1;
-  transition:left .55s cubic-bezier(.4,1.35,.5,1);filter:drop-shadow(0 1px 0 rgba(255,255,255,.7));}
+.plane{position:absolute;top:-1px;left:0;font-size:15px;line-height:1;
+  will-change:transform;filter:drop-shadow(0 1px 0 rgba(255,255,255,.7));}
 .route .label{white-space:nowrap;}
 .trip{font-family:var(--f-stamp);font-size:11px;font-weight:700;letter-spacing:.14em;color:var(--ink);
   font-variant-numeric:tabular-nums;border:1.5px solid rgba(38,49,61,.35);border-radius:3px;padding:3px 7px;}
@@ -73,7 +73,20 @@ body{
 /* ══ LA CARTE POSTALE ══ */
 .stage{perspective:1000px;display:flex;justify-content:center;align-items:center;flex:none;margin-bottom:clamp(14px,3.5vh,26px);}
 #quiz .stage{flex:1;min-height:0;}
-.float{animation:drift 7s ease-in-out infinite;width:100%;}
+.float{animation:drift 7s ease-in-out infinite;width:100%;transform-style:preserve-3d;}
+/* le bloc qui s'incline sous le doigt */
+.relief{position:relative;width:100%;transform-style:preserve-3d;}
+/* le bloc qui se retourne */
+.flip{position:relative;width:100%;transform-style:preserve-3d;
+  transition:transform .78s cubic-bezier(.22,.72,.24,1);}
+.flip.dos{transform:rotateY(180deg);}
+.flip.sansanim{transition:none;}
+.flip .card{backface-visibility:hidden;-webkit-backface-visibility:hidden;}
+.flip .face-ar{position:absolute;inset:0;transform:rotateY(180deg);}
+/* au verso il n'y a presque pas de texte : on laisse la photo respirer */
+.face-ar .card-veil{background:linear-gradient(180deg,
+  rgba(22,17,10,.16) 0%,rgba(22,17,10,0) 26%,rgba(20,15,9,.06) 60%,rgba(18,13,8,.52) 100%);}
+.face-ar .card-body{padding-bottom:calc(clamp(12px,3.6vw,18px) + 2px);}
 @keyframes drift{0%,100%{transform:translateY(0) rotate(-.7deg);}50%{transform:translateY(-6px) rotate(.5deg);}}
 
 .card{
@@ -264,12 +277,6 @@ body{
   transform:translate3d(var(--x,0px),var(--y,0px),0) rotate(var(--r,0deg)) scale(.32);
   transition:opacity .4s ease,transform .4s cubic-bezier(.5,-.3,.8,.5);
 }
-.physique{
-  display:block;text-align:center;margin-top:6px;
-  font-family:var(--f-stamp);font-size:11px;font-weight:700;letter-spacing:.07em;
-  color:var(--ink-2);font-variant-numeric:tabular-nums;opacity:0;transition:opacity .3s;
-}
-.physique.show{opacity:.85;}
 #btnNon{
   position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:min(72%,250px);
   font-family:var(--f-stamp);font-size:15px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
@@ -334,14 +341,26 @@ body{
 @keyframes up{from{transform:translateY(100%);}to{transform:none;}}
 .sheet h3{font-family:var(--f-hand);font-size:33px;font-weight:400;margin-bottom:4px;}
 .sheet p{font-size:13.5px;line-height:1.55;color:#3C4854;margin-bottom:14px;}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:9px;margin-bottom:16px;}
+.liste{margin-bottom:18px;}
+.liste-tete{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  border-bottom:1.5px solid rgba(38,49,61,.22);padding-bottom:5px;margin-bottom:10px;}
+.liste-tete h4{font-family:var(--f-stamp);font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;}
+.liste-tete h4 em{font-style:normal;font-weight:400;letter-spacing:.04em;text-transform:none;color:var(--ink-2);font-size:12px;}
+.compteur{font-family:var(--f-stamp);font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--ink-2);
+  font-variant-numeric:tabular-nums;white-space:nowrap;}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:9px;margin-bottom:6px;}
+.grid:empty::after{content:"aucune photo pour l'instant";font-size:12.5px;color:var(--ink-2);opacity:.8;}
+.thumb .num{
+  position:absolute;left:-3px;bottom:-3px;background:var(--ink);color:var(--paper-2);
+  font-family:var(--f-stamp);font-size:9.5px;font-weight:700;letter-spacing:.1em;padding:2px 5px;border-radius:2px;
+}
 .thumb{position:relative;aspect-ratio:1;background:#D9CDB2 center/cover;border:4px solid #FBF6E9;
   box-shadow:0 2px 6px rgba(52,40,20,.28);transform:rotate(-1.2deg);}
 .thumb:nth-child(even){transform:rotate(1.4deg);}
 .thumb button{position:absolute;top:-8px;right:-8px;width:24px;height:24px;border-radius:50%;
   background:var(--air-red);color:#fff;border:2px solid var(--paper);font-size:13px;line-height:1;cursor:pointer;}
-.drop{border:2px dashed rgba(38,49,61,.35);padding:18px;text-align:center;margin-bottom:14px;background:rgba(255,252,240,.5);}
-.drop span{display:block;font-size:26px;margin-bottom:6px;}
+.drop{display:block;border:2px dashed rgba(38,49,61,.35);padding:13px;text-align:center;margin-bottom:11px;background:rgba(255,252,240,.5);cursor:pointer;}
+.drop span{display:block;font-size:22px;margin-bottom:4px;}
 .drop em{font-style:normal;font-size:13px;color:#3C4854;}
 .sheet .row{justify-content:flex-start;}
 .hint{font-size:12px;color:var(--ink-2);line-height:1.5;margin-top:12px;}
@@ -411,20 +430,38 @@ input[type=file]{display:none;}
       <span class="trip" id="trip">01/11</span>
     </div>
 
-    <div class="stage"><div class="float">
-      <article class="card" id="card">
-        <div class="card-img" id="cardImg"></div>
-        <div class="card-veil"></div><div class="card-grain"></div>
-        <div class="card-body">
-          <div class="card-top">
-            <span class="postmark" id="postmark">Carte 1</span>
-            <span class="stamp"><i>✈</i><small>PAR AVION</small></span>
+    <div class="stage"><div class="float"><div class="relief" id="relief">
+      <div class="flip" id="flip">
+
+        <!-- recto : la photo de devant + la question -->
+        <article class="card face-av" id="card">
+          <div class="card-img" id="cardImg"></div>
+          <div class="card-veil"></div><div class="card-grain"></div>
+          <div class="card-body">
+            <div class="card-top">
+              <span class="postmark" id="postmark">Carte 1</span>
+              <span class="stamp"><i>✈</i><small>PAR AVION</small></span>
+            </div>
+            <h2 class="qtext" id="qtext"></h2>
+            <span class="peek" id="peekHint"></span>
           </div>
-          <h2 class="qtext" id="qtext"></h2>
-          <span class="peek" id="peekHint"></span>
-        </div>
-      </article>
-    </div></div>
+        </article>
+
+        <!-- verso : la deuxième photo -->
+        <article class="card face-ar" id="cardDos">
+          <div class="card-img" id="cardDosImg"></div>
+          <div class="card-veil"></div><div class="card-grain"></div>
+          <div class="card-body">
+            <div class="card-top">
+              <span class="postmark" id="postmarkDos">Verso</span>
+              <span class="stamp"><i>✉</i><small>AU DOS</small></span>
+            </div>
+            <span class="peek" id="peekDos"></span>
+          </div>
+        </article>
+
+      </div>
+    </div></div></div>
 
     <div class="answers" id="answers"></div>
 
@@ -435,7 +472,6 @@ input[type=file]{display:none;}
 
     <div class="arena" id="arena" hidden>
       <p class="taunt" id="taunt"></p>
-      <span class="physique" id="physique"></span>
       <div class="compte" id="compte" hidden>5</div>
       <button id="btnNon">Non</button>
     </div>
@@ -481,10 +517,21 @@ input[type=file]{display:none;}
 <div id="album-ui">
   <div class="sheet" role="dialog" aria-label="Mes photos">
     <h3>Mes photos</h3>
-    <p>Elles s'affichent au dos des cartes postales, dans un ordre différent à chaque partie. Elles restent sur cet appareil : rien n'est envoyé nulle part.</p>
-    <label class="drop" for="pick"><span>🖼️</span><em>Choisir des photos sur cet appareil</em></label>
-    <input type="file" id="pick" accept="image/*" multiple>
-    <div class="grid" id="grid"></div>
+    <p>Chaque carte postale a deux faces : une photo au recto, une autre au verso. Elles sont tirées au hasard dans les deux listes ci-dessous, dans un ordre différent à chaque partie. Elles restent sur cet appareil : rien n'est envoyé nulle part.</p>
+
+    <section class="liste">
+      <div class="liste-tete"><h4>Recto <em>— devant la carte</em></h4><span class="compteur" id="nbRecto">0 photo</span></div>
+      <label class="drop" for="pickRecto"><span>🖼️</span><em>Ajouter des photos au recto</em></label>
+      <input type="file" id="pickRecto" accept="image/*" multiple>
+      <div class="grid" id="gridRecto"></div>
+    </section>
+
+    <section class="liste">
+      <div class="liste-tete"><h4>Verso <em>— au dos, quand on retourne</em></h4><span class="compteur" id="nbVerso">0 photo</span></div>
+      <label class="drop" for="pickVerso"><span>🖼️</span><em>Ajouter des photos au verso</em></label>
+      <input type="file" id="pickVerso" accept="image/*" multiple>
+      <div class="grid" id="gridVerso"></div>
+    </section>
     <div class="row">
       <button class="mini" id="export">⬇︎ Enregistrer le quiz avec mes photos</button>
       <button class="mini" id="closeAlbum">Fermer</button>
@@ -751,18 +798,36 @@ const PRISTINE = document.body.innerHTML;   // copie propre, pour l'export
 const $ = s => document.querySelector(s);
 const screens = {intro:$('#intro'), quiz:$('#quiz'), result:$('#result')};
 
-let album = {pool:[]};
+/* Les photos vivent dans deux listes : recto (devant) et verso (au dos).
+   Chaque carte pioche une photo dans chacune, au hasard.               */
+const COTES = ['recto','verso'];
+const LETTRE = {recto:'R', verso:'V'};
+let album = {recto:[], verso:[]};
+
+function normalise(a){
+  a = a || {};
+  COTES.forEach(c=>{ if(!Array.isArray(a[c])) a[c] = []; });
+  /* ancien format à une seule liste : on la répartit sur les deux faces */
+  if(Array.isArray(a.pool) && a.pool.length && !a.recto.length && !a.verso.length)
+    a.pool.forEach((src,i)=> (i%2 ? a.verso : a.recto).push(src));
+  delete a.pool;
+  return a;
+}
+function garni(a){ return a && ((a.recto||[]).length + (a.verso||[]).length) > 0; }
 try{
   const inline = JSON.parse($('#album').textContent || '{}');
-  if(inline.pool && inline.pool.length) album = inline;
+  if(garni(normalise(inline))) album = normalise(inline);
   else{
     const saved = localStorage.getItem('carnet-louis');
-    if(saved) album = JSON.parse(saved);
+    if(saved) album = normalise(JSON.parse(saved));
   }
 }catch(e){}
-if(!album.pool) album.pool = [];
+album = normalise(album);
+/* toutes les photos, les deux listes confondues */
+function toutesPhotos(){ return album.recto.concat(album.verso); }
 
-let tirage = [], index = 0, score = 0, maxScore = 0, tries = 0, locked = false, ordrePhotos = [];
+let tirage = [], index = 0, score = 0, maxScore = 0, tries = 0, locked = false;
+let ordreRecto = [], ordreVerso = [];
 let peutSuivre = false;
 
 function melange(a){ a = a.slice(); for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [a[i],a[j]]=[a[j],a[i]]; } return a; }
@@ -771,17 +836,61 @@ function nouveauTirage(){
   tirage = melange(BANQUE).slice(0, Math.min(NB_CARTES, BANQUE.length));
   tirage.push(FINALE);
   maxScore = tirage.reduce((t,c)=> t + (c.finale ? c.points : Math.max.apply(null, c.a.map(r=>r[1]))), 0);
-  ordrePhotos = melange(album.pool.map((_,i)=>i));
+  ordreRecto = melange(listeDe('recto').map((_,i)=>i));
+  ordreVerso = melange(listeDe('verso').map((_,i)=>i));
   index = 0; score = 0; locked = false;
 }
+
+/* ── l'avion glisse d'une carte à l'autre, en prenant un peu d'altitude ── */
+const avion = {frac:0, dep:0, cible:0, t0:0, raf:null};
+function poseAvion(pente, montee){
+  const p = $('#plane'), l = $('.route-line');
+  if(!p || !l) return;
+  const x = avion.frac * l.clientWidth - p.offsetWidth/2;
+  p.style.transform = 'translate3d(' + x.toFixed(1) + 'px,' + (montee||0).toFixed(1) + 'px,0)'
+                    + ' rotate(' + (pente||0).toFixed(1) + 'deg)';
+}
+function volPas(t){
+  const k = Math.min(1, (t - avion.t0)/900);
+  const e = k < .5 ? 4*k*k*k : 1 - Math.pow(-2*k+2, 3)/2;   /* départ et arrivée en douceur */
+  const arc = Math.sin(Math.PI*k);                          /* il monte puis redescend */
+  const sens = avion.cible >= avion.dep ? 1 : -1;
+  avion.frac = avion.dep + (avion.cible - avion.dep)*e;
+  poseAvion(-arc*10*sens, -arc*5);
+  if(k < 1){ avion.raf = requestAnimationFrame(volPas); }
+  else { avion.raf = null; poseAvion(0, 0); }
+}
+function volVers(frac, direct){
+  if(avion.raf){ cancelAnimationFrame(avion.raf); avion.raf = null; }
+  if(direct){ avion.frac = avion.dep = avion.cible = frac; poseAvion(0, 0); return; }
+  avion.dep = avion.frac; avion.cible = frac; avion.t0 = performance.now();
+  avion.raf = requestAnimationFrame(volPas);
+}
+addEventListener('resize', ()=>{ if(!avion.raf) poseAvion(0, 0); });
 
 function show(n){ Object.values(screens).forEach(s=>s.classList.remove('active')); screens[n].classList.add('active'); scrollTo(0,0); }
 function buzz(v){ if(navigator.vibrate) try{ navigator.vibrate(v); }catch(e){} }
 
 /* ── photos ──────────────────────────────────────────────────────── */
-function photoPour(i){
-  if(!album.pool.length) return null;
-  return album.pool[ ordrePhotos[i % ordrePhotos.length] ];
+/* la liste d'un côté ; si elle est vide, on emprunte celle d'en face */
+function listeDe(cote){
+  const autre = cote === 'recto' ? 'verso' : 'recto';
+  return album[cote].length ? album[cote] : album[autre];
+}
+/* les deux photos de la carte n° i : une par face, jamais la même */
+function photosPour(i){
+  const R = listeDe('recto'), V = listeDe('verso');
+  if(!R.length) return {av:null, ar:null, refAv:'', refAr:''};
+  const cAv = album.recto.length ? 'recto' : 'verso';
+  const cAr = album.verso.length ? 'verso' : 'recto';
+  const iAv = ordreRecto[i % ordreRecto.length];
+  let iAr = ordreVerso[i % ordreVerso.length];
+  if(R === V && V.length > 1 && iAr === iAv) iAr = ordreVerso[(i+1) % ordreVerso.length];
+  return {
+    av: R[iAv], ar: V[iAr],
+    refAv: LETTRE[cAv] + (iAv+1),
+    refAr: LETTRE[cAr] + (iAr+1)
+  };
 }
 function poseCarte(carte, img, src){
   if(src){ img.style.backgroundImage = 'url("'+src+'")'; carte.classList.add('has-photo'); }
@@ -789,29 +898,32 @@ function poseCarte(carte, img, src){
   carte.classList.remove('looking');
 }
 function rafraichirCartesFixes(){
-  const cover = album.cover || photoPour(0) || album.pool[0] || null;
+  const toutes = toutesPhotos();
+  const cover = album.cover || album.recto[0] || toutes[0] || null;
   poseCarte($('#introCard'), $('#introCard .card-img'), cover);
-  const souv = album.pool.length>1 ? album.pool[album.pool.length-1] : cover;
+  const souv = album.verso[album.verso.length-1] || toutes[toutes.length-1] || cover;
   poseCarte($('#resultCard'), $('#resultCard .card-img'), souv);
-  $('#introCap').textContent = album.pool.length
+  $('#introCap').textContent = toutes.length
     ? "Le carnet est prêt. Bonne chance."
-    : "Ajoute tes photos : elles apparaîtront au dos des cartes.";
+    : "Ajoute tes photos : une au recto, une autre au dos de chaque carte.";
 }
 
 /* ── relief : la carte suit le doigt / la souris ─────────────────── */
-function rendreVivante(carte){
-  const stage = carte.parentElement.parentElement;
-  const img = carte.querySelector('.card-img');
+function rendreVivante(cible, images, auClic){
+  const stage = cible.closest('.stage');
   let raf = null, rx = 0, ry = 0, px = 0, py = 0;
   const appliquer = ()=>{
     raf = null;
-    carte.style.transform = 'rotateX('+rx.toFixed(2)+'deg) rotateY('+ry.toFixed(2)+'deg)';
-    img.style.setProperty('--px', px.toFixed(1)+'px');
-    if(!carte.classList.contains('looking'))
-      img.style.transform = 'scale(1.1) translate('+px.toFixed(1)+'px,'+py.toFixed(1)+'px)';
+    cible.style.transform = 'rotateX('+rx.toFixed(2)+'deg) rotateY('+ry.toFixed(2)+'deg)';
+    images.forEach(img=>{
+      img.style.setProperty('--px', px.toFixed(1)+'px');
+      const carte = img.closest('.card');
+      if(!carte || !carte.classList.contains('looking'))
+        img.style.transform = 'scale(1.1) translate('+px.toFixed(1)+'px,'+py.toFixed(1)+'px)';
+    });
   };
   const bouge = e=>{
-    const r = carte.getBoundingClientRect();
+    const r = cible.getBoundingClientRect();
     const x = ((e.clientX - r.left)/r.width - .5), y = ((e.clientY - r.top)/r.height - .5);
     ry = x*13; rx = -y*10; px = -x*16; py = -y*12;
     if(!raf) raf = requestAnimationFrame(appliquer);
@@ -821,12 +933,30 @@ function rendreVivante(carte){
   stage.addEventListener('pointerleave', repos);
   stage.addEventListener('pointercancel', repos);
   stage.addEventListener('pointerup', ()=>setTimeout(repos,900));
-  carte.addEventListener('click', ()=>{
+  cible.addEventListener('click', auClic);
+}
+/* les cartes fixes (accueil, souvenir) : un appui découvre la photo */
+function regarderPhoto(carte){
+  return ()=>{
     if(!carte.classList.contains('has-photo')) return;
     carte.classList.toggle('looking');
-    if(carte.classList.contains('looking')) img.style.transform = 'scale(1)';
+    if(carte.classList.contains('looking'))
+      carte.querySelector('.card-img').style.transform = 'scale(1)';
     buzz(8);
-  });
+  };
+}
+/* la carte du quiz : un appui la retourne */
+function retourner(){
+  $('#flip').classList.toggle('dos');
+  buzz(10);
+}
+function remetRecto(){
+  const f = $('#flip');
+  if(!f.classList.contains('dos')) return;
+  f.classList.add('sansanim');
+  f.classList.remove('dos');
+  void f.offsetWidth;
+  f.classList.remove('sansanim');
 }
 
 /* ── déroulé du quiz ─────────────────────────────────────────────── */
@@ -834,13 +964,17 @@ function afficher(){
   const c = tirage[index];
   locked = false;
   const total = tirage.length;
-  $('#plane').style.left = (index/(total-1)*100) + '%';
+  volVers(total > 1 ? index/(total-1) : 0, index === 0);
   $('#trip').textContent = String(index+1).padStart(2,'0') + '/' + String(total).padStart(2,'0');
   $('#postmark').textContent = c.finale ? 'Dernière carte' : 'Carte ' + (index+1);
   $('#qtext').textContent = c.q;
 
-  poseCarte($('#card'), $('#cardImg'), photoPour(index));
-  $('#peekHint').textContent = $('#card').classList.contains('has-photo') ? 'appuie sur la carte pour voir la photo' : '';
+  const ph = photosPour(index);
+  poseCarte($('#card'),    $('#cardImg'),    ph.av);
+  poseCarte($('#cardDos'), $('#cardDosImg'), ph.ar);
+  remetRecto();
+  $('#peekHint').textContent = (ph.av ? 'photo ' + ph.refAv + ' · ' : '') + 'appuie pour retourner la carte';
+  $('#peekDos').textContent  = (ph.ar ? 'photo ' + ph.refAr + ' · ' : '') + 'appuie pour revenir';
 
   peutSuivre = false;
   $('#suite').classList.remove('on');
@@ -895,7 +1029,7 @@ function avance(){
 $('#continuer').addEventListener('click', e=>{ e.stopPropagation(); avance(); });
 screens.quiz.addEventListener('click', e=>{
   if(!peutSuivre) return;
-  if(e.target.closest('#card')) return;      /* la photo reste consultable */
+  if(e.target.closest('.card')) return;      /* la carte, elle, se retourne */
   avance();
 });
 addEventListener('keydown', e=>{
@@ -931,7 +1065,7 @@ const oui = {x:0, y:0, vx:0, vy:0, a:0, va:0};
 const gvec = {x:0, y:1};            // direction de la pesanteur, à l'écran
 let physRaf = null, physT = 0, bornes = null;
 let etat = 0;                       // 0 posé · 1 gravité · 2 palet · 3 éjecté
-let tPalet = 0, compteId = null, capteur = false, ejectT = 0;
+let tPalet = 0, compteId = null, ejectT = 0;
 
 function elOui(){ return $('#btnOui'); }
 function calcBornes(){
@@ -969,7 +1103,6 @@ function surMouvement(e){
   const n = Math.hypot(a.x, a.y, a.z);
   if(n < 1) return;
   gvec.x = -a.x/n; gvec.y = a.y/n;
-  capteur = true;
 }
 function branchecapteur(){
   const DM = window.DeviceMotionEvent;
@@ -979,24 +1112,6 @@ function branchecapteur(){
   }else{
     addEventListener('devicemotion', surMouvement);
   }
-}
-
-function jauge(){
-  const j = $('#physique');
-  if(etat === 0 || etat === 3){ j.classList.remove('show'); return; }
-  const v = Math.hypot(oui.vx, oui.vy) / PHYS.PXM;
-  const chiffre = v.toFixed(1).replace('.', ',') + ' m/s';
-  let txt;
-  if(etat === 2){
-    txt = '« oui » · 2 kg · palet · ' + chiffre;
-  }else if(v < .35){
-    txt = capteur ? '« oui » · 2 kg · au sol · penche le téléphone'
-                  : '« oui » · 2 kg · au sol';
-  }else{
-    txt = '« oui » · 2 kg · chute libre · ' + chiffre;
-  }
-  j.textContent = txt;
-  j.classList.add('show');
 }
 
 /* vitesse du palet : constante, puis elle s'assagit pour rester jouable */
@@ -1051,7 +1166,7 @@ function pas(t){
   }
   if(choc && etat === 2) buzz(6);
 
-  applique(); jauge();
+  applique();
   physRaf = requestAnimationFrame(pas);
 }
 function reveille(){ if(!physRaf){ physT = 0; physRaf = requestAnimationFrame(pas); } }
@@ -1096,7 +1211,6 @@ function ejecte(px, py){
   const dv = PHYS.EJECT * PHYS.PXM;
   oui.vx = Math.cos(ang) * dv; oui.vy = Math.sin(ang) * dv;
   oui.va = (Math.random() < .5 ? -1 : 1) * 900;
-  $('#physique').classList.remove('show');
   reveille();
 }
 function sortiDeLecran(){
@@ -1134,7 +1248,6 @@ function prepareFinale(){
   arreteCompte();
   el.hidden = false; el.classList.remove('gone');
   t.classList.remove('show'); t.textContent = '';
-  $('#physique').classList.remove('show');
   requestAnimationFrame(()=>{
     bornes = calcBornes();
     const non = $('#btnNon').getBoundingClientRect();
@@ -1242,17 +1355,30 @@ const coeurs = (()=>{
 function ouvrirAlbum(){ dessineGrille(); $('#album-ui').classList.add('on'); }
 function fermerAlbum(){ $('#album-ui').classList.remove('on'); }
 function dessineGrille(){
-  const g = $('#grid'); g.innerHTML = '';
-  album.pool.forEach((src,i)=>{
-    const d = document.createElement('div');
-    d.className = 'thumb'; d.style.backgroundImage = 'url("'+src+'")';
-    const x = document.createElement('button'); x.type='button'; x.textContent='×'; x.title='Retirer';
-    x.addEventListener('click', ()=>{ album.pool.splice(i,1); sauver(); dessineGrille(); rafraichirCartesFixes(); });
-    d.appendChild(x); g.appendChild(d);
+  COTES.forEach(cote=>{
+    const g = $('#grid' + cote[0].toUpperCase() + cote.slice(1));
+    g.innerHTML = '';
+    album[cote].forEach((src,i)=>{
+      const d = document.createElement('div');
+      d.className = 'thumb'; d.style.backgroundImage = 'url("'+src+'")';
+      d.title = cote + ' — photo ' + LETTRE[cote] + (i+1);
+      const n = document.createElement('span');
+      n.className = 'num'; n.textContent = LETTRE[cote] + (i+1);
+      const x = document.createElement('button');
+      x.type = 'button'; x.textContent = '×'; x.title = 'Retirer cette photo';
+      x.addEventListener('click', ()=>{
+        album[cote].splice(i,1);
+        sauver(); dessineGrille(); rafraichirCartesFixes();
+      });
+      d.appendChild(n); d.appendChild(x); g.appendChild(d);
+    });
+    const n = album[cote].length;
+    $('#nb' + cote[0].toUpperCase() + cote.slice(1)).textContent = n + ' photo' + (n > 1 ? 's' : '');
   });
-  $('#albumHint').textContent = album.pool.length
-    ? album.pool.length + " photo(s). Le fichier enregistré les contient : envoie-le par WhatsApp ou par mail, il marche tout seul sur n'importe quel appareil, même sans internet."
-    : "Aucune photo pour l'instant : les cartes s'affichent en papier uni.";
+  const total = toutesPhotos().length;
+  $('#albumHint').textContent = total
+    ? total + " photo(s) : " + album.recto.length + " au recto, " + album.verso.length + " au verso. Le fichier enregistré les contient : envoie-le par WhatsApp ou par mail, il marche tout seul sur n'importe quel appareil, même sans internet."
+    : "Aucune photo pour l'instant : les cartes s'affichent en papier uni des deux côtés.";
 }
 function sauver(){
   try{ localStorage.setItem('carnet-louis', JSON.stringify(album)); }
@@ -1277,12 +1403,14 @@ function reduire(file){
     fr.readAsDataURL(file);
   });
 }
-$('#pick').addEventListener('change', async e=>{
-  const fichiers = [...e.target.files];
-  $('#albumHint').textContent = "Traitement de " + fichiers.length + " photo(s)…";
-  for(const f of fichiers){ const d = await reduire(f); if(d) album.pool.push(d); }
-  e.target.value = '';
-  sauver(); dessineGrille(); rafraichirCartesFixes();
+COTES.forEach(cote=>{
+  $('#pick' + cote[0].toUpperCase() + cote.slice(1)).addEventListener('change', async e=>{
+    const fichiers = [...e.target.files];
+    $('#albumHint').textContent = "Traitement de " + fichiers.length + " photo(s) pour le " + cote + "…";
+    for(const f of fichiers){ const d = await reduire(f); if(d) album[cote].push(d); }
+    e.target.value = '';
+    sauver(); dessineGrille(); rafraichirCartesFixes();
+  });
 });
 $('#export').addEventListener('click', ()=>{
   const styleEnTete = document.head.querySelector('#look');
@@ -1312,7 +1440,9 @@ $('#again').addEventListener('click', ()=>{
 });
 
 /* ═══ démarrage ══════════════════════════════════════════════════ */
-['#introCard','#card','#resultCard'].forEach(s=>rendreVivante($(s)));
+rendreVivante($('#introCard'),  [$('#introCard .card-img')],  regarderPhoto($('#introCard')));
+rendreVivante($('#resultCard'), [$('#resultCard .card-img')], regarderPhoto($('#resultCard')));
+rendreVivante($('#relief'),     [$('#cardImg'), $('#cardDosImg')], retourner);
 nouveauTirage();
 rafraichirCartesFixes();
 </script>

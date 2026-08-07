@@ -22,9 +22,18 @@ aucun envoi vers un serveur.
 
 - **100 questions** dans la banque, **10 tirées au hasard** à chaque lancement,
   plus la dernière — la vraie. Les réponses sont mélangées elles aussi.
-- Chaque question est une **carte postale par avion** : la photo est au dos, la
-  carte s'incline quand on bouge le doigt dessus (relief + ombre portée), et on
-  **appuie dessus pour voir la photo en entier**.
+- Chaque question est une **carte postale par avion recto-verso** : une photo au
+  recto derrière la question, une **autre photo au verso**. La carte s'incline
+  quand on bouge le doigt dessus (relief + ombre portée) et **un appui la
+  retourne** en pivotant sur son axe. Chaque face indique la photo affichée
+  (`photo R3`, `photo V1`).
+- Les photos vivent dans **deux listes**, *recto* et *verso*, gérées séparément
+  dans « Mes photos » : chaque liste a son compteur, son bouton d'ajout et ses
+  vignettes numérotées (R1, R2… / V1, V2…). Chaque carte pioche **une photo au
+  hasard dans chacune** — jamais deux fois la même sur les deux faces. Si une
+  seule liste est remplie, l'autre face y pioche aussi, sans doublon. Les
+  carnets enregistrés à l'ancien format (une seule liste) sont répartis
+  automatiquement sur les deux faces au chargement.
 - **Correction après chaque réponse** : les bonnes réponses passent en vert,
   les mauvaises en rouge, chacune affiche ses points, la meilleure et celle que
   tu as choisie sont étiquetées. On reste sur la carte jusqu'à ce que tu appuies
@@ -48,8 +57,10 @@ aucun envoi vers un serveur.
      est validée toute seule.
 
   Les réglages sont dans l'objet `PHYS` : masse, pesanteur, poussée du premier
-  appui, vitesse du palet, force d'éjection, rebond et freinage au sol. Un petit
-  compteur affiche l'état et la vitesse en direct.
+  appui, vitesse du palet, force d'éjection, rebond et freinage au sol.
+- L'**avion** de la barre de progression ne saute plus d'une carte à l'autre : il
+  glisse en 0,9 s avec une accélération et un freinage progressifs, en prenant un
+  peu d'altitude et en s'inclinant dans le sens du vol.
 - Écran **Souvenir** : score sur 100, verdict tamponné, pluie de cœurs.
 
 ## Modifier les questions

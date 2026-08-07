@@ -25,9 +25,14 @@ aucun envoi vers un serveur.
 - Chaque question est une **carte postale par avion** : la photo est au dos, la
   carte s'incline quand on bouge le doigt dessus (relief + ombre portée), et on
   **appuie dessus pour voir la photo en entier**.
-- **Dernière carte** : le bouton « Oui » se téléporte à chaque tentative, il
-  disparaît à la troisième, l'écran devient rouge avec un tampon « NON. », la
-  réponse « Non » est validée automatiquement, puis on passe au score.
+- **Dernière carte** : le bouton « Oui » ne se téléporte pas, il est *lancé*.
+  Chaque tentative lui donne une impulsion et il traverse l'écran en glissant,
+  en tournant, en rebondissant sur les bords, puis il ralentit et s'arrête —
+  masse 2 kg, frottement visqueux, rebonds amortis (les réglages sont dans
+  l'objet `PHYS` : masse, impulsion, frottement, rebond). Un petit compteur
+  affiche sa vitesse en temps réel. À la troisième tentative il part pour de
+  bon, l'écran devient rouge avec un tampon « NON. », la réponse « Non » est
+  validée automatiquement, puis on passe au score.
 - Écran **Souvenir** : score sur 100, verdict tamponné, pluie de cœurs.
 
 ## Modifier les questions

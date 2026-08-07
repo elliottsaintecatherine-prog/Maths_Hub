@@ -206,14 +206,26 @@ body{
   opacity:0;transition:opacity .25s;transform:rotate(-1.5deg);}
 .taunt.show{opacity:1;}
 #btnOui{
-  position:absolute;width:min(45%,160px);
+  position:fixed;left:0;top:0;z-index:60;width:min(35vw,128px);
   font-family:var(--f-stamp);font-size:14px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
   background:var(--paper-2);color:var(--ink);border:1px solid rgba(38,49,61,.3);border-radius:3px;
-  padding:16px 8px;cursor:pointer;box-shadow:0 2px 0 rgba(52,40,20,.12),0 6px 14px rgba(52,40,20,.14);
-  transition:left .34s cubic-bezier(.34,1.5,.64,1),top .34s cubic-bezier(.34,1.5,.64,1),opacity .3s,transform .3s;
-  touch-action:manipulation;
+  padding:16px 8px;cursor:pointer;
+  box-shadow:0 2px 0 rgba(52,40,20,.12),0 6px 14px rgba(52,40,20,.16),0 16px 30px rgba(52,40,20,.16);
+  transform:translate3d(var(--x,0px),var(--y,0px),0) rotate(var(--r,0deg));
+  will-change:transform;touch-action:none;
 }
-#btnOui.gone{opacity:0;transform:scale(.4) rotate(24deg);pointer-events:none;}
+#btnOui[hidden]{display:none;}
+#btnOui.gone{
+  opacity:0;pointer-events:none;
+  transform:translate3d(var(--x,0px),var(--y,0px),0) rotate(var(--r,0deg)) scale(.32);
+  transition:opacity .4s ease,transform .4s cubic-bezier(.5,-.3,.8,.5);
+}
+.physique{
+  display:block;text-align:center;margin-top:6px;
+  font-family:var(--f-stamp);font-size:11px;font-weight:700;letter-spacing:.07em;
+  color:var(--ink-2);font-variant-numeric:tabular-nums;opacity:0;transition:opacity .3s;
+}
+.physique.show{opacity:.85;}
 #btnNon{
   position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:min(72%,250px);
   font-family:var(--f-stamp);font-size:15px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
@@ -357,7 +369,7 @@ input[type=file]{display:none;}
 
     <div class="arena" id="arena" hidden>
       <p class="taunt" id="taunt"></p>
-      <button id="btnOui">Oui</button>
+      <span class="physique" id="physique"></span>
       <button id="btnNon">Non</button>
     </div>
   </section>
@@ -390,6 +402,8 @@ input[type=file]{display:none;}
     </div>
   </section>
 </div>
+
+<button id="btnOui" hidden>Oui</button>
 
 <!-- ══ TAMPON ROUGE ══ -->
 <div id="rage" aria-hidden="true">
@@ -784,42 +798,158 @@ function suivant(){
   afficher();
 }
 
-/* ── la carte finale ─────────────────────────────────────────────── */
+/* ── la carte finale : le bouton « Oui » est un objet lancé ──────
+   Masse 2 kg, frottement visqueux, rebonds sur les bords de l'écran.
+   Chaque tentative lui donne une impulsion : il part loin, il tourne,
+   il ralentit — il ne se téléporte jamais.                            */
+const PHYS = {
+  M: 2,          // masse du bouton, en kilogrammes
+  PXM: 220,      // combien de pixels valent un mètre à l'écran
+  J: 11,         // impulsion d'une tentative, en newton-secondes
+  GARDE: 0.30,   // part de la vitesse encore là après une seconde
+  REBOND: 0.42   // énergie conservée quand il tape un bord
+};
+const oui = {x:0, y:0, vx:0, vy:0, a:0, va:0};
+let physRaf = null, physT = 0, bornes = null;
+
+function elOui(){ return $('#btnOui'); }
+function calcBornes(){
+  const el = elOui(), non = $('#btnNon').getBoundingClientRect();
+  const w = el.offsetWidth || 150, h = el.offsetHeight || 54;
+  return {
+    minX: 8, maxX: Math.max(8, innerWidth - w - 8),
+    minY: 8, maxY: Math.max(60, (non.height ? non.top : innerHeight) - h - 16),
+    w:w, h:h
+  };
+}
+/* encombrement réel du bouton une fois incliné */
+function limites(){
+  const th = oui.a*Math.PI/180, c = Math.abs(Math.cos(th)), si = Math.abs(Math.sin(th));
+  const dx = (bornes.w*c + bornes.h*si)/2 - bornes.w/2;
+  const dy = (bornes.w*si + bornes.h*c)/2 - bornes.h/2;
+  const minX = bornes.minX+dx, maxX = bornes.maxX-dx;
+  const minY = bornes.minY+dy, maxY = bornes.maxY-dy;
+  return {
+    minX: minX, maxX: Math.max(minX, maxX),
+    minY: minY, maxY: Math.max(minY, maxY)
+  };
+}
+function applique(){
+  const el = elOui();
+  el.style.setProperty('--x', oui.x.toFixed(1) + 'px');
+  el.style.setProperty('--y', oui.y.toFixed(1) + 'px');
+  el.style.setProperty('--r', oui.a.toFixed(1) + 'deg');
+}
+function jauge(){
+  const v = Math.hypot(oui.vx, oui.vy) / PHYS.PXM;
+  const j = $('#physique');
+  j.textContent = v < .05
+    ? '« oui » · 2 kg · à l\'arrêt'
+    : '« oui » · 2 kg · ' + v.toFixed(1).replace('.', ',') + ' m/s';
+  j.classList.add('show');
+}
+function pas(t){
+  const dt = Math.min(.033, physT ? (t - physT)/1000 : .016);
+  physT = t;
+  const frein = Math.pow(PHYS.GARDE, dt);
+  oui.vx *= frein; oui.vy *= frein; oui.va *= Math.pow(.2, dt);
+  oui.x += oui.vx*dt; oui.y += oui.vy*dt; oui.a += oui.va*dt;
+
+  /* rebonds : il perd de l'énergie et prend de la rotation au contact.
+     Les limites tiennent compte de son inclinaison, pour qu'un coin ne
+     dépasse jamais de l'écran ni ne recouvre le bouton « Non ».        */
+  const l = limites();
+  if(oui.x < l.minX){ oui.x = l.minX; oui.vx = Math.abs(oui.vx)*PHYS.REBOND; oui.va -= oui.vy*.012; }
+  if(oui.x > l.maxX){ oui.x = l.maxX; oui.vx = -Math.abs(oui.vx)*PHYS.REBOND; oui.va += oui.vy*.012; }
+  if(oui.y < l.minY){ oui.y = l.minY; oui.vy = Math.abs(oui.vy)*PHYS.REBOND; oui.va += oui.vx*.012; }
+  if(oui.y > l.maxY){ oui.y = l.maxY; oui.vy = -Math.abs(oui.vy)*PHYS.REBOND; oui.va -= oui.vx*.012; }
+
+  applique(); jauge();
+
+  if(Math.hypot(oui.vx, oui.vy) < 4 && Math.abs(oui.va) < .6){
+    oui.vx = oui.vy = oui.va = 0;
+    applique(); jauge();
+    physRaf = null; physT = 0;      // il s'est arrêté : on rend la main
+    return;
+  }
+  physRaf = requestAnimationFrame(pas);
+}
+function reveille(){ if(!physRaf){ physT = 0; physRaf = requestAnimationFrame(pas); } }
+function stopPhys(){ if(physRaf){ cancelAnimationFrame(physRaf); physRaf = null; } physT = 0; }
+
+/* l'impulsion : il part à l'opposé du doigt ET vers la zone la plus
+   dégagée de l'écran, pour finir vraiment loin. Une seule poussée :
+   ensuite c'est l'inertie et le frottement qui font le trajet.        */
+function impulsion(px, py){
+  const cx = oui.x + bornes.w/2, cy = oui.y + bornes.h/2;
+
+  /* direction 1 : à l'opposé du doigt */
+  let dx = cx - px, dy = cy - py;
+  const d = Math.hypot(dx, dy);
+  const fuite = d > 4 ? Math.atan2(dy, dx) : Math.random()*6.283;
+
+  /* direction 2 : vers le coin le plus éloigné de l'aire de jeu */
+  const coins = [[bornes.minX,bornes.minY],[bornes.maxX,bornes.minY],
+                 [bornes.minX,bornes.maxY],[bornes.maxX,bornes.maxY]];
+  let loin = coins[0], best = -1;
+  coins.forEach(c=>{ const dd = Math.hypot(c[0]-oui.x, c[1]-oui.y); if(dd > best){ best = dd; loin = c; } });
+  const cible = Math.atan2(loin[1]+bornes.h/2 - cy, loin[0]+bornes.w/2 - cx);
+
+  /* on mélange les deux, plus un peu de hasard */
+  const ang = Math.atan2(
+    Math.sin(cible)*.68 + Math.sin(fuite)*.32,
+    Math.cos(cible)*.68 + Math.cos(fuite)*.32
+  ) + (Math.random() - .5) * .45;
+
+  const dv = (PHYS.J / PHYS.M) * PHYS.PXM;   // Δv = J/m, converti en pixels/s
+  oui.vx += Math.cos(ang) * dv;
+  oui.vy += Math.sin(ang) * dv;
+  oui.va += (Math.random() - .5) * 700;      // il part en tournant
+  reveille();
+}
+
 function prepareFinale(){
   tries = 0;
-  const oui = $('#btnOui'), t = $('#taunt');
-  oui.classList.remove('gone'); t.classList.remove('show'); t.textContent = '';
-  requestAnimationFrame(()=>placer(true));
+  const el = elOui(), t = $('#taunt');
+  el.hidden = false; el.classList.remove('gone');
+  t.classList.remove('show'); t.textContent = '';
+  $('#physique').classList.remove('show');
+  requestAnimationFrame(()=>{
+    bornes = calcBornes();
+    const non = $('#btnNon').getBoundingClientRect();
+    oui.x = (innerWidth - bornes.w)/2;
+    oui.y = Math.max(bornes.minY, non.top - bornes.h - 54);
+    oui.vx = oui.vy = oui.va = oui.a = 0;
+    applique(); jauge();
+  });
 }
-function placer(premier){
-  const oui = $('#btnOui'), arena = $('#arena');
-  const aw = arena.clientWidth, ah = arena.clientHeight;
-  const bw = oui.offsetWidth || 150, bh = oui.offsetHeight || 54;
-  if(premier){ oui.style.left = Math.round((aw-bw)/2)+'px'; oui.style.top = '34px'; return; }
-  const maxX = Math.max(0, aw-bw), maxY = Math.max(0, ah-bh-76);
-  const cx = parseFloat(oui.style.left)||0, cy = parseFloat(oui.style.top)||0;
-  let x, y, n = 0;
-  do{ x = Math.random()*maxX; y = Math.random()*maxY; n++; }
-  while(n < 12 && Math.hypot(x-cx, y-cy) < Math.min(maxX,maxY)*.55);
-  oui.style.left = Math.round(x)+'px'; oui.style.top = Math.round(y)+'px';
-}
-$('#btnOui').addEventListener('pointerdown', e=>{
+elOui().addEventListener('pointerdown', e=>{
   e.preventDefault();
   if(locked) return;
+  bornes = calcBornes();
   tries++; buzz(22);
   const t = $('#taunt');
+  impulsion(e.clientX, e.clientY);
   if(tries >= 3){
-    $('#btnOui').classList.add('gone');
     t.textContent = TAUNTS[2]; t.classList.add('show');
-    tamponNon();
+    setTimeout(()=>{ stopPhys(); elOui().classList.add('gone'); tamponNon(); }, 620);
+    locked = true;
     return;
   }
   t.textContent = TAUNTS[tries-1]; t.classList.add('show');
-  placer(false);
 });
+addEventListener('resize', ()=>{
+  if(elOui().hidden) return;
+  bornes = calcBornes();
+  oui.x = Math.min(Math.max(oui.x, bornes.minX), bornes.maxX);
+  oui.y = Math.min(Math.max(oui.y, bornes.minY), bornes.maxY);
+  applique();
+});
+function rangeOui(){ stopPhys(); const el = elOui(); el.hidden = true; el.classList.remove('gone'); }
+
 $('#btnNon').addEventListener('click', ()=>{
   if(locked) return;
-  locked = true; score += FINALE.points; buzz(14);
+  locked = true; rangeOui(); score += FINALE.points; buzz(14);
   setTimeout(terminer, 270);
 });
 function tamponNon(){
@@ -832,6 +962,7 @@ function tamponNon(){
 
 /* ── souvenir ────────────────────────────────────────────────────── */
 function terminer(){
+  rangeOui();
   const pct = Math.round(score/maxScore*100);
   const v = VERDICTS.find(x => pct >= x[0]);
   $('#verdict').textContent = v[1];

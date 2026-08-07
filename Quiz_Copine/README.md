@@ -123,6 +123,14 @@ q("Une question écrite seulement en français",
   ["Une réponse", 10], ["Une autre", 4], ...),
 ```
 
+Les points vont de **−5 à 10**. Les réponses négatives font vraiment perdre des
+points : 22 d'entre elles en portent, réparties sur 22 questions — **−5** pour
+les vrais drapeaux rouges (fouiller son téléphone, le géolocaliser, l'humilier
+en story, se servir d'un secret dans une dispute) et **−2** pour les
+mesquineries. Elles s'affichent en rouge appuyé à la correction, avec leur
+compte en gras. Le score peut donc finir sous zéro : au pire, une partie de dix
+cartes toutes ratées descend à −50.
+
 Tu peux en ajouter, en enlever, en réécrire : le score se recalcule tout seul
 sur 100. Garde une réponse à 10 points par question pour que le maximum reste
 atteignable.

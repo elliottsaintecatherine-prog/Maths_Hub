@@ -67,6 +67,9 @@ body{
 :root[lang="vi"]{--f-hand:Georgia,'Iowan Old Style','Times New Roman',serif;}
 :root[lang="vi"] .hand,:root[lang="vi"] .title,:root[lang="vi"] .taunt,
 :root[lang="vi"] .sheet h3,:root[lang="vi"] .suite-hint{font-style:italic;}
+/* le vietnamien est plus long : on serre un peu pour que l'accueil tienne */
+:root[lang="vi"] .title{font-size:clamp(31px,9.4vw,49px);}
+:root[lang="vi"] .lede{font-size:clamp(13px,3.6vw,15.5px);}
 
 /* ══ ITINÉRAIRE (progression) ══ */
 #langue{
@@ -217,6 +220,10 @@ body{
 .ans.bonne .tick{border-color:var(--vert);color:var(--vert);}
 .ans.mauvaise{border-color:rgba(193,51,43,.5);background:#FAEDEA;color:#8A392F;opacity:.92;}
 .ans.mauvaise .tick{border-color:rgba(193,51,43,.5);color:var(--air-red);}
+/* une réponse qui coûte des points : plus sombre, et le compte en gras */
+.ans.piege{border-color:var(--air-red);background:#F7E0DB;color:#7A2C24;}
+.ans.piege .tick{border-color:var(--air-red);}
+.ans.piege .pts{font-weight:700;opacity:1;color:var(--air-red);}
 .ans.choix{box-shadow:0 0 0 2.5px var(--halo),0 2px 0 rgba(52,40,20,.10),0 7px 16px rgba(52,40,20,.16);}
 .ans.bonne.choix{--halo:rgba(46,122,80,.42);}
 .ans.mauvaise.choix{--halo:rgba(193,51,43,.34);}
@@ -249,7 +256,11 @@ body{
 .suite-hint{font-family:var(--f-hand);font-size:15px;color:var(--ink-2);opacity:.75;}
 
 /* ══ ACCUEIL ══ */
-#intro{justify-content:center;gap:clamp(12px,2.4vh,20px);padding:10px 0;}
+#intro{justify-content:center;gap:clamp(8px,1.7vh,15px);padding:8px 0;}
+/* la carte d'accueil est décorative : elle ne doit pas pousser le bouton
+   « Ouvrir le carnet » hors de l'écran */
+#intro .card{min-height:clamp(128px,20svh,190px);}
+#intro .qtext{font-size:clamp(16px,4.6vw,22px);margin-top:8px;}
 .title{font-family:var(--f-hand);font-size:clamp(42px,13vw,66px);line-height:.98;color:var(--ink);text-wrap:balance;}
 .title em{font-style:normal;color:var(--air-red);}
 .lede{font-size:clamp(14.5px,3.9vw,16.5px);line-height:1.6;color:#3C4854;max-width:36ch;}
@@ -346,6 +357,7 @@ body{
 #result{justify-content:center;align-items:center;text-align:center;gap:clamp(10px,2.2vh,18px);padding:14px 0;}
 .score{font-family:var(--f-stamp);font-weight:700;font-variant-numeric:tabular-nums;
   font-size:clamp(64px,22vw,112px);line-height:.86;color:var(--air-red);letter-spacing:-.03em;}
+#scoreNum.dette{font-size:.85em;}   /* le signe moins prend de la place */
 .score sub{font-size:.26em;color:var(--ink-2);vertical-align:baseline;letter-spacing:.06em;margin-left:.12em;}
 .verdict{font-family:var(--f-hand);font-size:clamp(32px,9.5vw,46px);line-height:1.05;text-wrap:balance;}
 .verdict-sub{font-size:14.5px;line-height:1.6;color:#3C4854;max-width:33ch;}
@@ -400,7 +412,13 @@ input[type=file]{display:none;}
   .suite-hint{font-size:13px;}
   .title{font-size:clamp(36px,11vw,48px);}
   .ticket{padding:11px 13px;gap:6px;}
-  .ticket .line{font-size:13px;}
+  .ticket .line{font-size:13px;line-height:1.32;}
+  /* l'accueil doit tenir d'un coup d'œil, même sur un petit écran */
+  #intro{gap:7px;padding:3px 0;}
+  #intro .card{min-height:clamp(104px,16svh,140px);}
+  #intro .qtext{font-size:clamp(14px,4.2vw,17px);}
+  .lede{font-size:13.5px;line-height:1.5;}
+  .go{padding:14px 18px;}
 }
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;}
@@ -443,7 +461,8 @@ input[type=file]{display:none;}
       <span class="tape"></span>
       <div class="line"><span class="n">01</span><span data-th="ticket1"><b>10 cartes au hasard</b> parmi 100. Jamais le même quiz.</span></div>
       <div class="line"><span class="n">02</span><span data-th="ticket2"><b>Appuie sur une carte</b> pour la retourner et voir l'autre photo.</span></div>
-      <div class="line"><span class="n">03</span><span data-th="ticket3"><b>La dernière question</b> décide de tout.</span></div>
+      <div class="line"><span class="n">03</span><span data-th="ticket3"><b>Certaines réponses</b> font perdre des points.</span></div>
+      <div class="line"><span class="n">04</span><span data-th="ticket4"><b>La dernière question</b> décide de tout.</span></div>
     </div>
 
     <button class="go" id="start" data-t="ouvrir">Ouvrir le carnet</button>
@@ -634,7 +653,7 @@ q(["Son téléphone est posé sur la table, écran allumé.",
    "Liếc một cái, hai giây thôi.", 4],
   ["Je lis tout. C'est mon droit.",
    "I read everything. It's my right.",
-   "Tôi đọc hết. Đó là quyền của tôi.", 0]),
+   "Tôi đọc hết. Đó là quyền của tôi.", -5]),
 q(["Il t'envoie quatre photos du même coucher de soleil.",
    "He sends you four photos of the same sunset.",
    "Anh ấy gửi bạn bốn tấm ảnh cùng một cảnh hoàng hôn."],
@@ -694,7 +713,7 @@ q(["Nouveau contact dans son téléphone : « Marion 🏐 ».",
    "Tôi điều tra cả ba cô Marion trong thành phố.", 1],
   ["Je mets « Marion » en story pour voir.",
    "I put “Marion” in my story to see what happens.",
-   "Tôi đăng « Marion » lên story xem sao.", 0]),
+   "Tôi đăng « Marion » lên story xem sao.", -5]),
 q(["Il n'a pas répondu depuis ce matin.",
    "He hasn't answered since this morning.",
    "Từ sáng đến giờ anh ấy chưa trả lời."],
@@ -709,7 +728,7 @@ q(["Il n'a pas répondu depuis ce matin.",
    "Ba cuộc gọi và hai tin thoại.", 2],
   ["Je préviens sa mère.",
    "I alert his mother.",
-   "Tôi báo mẹ anh ấy.", 0]),
+   "Tôi báo mẹ anh ấy.", -2]),
 q(["Vocal de sept minutes reçu de sa part.",
    "A seven-minute voice note from him.",
    "Nhận một tin thoại bảy phút từ anh ấy."],
@@ -983,7 +1002,7 @@ q(["Au restaurant, il a oublié son portefeuille.",
    "Tôi trả, nhưng nhắc lại ba lần.", 3],
   ["Je préviens sa mère.",
    "I alert his mother.",
-   "Tôi báo mẹ anh ấy.", 0]),
+   "Tôi báo mẹ anh ấy.", -2]),
 q(["Il te vole une frite dans ton assiette.",
    "He steals a chip off your plate.",
    "Anh ấy nhón một miếng khoai tây chiên trong đĩa của bạn."],
@@ -1013,7 +1032,7 @@ q(["Il cuisine pour toi. C'est raté.",
    "Tôi nói thật. Nhẹ nhàng thôi.", 7],
   ["Photo, groupe des filles.",
    "Photo, straight to the group chat.",
-   "Chụp ảnh, gửi ngay vào nhóm bạn.", 0]),
+   "Chụp ảnh, gửi ngay vào nhóm bạn.", -5]),
 q(["Une soirée où il n'a pas envie d'aller.",
    "A party he doesn't feel like going to.",
    "Một buổi tiệc mà anh ấy không muốn đi."],
@@ -1105,7 +1124,7 @@ q(["Il a oublié votre date anniversaire.",
    "Tôi coi như không có gì, anh ấy sẽ tự thấy áy náy.", 3],
   ["Silence radio pendant trois jours.",
    "Radio silence for three days.",
-   "Ba ngày im lặng.", 0]),
+   "Ba ngày im lặng.", -2]),
 q(["Il t'offre un cadeau. Tu détestes.",
    "He gives you a present. You hate it.",
    "Anh ấy tặng bạn một món quà. Bạn ghét nó."],
@@ -1120,7 +1139,7 @@ q(["Il t'offre un cadeau. Tu détestes.",
    "Tôi lặng lẽ bán lại.", 2],
   ["« sérieusement ? »",
    "“seriously?”",
-   "« thật hả? »", 0]),
+   "« thật hả? »", -2]),
 q(["La Saint-Valentin, pour toi c'est…",
    "Valentine's Day, to you, is…",
    "Ngày lễ tình nhân, với bạn là…"],
@@ -1195,7 +1214,7 @@ q(["Il rate un examen important.",
    "Hai đứa đi chơi, nói chuyện khác.", 7],
   ["« je t'avais dit de réviser »",
    "“I told you to revise.”",
-   "« đã bảo anh ôn bài rồi mà »", 0]),
+   "« đã bảo anh ôn bài rồi mà »", -2]),
 
 /* ── Disputes & jalousie  ·  Arguments & jealousy / Cãi vã & ghen tuông ─── */
 q(["Il t'envoie : « faut qu'on parle ».",
@@ -1257,7 +1276,7 @@ q(["Son ex lui écrit pour son anniversaire.",
    "Sáu tháng sau tôi vẫn nhắc anh ấy về cô ta.", 1],
   ["Je réponds à sa place.",
    "I reply on his behalf.",
-   "Tôi trả lời thay anh ấy.", 0]),
+   "Tôi trả lời thay anh ấy.", -5]),
 q(["Une fille le complimente devant toi.",
    "A girl compliments him right in front of you.",
    "Một cô gái khen anh ấy ngay trước mặt bạn."],
@@ -1272,7 +1291,7 @@ q(["Une fille le complimente devant toi.",
    "Tôi bám chặt lấy anh ấy.", 4],
   ["Je la fixe jusqu'à ce qu'elle parte.",
    "I stare at her until she leaves.",
-   "Tôi nhìn chằm chằm đến khi cô ta đi.", 0]),
+   "Tôi nhìn chằm chằm đến khi cô ta đi.", -2]),
 q(["Tu as eu tort. Tu le sais.",
    "You were in the wrong. You know it.",
    "Bạn sai. Và bạn biết điều đó."],
@@ -1302,7 +1321,7 @@ q(["Il te dit un truc blessant, sans le vouloir.",
    "Tôi ghi lại. Để dành.", 1],
   ["Je réponds pire.",
    "I say something worse back.",
-   "Tôi đáp lại một câu còn đau hơn.", 0]),
+   "Tôi đáp lại một câu còn đau hơn.", -5]),
 q(["Il sort sans toi et rentre à quatre heures du matin.",
    "He goes out without you and gets home at four in the morning.",
    "Anh ấy đi chơi không có bạn và bốn giờ sáng mới về."],
@@ -1317,7 +1336,7 @@ q(["Il sort sans toi et rentre à quatre heures du matin.",
    "Tôi thức đợi, khoanh tay.", 2],
   ["Je le géolocalise.",
    "I track his location.",
-   "Tôi định vị điện thoại anh ấy.", 0]),
+   "Tôi định vị điện thoại anh ấy.", -5]),
 q(["Vous n'êtes pas d'accord sur quelque chose d'important.",
    "You disagree on something important.",
    "Hai người bất đồng về một chuyện quan trọng."],
@@ -1347,7 +1366,7 @@ q(["Vous vous réconciliez. Le premier mot, c'est…",
    "« tối nay ăn gì? »", 7],
   ["« t'as vu, j'avais raison »",
    "“see, I was right”",
-   "« thấy chưa, em nói đúng mà »", 0]),
+   "« thấy chưa, em nói đúng mà »", -2]),
 
 /* ── Le quotidien  ·  Everyday life / Đời thường ──────────────────────── */
 q(["Il laisse ses chaussettes au milieu du salon.",
@@ -1364,7 +1383,7 @@ q(["Il laisse ses chaussettes au milieu du salon.",
    "Tôi để nguyên đó. Kiểu gì cũng thấy.", 5],
   ["Photo, story, humiliation publique.",
    "Photo, story, public humiliation.",
-   "Chụp ảnh, đăng story, bêu tên.", 0]),
+   "Chụp ảnh, đăng story, bêu tên.", -5]),
 q(["Réveil : lui c'est 6h30, toi c'est midi.",
    "Wake-up time: 6:30 for him, midday for you.",
    "Giờ dậy: anh ấy 6h30, bạn thì trưa trật."],
@@ -1531,7 +1550,7 @@ q(["Son film préféré, tu l'as vu ?",
    "Chưa, nhưng tôi biết tên phim.", 3],
   ["Non. Et il ne le sait pas.",
    "No. And he doesn't know that.",
-   "Chưa. Và anh ấy không biết điều đó.", 0]),
+   "Chưa. Và anh ấy không biết điều đó.", -2]),
 q(["Sa manie qui énerve tout le monde…",
    "That habit of his that annoys everyone…",
    "Cái tật của anh ấy làm ai cũng khó chịu…"],
@@ -1683,7 +1702,7 @@ q(["Un de ses potes ne t'aime pas.",
    "Tôi hỏi Louis vì sao.", 7],
   ["Je fais choisir Louis.",
    "I make Louis choose.",
-   "Tôi bắt Louis chọn.", 0]),
+   "Tôi bắt Louis chọn.", -5]),
 q(["Ses amis lui font une blague à ses dépens.",
    "His friends make a joke at his expense.",
    "Bạn bè trêu anh ấy một vố."],
@@ -1728,7 +1747,7 @@ q(["Louis se plante complètement devant tout le monde.",
    "Tôi cười với mọi người, anh ấy quen rồi.", 2],
   ["Je filme. Ça fera une story.",
    "I film it. That'll make a good story.",
-   "Tôi quay lại. Đăng story được đấy.", 0]),
+   "Tôi quay lại. Đăng story được đấy.", -5]),
 q(["Tes amies rencontrent Louis pour la première fois.",
    "Your friends meet Louis for the first time.",
    "Bạn bè của bạn gặp Louis lần đầu."],
@@ -1788,7 +1807,7 @@ q(["Il devient ami avec ta meilleure amie.",
    "Tôi để mắt tới.", 2],
   ["Je les mets en compétition.",
    "I set them against each other.",
-   "Tôi cho hai người đó cạnh tranh nhau.", 0]),
+   "Tôi cho hai người đó cạnh tranh nhau.", -5]),
 q(["Il a besoin d'une soirée seul, chez lui.",
    "He needs an evening alone, at home.",
    "Anh ấy cần một buổi tối ở nhà một mình."],
@@ -1865,7 +1884,7 @@ q(["Il a un projet un peu fou.",
    "Tôi liệt kê mọi thứ có thể hỏng.", 3],
   ["Je le décourage. Pour son bien.",
    "I talk him out of it. For his own good.",
-   "Tôi can anh ấy. Vì lợi ích của anh ấy.", 0]),
+   "Tôi can anh ấy. Vì lợi ích của anh ấy.", -2]),
 q(["L'argent, entre vous…",
    "Money, between the two of you…",
    "Chuyện tiền bạc giữa hai người…"],
@@ -1895,7 +1914,7 @@ q(["Il te confie un truc que personne ne sait.",
    "Chuyện đó nằm giữa hai đứa và bạn thân tôi.", 2],
   ["Je m'en servirai dans une dispute, un jour.",
    "I'll use it in an argument one day.",
-   "Sau này cãi nhau tôi sẽ lôi ra.", 0]),
+   "Sau này cãi nhau tôi sẽ lôi ra.", -5]),
 q(["Tu traverses une période difficile.",
    "You're going through a hard time.",
    "Bạn đang trải qua một giai đoạn khó khăn."],
@@ -2017,7 +2036,7 @@ q(["Il conduit et se trompe de route depuis vingt minutes.",
    "Tôi im lặng, rồi anh ấy sẽ tự nhận ra.", 6],
   ["« je te l'avais dit »",
    "“I told you so”",
-   "« em đã bảo rồi mà »", 0]),
+   "« em đã bảo rồi mà »", -2]),
 q(["Test surprise : son deuxième prénom ?",
    "Surprise test: his middle name?",
    "Kiểm tra bất ngờ: tên đệm của anh ấy là gì?"],
@@ -2047,7 +2066,7 @@ q(["Une machine te propose de lire ses pensées.",
    "Có, nhưng một lần thôi.", 4],
   ["Oui. Tous les jours.",
    "Yes. Every day.",
-   "Có. Ngày nào cũng đọc.", 0]),
+   "Có. Ngày nào cũng đọc.", -5]),
 q(["Tu peux effacer un souvenir gênant de lui.",
    "You can erase one embarrassing memory of his.",
    "Bạn được xóa một kỷ niệm quê độ của anh ấy."],
@@ -2143,7 +2162,8 @@ fr:{
   capVide:"Ajoute tes photos : une au recto, une autre au dos de chaque carte.",
   ticket1:"<b>10 cartes au hasard</b> parmi 100. Jamais le même quiz.",
   ticket2:"<b>Appuie sur une carte</b> pour la retourner et voir l'autre photo.",
-  ticket3:"<b>La dernière question</b> décide de tout.",
+  ticket3:"<b>Certaines réponses</b> font perdre des points.",
+  ticket4:"<b>La dernière question</b> décide de tout.",
   ouvrir:"Ouvrir le carnet", mesPhotos:"📷 Mes photos",
   depart:"Départ", carte:"Carte {n}", derniereCarte:"Dernière carte", verso:"Verso",
   peekRecto:"appuie pour retourner la carte", peekVerso:"appuie pour revenir", photoRef:"photo {r} · ",
@@ -2185,7 +2205,8 @@ en:{
   capVide:"Add your photos: one on the front, another on the back of every card.",
   ticket1:"<b>10 random cards</b> out of 100. Never the same quiz twice.",
   ticket2:"<b>Tap a card</b> to flip it over and see the other photo.",
-  ticket3:"<b>The last question</b> decides everything.",
+  ticket3:"<b>Some answers</b> cost you points.",
+  ticket4:"<b>The last question</b> decides everything.",
   ouvrir:"Open the logbook", mesPhotos:"📷 My photos",
   depart:"Departure", carte:"Card {n}", derniereCarte:"Last card", verso:"Back",
   peekRecto:"tap to flip the card", peekVerso:"tap to flip back", photoRef:"photo {r} · ",
@@ -2227,7 +2248,8 @@ vi:{
   capVide:"Thêm ảnh của bạn: một ảnh mặt trước, một ảnh mặt sau mỗi tấm thiệp.",
   ticket1:"<b>10 tấm ngẫu nhiên</b> trong 100. Không lần nào giống lần nào.",
   ticket2:"<b>Chạm vào tấm thiệp</b> để lật và xem ảnh mặt kia.",
-  ticket3:"<b>Câu hỏi cuối cùng</b> quyết định tất cả.",
+  ticket3:"<b>Một số câu trả lời</b> sẽ bị trừ điểm.",
+  ticket4:"<b>Câu hỏi cuối cùng</b> quyết định tất cả.",
   ouvrir:"Mở cuốn sổ", mesPhotos:"📷 Ảnh của tôi",
   depart:"Khởi hành", carte:"Tấm {n}", derniereCarte:"Tấm cuối", verso:"Mặt sau",
   peekRecto:"chạm để lật tấm thiệp", peekVerso:"chạm để lật lại", photoRef:"ảnh {r} · ",
@@ -2574,6 +2596,7 @@ function afficher(){
       b.querySelector('.txt').textContent = txt(texte);
       b.dataset.pts = pts;
       b.dataset.bonne = (pts >= SEUIL_BON) ? '1' : '';
+      b.dataset.piege = (pts < 0) ? '1' : '';
       b.dataset.top = (pts === meilleure) ? '1' : '';
       b.addEventListener('click', ()=>{
         if(locked) return;
@@ -2585,6 +2608,9 @@ function afficher(){
   poseTextesCarte();
 }
 
+/* « +8 », « 0 », « −5 » — avec un vrai signe moins */
+function signe(p){ return (p > 0 ? '+' : p < 0 ? '−' : '') + Math.abs(p); }
+
 /* ── correction : on montre la bonne réponse et on attend un appui ── */
 function corrige(choisi, pts, meilleure){
   locked = true;
@@ -2594,8 +2620,9 @@ function corrige(choisi, pts, meilleure){
     const bonne = b.dataset.bonne === '1';
     b.classList.add('revele', bonne ? 'bonne' : 'mauvaise');
     if(b.dataset.top === '1') b.classList.add('top');
+    if(b.dataset.piege === '1') b.classList.add('piege');
     b.querySelector('.tick').textContent = bonne ? '✓' : '✕';
-    b.querySelector('.pts').textContent = '+' + b.dataset.pts;
+    b.querySelector('.pts').textContent = signe(+b.dataset.pts);
   });
   choisi.classList.add('choix');
   buzz(juste ? [14,50,14] : 26);
@@ -2937,8 +2964,9 @@ function poseVerdict(){
 }
 function compter(cible){
   const el = $('#scoreNum'), t0 = performance.now(), d = 1400;
-  if(matchMedia('(prefers-reduced-motion: reduce)').matches){ el.textContent = cible; return; }
-  (function tic(t){ const p = Math.min(1,(t-t0)/d); el.textContent = Math.round(cible*(1-Math.pow(1-p,3)));
+  const pose = v => { el.textContent = v; el.classList.toggle('dette', v < 0); };
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches){ pose(cible); return; }
+  (function tic(t){ const p = Math.min(1,(t-t0)/d); pose(Math.round(cible*(1-Math.pow(1-p,3))));
     if(p<1) requestAnimationFrame(tic); })(t0);
 }
 
@@ -3065,7 +3093,7 @@ $('#album-ui').addEventListener('click', e=>{ if(e.target.id === 'album-ui') fer
 /* ═══ boutons d'écran ════════════════════════════════════════════ */
 $('#start').addEventListener('click', ()=>{ nouveauTirage(); show('quiz'); afficher(); });
 $('#again').addEventListener('click', ()=>{
-  coeurs.stop(); $('#scoreNum').textContent = '0';
+  coeurs.stop(); $('#scoreNum').textContent = '0'; $('#scoreNum').classList.remove('dette');
   nouveauTirage(); rafraichirCartesFixes(); show('intro');
 });
 

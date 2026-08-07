@@ -2190,6 +2190,7 @@ fr:{
   albExport:"⬇︎ Enregistrer le quiz avec mes photos", albFermer:"Fermer",
   albVide:"aucune photo pour l'instant", albPhotos:"{n} photo{s}",
   albHintPlein:"{n} photo(s) — {r} au recto, {v} au verso, {mo} Mo. Le fichier enregistré les contient : envoie-le par WhatsApp ou par mail, il marche tout seul sur n'importe quel appareil, même sans internet.",
+  albEnCours:"Photo {i} sur {n}…",
   albAjoutees:"{n} photo(s) ajoutée(s) au {c}.",
   albIgnorees:"{n} photo(s) n'ont pas pu être lues par cet appareil et ont été laissées de côté.",
   albPlein:"Attention : la mémoire de l'appareil est pleine, les dernières ne seront pas là à la réouverture. Enregistre le fichier pour les garder pour de bon.",
@@ -2235,6 +2236,7 @@ en:{
   albExport:"⬇︎ Save the quiz with my photos", albFermer:"Close",
   albVide:"no photos yet", albPhotos:"{n} photo{s}",
   albHintPlein:"{n} photo(s) — {r} on the front, {v} on the back, {mo} MB. The saved file contains them: send it by WhatsApp or email, it works on its own on any device, even offline.",
+  albEnCours:"Photo {i} of {n}…",
   albAjoutees:"{n} photo(s) added to the {c}.",
   albIgnorees:"{n} photo(s) could not be read by this device and were left out.",
   albPlein:"Careful: this device's memory is full, the last ones won't be there when you reopen the page. Save the file to keep them for good.",
@@ -2280,6 +2282,7 @@ vi:{
   albExport:"⬇︎ Lưu bài trắc nghiệm kèm ảnh", albFermer:"Đóng",
   albVide:"chưa có ảnh nào", albPhotos:"{n} ảnh",
   albHintPlein:"{n} ảnh — {r} mặt trước, {v} mặt sau, {mo} MB. Tệp đã lưu chứa sẵn ảnh: gửi qua WhatsApp hoặc email, tệp chạy độc lập trên mọi máy, kể cả khi không có mạng.",
+  albEnCours:"Ảnh {i} trên {n}…",
   albAjoutees:"Đã thêm {n} ảnh vào {c}.",
   albIgnorees:"{n} ảnh máy này không đọc được nên đã bỏ qua.",
   albPlein:"Lưu ý: bộ nhớ của máy đã đầy, những ảnh cuối sẽ không còn khi mở lại trang. Hãy lưu tệp để giữ chúng lại.",
@@ -3067,44 +3070,103 @@ function sauver(){
 function poidsAlbum(){
   return toutesPhotos().reduce((t,s)=>t + s.length, 0) / 1048576;
 }
-function reduire(file){
+/* ── réduction d'une photo ────────────────────────────────────────
+   Une photo d'iPhone fait 4032 × 3024 : décodée, elle occupe près de
+   50 Mo en mémoire. Safari sur iPhone tue la page au bout de deux ou
+   trois. On prend donc toutes les précautions :
+   — on passe par une adresse d'objet, jamais par une chaîne géante ;
+   — on rend le canevas et l'image dès qu'on a fini (c.width = 0) ;
+   — on souffle entre deux photos pour laisser l'appareil récupérer.  */
+const PHOTO_MAX = 1100;       // côté le plus long, en pixels
+const PHOTO_QUAL = 0.70;      // compression JPEG
+
+function pause(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+function chargeImage(url){
+  return new Promise((res, rej)=>{
+    const im = new Image();
+    im.onload = ()=>res(im);
+    im.onerror = ()=>rej(new Error('illisible'));
+    im.decoding = 'sync';
+    im.src = url;
+  });
+}
+async function reduireDepuis(url, aRevoquer){
+  let im = null, c = null;
+  try{
+    im = await chargeImage(url);
+    const w0 = im.naturalWidth || im.width, h0 = im.naturalHeight || im.height;
+    if(!w0 || !h0) return null;
+    const r = Math.min(1, PHOTO_MAX / Math.max(w0, h0));
+    c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(w0 * r));
+    c.height = Math.max(1, Math.round(h0 * r));
+    c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+    const d = c.toDataURL('image/jpeg', PHOTO_QUAL);
+    return (d && d.length > 200) ? d : null;
+  }catch(e){
+    return null;
+  }finally{
+    if(c){ c.width = 0; c.height = 0; }      /* on rend la mémoire tout de suite */
+    if(im){ im.onload = im.onerror = null; im.src = ''; }
+    if(aRevoquer) URL.revokeObjectURL(url);
+  }
+}
+function enDataURI(file){
   return new Promise(res=>{
     const fr = new FileReader();
-    fr.onload = ()=>{
-      const im = new Image();
-      im.onload = ()=>{
-        const max = 1100, r = Math.min(1, max/Math.max(im.width, im.height));
-        const c = document.createElement('canvas');
-        c.width = Math.round(im.width*r); c.height = Math.round(im.height*r);
-        c.getContext('2d').drawImage(im,0,0,c.width,c.height);
-        res(c.toDataURL('image/jpeg', .70));
-      };
-      im.onerror = ()=>res(null);
-      im.src = fr.result;
-    };
+    fr.onload = ()=>res(fr.result);
     fr.onerror = ()=>res(null);
-    fr.readAsDataURL(file);
+    try{ fr.readAsDataURL(file); }catch(e){ res(null); }
   });
+}
+/* deux chemins : l'adresse d'objet, économe en mémoire, et si elle est
+   refusée (page enfermée dans un cadre à règles strictes), la lecture
+   classique du fichier. Une photo n'est abandonnée que si les deux
+   échouent.                                                            */
+async function reduire(file){
+  if(!file || !file.size) return null;
+  let d = null;
+  try{ d = await reduireDepuis(URL.createObjectURL(file), true); }catch(e){}
+  if(!d){
+    const uri = await enDataURI(file);
+    if(uri) d = await reduireDepuis(uri, false);
+  }
+  return d;
+}
+/* Les photos sont traitées une par une et gardées au fur et à mesure :
+   si l'appareil abandonne au milieu, celles d'avant sont déjà acquises. */
+let occupe = false;
+async function ajoutePhotos(cote, fichiers){
+  if(occupe) return;
+  occupe = true;
+  const nomCote = T(cote === 'recto' ? 'albRecto' : 'albVerso').toLowerCase();
+  let ajoutees = 0, ignorees = 0, memoire = true;
+  for(let k = 0; k < fichiers.length; k++){
+    $('#albumHint').textContent = T('albEnCours', {i:k+1, n:fichiers.length});
+    await pause(0);                        /* le message s'affiche avant le gros du travail */
+    const d = await reduire(fichiers[k]);
+    if(d){
+      album[cote].push(d);
+      ajoutees++;
+      if(!sauver()) memoire = false;       /* on garde après chaque photo */
+      photosOntChange();                   /* et la vignette apparaît aussitôt */
+    }else{
+      ignorees++;
+    }
+    await pause(60);                       /* on laisse l'appareil récupérer */
+  }
+  let mot = T('albAjoutees', {n:ajoutees, c:nomCote});
+  if(ignorees)  mot += ' ' + T('albIgnorees', {n:ignorees});
+  if(!memoire)  mot += ' ' + T('albPlein');
+  $('#albumHint').textContent = mot;
+  occupe = false;
 }
 COTES.forEach(cote=>{
   $('#pick' + cote[0].toUpperCase() + cote.slice(1)).addEventListener('change', async e=>{
     const fichiers = [...e.target.files];
-    if(!fichiers.length) return;
-    $('#albumHint').textContent = T('albTraitement', {n:fichiers.length, c:T(cote === 'recto' ? 'albRecto' : 'albVerso').toLowerCase()});
-    let ajoutees = 0, ignorees = 0;
-    for(const f of fichiers){
-      const d = await reduire(f);
-      if(d){ album[cote].push(d); ajoutees++; } else { ignorees++; }
-    }
-    e.target.value = '';
-    const garde = sauver();
-    photosOntChange();
-    /* on dit exactement ce qui s'est passé : combien ajoutées, combien
-       refusées par l'appareil, et si la mémoire n'a pas suivi           */
-    let mot = T('albAjoutees', {n:ajoutees, c:T(cote === 'recto' ? 'albRecto' : 'albVerso').toLowerCase()});
-    if(ignorees) mot += ' ' + T('albIgnorees', {n:ignorees});
-    if(!garde)   mot += ' ' + T('albPlein');
-    $('#albumHint').textContent = mot;
+    e.target.value = '';                   /* libéré tout de suite : iOS garde la main dessus */
+    if(fichiers.length) await ajoutePhotos(cote, fichiers);
   });
 });
 $('#export').addEventListener('click', ()=>{

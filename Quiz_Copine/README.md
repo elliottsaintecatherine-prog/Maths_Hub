@@ -40,12 +40,19 @@ aucun envoi vers un serveur.
   suppressions sont pris en compte **immédiatement**, même en pleine partie. Les
   carnets enregistrés à l'ancien format (une seule liste) sont répartis
   automatiquement sur les deux faces au chargement.
-- Les photos sont ramenées à 1100 px de côté (~150 Ko chacune) : une trentaine
-  tiennent dans la mémoire d'un téléphone. Le panneau affiche le nombre et le
-  poids, dit combien de photos ont été ajoutées, signale celles que l'appareil
-  n'a pas su lire, et prévient si la mémoire est pleine — dans ce cas les photos
-  restent utilisables pour la partie en cours, mais il faut **enregistrer le
-  fichier** pour les garder.
+- Les photos sont traitées **une par une et gardées au fur et à mesure** : si
+  l'appareil abandonne au milieu d'un gros lot, celles d'avant sont déjà
+  acquises. Le panneau affiche l'avancement (« photo 3 sur 8… »), puis le
+  résultat : combien ont été ajoutées, combien l'appareil n'a pas su lire, et si
+  la mémoire est pleine — dans ce cas les photos restent utilisables pour la
+  partie, mais il faut **enregistrer le fichier** pour les garder.
+- Elles sont ramenées à 1100 px de côté (~150 Ko chacune) : une trentaine
+  tiennent dans la mémoire d'un téléphone. La réduction évite soigneusement de
+  saturer la mémoire — une photo d'iPhone occupe près de 50 Mo une fois
+  décodée, et Safari ferme la page au bout de deux ou trois si on ne rend pas
+  la place au fur et à mesure. Deux chemins sont tentés (adresse d'objet, puis
+  lecture classique) pour que ça marche aussi dans une page enfermée dans un
+  cadre à règles strictes.
 - **Correction après chaque réponse** : les bonnes réponses passent en vert,
   les mauvaises en rouge, chacune affiche ses points, la meilleure et celle que
   tu as choisie sont étiquetées. On reste sur la carte jusqu'à ce que tu appuies

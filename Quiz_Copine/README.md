@@ -64,14 +64,37 @@ aucun envoi vers un serveur.
 
   Les réglages sont dans l'objet `PHYS` : masse, pesanteur, poussée du premier
   appui, vitesse du palet, force d'éjection, rebond et freinage au sol.
-- **Passage d'une carte à l'autre** : seules la carte et les réponses glissent
-  et se fondent (250 ms de sortie, 250 ms d'entrée). L'écran entier n'est plus
-  redessiné — avant, l'animation d'entrée rejouait à chaque question et donnait
-  l'impression d'un rechargement de page.
+- **Passage d'une carte à l'autre** : la carte et les réponses se fondent vers
+  la gauche (200 ms) puis reviennent de la droite (300 ms), enchaînées dans la
+  même image, sans que l'écran soit redessiné. Les photos de la carte suivante
+  sont décodées à l'avance pour qu'aucune image ne saute au moment du
+  remplacement.
 - L'**avion** de la barre de progression ne saute plus d'une carte à l'autre : il
   glisse en 0,9 s avec une accélération et un freinage progressifs, en prenant un
   peu d'altitude et en s'inclinant dans le sens du vol.
 - Écran **Souvenir** : score sur 100, verdict tamponné, pluie de cœurs.
+
+## Trois langues
+
+Un bouton en haut à droite fait tourner **français → anglais → vietnamien**.
+Il traduit toute l'interface : titres, boutons, cachets, timbres, verdicts,
+piques du bouton « Oui », panneau des photos, jusqu'aux petites étiquettes
+« ton choix » et « la meilleure » qui sont écrites en CSS.
+
+**Les 100 questions et la dernière carte restent en français dans tous les
+cas** — c'est la liste que tu modifies, elle n'existe qu'à un seul endroit.
+
+Au premier lancement la langue du téléphone est utilisée si c'est l'une des
+trois, sinon le français. Ton choix est ensuite mémorisé et **voyage avec le
+fichier enregistré** : la personne qui l'ouvre retrouve la langue que tu avais
+choisie.
+
+Les textes sont regroupés dans l'objet `TEXTES`, un bloc par langue, avec les
+mêmes clés. Pour en corriger un, cherche sa clé dans le bloc `fr` puis dans les
+autres. Pour ajouter une langue : recopie un bloc, ajoute son code dans
+`LANGUES` et son étiquette dans `NOM_LANGUE`. En vietnamien la police manuscrite
+du carnet est remplacée par une italique, faute de signes diacritiques dans la
+fonte d'origine.
 
 ## Modifier les questions
 

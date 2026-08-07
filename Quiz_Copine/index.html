@@ -53,24 +53,32 @@ body{
   padding:max(12px,env(safe-area-inset-top)) var(--pad) max(18px,env(safe-area-inset-bottom));
 }
 .screen{display:none;flex:1;flex-direction:column;animation:in .5s cubic-bezier(.2,.85,.3,1);}
-/* on ne rejoue pas l'entrée de l'écran entre deux cartes : seuls la carte
-   et les réponses glissent, la barre de route et l'avion restent en place */
-#quiz .stage,#quiz .answers,#quiz .suite{
-  transition:opacity .24s ease,transform .24s cubic-bezier(.35,0,.6,1);
-}
-#quiz.sortie .stage,#quiz.sortie .answers,#quiz.sortie .suite{opacity:0;transform:translateX(-22px);}
-#quiz.entree .stage,#quiz.entree .answers,#quiz.entree .suite{
-  opacity:0;transform:translateX(22px);transition:none;
-}
+/* le passage d'une carte à l'autre est animé en JavaScript (voir glisse) :
+   l'écran n'est jamais redessiné, seules la carte et les réponses bougent */
 .screen.active{display:flex;}
 @keyframes in{from{opacity:0;transform:translateY(16px) rotate(.6deg);}to{opacity:1;transform:none;}}
 
 /* ── typo utilitaire ─────────────────────────────────────────── */
 .label{font-family:var(--f-stamp);font-size:10px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-2);}
 .hand{font-family:var(--f-hand);}
+/* la police manuscrite du carnet ne contient pas les signes diacritiques
+   vietnamiens : en vietnamien on passe sur une italique complète, pour ne
+   pas mélanger deux dessins de lettres dans le même mot */
+:root[lang="vi"]{--f-hand:Georgia,'Iowan Old Style','Times New Roman',serif;}
+:root[lang="vi"] .hand,:root[lang="vi"] .title,:root[lang="vi"] .taunt,
+:root[lang="vi"] .sheet h3,:root[lang="vi"] .suite-hint{font-style:italic;}
 
 /* ══ ITINÉRAIRE (progression) ══ */
+#langue{
+  position:absolute;z-index:75;top:max(10px,env(safe-area-inset-top));right:var(--pad);
+  font-family:var(--f-stamp);font-size:10.5px;font-weight:700;letter-spacing:.16em;
+  background:var(--paper-3);color:var(--ink);border:1.5px solid rgba(38,49,61,.4);border-radius:3px;
+  padding:5px 8px 4px;cursor:pointer;transform:rotate(-2.5deg);
+  box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 2px 5px rgba(52,40,20,.22);
+}
+#langue:active{transform:rotate(-2.5deg) translateY(2px);box-shadow:0 1px 2px rgba(52,40,20,.2);}
 .route{display:flex;align-items:center;gap:9px;padding:4px 0 14px;}
+#quiz .route{padding-right:44px;}   /* on laisse la place au bouton de langue */
 .route-line{position:relative;flex:1;height:18px;}
 .route-line::before{content:"";position:absolute;left:0;right:0;top:9px;border-top:2px dashed rgba(38,49,61,.3);}
 .plane{position:absolute;top:-1px;left:0;font-size:15px;line-height:1;
@@ -213,13 +221,13 @@ body{
 .ans.bonne.choix{--halo:rgba(46,122,80,.42);}
 .ans.mauvaise.choix{--halo:rgba(193,51,43,.34);}
 .ans.choix::after{
-  content:'ton choix';position:absolute;top:-8px;right:11px;
+  content:var(--txt-choix,'ton choix');position:absolute;top:-8px;right:11px;
   font-family:var(--f-stamp);font-size:9.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
   background:var(--paper);padding:1px 6px;border-radius:2px;color:inherit;opacity:.85;
 }
 
 .ans.top::before{
-  content:'la meilleure';position:absolute;top:-8px;left:11px;
+  content:var(--txt-meilleure,'la meilleure');position:absolute;top:-8px;left:11px;
   font-family:var(--f-stamp);font-size:9.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
   background:var(--paper);padding:1px 6px;border-radius:2px;color:var(--vert);opacity:.9;
 }
@@ -366,7 +374,7 @@ body{
 .compteur{font-family:var(--f-stamp);font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--ink-2);
   font-variant-numeric:tabular-nums;white-space:nowrap;}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:9px;margin-bottom:6px;}
-.grid:empty::after{content:"aucune photo pour l'instant";font-size:12.5px;color:var(--ink-2);opacity:.8;}
+.grid:empty::after{content:var(--txt-vide,"aucune photo pour l'instant");font-size:12.5px;color:var(--ink-2);opacity:.8;}
 .thumb .num{
   position:absolute;left:-3px;bottom:-3px;background:var(--ink);color:var(--paper-2);
   font-family:var(--f-stamp);font-size:9.5px;font-weight:700;letter-spacing:.1em;padding:2px 5px;border-radius:2px;
@@ -408,11 +416,14 @@ input[type=file]{display:none;}
 
 <div class="app" id="app">
 
+  <button id="langue" type="button" aria-label="Langue / Language / Ngôn ngữ">FR</button>
+
+
   <!-- ══ ACCUEIL ══ -->
   <section class="screen active" id="intro">
-    <p class="label">Carnet de bord · dossier n°1</p>
-    <h1 class="title">Es-tu digne d'être la copine de <em>Louis</em> ?</h1>
-    <p class="lede">Dix cartes tirées au hasard dans le carnet, plus la dernière — celle qui compte vraiment. Je suis sa cousine préférée : c'est moi qui tamponne.</p>
+    <p class="label" data-t="carnet">Carnet de bord · dossier n°1</p>
+    <h1 class="title" data-th="titre">Es-tu digne d'être la copine de <em>Louis</em> ?</h1>
+    <p class="lede" data-t="lede">Dix cartes tirées au hasard dans le carnet, plus la dernière — celle qui compte vraiment. Je suis sa cousine préférée : c'est moi qui tamponne.</p>
 
     <div class="stage"><div class="float">
       <article class="card" id="introCard">
@@ -420,8 +431,8 @@ input[type=file]{display:none;}
         <div class="card-veil"></div><div class="card-grain"></div>
         <div class="card-body">
           <div class="card-top">
-            <span class="postmark">Souvenir</span>
-            <span class="stamp"><i>✈</i><small>PAR AVION</small></span>
+            <span class="postmark" data-t="souvenir">Souvenir</span>
+            <span class="stamp"><i>✈</i><small data-t="parAvion">PAR AVION</small></span>
           </div>
           <p class="qtext hand" id="introCap">Louis, quelque part, en train de raconter la même histoire.</p>
         </div>
@@ -430,19 +441,19 @@ input[type=file]{display:none;}
 
     <div class="ticket">
       <span class="tape"></span>
-      <div class="line"><span class="n">01</span><span><b>10 cartes au hasard</b> parmi 100. Jamais le même quiz.</span></div>
-      <div class="line"><span class="n">02</span><span><b>Appuie sur une carte</b> pour voir la photo en entier.</span></div>
-      <div class="line"><span class="n">03</span><span><b>La dernière question</b> décide de tout.</span></div>
+      <div class="line"><span class="n">01</span><span data-th="ticket1"><b>10 cartes au hasard</b> parmi 100. Jamais le même quiz.</span></div>
+      <div class="line"><span class="n">02</span><span data-th="ticket2"><b>Appuie sur une carte</b> pour la retourner et voir l'autre photo.</span></div>
+      <div class="line"><span class="n">03</span><span data-th="ticket3"><b>La dernière question</b> décide de tout.</span></div>
     </div>
 
-    <button class="go" id="start">Ouvrir le carnet</button>
-    <div class="row"><button class="mini" id="openAlbum">📷 Mes photos</button></div>
+    <button class="go" id="start" data-t="ouvrir">Ouvrir le carnet</button>
+    <div class="row"><button class="mini" id="openAlbum" data-t="mesPhotos">📷 Mes photos</button></div>
   </section>
 
   <!-- ══ QUIZ ══ -->
   <section class="screen" id="quiz">
     <div class="route">
-      <span class="label">Départ</span>
+      <span class="label" data-t="depart">Départ</span>
       <span class="route-line"><span class="plane" id="plane">✈</span></span>
       <span class="trip" id="trip">01/11</span>
     </div>
@@ -457,7 +468,7 @@ input[type=file]{display:none;}
           <div class="card-body">
             <div class="card-top">
               <span class="postmark" id="postmark">Carte 1</span>
-              <span class="stamp"><i>✈</i><small>PAR AVION</small></span>
+              <span class="stamp"><i>✈</i><small data-t="parAvion">PAR AVION</small></span>
             </div>
             <h2 class="qtext" id="qtext"></h2>
             <span class="peek" id="peekHint"></span>
@@ -470,8 +481,8 @@ input[type=file]{display:none;}
           <div class="card-veil"></div><div class="card-grain"></div><div class="lustre"></div>
           <div class="card-body">
             <div class="card-top">
-              <span class="postmark" id="postmarkDos">Verso</span>
-              <span class="stamp"><i>✉</i><small>AU DOS</small></span>
+              <span class="postmark" id="postmarkDos" data-t="verso">Verso</span>
+              <span class="stamp"><i>✉</i><small data-t="auDos">AU DOS</small></span>
             </div>
             <span class="peek" id="peekDos"></span>
           </div>
@@ -483,20 +494,20 @@ input[type=file]{display:none;}
     <div class="answers" id="answers"></div>
 
     <div class="suite" id="suite">
-      <button type="button" id="continuer">Continuer <i>→</i></button>
-      <span class="suite-hint">ou appuie n'importe où</span>
+      <button type="button" id="continuer"><span data-t="continuer">Continuer</span> <i>→</i></button>
+      <span class="suite-hint" data-t="nimporteOu">ou appuie n'importe où</span>
     </div>
 
     <div class="arena" id="arena" hidden>
       <p class="taunt" id="taunt"></p>
       <div class="compte" id="compte" hidden>5</div>
-      <button id="btnNon">Non</button>
+      <button id="btnNon" data-t="non">Non</button>
     </div>
   </section>
 
   <!-- ══ SOUVENIR ══ -->
   <section class="screen" id="result">
-    <p class="label">Tampon du comité familial</p>
+    <p class="label" data-t="tampon">Tampon du comité familial</p>
     <div class="score"><span id="scoreNum">0</span><sub>/100</sub></div>
     <h2 class="verdict" id="verdict"></h2>
     <p class="verdict-sub" id="verdictSub"></p>
@@ -507,51 +518,51 @@ input[type=file]{display:none;}
         <div class="card-veil"></div><div class="card-grain"></div>
         <div class="card-body">
           <div class="card-top">
-            <span class="postmark">Classé sans suite</span>
-            <span class="stamp"><i>❤</i><small>SOUVENIR</small></span>
+            <span class="postmark" data-t="classe">Classé sans suite</span>
+            <span class="stamp"><i>❤</i><small data-t="stampSouvenir">SOUVENIR</small></span>
           </div>
-          <p class="qtext hand">Et tu as reconnu, de ton plein gré, que ma place dans son cœur est intouchable.</p>
+          <p class="qtext hand" data-t="resCarte">Et tu as reconnu, de ton plein gré, que ma place dans son cœur est intouchable.</p>
         </div>
       </article>
     </div></div>
 
-    <p class="sign">— sa cousine préférée</p>
+    <p class="sign" data-t="sign">— sa cousine préférée</p>
     <div class="row">
-      <button class="mini" id="again">Tirer 10 nouvelles cartes</button>
-      <button class="mini" id="openAlbum2">📷 Mes photos</button>
+      <button class="mini" id="again" data-t="rejouer">Tirer 10 nouvelles cartes</button>
+      <button class="mini" id="openAlbum2" data-t="mesPhotos">📷 Mes photos</button>
     </div>
   </section>
 </div>
 
-<button id="btnOui" hidden>Oui</button>
+<button id="btnOui" hidden data-t="oui">Oui</button>
 
 <!-- ══ TAMPON ROUGE ══ -->
 <div id="rage" aria-hidden="true">
-  <div class="mark"><b>NON.</b><small>Réponse enregistrée à ta place</small></div>
+  <div class="mark"><b data-t="nonPoint">NON.</b><small data-t="aTaPlace">Réponse enregistrée à ta place</small></div>
 </div>
 
 <!-- ══ PANNEAU PHOTOS ══ -->
 <div id="album-ui">
   <div class="sheet" role="dialog" aria-label="Mes photos">
-    <h3>Mes photos</h3>
-    <p>Chaque carte postale a deux faces : une photo au recto, une autre au verso. Elles sont tirées au hasard dans les deux listes ci-dessous, dans un ordre différent à chaque partie. Elles restent sur cet appareil : rien n'est envoyé nulle part.</p>
+    <h3 data-t="albTitre">Mes photos</h3>
+    <p data-t="albIntro">Chaque carte postale a deux faces : une photo au recto, une autre au verso. Elles sont tirées au hasard dans les deux listes ci-dessous, dans un ordre différent à chaque partie. Elles restent sur cet appareil : rien n'est envoyé nulle part.</p>
 
     <section class="liste">
-      <div class="liste-tete"><h4>Recto <em>— devant la carte</em></h4><span class="compteur" id="nbRecto">0 photo</span></div>
-      <label class="drop" for="pickRecto"><span>🖼️</span><em>Ajouter des photos au recto</em></label>
+      <div class="liste-tete"><h4><span data-t="albRecto">Recto</span> <em data-t="albRectoSub">— devant la carte</em></h4><span class="compteur" id="nbRecto">0 photo</span></div>
+      <label class="drop" for="pickRecto"><span>🖼️</span><em data-t="albAjoutRecto">Ajouter des photos au recto</em></label>
       <input type="file" id="pickRecto" accept="image/*" multiple>
       <div class="grid" id="gridRecto"></div>
     </section>
 
     <section class="liste">
-      <div class="liste-tete"><h4>Verso <em>— au dos, quand on retourne</em></h4><span class="compteur" id="nbVerso">0 photo</span></div>
-      <label class="drop" for="pickVerso"><span>🖼️</span><em>Ajouter des photos au verso</em></label>
+      <div class="liste-tete"><h4><span data-t="albVerso">Verso</span> <em data-t="albVersoSub">— au dos, quand on retourne</em></h4><span class="compteur" id="nbVerso">0 photo</span></div>
+      <label class="drop" for="pickVerso"><span>🖼️</span><em data-t="albAjoutVerso">Ajouter des photos au verso</em></label>
       <input type="file" id="pickVerso" accept="image/*" multiple>
       <div class="grid" id="gridVerso"></div>
     </section>
     <div class="row">
-      <button class="mini" id="export">⬇︎ Enregistrer le quiz avec mes photos</button>
-      <button class="mini" id="closeAlbum">Fermer</button>
+      <button class="mini" id="export" data-t="albExport">⬇︎ Enregistrer le quiz avec mes photos</button>
+      <button class="mini" id="closeAlbum" data-t="albFermer">Fermer</button>
     </div>
     <p class="hint" id="albumHint">Le fichier enregistré contient les photos à l'intérieur : envoie-le par WhatsApp ou par mail, il fonctionne tout seul sur n'importe quel téléphone, même sans internet.</p>
   </div>
@@ -793,18 +804,162 @@ const FINALE = {
   q:"Dernière carte. La vraie. Penses-tu être meilleure que moi pour prendre ma place dans le cœur de Louis ?"
 };
 
-/* Les piques quand elle essaie de cliquer sur « Oui » */
-/* une réponse à 7 points ou plus compte comme bonne ; la meilleure est signalée */
+/* une réponse à 7 points ou plus compte comme bonne ; la meilleure est signalée
+   (les piques du bouton « Oui » sont dans TEXTES[langue].taunts) */
 const SEUIL_BON = 7;
-const TAUNTS = ["Essaie encore, pour voir.","Deuxième tentative. Courageuse.","Troisième. Tu l'auras cherché."];
 
 /* Les verdicts (score minimum en %) */
-const VERDICTS = [
-  [88,"Tamponnée. Bienvenue.","Je te la confie. Prends-en soin — je vérifie tous les dimanches."],
-  [70,"Acceptée sous conditions.","C'est très bien. Pas parfait. On surveille, mais avec bienveillance."],
-  [50,"Période d'essai.","Il y a du potentiel. Il y a aussi du travail. On y croit."],
-  [0 ,"Second entretien demandé.","Refusée pour aujourd'hui. Mais entre nous : Louis fera ce qu'il veut. Il fait toujours ce qu'il veut."]
-];
+/* ═══════════════════════════════════════════════════════════════════
+   LES LANGUES
+   Seule l'interface est traduite. Les 100 questions et la dernière
+   carte restent en français : c'est la liste que tu modifies, elle
+   n'existe qu'une fois, dans BANQUE.
+   Pour ajouter une langue : recopie un bloc, garde les mêmes clés.
+   {n} {r} {L} sont remplacés par un nombre, une référence photo, Louis.
+   ═══════════════════════════════════════════════════════════════════ */
+const LANGUES = ['fr','en','vi'];
+const NOM_LANGUE = {fr:'FR', en:'EN', vi:'VI'};
+const TEXTES = {
+
+fr:{
+  carnet:"Carnet de bord · dossier n°1",
+  titre:"Es-tu digne d'être la copine de {L} ?",
+  lede:"Dix cartes tirées au hasard dans le carnet, plus la dernière — celle qui compte vraiment. Je suis sa cousine préférée : c'est moi qui tamponne.",
+  souvenir:"Souvenir", parAvion:"PAR AVION", auDos:"AU DOS", stampSouvenir:"SOUVENIR",
+  capPret:"Le carnet est prêt. Bonne chance.",
+  capVide:"Ajoute tes photos : une au recto, une autre au dos de chaque carte.",
+  ticket1:"<b>10 cartes au hasard</b> parmi 100. Jamais le même quiz.",
+  ticket2:"<b>Appuie sur une carte</b> pour la retourner et voir l'autre photo.",
+  ticket3:"<b>La dernière question</b> décide de tout.",
+  ouvrir:"Ouvrir le carnet", mesPhotos:"📷 Mes photos",
+  depart:"Départ", carte:"Carte {n}", derniereCarte:"Dernière carte", verso:"Verso",
+  peekRecto:"appuie pour retourner la carte", peekVerso:"appuie pour revenir", photoRef:"photo {r} · ",
+  tonChoix:"ton choix", laMeilleure:"la meilleure",
+  continuer:"Continuer", nimporteOu:"ou appuie n'importe où",
+  oui:"Oui", non:"Non",
+  taunts:["Essaie encore, pour voir.","Deuxième tentative. Courageuse.","Troisième. Tu l'auras cherché."],
+  resteUne:"Il ne reste qu'une réponse.",
+  nonPoint:"NON.", aTaPlace:"Réponse enregistrée à ta place",
+  tampon:"Tampon du comité familial", classe:"Classé sans suite",
+  resCarte:"Et tu as reconnu, de ton plein gré, que ma place dans son cœur est intouchable.",
+  sign:"— sa cousine préférée", rejouer:"Tirer 10 nouvelles cartes",
+  verdicts:[
+    ["Tamponnée. Bienvenue.","Je te la confie. Prends-en soin — je vérifie tous les dimanches."],
+    ["Acceptée sous conditions.","C'est très bien. Pas parfait. On surveille, mais avec bienveillance."],
+    ["Période d'essai.","Il y a du potentiel. Il y a aussi du travail. On y croit."],
+    ["Second entretien demandé.","Refusée pour aujourd'hui. Mais entre nous : Louis fera ce qu'il veut. Il fait toujours ce qu'il veut."]
+  ],
+  albTitre:"Mes photos",
+  albIntro:"Chaque carte postale a deux faces : une photo au recto, une autre au verso. Elles sont tirées au hasard dans les deux listes ci-dessous, dans un ordre différent à chaque partie. Elles restent sur cet appareil : rien n'est envoyé nulle part.",
+  albRecto:"Recto", albRectoSub:"— devant la carte",
+  albVerso:"Verso", albVersoSub:"— au dos, quand on retourne",
+  albAjoutRecto:"Ajouter des photos au recto", albAjoutVerso:"Ajouter des photos au verso",
+  albExport:"⬇︎ Enregistrer le quiz avec mes photos", albFermer:"Fermer",
+  albVide:"aucune photo pour l'instant", albPhotos:"{n} photo{s}",
+  albHintPlein:"{n} photo(s) : {r} au recto, {v} au verso. Le fichier enregistré les contient : envoie-le par WhatsApp ou par mail, il marche tout seul sur n'importe quel appareil, même sans internet.",
+  albHintVide:"Aucune photo pour l'instant : les cartes s'affichent en papier uni des deux côtés.",
+  albTraitement:"Traitement de {n} photo(s) pour le {c}…",
+  albEnregistre:"Fichier « quiz-louis.html » enregistré. Si rien ne se passe sur iPhone, la page s'ouvre dans un onglet : Partager → Enregistrer dans Fichiers.",
+  albTrop:"Trop de photos pour la mémoire de cet appareil — elles restent actives pour cette partie, pense à enregistrer le fichier."
+},
+
+en:{
+  carnet:"Logbook · file no. 1",
+  titre:"Are you worthy of being {L}'s girlfriend?",
+  lede:"Ten cards drawn at random from the logbook, plus the last one — the one that really counts. I'm his favourite cousin: I'm the one holding the stamp.",
+  souvenir:"Keepsake", parAvion:"AIR MAIL", auDos:"REVERSE", stampSouvenir:"KEEPSAKE",
+  capPret:"The logbook is ready. Good luck.",
+  capVide:"Add your photos: one on the front, another on the back of every card.",
+  ticket1:"<b>10 random cards</b> out of 100. Never the same quiz twice.",
+  ticket2:"<b>Tap a card</b> to flip it over and see the other photo.",
+  ticket3:"<b>The last question</b> decides everything.",
+  ouvrir:"Open the logbook", mesPhotos:"📷 My photos",
+  depart:"Departure", carte:"Card {n}", derniereCarte:"Last card", verso:"Back",
+  peekRecto:"tap to flip the card", peekVerso:"tap to flip back", photoRef:"photo {r} · ",
+  tonChoix:"your answer", laMeilleure:"the best one",
+  continuer:"Continue", nimporteOu:"or tap anywhere",
+  oui:"Yes", non:"No",
+  taunts:["Go on, try again.","Second attempt. Brave.","Third one. You asked for it."],
+  resteUne:"Only one answer left.",
+  nonPoint:"NO.", aTaPlace:"Answer recorded on your behalf",
+  tampon:"Stamped by the family committee", classe:"Case closed",
+  resCarte:"And you acknowledged, of your own free will, that my place in his heart is untouchable.",
+  sign:"— his favourite cousin", rejouer:"Draw 10 new cards",
+  verdicts:[
+    ["Stamped. Welcome in.","I'm trusting you with him. Take care of him — I check every Sunday."],
+    ["Accepted, with conditions.","Very good. Not perfect. We'll be watching, kindly."],
+    ["Trial period.","There's potential. There's also work to do. We believe in you."],
+    ["Second interview required.","Turned down for today. But between us: Louis will do as he pleases. He always does."]
+  ],
+  albTitre:"My photos",
+  albIntro:"Every postcard has two sides: one photo on the front, another on the back. They are drawn at random from the two lists below, in a different order every time. They stay on this device: nothing is sent anywhere.",
+  albRecto:"Front", albRectoSub:"— the face of the card",
+  albVerso:"Back", albVersoSub:"— behind it, once you flip",
+  albAjoutRecto:"Add photos to the front", albAjoutVerso:"Add photos to the back",
+  albExport:"⬇︎ Save the quiz with my photos", albFermer:"Close",
+  albVide:"no photos yet", albPhotos:"{n} photo{s}",
+  albHintPlein:"{n} photo(s): {r} on the front, {v} on the back. The saved file contains them: send it by WhatsApp or email, it works on its own on any device, even offline.",
+  albHintVide:"No photos yet: the cards show plain paper on both sides.",
+  albTraitement:"Processing {n} photo(s) for the {c}…",
+  albEnregistre:"File “quiz-louis.html” saved. If nothing happens on iPhone, the page opens in a tab: Share → Save to Files.",
+  albTrop:"Too many photos for this device's memory — they stay active for this round, remember to save the file."
+},
+
+vi:{
+  carnet:"Nhật ký hành trình · hồ sơ số 1",
+  titre:"Bạn có xứng đáng làm bạn gái của {L} không?",
+  lede:"Mười tấm thiệp rút ngẫu nhiên từ cuốn sổ, cộng thêm tấm cuối — tấm thật sự quan trọng. Tôi là cô em họ cưng của anh ấy: người đóng dấu là tôi.",
+  souvenir:"Kỷ niệm", parAvion:"HÀNG KHÔNG", auDos:"MẶT SAU", stampSouvenir:"KỶ NIỆM",
+  capPret:"Cuốn sổ đã sẵn sàng. Chúc may mắn.",
+  capVide:"Thêm ảnh của bạn: một ảnh mặt trước, một ảnh mặt sau mỗi tấm thiệp.",
+  ticket1:"<b>10 tấm ngẫu nhiên</b> trong 100. Không lần nào giống lần nào.",
+  ticket2:"<b>Chạm vào tấm thiệp</b> để lật và xem ảnh mặt kia.",
+  ticket3:"<b>Câu hỏi cuối cùng</b> quyết định tất cả.",
+  ouvrir:"Mở cuốn sổ", mesPhotos:"📷 Ảnh của tôi",
+  depart:"Khởi hành", carte:"Tấm {n}", derniereCarte:"Tấm cuối", verso:"Mặt sau",
+  peekRecto:"chạm để lật tấm thiệp", peekVerso:"chạm để lật lại", photoRef:"ảnh {r} · ",
+  tonChoix:"bạn chọn", laMeilleure:"hay nhất",
+  continuer:"Tiếp tục", nimporteOu:"hoặc chạm bất kỳ đâu",
+  oui:"Có", non:"Không",
+  taunts:["Thử lại xem nào.","Lần thứ hai. Gan đấy.","Lần thứ ba. Tự bạn chuốc lấy."],
+  resteUne:"Chỉ còn một lựa chọn.",
+  nonPoint:"KHÔNG.", aTaPlace:"Câu trả lời đã được ghi thay bạn",
+  tampon:"Con dấu của hội đồng gia đình", classe:"Khép hồ sơ",
+  resCarte:"Và bạn đã tự nguyện thừa nhận rằng chỗ của tôi trong tim anh ấy là bất khả xâm phạm.",
+  sign:"— cô em họ cưng của anh ấy", rejouer:"Rút 10 tấm mới",
+  verdicts:[
+    ["Đã đóng dấu. Chào mừng.","Tôi giao anh ấy cho bạn. Giữ gìn cẩn thận — Chủ nhật nào tôi cũng kiểm tra."],
+    ["Chấp nhận, có điều kiện.","Rất tốt. Chưa hoàn hảo. Chúng tôi vẫn theo dõi, nhưng thiện chí."],
+    ["Thời gian thử thách.","Có tiềm năng. Cũng còn phải cố gắng. Chúng tôi tin bạn."],
+    ["Cần phỏng vấn lần hai.","Hôm nay chưa được. Nhưng nói nhỏ: Louis muốn gì làm nấy. Lúc nào cũng vậy."]
+  ],
+  albTitre:"Ảnh của tôi",
+  albIntro:"Mỗi tấm thiệp có hai mặt: một ảnh phía trước, một ảnh phía sau. Ảnh được rút ngẫu nhiên từ hai danh sách bên dưới, thứ tự khác nhau mỗi ván. Ảnh nằm lại trên máy này: không có gì được gửi đi đâu cả.",
+  albRecto:"Mặt trước", albRectoSub:"— phía trước tấm thiệp",
+  albVerso:"Mặt sau", albVersoSub:"— phía sau, khi lật lại",
+  albAjoutRecto:"Thêm ảnh mặt trước", albAjoutVerso:"Thêm ảnh mặt sau",
+  albExport:"⬇︎ Lưu bài trắc nghiệm kèm ảnh", albFermer:"Đóng",
+  albVide:"chưa có ảnh nào", albPhotos:"{n} ảnh",
+  albHintPlein:"{n} ảnh: {r} mặt trước, {v} mặt sau. Tệp đã lưu chứa sẵn ảnh: gửi qua WhatsApp hoặc email, tệp chạy độc lập trên mọi máy, kể cả khi không có mạng.",
+  albHintVide:"Chưa có ảnh nào: hai mặt thiệp đều là giấy trơn.",
+  albTraitement:"Đang xử lý {n} ảnh cho {c}…",
+  albEnregistre:"Đã lưu tệp « quiz-louis.html ». Nếu trên iPhone không thấy gì, trang sẽ mở trong một thẻ mới: Chia sẻ → Lưu vào Tệp.",
+  albTrop:"Quá nhiều ảnh so với bộ nhớ của máy này — ảnh vẫn dùng được cho ván này, nhớ lưu tệp lại."
+}
+
+};
+let langue = 'fr';
+/* T('carte', {n:3}) → « Carte 3 » */
+function T(cle, vals){
+  let t = (TEXTES[langue] && TEXTES[langue][cle]);
+  if(t === undefined) t = TEXTES.fr[cle];
+  if(typeof t === 'string' && vals)
+    Object.keys(vals).forEach(k=>{ t = t.split('{'+k+'}').join(vals[k]); });
+  return t;
+}
+
+/* les seuils du verdict ; les phrases sont dans TEXTES[langue].verdicts */
+const SEUILS = [88, 70, 50, 0];
 
 const NB_CARTES = 10;   // combien de cartes on tire au hasard à chaque partie
 
@@ -856,7 +1011,6 @@ function nouveauTirage(){
   ordreRecto = melange(listeDe('recto').map((_,i)=>i));
   ordreVerso = melange(listeDe('verso').map((_,i)=>i));
   index = 0; score = 0; locked = false;
-  screens.quiz.classList.remove('sortie','entree');
 }
 
 /* ── l'avion glisse d'une carte à l'autre, en prenant un peu d'altitude ── */
@@ -886,6 +1040,44 @@ function volVers(frac, direct){
 }
 addEventListener('resize', ()=>{ if(!avion.raf) poseAvion(0, 0); });
 
+/* ── changer de langue ────────────────────────────────────────────
+   Tout ce qui est écrit dans l'interface porte un attribut data-t
+   (texte simple) ou data-th (texte avec du gras). Le reste est remis à
+   jour à la main juste en dessous. Les questions ne bougent pas.      */
+function appliqueLangue(l, garder){
+  langue = LANGUES.indexOf(l) >= 0 ? l : 'fr';
+  document.documentElement.lang = langue;
+  $('#langue').textContent = NOM_LANGUE[langue];
+  document.querySelectorAll('[data-t]').forEach(el=>{ el.textContent = T(el.dataset.t); });
+  document.querySelectorAll('[data-th]').forEach(el=>{ el.innerHTML = T(el.dataset.th, {L:'<em>Louis</em>'}); });
+  const r = document.documentElement.style;   /* les pastilles sont écrites en CSS */
+  r.setProperty('--txt-choix', JSON.stringify(T('tonChoix')));
+  r.setProperty('--txt-meilleure', JSON.stringify(T('laMeilleure')));
+  r.setProperty('--txt-vide', JSON.stringify(T('albVide')));
+  rafraichirCartesFixes();
+  dessineGrille();
+  majCarteEnCours();
+  if(screens.result.classList.contains('active')) poseVerdict();
+  if(garder){ album.langue = langue; sauver(); }
+}
+/* les libellés de la carte affichée, sans toucher à la question */
+function majCarteEnCours(){
+  const c = tirage[index];
+  if(!c) return;
+  $('#postmark').textContent = c.finale ? T('derniereCarte') : T('carte', {n:index+1});
+  const ph = photosPour(index);
+  $('#peekHint').textContent = (ph.av ? T('photoRef',{r:ph.refAv}) : '') + T('peekRecto');
+  $('#peekDos').textContent  = (ph.ar ? T('photoRef',{r:ph.refAr}) : '') + T('peekVerso');
+}
+function languePreferee(){
+  const n = (navigator.language || 'fr').slice(0,2).toLowerCase();
+  return LANGUES.indexOf(n) >= 0 ? n : 'fr';
+}
+$('#langue').addEventListener('click', ()=>{
+  appliqueLangue(LANGUES[(LANGUES.indexOf(langue) + 1) % LANGUES.length], true);
+  buzz(8);
+});
+
 function show(n){ Object.values(screens).forEach(s=>s.classList.remove('active')); screens[n].classList.add('active'); scrollTo(0,0); }
 function buzz(v){ if(navigator.vibrate) try{ navigator.vibrate(v); }catch(e){} }
 
@@ -910,6 +1102,20 @@ function photosPour(i){
     refAr: LETTRE[cAr] + (iAr+1)
   };
 }
+/* on décode les photos de la carte suivante pendant qu'on lit celle-ci,
+   pour que le remplacement ne coûte rien au moment du glissement */
+const dejaVues = new Set();
+function precharge(i){
+  if(i >= tirage.length) return;
+  const ph = photosPour(i);
+  [ph.av, ph.ar].forEach(src=>{
+    if(!src || dejaVues.has(src)) return;
+    dejaVues.add(src);
+    const im = new Image();
+    im.src = src;
+    if(im.decode) im.decode().catch(()=>{});
+  });
+}
 function poseCarte(carte, img, src){
   if(src){ img.style.backgroundImage = 'url("'+src+'")'; carte.classList.add('has-photo'); }
   else{ img.style.backgroundImage = ''; carte.classList.remove('has-photo'); }
@@ -921,9 +1127,7 @@ function rafraichirCartesFixes(){
   poseCarte($('#introCard'), $('#introCard .card-img'), cover);
   const souv = album.verso[album.verso.length-1] || toutes[toutes.length-1] || cover;
   poseCarte($('#resultCard'), $('#resultCard .card-img'), souv);
-  $('#introCap').textContent = toutes.length
-    ? "Le carnet est prêt. Bonne chance."
-    : "Ajoute tes photos : une au recto, une autre au dos de chaque carte.";
+  $('#introCap').textContent = toutes.length ? T('capPret') : T('capVide');
 }
 
 /* ── relief : la carte suit le doigt / la souris ─────────────────── */
@@ -1015,15 +1219,16 @@ function afficher(){
   const total = tirage.length;
   volVers(total > 1 ? index/(total-1) : 0, index === 0);
   $('#trip').textContent = String(index+1).padStart(2,'0') + '/' + String(total).padStart(2,'0');
-  $('#postmark').textContent = c.finale ? 'Dernière carte' : 'Carte ' + (index+1);
+  $('#postmark').textContent = c.finale ? T('derniereCarte') : T('carte', {n:index+1});
   $('#qtext').textContent = c.q;
 
   const ph = photosPour(index);
+  precharge(index + 1);                /* la carte suivante est décodée d'avance */
   poseCarte($('#card'),    $('#cardImg'),    ph.av);
   poseCarte($('#cardDos'), $('#cardDosImg'), ph.ar);
   remetRecto();
-  $('#peekHint').textContent = (ph.av ? 'photo ' + ph.refAv + ' · ' : '') + 'appuie pour retourner la carte';
-  $('#peekDos').textContent  = (ph.ar ? 'photo ' + ph.refAr + ' · ' : '') + 'appuie pour revenir';
+  $('#peekHint').textContent = (ph.av ? T('photoRef',{r:ph.refAv}) : '') + T('peekRecto');
+  $('#peekDos').textContent  = (ph.ar ? T('photoRef',{r:ph.refAr}) : '') + T('peekVerso');
 
   peutSuivre = false;
   $('#suite').classList.remove('on');
@@ -1087,16 +1292,27 @@ addEventListener('keydown', e=>{
 });
 function suivant(){
   if(index + 1 >= tirage.length){ index++; terminer(); return; }
-  const q = screens.quiz;
-  q.classList.add('sortie');
-  setTimeout(()=>{
-    index++;
-    afficher();                      /* la nouvelle carte est posée pendant qu'on ne la voit pas */
-    q.classList.remove('sortie');
-    q.classList.add('entree');
-    void q.offsetWidth;              /* on repart de la droite, sans transition */
-    requestAnimationFrame(()=>q.classList.remove('entree'));
-  }, 250);
+  glisse(()=>{ index++; afficher(); });
+}
+/* ── fondu-glissé d'une carte à l'autre ───────────────────────────
+   Le contenu est remplacé pendant que tout est transparent, et les deux
+   moitiés du mouvement s'enchaînent dans la même image : aucune coupure,
+   et l'écran ne rejoue jamais son animation d'entrée.                  */
+function glisse(remplacer){
+  const blocs = [$('#quiz .stage'), $('#answers'), $('#suite')].filter(Boolean);
+  if(!blocs.length || !blocs[0].animate){ remplacer(); return; }   /* vieux navigateur */
+  const sortie = blocs.map(el => el.animate(
+    [{opacity:1, transform:'translateX(0)'}, {opacity:0, transform:'translateX(-20px)'}],
+    {duration:200, easing:'cubic-bezier(.4,0,.9,.35)', fill:'forwards'}
+  ));
+  Promise.all(sortie.map(a => a.finished)).then(()=>{
+    remplacer();                       /* invisible : le fill maintient l'opacité à 0 */
+    sortie.forEach(a => a.cancel());   /* et l'entrée démarre dans la même image */
+    blocs.forEach(el => el.animate(
+      [{opacity:0, transform:'translateX(20px)'}, {opacity:1, transform:'translateX(0)'}],
+      {duration:300, easing:'cubic-bezier(.15,.6,.3,1)'}
+    ));
+  }).catch(()=>{ remplacer(); sortie.forEach(a => a.cancel()); });
 }
 
 /* ── la carte finale : le bouton « Oui » en trois temps ──────────
@@ -1297,7 +1513,7 @@ function lanceCompte(){
   const c = $('#compte');
   let n = 5;
   c.hidden = false; c.textContent = n; c.classList.add('tic');
-  $('#taunt').textContent = 'Il ne reste qu\'une réponse.';
+  $('#taunt').textContent = T('resteUne');
   $('#taunt').classList.add('show');
   $('#btnNon').classList.add('presse');
   buzz(18);
@@ -1335,7 +1551,7 @@ elOui().addEventListener('pointerdown', e=>{
   if(locked || etat >= 3) return;
   bornes = calcBornes();
   const t = $('#taunt');
-  t.textContent = TAUNTS[Math.min(etat, 2)]; t.classList.add('show');
+  t.textContent = T('taunts')[Math.min(etat, 2)]; t.classList.add('show');
   buzz(22);
   if(etat === 0) decroche(e.clientX, e.clientY);
   else if(etat === 1) palet(e.clientX, e.clientY);
@@ -1370,13 +1586,19 @@ function tamponNon(){
 /* ── souvenir ────────────────────────────────────────────────────── */
 function terminer(){
   rangeOui();
-  const pct = Math.round(score/maxScore*100);
-  const v = VERDICTS.find(x => pct >= x[0]);
-  $('#verdict').textContent = v[1];
-  $('#verdictSub').textContent = v[2];
+  const pct = poseVerdict();
   show('result');
   compter(pct);
   coeurs.start();
+}
+function poseVerdict(){
+  const pct = Math.round(score/maxScore*100);
+  let i = SEUILS.findIndex(seuil => pct >= seuil);
+  if(i < 0) i = SEUILS.length - 1;
+  const v = T('verdicts')[i];
+  $('#verdict').textContent = v[0];
+  $('#verdictSub').textContent = v[1];
+  return pct;
 }
 function compter(cible){
   const el = $('#scoreNum'), t0 = performance.now(), d = 1400;
@@ -1446,16 +1668,16 @@ function dessineGrille(){
       d.appendChild(n); d.appendChild(x); g.appendChild(d);
     });
     const n = album[cote].length;
-    $('#nb' + cote[0].toUpperCase() + cote.slice(1)).textContent = n + ' photo' + (n > 1 ? 's' : '');
+    $('#nb' + cote[0].toUpperCase() + cote.slice(1)).textContent = T('albPhotos', {n:n, s:(n > 1 ? 's' : '')});
   });
   const total = toutesPhotos().length;
   $('#albumHint').textContent = total
-    ? total + " photo(s) : " + album.recto.length + " au recto, " + album.verso.length + " au verso. Le fichier enregistré les contient : envoie-le par WhatsApp ou par mail, il marche tout seul sur n'importe quel appareil, même sans internet."
-    : "Aucune photo pour l'instant : les cartes s'affichent en papier uni des deux côtés.";
+    ? T('albHintPlein', {n:total, r:album.recto.length, v:album.verso.length})
+    : T('albHintVide');
 }
 function sauver(){
   try{ localStorage.setItem('carnet-louis', JSON.stringify(album)); }
-  catch(e){ $('#albumHint').textContent = "Trop de photos pour la mémoire de cet appareil — elles restent actives pour cette partie, pense à enregistrer le fichier."; }
+  catch(e){ $('#albumHint').textContent = T('albTrop'); }
 }
 function reduire(file){
   return new Promise(res=>{
@@ -1479,7 +1701,7 @@ function reduire(file){
 COTES.forEach(cote=>{
   $('#pick' + cote[0].toUpperCase() + cote.slice(1)).addEventListener('change', async e=>{
     const fichiers = [...e.target.files];
-    $('#albumHint').textContent = "Traitement de " + fichiers.length + " photo(s) pour le " + cote + "…";
+    $('#albumHint').textContent = T('albTraitement', {n:fichiers.length, c:T(cote === 'recto' ? 'albRecto' : 'albVerso').toLowerCase()});
     for(const f of fichiers){ const d = await reduire(f); if(d) album[cote].push(d); }
     e.target.value = '';
     sauver(); dessineGrille(); rafraichirCartesFixes();
@@ -1498,7 +1720,7 @@ $('#export').addEventListener('click', ()=>{
   const a = document.createElement('a');
   a.href = url; a.download = 'quiz-louis.html'; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(url), 4000);
-  $('#albumHint').textContent = "Fichier « quiz-louis.html » enregistré. Si rien ne se passe sur iPhone, la page s'ouvre dans un onglet : Partager → Enregistrer dans Fichiers.";
+  $('#albumHint').textContent = T('albEnregistre');
 });
 $('#openAlbum').addEventListener('click', ouvrirAlbum);
 $('#openAlbum2').addEventListener('click', ouvrirAlbum);
@@ -1518,6 +1740,7 @@ rendreVivante($('#resultCard'), [$('#resultCard .card-img')], regarderPhoto($('#
 rendreVivante($('#relief'),     [$('#cardImg'), $('#cardDosImg')], retourner);
 nouveauTirage();
 rafraichirCartesFixes();
+appliqueLangue(album.langue || languePreferee());   /* la langue enregistrée, sinon celle du téléphone */
 </script>
 </body>
 </html>

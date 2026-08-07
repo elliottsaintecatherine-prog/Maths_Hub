@@ -2189,11 +2189,13 @@ fr:{
   albAjoutRecto:"Ajouter des photos au recto", albAjoutVerso:"Ajouter des photos au verso",
   albExport:"⬇︎ Enregistrer le quiz avec mes photos", albFermer:"Fermer",
   albVide:"aucune photo pour l'instant", albPhotos:"{n} photo{s}",
-  albHintPlein:"{n} photo(s) : {r} au recto, {v} au verso. Le fichier enregistré les contient : envoie-le par WhatsApp ou par mail, il marche tout seul sur n'importe quel appareil, même sans internet.",
+  albHintPlein:"{n} photo(s) — {r} au recto, {v} au verso, {mo} Mo. Le fichier enregistré les contient : envoie-le par WhatsApp ou par mail, il marche tout seul sur n'importe quel appareil, même sans internet.",
+  albAjoutees:"{n} photo(s) ajoutée(s) au {c}.",
+  albIgnorees:"{n} photo(s) n'ont pas pu être lues par cet appareil et ont été laissées de côté.",
+  albPlein:"Attention : la mémoire de l'appareil est pleine, les dernières ne seront pas là à la réouverture. Enregistre le fichier pour les garder pour de bon.",
   albHintVide:"Aucune photo pour l'instant : les cartes s'affichent en papier uni des deux côtés.",
   albTraitement:"Traitement de {n} photo(s) pour le {c}…",
   albEnregistre:"Fichier « quiz-louis.html » enregistré. Si rien ne se passe sur iPhone, la page s'ouvre dans un onglet : Partager → Enregistrer dans Fichiers.",
-  albTrop:"Trop de photos pour la mémoire de cet appareil — elles restent actives pour cette partie, pense à enregistrer le fichier."
 },
 
 en:{
@@ -2232,11 +2234,13 @@ en:{
   albAjoutRecto:"Add photos to the front", albAjoutVerso:"Add photos to the back",
   albExport:"⬇︎ Save the quiz with my photos", albFermer:"Close",
   albVide:"no photos yet", albPhotos:"{n} photo{s}",
-  albHintPlein:"{n} photo(s): {r} on the front, {v} on the back. The saved file contains them: send it by WhatsApp or email, it works on its own on any device, even offline.",
+  albHintPlein:"{n} photo(s) — {r} on the front, {v} on the back, {mo} MB. The saved file contains them: send it by WhatsApp or email, it works on its own on any device, even offline.",
+  albAjoutees:"{n} photo(s) added to the {c}.",
+  albIgnorees:"{n} photo(s) could not be read by this device and were left out.",
+  albPlein:"Careful: this device's memory is full, the last ones won't be there when you reopen the page. Save the file to keep them for good.",
   albHintVide:"No photos yet: the cards show plain paper on both sides.",
   albTraitement:"Processing {n} photo(s) for the {c}…",
   albEnregistre:"File “quiz-louis.html” saved. If nothing happens on iPhone, the page opens in a tab: Share → Save to Files.",
-  albTrop:"Too many photos for this device's memory — they stay active for this round, remember to save the file."
 },
 
 vi:{
@@ -2275,11 +2279,13 @@ vi:{
   albAjoutRecto:"Thêm ảnh mặt trước", albAjoutVerso:"Thêm ảnh mặt sau",
   albExport:"⬇︎ Lưu bài trắc nghiệm kèm ảnh", albFermer:"Đóng",
   albVide:"chưa có ảnh nào", albPhotos:"{n} ảnh",
-  albHintPlein:"{n} ảnh: {r} mặt trước, {v} mặt sau. Tệp đã lưu chứa sẵn ảnh: gửi qua WhatsApp hoặc email, tệp chạy độc lập trên mọi máy, kể cả khi không có mạng.",
+  albHintPlein:"{n} ảnh — {r} mặt trước, {v} mặt sau, {mo} MB. Tệp đã lưu chứa sẵn ảnh: gửi qua WhatsApp hoặc email, tệp chạy độc lập trên mọi máy, kể cả khi không có mạng.",
+  albAjoutees:"Đã thêm {n} ảnh vào {c}.",
+  albIgnorees:"{n} ảnh máy này không đọc được nên đã bỏ qua.",
+  albPlein:"Lưu ý: bộ nhớ của máy đã đầy, những ảnh cuối sẽ không còn khi mở lại trang. Hãy lưu tệp để giữ chúng lại.",
   albHintVide:"Chưa có ảnh nào: hai mặt thiệp đều là giấy trơn.",
   albTraitement:"Đang xử lý {n} ảnh cho {c}…",
   albEnregistre:"Đã lưu tệp « quiz-louis.html ». Nếu trên iPhone không thấy gì, trang sẽ mở trong một thẻ mới: Chia sẻ → Lưu vào Tệp.",
-  albTrop:"Quá nhiều ảnh so với bộ nhớ của máy này — ảnh vẫn dùng được cho ván này, nhớ lưu tệp lại."
 }
 
 };
@@ -2343,8 +2349,7 @@ function nouveauTirage(){
   tirage = melange(BANQUE).slice(0, Math.min(NB_CARTES, BANQUE.length));
   tirage.push(FINALE);
   maxScore = tirage.reduce((t,c)=> t + (c.finale ? c.points : Math.max.apply(null, c.a.map(r=>r[1]))), 0);
-  ordreRecto = melange(listeDe('recto').map((_,i)=>i));
-  ordreVerso = melange(listeDe('verso').map((_,i)=>i));
+  majOrdresPhotos();
   index = 0; score = 0; locked = false;
 }
 
@@ -2374,6 +2379,24 @@ function volVers(frac, direct){
   avion.raf = requestAnimationFrame(volPas);
 }
 addEventListener('resize', ()=>{ if(!avion.raf) poseAvion(0, 0); });
+
+/* les deux photos de la carte affichée */
+function posePhotos(){
+  if(!tirage.length) return;
+  const ph = photosPour(index);
+  poseCarte($('#card'),    $('#cardImg'),    ph.av);
+  poseCarte($('#cardDos'), $('#cardDosImg'), ph.ar);
+  $('#peekHint').textContent = (ph.av ? T('photoRef',{r:ph.refAv}) : '') + T('peekRecto');
+  $('#peekDos').textContent  = (ph.ar ? T('photoRef',{r:ph.refAr}) : '') + T('peekVerso');
+}
+/* après un ajout ou une suppression de photo, tout se remet à jour */
+function photosOntChange(){
+  majOrdresPhotos();
+  dejaVues.clear();
+  posePhotos();
+  rafraichirCartesFixes();
+  dessineGrille();
+}
 
 /* les textes de la carte affichée, dans la langue en cours */
 let reponsesAffichees = [];
@@ -2412,9 +2435,7 @@ function majCarteEnCours(){
   const c = tirage[index];
   if(!c) return;
   $('#postmark').textContent = c.finale ? T('derniereCarte') : T('carte', {n:index+1});
-  const ph = photosPour(index);
-  $('#peekHint').textContent = (ph.av ? T('photoRef',{r:ph.refAv}) : '') + T('peekRecto');
-  $('#peekDos').textContent  = (ph.ar ? T('photoRef',{r:ph.refAr}) : '') + T('peekVerso');
+  posePhotos();
 }
 function languePreferee(){
   const n = (navigator.language || 'fr').slice(0,2).toLowerCase();
@@ -2429,25 +2450,27 @@ function show(n){ Object.values(screens).forEach(s=>s.classList.remove('active')
 function buzz(v){ if(navigator.vibrate) try{ navigator.vibrate(v); }catch(e){} }
 
 /* ── photos ──────────────────────────────────────────────────────── */
-/* la liste d'un côté ; si elle est vide, on emprunte celle d'en face */
-function listeDe(cote){
-  const autre = cote === 'recto' ? 'verso' : 'recto';
-  return album[cote].length ? album[cote] : album[autre];
-}
-/* les deux photos de la carte n° i : une par face, jamais la même */
+/* Les deux photos de la carte n° i. Chaque liste ne sert que sa face :
+   ce que tu mets au recto reste au recto, ce que tu mets au verso reste au
+   verso. Une face dont la liste est vide reste en papier uni.          */
 function photosPour(i){
-  const R = listeDe('recto'), V = listeDe('verso');
-  if(!R.length) return {av:null, ar:null, refAv:'', refAr:''};
-  const cAv = album.recto.length ? 'recto' : 'verso';
-  const cAr = album.verso.length ? 'verso' : 'recto';
-  const iAv = ordreRecto[i % ordreRecto.length];
-  let iAr = ordreVerso[i % ordreVerso.length];
-  if(R === V && V.length > 1 && iAr === iAv) iAr = ordreVerso[(i+1) % ordreVerso.length];
+  const iAv = album.recto.length ? ordreRecto[i % ordreRecto.length] : -1;
+  let   iAr = album.verso.length ? ordreVerso[i % ordreVerso.length] : -1;
+  /* si la même photo se trouve dans les deux listes, on décale d'un cran
+     pour ne pas la montrer des deux côtés de la même carte */
+  if(iAv >= 0 && iAr >= 0 && album.recto[iAv] === album.verso[iAr] && album.verso.length > 1)
+    iAr = ordreVerso[(i+1) % ordreVerso.length];
   return {
-    av: R[iAv], ar: V[iAr],
-    refAv: LETTRE[cAv] + (iAv+1),
-    refAr: LETTRE[cAr] + (iAr+1)
+    av: iAv >= 0 ? album.recto[iAv] : null,
+    ar: iAr >= 0 ? album.verso[iAr] : null,
+    refAv: iAv >= 0 ? LETTRE.recto + (iAv+1) : '',
+    refAr: iAr >= 0 ? LETTRE.verso + (iAr+1) : ''
   };
+}
+/* l'ordre de passage des photos, retiré à chaque partie et à chaque ajout */
+function majOrdresPhotos(){
+  ordreRecto = melange(album.recto.map((_,i)=>i));
+  ordreVerso = melange(album.verso.map((_,i)=>i));
 }
 /* on décode les photos de la carte suivante pendant qu'on lit celle-ci,
    pour que le remplacement ne coûte rien au moment du glissement */
@@ -2470,9 +2493,9 @@ function poseCarte(carte, img, src){
 }
 function rafraichirCartesFixes(){
   const toutes = toutesPhotos();
-  const cover = album.cover || album.recto[0] || toutes[0] || null;
+  const cover = album.cover || album.recto[0] || album.verso[0] || null;
   poseCarte($('#introCard'), $('#introCard .card-img'), cover);
-  const souv = album.verso[album.verso.length-1] || toutes[toutes.length-1] || cover;
+  const souv = album.verso[album.verso.length-1] || album.recto[album.recto.length-1] || cover;
   poseCarte($('#resultCard'), $('#resultCard .card-img'), souv);
   $('#introCap').textContent = toutes.length ? T('capPret') : T('capVide');
 }
@@ -2569,13 +2592,9 @@ function afficher(){
   $('#postmark').textContent = c.finale ? T('derniereCarte') : T('carte', {n:index+1});
   $('#qtext').textContent = c.q;
 
-  const ph = photosPour(index);
+  posePhotos();
   precharge(index + 1);                /* la carte suivante est décodée d'avance */
-  poseCarte($('#card'),    $('#cardImg'),    ph.av);
-  poseCarte($('#cardDos'), $('#cardDosImg'), ph.ar);
   remetRecto();
-  $('#peekHint').textContent = (ph.av ? T('photoRef',{r:ph.refAv}) : '') + T('peekRecto');
-  $('#peekDos').textContent  = (ph.ar ? T('photoRef',{r:ph.refAr}) : '') + T('peekVerso');
 
   peutSuivre = false;
   $('#suite').classList.remove('on');
@@ -3026,7 +3045,7 @@ function dessineGrille(){
       x.type = 'button'; x.textContent = '×'; x.title = 'Retirer cette photo';
       x.addEventListener('click', ()=>{
         album[cote].splice(i,1);
-        sauver(); dessineGrille(); rafraichirCartesFixes();
+        sauver(); photosOntChange();
       });
       d.appendChild(n); d.appendChild(x); g.appendChild(d);
     });
@@ -3035,12 +3054,18 @@ function dessineGrille(){
   });
   const total = toutesPhotos().length;
   $('#albumHint').textContent = total
-    ? T('albHintPlein', {n:total, r:album.recto.length, v:album.verso.length})
+    ? T('albHintPlein', {n:total, r:album.recto.length, v:album.verso.length,
+                         mo:poidsAlbum().toFixed(1).replace('.', ',')})
     : T('albHintVide');
 }
+/* renvoie true si l'album a bien été gardé en mémoire de l'appareil */
 function sauver(){
-  try{ localStorage.setItem('carnet-louis', JSON.stringify(album)); }
-  catch(e){ $('#albumHint').textContent = T('albTrop'); }
+  try{ localStorage.setItem('carnet-louis', JSON.stringify(album)); return true; }
+  catch(e){ return false; }
+}
+/* le poids de l'album, en Mo */
+function poidsAlbum(){
+  return toutesPhotos().reduce((t,s)=>t + s.length, 0) / 1048576;
 }
 function reduire(file){
   return new Promise(res=>{
@@ -3048,11 +3073,11 @@ function reduire(file){
     fr.onload = ()=>{
       const im = new Image();
       im.onload = ()=>{
-        const max = 1280, r = Math.min(1, max/Math.max(im.width, im.height));
+        const max = 1100, r = Math.min(1, max/Math.max(im.width, im.height));
         const c = document.createElement('canvas');
         c.width = Math.round(im.width*r); c.height = Math.round(im.height*r);
         c.getContext('2d').drawImage(im,0,0,c.width,c.height);
-        res(c.toDataURL('image/jpeg', .78));
+        res(c.toDataURL('image/jpeg', .70));
       };
       im.onerror = ()=>res(null);
       im.src = fr.result;
@@ -3064,10 +3089,22 @@ function reduire(file){
 COTES.forEach(cote=>{
   $('#pick' + cote[0].toUpperCase() + cote.slice(1)).addEventListener('change', async e=>{
     const fichiers = [...e.target.files];
+    if(!fichiers.length) return;
     $('#albumHint').textContent = T('albTraitement', {n:fichiers.length, c:T(cote === 'recto' ? 'albRecto' : 'albVerso').toLowerCase()});
-    for(const f of fichiers){ const d = await reduire(f); if(d) album[cote].push(d); }
+    let ajoutees = 0, ignorees = 0;
+    for(const f of fichiers){
+      const d = await reduire(f);
+      if(d){ album[cote].push(d); ajoutees++; } else { ignorees++; }
+    }
     e.target.value = '';
-    sauver(); dessineGrille(); rafraichirCartesFixes();
+    const garde = sauver();
+    photosOntChange();
+    /* on dit exactement ce qui s'est passé : combien ajoutées, combien
+       refusées par l'appareil, et si la mémoire n'a pas suivi           */
+    let mot = T('albAjoutees', {n:ajoutees, c:T(cote === 'recto' ? 'albRecto' : 'albVerso').toLowerCase()});
+    if(ignorees) mot += ' ' + T('albIgnorees', {n:ignorees});
+    if(!garde)   mot += ' ' + T('albPlein');
+    $('#albumHint').textContent = mot;
   });
 });
 $('#export').addEventListener('click', ()=>{

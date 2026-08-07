@@ -32,11 +32,20 @@ aucun envoi vers un serveur.
   (`photo R3`, `photo V1`).
 - Les photos vivent dans **deux listes**, *recto* et *verso*, gérées séparément
   dans « Mes photos » : chaque liste a son compteur, son bouton d'ajout et ses
-  vignettes numérotées (R1, R2… / V1, V2…). Chaque carte pioche **une photo au
-  hasard dans chacune** — jamais deux fois la même sur les deux faces. Si une
-  seule liste est remplie, l'autre face y pioche aussi, sans doublon. Les
+  vignettes numérotées (R1, R2… / V1, V2…). **Chaque liste ne sert que sa face** :
+  ce que tu mets au recto reste au recto, ce que tu mets au verso reste au verso,
+  et une face dont la liste est vide reste en papier uni. Chaque carte pioche une
+  photo au hasard dans chaque liste, et si une même photo se trouve dans les deux,
+  elle n'apparaît jamais des deux côtés d'une même carte. Les ajouts et les
+  suppressions sont pris en compte **immédiatement**, même en pleine partie. Les
   carnets enregistrés à l'ancien format (une seule liste) sont répartis
   automatiquement sur les deux faces au chargement.
+- Les photos sont ramenées à 1100 px de côté (~150 Ko chacune) : une trentaine
+  tiennent dans la mémoire d'un téléphone. Le panneau affiche le nombre et le
+  poids, dit combien de photos ont été ajoutées, signale celles que l'appareil
+  n'a pas su lire, et prévient si la mémoire est pleine — dans ce cas les photos
+  restent utilisables pour la partie en cours, mais il faut **enregistrer le
+  fichier** pour les garder.
 - **Correction après chaque réponse** : les bonnes réponses passent en vert,
   les mauvaises en rouge, chacune affiche ses points, la meilleure et celle que
   tu as choisie sont étiquetées. On reste sur la carte jusqu'à ce que tu appuies

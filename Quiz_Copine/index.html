@@ -53,6 +53,15 @@ body{
   padding:max(12px,env(safe-area-inset-top)) var(--pad) max(18px,env(safe-area-inset-bottom));
 }
 .screen{display:none;flex:1;flex-direction:column;animation:in .5s cubic-bezier(.2,.85,.3,1);}
+/* on ne rejoue pas l'entrée de l'écran entre deux cartes : seuls la carte
+   et les réponses glissent, la barre de route et l'avion restent en place */
+#quiz .stage,#quiz .answers,#quiz .suite{
+  transition:opacity .24s ease,transform .24s cubic-bezier(.35,0,.6,1);
+}
+#quiz.sortie .stage,#quiz.sortie .answers,#quiz.sortie .suite{opacity:0;transform:translateX(-22px);}
+#quiz.entree .stage,#quiz.entree .answers,#quiz.entree .suite{
+  opacity:0;transform:translateX(22px);transition:none;
+}
 .screen.active{display:flex;}
 @keyframes in{from{opacity:0;transform:translateY(16px) rotate(.6deg);}to{opacity:1;transform:none;}}
 
@@ -77,10 +86,7 @@ body{
 /* le bloc qui s'incline sous le doigt */
 .relief{position:relative;width:100%;transform-style:preserve-3d;}
 /* le bloc qui se retourne */
-.flip{position:relative;width:100%;transform-style:preserve-3d;
-  transition:transform .78s cubic-bezier(.22,.72,.24,1);}
-.flip.dos{transform:rotateY(180deg);}
-.flip.sansanim{transition:none;}
+.flip{position:relative;width:100%;transform-style:preserve-3d;}
 .flip .card{backface-visibility:hidden;-webkit-backface-visibility:hidden;}
 .flip .face-ar{position:absolute;inset:0;transform:rotateY(180deg);}
 /* au verso il n'y a presque pas de texte : on laisse la photo respirer */
@@ -109,8 +115,19 @@ body{
 .card:active{box-shadow:0 2px 3px rgba(52,40,20,.24),0 6px 12px rgba(52,40,20,.2),0 14px 26px rgba(52,40,20,.22);}
 .card-img{
   position:absolute;inset:-6%;background-size:cover;background-position:center;
-  transform:scale(1.1);transition:transform .45s cubic-bezier(.2,.8,.3,1),filter .45s;
-  filter:saturate(1.04) contrast(1.03);
+  transform:scale(1.1) translate(calc(var(--tx,0px) + var(--fx,0px)),var(--ty,0px));
+  transition:transform .45s cubic-bezier(.2,.8,.3,1),filter .45s;
+  filter:saturate(1.04) contrast(1.03) brightness(var(--lum,1));
+}
+/* pendant le retournement, la photo suit la carte à l'image près */
+.flip.tourne .card-img{transition:none;}
+/* le reflet qui glisse sur le papier glacé */
+.lustre{
+  position:absolute;inset:0;z-index:2;pointer-events:none;opacity:0;mix-blend-mode:screen;
+  background:linear-gradient(102deg,
+    rgba(255,255,255,0) 34%,rgba(255,255,255,.30) 45%,
+    rgba(255,255,255,.62) 50%,rgba(255,255,255,.30) 55%,rgba(255,255,255,0) 66%);
+  transform:translateX(var(--reflet,0%));
 }
 .card-veil{
   position:absolute;inset:0;transition:opacity .4s ease;
@@ -436,7 +453,7 @@ input[type=file]{display:none;}
         <!-- recto : la photo de devant + la question -->
         <article class="card face-av" id="card">
           <div class="card-img" id="cardImg"></div>
-          <div class="card-veil"></div><div class="card-grain"></div>
+          <div class="card-veil"></div><div class="card-grain"></div><div class="lustre"></div>
           <div class="card-body">
             <div class="card-top">
               <span class="postmark" id="postmark">Carte 1</span>
@@ -450,7 +467,7 @@ input[type=file]{display:none;}
         <!-- verso : la deuxième photo -->
         <article class="card face-ar" id="cardDos">
           <div class="card-img" id="cardDosImg"></div>
-          <div class="card-veil"></div><div class="card-grain"></div>
+          <div class="card-veil"></div><div class="card-grain"></div><div class="lustre"></div>
           <div class="card-body">
             <div class="card-top">
               <span class="postmark" id="postmarkDos">Verso</span>
@@ -839,6 +856,7 @@ function nouveauTirage(){
   ordreRecto = melange(listeDe('recto').map((_,i)=>i));
   ordreVerso = melange(listeDe('verso').map((_,i)=>i));
   index = 0; score = 0; locked = false;
+  screens.quiz.classList.remove('sortie','entree');
 }
 
 /* ── l'avion glisse d'une carte à l'autre, en prenant un peu d'altitude ── */
@@ -916,10 +934,8 @@ function rendreVivante(cible, images, auClic){
     raf = null;
     cible.style.transform = 'rotateX('+rx.toFixed(2)+'deg) rotateY('+ry.toFixed(2)+'deg)';
     images.forEach(img=>{
-      img.style.setProperty('--px', px.toFixed(1)+'px');
-      const carte = img.closest('.card');
-      if(!carte || !carte.classList.contains('looking'))
-        img.style.transform = 'scale(1.1) translate('+px.toFixed(1)+'px,'+py.toFixed(1)+'px)';
+      img.style.setProperty('--tx', px.toFixed(1)+'px');
+      img.style.setProperty('--ty', py.toFixed(1)+'px');
     });
   };
   const bouge = e=>{
@@ -940,23 +956,56 @@ function regarderPhoto(carte){
   return ()=>{
     if(!carte.classList.contains('has-photo')) return;
     carte.classList.toggle('looking');
-    if(carte.classList.contains('looking'))
-      carte.querySelector('.card-img').style.transform = 'scale(1)';
     buzz(8);
   };
 }
-/* la carte du quiz : un appui la retourne */
+/* ── la carte du quiz se retourne pour de vrai ────────────────────
+   L'angle est piloté image par image : la carte se soulève vers le
+   lecteur, un reflet glisse sur le papier glacé, la photo s'assombrit
+   en se mettant de profil et se décale légèrement, comme une vraie
+   image sous vernis.                                                  */
+const FLIP = {ms:820, angle:0, dep:0, cible:0, t0:0, raf:null};
+function appliqueFlip(){
+  const f = $('#flip'), a = FLIP.angle;
+  const rad = a*Math.PI/180;
+  const profil = Math.abs(Math.sin(rad));      /* 0 de face, 1 sur la tranche */
+  const sens = Math.cos(rad);                  /* > 0 : c'est le recto qu'on voit */
+  f.style.transform = 'translateZ(' + (profil*34).toFixed(1) + 'px) rotateY(' + a.toFixed(2) + 'deg)';
+  [[$('#card'), sens > 0], [$('#cardDos'), sens <= 0]].forEach(([carte, visible])=>{
+    const img = carte.querySelector('.card-img'), l = carte.querySelector('.lustre');
+    img.style.setProperty('--lum', (1 - profil*.4).toFixed(3));
+    img.style.setProperty('--fx', (Math.sin(rad) * (visible ? 22 : -22)).toFixed(1) + 'px');
+    l.style.opacity = visible ? (profil*.9).toFixed(3) : '0';
+    l.style.setProperty('--reflet', ((a/180)*150 - 75).toFixed(1) + '%');
+  });
+}
+function pasFlip(t){
+  const k = Math.min(1, (t - FLIP.t0)/FLIP.ms);
+  const e = k < .5 ? 4*k*k*k : 1 - Math.pow(-2*k+2, 3)/2;
+  FLIP.angle = FLIP.dep + (FLIP.cible - FLIP.dep)*e;
+  appliqueFlip();
+  if(k < 1){ FLIP.raf = requestAnimationFrame(pasFlip); }
+  else{
+    FLIP.raf = null; FLIP.angle = FLIP.cible;
+    appliqueFlip();
+    $('#flip').classList.remove('tourne');
+  }
+}
 function retourner(){
-  $('#flip').classList.toggle('dos');
+  if(FLIP.raf) return;                          /* un retournement à la fois */
+  FLIP.dep = FLIP.angle;
+  FLIP.cible = FLIP.angle >= 90 ? 0 : 180;
+  FLIP.t0 = performance.now();
+  $('#flip').classList.add('tourne');
+  FLIP.raf = requestAnimationFrame(pasFlip);
   buzz(10);
 }
+function surLeDos(){ return FLIP.angle >= 90; }
 function remetRecto(){
-  const f = $('#flip');
-  if(!f.classList.contains('dos')) return;
-  f.classList.add('sansanim');
-  f.classList.remove('dos');
-  void f.offsetWidth;
-  f.classList.remove('sansanim');
+  if(FLIP.raf){ cancelAnimationFrame(FLIP.raf); FLIP.raf = null; }
+  $('#flip').classList.remove('tourne');
+  FLIP.angle = FLIP.dep = FLIP.cible = 0;
+  appliqueFlip();
 }
 
 /* ── déroulé du quiz ─────────────────────────────────────────────── */
@@ -1037,10 +1086,17 @@ addEventListener('keydown', e=>{
   if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); avance(); }
 });
 function suivant(){
-  index++;
-  if(index >= tirage.length){ terminer(); return; }
-  screens.quiz.classList.remove('active'); void screens.quiz.offsetWidth; screens.quiz.classList.add('active');
-  afficher();
+  if(index + 1 >= tirage.length){ index++; terminer(); return; }
+  const q = screens.quiz;
+  q.classList.add('sortie');
+  setTimeout(()=>{
+    index++;
+    afficher();                      /* la nouvelle carte est posée pendant qu'on ne la voit pas */
+    q.classList.remove('sortie');
+    q.classList.add('entree');
+    void q.offsetWidth;              /* on repart de la droite, sans transition */
+    requestAnimationFrame(()=>q.classList.remove('entree'));
+  }, 250);
 }
 
 /* ── la carte finale : le bouton « Oui » en trois temps ──────────
@@ -1048,8 +1104,9 @@ function suivant(){
              et la pesanteur suit l'inclinaison du téléphone ;
    2e  clic  il devient un palet de hockey : plus de gravité, plus de
              frottement, il rebondit sans jamais s'arrêter ;
-   3e  clic  il est éjecté et sort de l'écran, puis un compte à rebours
-             de 5 secondes s'affiche avec « Non » qui respire.        */
+   3e  clic  il part en ricochet, claque cinq fois contre les côtés,
+             puis file hors de l'écran ; un compte à rebours de
+             5 secondes s'affiche avec « Non » qui respire.           */
 const PHYS = {
   M: 2,            // masse du bouton, en kilogrammes
   PXM: 220,        // combien de pixels valent un mètre à l'écran
@@ -1057,14 +1114,17 @@ const PHYS = {
   KICK: 3.4,       // m/s : la poussée du premier clic
   PALET: 3.9,      // m/s : vitesse constante du palet
   PALET_MIN: 1.7,  // m/s : il finit par ralentir, sinon il est inattrapable
-  EJECT: 13,       // m/s : le départ définitif
+  RICOCHET: 8,     // m/s : la vitesse des cinq claquements sur les côtés
+  N_RICOCHETS: 5,  // combien de fois il tape les bords avant de filer
+  EJECT: 1.7,      // de combien sa vitesse est multipliée pour le départ
   REBOND: 0.45,    // rebond sous gravité (le palet, lui, ne perd rien)
   SOL: 0.55        // freinage quand il glisse au sol
 };
 const oui = {x:0, y:0, vx:0, vy:0, a:0, va:0};
 const gvec = {x:0, y:1};            // direction de la pesanteur, à l'écran
 let physRaf = null, physT = 0, bornes = null;
-let etat = 0;                       // 0 posé · 1 gravité · 2 palet · 3 éjecté
+let etat = 0;      // 0 posé · 1 gravité · 2 palet · 3 ricochets · 4 sortie
+let rebonds = 0;   // les claquements déjà donnés sur les côtés
 let tPalet = 0, compteId = null, ejectT = 0;
 
 function elOui(){ return $('#btnOui'); }
@@ -1139,7 +1199,7 @@ function pas(t){
 
   oui.x += oui.vx*dt; oui.y += oui.vy*dt; oui.a += oui.va*dt;
 
-  if(etat === 3){                                // plus de murs : il s'en va
+  if(etat === 4){                                // plus de murs : il s'en va
     applique();
     const w = bornes.w + 60, h = bornes.h + 60;
     if(oui.x < -w || oui.x > innerWidth + w || oui.y < -h || oui.y > innerHeight + h
@@ -1150,12 +1210,25 @@ function pas(t){
 
   /* rebonds : les limites tiennent compte de l'inclinaison, pour qu'un
      coin ne dépasse jamais de l'écran ni ne recouvre le bouton « Non ». */
-  const l = limites(), r = etat === 2 ? 1 : PHYS.REBOND;
-  let choc = false;
-  if(oui.x < l.minX){ oui.x = l.minX; oui.vx = Math.abs(oui.vx)*r; oui.va -= oui.vy*.012; choc = true; }
-  if(oui.x > l.maxX){ oui.x = l.maxX; oui.vx = -Math.abs(oui.vx)*r; oui.va += oui.vy*.012; choc = true; }
+  const l = limites(), r = (etat === 2 || etat === 3) ? 1 : PHYS.REBOND;
+  let choc = false, cote = false;
+  if(oui.x < l.minX){ oui.x = l.minX; oui.vx = Math.abs(oui.vx)*r; oui.va -= oui.vy*.012; choc = cote = true; }
+  if(oui.x > l.maxX){ oui.x = l.maxX; oui.vx = -Math.abs(oui.vx)*r; oui.va += oui.vy*.012; choc = cote = true; }
   if(oui.y < l.minY){ oui.y = l.minY; oui.vy = Math.abs(oui.vy)*r; oui.va += oui.vx*.012; choc = true; }
   if(oui.y > l.maxY){ oui.y = l.maxY; oui.vy = -Math.abs(oui.vy)*r; oui.va -= oui.vx*.012; choc = true; }
+
+  if(etat === 3){
+    if(cote){
+      rebonds++;
+      buzz(10);
+      if(rebonds >= PHYS.N_RICOCHETS){        /* le dernier claquement l'expédie */
+        etat = 4; ejectT = performance.now();
+        oui.vx *= PHYS.EJECT; oui.vy *= PHYS.EJECT;
+        oui.va = (Math.random() < .5 ? -1 : 1) * 900;
+      }
+    }
+    if(performance.now() - ejectT > 2600){ etat = 4; ejectT = performance.now(); }
+  }
 
   if(etat === 1 && oui.y >= l.maxY - .5){        // il touche le sol
     if(Math.abs(oui.vy) < 70) oui.vy = 0;        // il arrête de sautiller
@@ -1202,15 +1275,15 @@ function palet(px, py){
   oui.va = (Math.random() < .5 ? -1 : 1) * 200;
   reveille();
 }
-/* 3e clic : éjection, il quitte l'écran */
+/* 3e clic : il part en ricochet, cinq claquements sur les côtés, puis dehors */
 function ejecte(px, py){
-  etat = 3; ejectT = performance.now();
+  etat = 3; rebonds = 0; ejectT = performance.now();
   const cx = oui.x + bornes.w/2;
-  const vers = cx < innerWidth/2 ? Math.PI : 0;          // il sort par le côté le plus proche
-  const ang = vers + (Math.random()-.5)*.7 - .35;        // légèrement vers le haut
-  const dv = PHYS.EJECT * PHYS.PXM;
+  const vers = cx < innerWidth/2 ? 0 : Math.PI;          // il file vers le côté le plus loin
+  const ang = vers + (Math.random()-.5)*.28;             // presque à l'horizontale
+  const dv = PHYS.RICOCHET * PHYS.PXM;
   oui.vx = Math.cos(ang) * dv; oui.vy = Math.sin(ang) * dv;
-  oui.va = (Math.random() < .5 ? -1 : 1) * 900;
+  oui.va = (Math.random() < .5 ? -1 : 1) * 640;
   reveille();
 }
 function sortiDeLecran(){
@@ -1244,7 +1317,7 @@ function arreteCompte(){
 
 function prepareFinale(){
   const el = elOui(), t = $('#taunt');
-  etat = 0; tries = 0;
+  etat = 0; rebonds = 0; tries = 0;
   arreteCompte();
   el.hidden = false; el.classList.remove('gone');
   t.classList.remove('show'); t.textContent = '';
@@ -1269,7 +1342,7 @@ elOui().addEventListener('pointerdown', e=>{
   else ejecte(e.clientX, e.clientY);
 });
 addEventListener('resize', ()=>{
-  if(elOui().hidden || etat === 3) return;
+  if(elOui().hidden || etat >= 3) return;
   bornes = calcBornes();
   oui.x = Math.min(Math.max(oui.x, bornes.minX), bornes.maxX);
   oui.y = Math.min(Math.max(oui.y, bornes.minY), bornes.maxY);
@@ -1277,7 +1350,7 @@ addEventListener('resize', ()=>{
 });
 function rangeOui(){
   stopPhys(); arreteCompte();
-  etat = 0;
+  etat = 0; rebonds = 0;
   const el = elOui(); el.hidden = true; el.classList.remove('gone');
 }
 

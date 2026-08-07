@@ -25,7 +25,10 @@ aucun envoi vers un serveur.
 - Chaque question est une **carte postale par avion recto-verso** : une photo au
   recto derrière la question, une **autre photo au verso**. La carte s'incline
   quand on bouge le doigt dessus (relief + ombre portée) et **un appui la
-  retourne** en pivotant sur son axe. Chaque face indique la photo affichée
+  retourne** : l'angle est piloté image par image, la carte se soulève vers
+  l'écran, un reflet glisse sur le papier glacé, la photo s'assombrit en se
+  mettant sur la tranche et se décale dans son cadre comme une image sous
+  vernis. Chaque face indique la photo affichée
   (`photo R3`, `photo V1`).
 - Les photos vivent dans **deux listes**, *recto* et *verso*, gérées séparément
   dans « Mes photos » : chaque liste a son compteur, son bouton d'ajout et ses
@@ -50,7 +53,10 @@ aucun envoi vers un serveur.
      plus de frottement, il rebondit sur les bords **sans jamais s'arrêter**.
      Au bout de dix secondes il ralentit progressivement (jusqu'à 1,7 m/s) pour
      rester attrapable.
-  3. **Troisième appui** : il est **éjecté** et sort de l'écran. Un
+  3. **Troisième appui** : il part en **ricochet** et claque **cinq fois**
+     contre les côtés de l'écran, sans rien perdre de sa vitesse (environ
+     160 ms entre chaque claquement), puis le dernier rebond l'expédie
+     dehors. Un
      **compte à rebours de 5 secondes** s'affiche, le bouton « Non » grossit
      légèrement et se met à respirer. On peut appuyer sur « Non » à tout moment ;
      sinon, à zéro, l'écran devient rouge avec un tampon « NON. » et la réponse
@@ -58,6 +64,10 @@ aucun envoi vers un serveur.
 
   Les réglages sont dans l'objet `PHYS` : masse, pesanteur, poussée du premier
   appui, vitesse du palet, force d'éjection, rebond et freinage au sol.
+- **Passage d'une carte à l'autre** : seules la carte et les réponses glissent
+  et se fondent (250 ms de sortie, 250 ms d'entrée). L'écran entier n'est plus
+  redessiné — avant, l'animation d'entrée rejouait à chaque question et donnait
+  l'impression d'un rechargement de page.
 - L'**avion** de la barre de progression ne saute plus d'une carte à l'autre : il
   glisse en 0,9 s avec une accélération et un freinage progressifs, en prenant un
   peu d'altitude et en s'inclinant dans le sens du vol.

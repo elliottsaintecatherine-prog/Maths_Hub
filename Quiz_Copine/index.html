@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1B0512">
+<title>Es-tu digne de Louis ? — Le test officiel</title>
+<style>
+/* ═══════════════════════════════════════════════════════════
+   PALETTE — un seul monde visuel assumé : "candy noir"
+   ═══════════════════════════════════════════════════════════ */
+:root{
+  --wine:#1B0512;         /* fond profond */
+  --wine-2:#2C0A20;       /* cartes */
+  --wine-3:#3D1230;       /* cartes survolées */
+  --ink:#FFE9F0;          /* texte principal */
+  --ink-soft:#D9A3BC;     /* texte secondaire */
+  --fuchsia:#FF2E7E;      /* accent star */
+  --peach:#FFAE8F;        /* accent doux */
+  --gold:#FFC94D;         /* score / médaille */
+  --rage:#E10600;         /* l'écran de la honte */
+  --line:rgba(255,233,240,.14);
+
+  --font-display:Georgia,'Iowan Old Style','Times New Roman',serif;
+  --font-body:ui-rounded,'SF Pro Rounded','Hiragino Maru Gothic ProN','Segoe UI',system-ui,sans-serif;
+  --font-label:ui-sans-serif,system-ui,'Segoe UI',sans-serif;
+
+  --r:20px;
+  --pad:clamp(18px,5vw,32px);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{-webkit-text-size-adjust:100%;}
+body{
+  font-family:var(--font-body);
+  color:var(--ink);
+  background:var(--wine);
+  background-image:
+    radial-gradient(120% 80% at 80% -10%,rgba(255,46,126,.30),transparent 60%),
+    radial-gradient(90% 70% at 0% 105%,rgba(255,174,143,.18),transparent 60%);
+  background-attachment:fixed;
+  min-height:100svh;
+  overflow-x:hidden;
+  -webkit-tap-highlight-color:transparent;
+}
+
+/* ── Coeurs animés (canvas) ────────────────────────────── */
+#hearts{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:5;opacity:0;transition:opacity .8s ease;}
+#hearts.on{opacity:1;}
+
+/* ── Structure ─────────────────────────────────────────── */
+.app{
+  position:relative;z-index:10;
+  min-height:100svh;
+  display:flex;flex-direction:column;
+  padding:max(16px,env(safe-area-inset-top)) var(--pad) max(24px,env(safe-area-inset-bottom));
+  max-width:620px;margin:0 auto;width:100%;
+}
+.screen{display:none;flex:1;flex-direction:column;animation:enter .45s cubic-bezier(.2,.8,.25,1);}
+.screen.active{display:flex;}
+@keyframes enter{from{opacity:0;transform:translateY(18px) scale(.985);}to{opacity:1;transform:none;}}
+
+/* ── Typo ──────────────────────────────────────────────── */
+.eyebrow{
+  font-family:var(--font-label);font-size:11px;font-weight:700;
+  letter-spacing:.18em;text-transform:uppercase;color:var(--fuchsia);
+}
+h1{
+  font-family:var(--font-display);font-style:italic;font-weight:400;
+  font-size:clamp(38px,12vw,62px);line-height:.98;letter-spacing:-.02em;
+  text-wrap:balance;
+}
+h1 em{font-style:normal;color:var(--fuchsia);}
+.lede{font-size:clamp(15px,4vw,17px);line-height:1.55;color:var(--ink-soft);max-width:34ch;}
+
+/* ── Écran d'intro ─────────────────────────────────────── */
+#intro{justify-content:center;gap:22px;padding:24px 0;}
+.seal{
+  width:74px;height:74px;border-radius:50%;
+  display:grid;place-items:center;font-size:32px;
+  background:radial-gradient(circle at 30% 25%,#FF7AA8,var(--fuchsia) 60%,#B8004E);
+  box-shadow:0 12px 34px rgba(255,46,126,.45);
+  animation:beat 1.9s ease-in-out infinite;
+}
+@keyframes beat{0%,100%{transform:scale(1);}12%{transform:scale(1.12);}24%{transform:scale(1);}36%{transform:scale(1.08);}}
+.rules{
+  display:flex;flex-direction:column;gap:10px;
+  border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  padding:16px 0;font-size:14px;color:var(--ink-soft);
+}
+.rules div{display:flex;gap:10px;align-items:baseline;}
+.rules b{color:var(--ink);font-weight:600;}
+.rules span:first-child{color:var(--fuchsia);}
+
+/* ── Boutons ───────────────────────────────────────────── */
+.cta{
+  font-family:var(--font-body);font-size:17px;font-weight:700;
+  color:#2C0014;background:linear-gradient(180deg,#FF6FA3,var(--fuchsia));
+  border:none;border-radius:999px;padding:18px 26px;width:100%;
+  cursor:pointer;box-shadow:0 10px 26px rgba(255,46,126,.35);
+  transition:transform .15s ease,box-shadow .15s ease;
+}
+.cta:active{transform:translateY(2px) scale(.99);box-shadow:0 6px 16px rgba(255,46,126,.3);}
+.ghost{
+  font-family:var(--font-body);font-size:14px;font-weight:600;
+  background:rgba(27,5,18,.72);color:var(--ink-soft);border:1px solid var(--line);
+  border-radius:999px;padding:13px 20px;cursor:pointer;transition:color .15s,border-color .15s;
+}
+.ghost:active{color:var(--ink);border-color:var(--fuchsia);}
+:focus-visible{outline:3px solid var(--peach);outline-offset:3px;}
+
+/* ── En-tête de quiz : progression en coeurs ───────────── */
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 0 20px;}
+.pips{display:flex;gap:5px;flex-wrap:wrap;}
+.pip{width:11px;height:11px;color:rgba(255,233,240,.22);transition:color .35s ease,transform .35s ease;}
+.pip.done{color:var(--fuchsia);}
+.pip.now{color:var(--peach);transform:scale(1.35);}
+.counter{font-family:var(--font-label);font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--ink-soft);font-variant-numeric:tabular-nums;white-space:nowrap;}
+
+/* ── Photo (cadre polaroid incliné) ────────────────────── */
+.photo{
+  align-self:center;margin-bottom:22px;
+  background:#FFF4F8;padding:9px 9px 34px;border-radius:6px;
+  box-shadow:0 18px 40px rgba(0,0,0,.45);
+  transform:rotate(-2.2deg);
+  max-width:min(100%,300px);
+}
+.photo:nth-of-type(even){transform:rotate(1.8deg);}
+.photo img{display:block;width:100%;height:auto;max-height:min(26svh,300px);object-fit:contain;border-radius:2px;background:#F0D8E2;}
+.photo figcaption{
+  font-family:var(--font-display);font-style:italic;font-size:13px;color:#8A5570;
+  text-align:center;padding-top:9px;
+}
+.photo.empty{
+  background:transparent;border:1.5px dashed rgba(255,233,240,.28);
+  padding:22px 18px;box-shadow:none;text-align:center;border-radius:14px;
+}
+.photo.empty .ph-heart{font-size:26px;display:block;margin-bottom:6px;opacity:.85;}
+.photo.empty code{
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;
+  color:var(--peach);background:rgba(255,174,143,.12);padding:2px 7px;border-radius:6px;
+}
+.photo.empty p{font-size:12px;color:var(--ink-soft);margin-top:6px;}
+
+/* ── Question ──────────────────────────────────────────── */
+.qtext{
+  font-family:var(--font-display);font-style:italic;font-weight:400;
+  font-size:clamp(24px,7vw,34px);line-height:1.15;letter-spacing:-.01em;
+  text-wrap:balance;margin-bottom:24px;
+}
+.qbody{flex:1;display:flex;flex-direction:column;justify-content:flex-end;min-height:0;padding-bottom:clamp(14px,5vh,44px);}
+.answers{display:flex;flex-direction:column;gap:11px;padding-bottom:6px;}
+.answers[hidden],.arena[hidden],.photo[hidden]{display:none;}
+.ans{
+  font-family:var(--font-body);font-size:16px;line-height:1.35;font-weight:500;
+  text-align:left;color:var(--ink);background:var(--wine-2);
+  border:1px solid var(--line);border-radius:var(--r);
+  padding:17px 18px 17px 46px;position:relative;cursor:pointer;
+  min-height:58px;width:100%;
+  transition:background .18s,border-color .18s,transform .12s;
+}
+.ans::before{
+  content:"";position:absolute;left:17px;top:50%;transform:translateY(-50%);
+  width:13px;height:13px;border-radius:50%;
+  border:1.5px solid rgba(255,233,240,.35);transition:all .18s;
+}
+.ans:active{transform:scale(.985);background:var(--wine-3);}
+.ans.picked{background:var(--wine-3);border-color:var(--fuchsia);}
+.ans.picked::before{background:var(--fuchsia);border-color:var(--fuchsia);box-shadow:0 0 0 4px rgba(255,46,126,.22);}
+
+/* ── La finale : le bouton fuyard ──────────────────────── */
+.arena{position:relative;min-height:min(240px,30svh);margin-top:auto;}
+.taunt{
+  font-family:var(--font-display);font-style:italic;font-size:15px;color:var(--peach);
+  text-align:center;min-height:22px;margin-bottom:10px;opacity:0;transition:opacity .25s;
+}
+.taunt.show{opacity:1;}
+#btnOui{
+  position:absolute;width:min(46%,170px);
+  background:var(--wine-2);border:1px solid var(--line);border-radius:999px;
+  color:var(--ink);font-family:var(--font-body);font-size:17px;font-weight:700;
+  padding:17px 10px;cursor:pointer;text-align:center;
+  transition:left .32s cubic-bezier(.34,1.56,.64,1),top .32s cubic-bezier(.34,1.56,.64,1),opacity .3s,transform .3s;
+  touch-action:manipulation;
+}
+#btnOui.gone{opacity:0;transform:scale(.4) rotate(20deg);pointer-events:none;}
+#btnNon{
+  position:absolute;left:50%;bottom:0;transform:translateX(-50%);
+  width:min(70%,260px);
+  background:linear-gradient(180deg,#FF6FA3,var(--fuchsia));color:#2C0014;
+  border:none;border-radius:999px;font-family:var(--font-body);font-size:17px;font-weight:700;
+  padding:18px 10px;cursor:pointer;box-shadow:0 10px 26px rgba(255,46,126,.35);
+}
+#btnNon:active{transform:translateX(-50%) translateY(2px);}
+#btnNon.auto{animation:slam .5s ease;}
+@keyframes slam{0%{transform:translateX(-50%) scale(1);}40%{transform:translateX(-50%) scale(1.18);}100%{transform:translateX(-50%) scale(1);}}
+
+/* ── L'écran rouge de la honte ─────────────────────────── */
+#rage{
+  position:fixed;inset:0;z-index:80;display:none;
+  place-items:center;background:var(--rage);
+  background-image:radial-gradient(circle at 50% 40%,#FF3B34,#9E0400 70%);
+}
+#rage.on{display:grid;animation:flood .28s ease-out;}
+@keyframes flood{from{opacity:0;transform:scale(1.15);}to{opacity:1;transform:none;}}
+.stamp{text-align:center;padding:20px;animation:shake .45s cubic-bezier(.36,.07,.19,.97) 2;}
+.stamp b{
+  display:block;font-family:var(--font-display);font-weight:700;
+  font-size:clamp(64px,26vw,150px);line-height:.85;color:#fff;letter-spacing:-.04em;
+}
+.stamp small{
+  display:block;margin-top:16px;font-family:var(--font-label);font-size:13px;font-weight:700;
+  letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.85);
+}
+@keyframes shake{10%,90%{transform:translateX(-3px) rotate(-1deg);}20%,80%{transform:translateX(6px) rotate(1.5deg);}30%,50%,70%{transform:translateX(-10px) rotate(-2deg);}40%,60%{transform:translateX(10px) rotate(2deg);}}
+
+/* ── Écran du score ────────────────────────────────────── */
+#result{justify-content:center;text-align:center;gap:18px;padding:24px 0;align-items:center;}
+#result .photo{max-width:min(100%,215px);}
+#result .photo img{max-height:min(24svh,230px);}
+.score{
+  font-family:var(--font-display);font-weight:700;font-variant-numeric:tabular-nums;
+  font-size:clamp(84px,30vw,150px);line-height:.85;letter-spacing:-.05em;
+  color:var(--gold);text-shadow:0 0 44px rgba(255,201,77,.35);
+}
+.score sub{font-size:.24em;color:var(--ink-soft);font-weight:400;vertical-align:baseline;letter-spacing:0;}
+.verdict{font-family:var(--font-display);font-style:italic;font-size:clamp(26px,8vw,38px);line-height:1.1;text-wrap:balance;}
+.verdict-sub{font-size:15px;line-height:1.6;color:var(--ink-soft);max-width:32ch;}
+.note{
+  border:1px solid var(--line);border-radius:var(--r);background:rgba(44,10,32,.75);
+  backdrop-filter:blur(6px);padding:18px 20px;font-size:14px;line-height:1.6;color:var(--ink-soft);
+  max-width:38ch;
+}
+.note b{color:var(--fuchsia);font-weight:700;}
+.result-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:4px;}
+
+/* Petits écrans (iPhone SE, vieux Android) : on resserre tout */
+@media (max-height:720px){
+  .qtext{font-size:clamp(20px,5.6vw,26px);margin-bottom:16px;}
+  .photo{margin-bottom:14px;padding:7px 7px 26px;}
+  .photo img{max-height:21svh;}
+  .photo figcaption{font-size:12px;padding-top:6px;}
+  .ans{padding:14px 16px 14px 44px;min-height:52px;font-size:15px;}
+  .topbar{padding:4px 0 12px;}
+  h1{font-size:clamp(32px,10vw,44px);}
+  .rules{gap:7px;padding:12px 0;font-size:13px;}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;}
+}
+</style>
+</head>
+<body>
+
+<canvas id="hearts"></canvas>
+
+<div class="app">
+
+  <!-- ═══ INTRO ═══ -->
+  <section class="screen active" id="intro">
+    <div class="seal">💘</div>
+    <p class="eyebrow">Comité familial · Dossier confidentiel</p>
+    <h1>Es-tu digne d'être la copine de <em>Louis</em> ?</h1>
+    <p class="lede">Dix questions. Aucune deuxième chance. Je suis sa cousine préférée, c'est moi qui valide.</p>
+    <figure class="photo" data-photo="intro" data-caption="Le concerné."></figure>
+    <div class="rules">
+      <div><span>❤</span><span><b>10 questions</b> — chacune vaut jusqu'à 10 points.</span></div>
+      <div><span>❤</span><span><b>Pas de retour en arrière.</b> Réponds avec le cœur.</span></div>
+      <div><span>❤</span><span><b>La dernière question</b> décide de tout.</span></div>
+    </div>
+    <button class="cta" id="start">Commencer le test</button>
+  </section>
+
+  <!-- ═══ QUIZ ═══ -->
+  <section class="screen" id="quiz">
+    <div class="topbar">
+      <div class="pips" id="pips"></div>
+      <div class="counter" id="counter">01 / 10</div>
+    </div>
+    <div class="qbody">
+      <figure class="photo" id="qphoto"></figure>
+      <h2 class="qtext" id="qtext"></h2>
+    </div>
+
+    <div class="answers" id="answers"></div>
+
+    <div class="arena" id="arena" hidden>
+      <p class="taunt" id="taunt"></p>
+      <button id="btnOui">Oui</button>
+      <button id="btnNon">Non</button>
+    </div>
+  </section>
+
+  <!-- ═══ SCORE ═══ -->
+  <section class="screen" id="result">
+    <p class="eyebrow">Verdict du comité</p>
+    <div class="score"><span id="scoreNum">0</span><sub>/100</sub></div>
+    <h2 class="verdict" id="verdict"></h2>
+    <p class="verdict-sub" id="verdictSub"></p>
+    <figure class="photo" data-photo="result" data-caption="Pour toujours."></figure>
+    <p class="note">Et surtout : tu as reconnu, de ton plein gré, que <b>ma place dans son cœur est intouchable</b>. C'est noté. C'est signé. ❤️</p>
+    <div class="result-actions">
+      <button class="ghost" id="again">Refaire le test</button>
+      <button class="ghost" id="share">Copier le lien</button>
+    </div>
+  </section>
+
+</div>
+
+<!-- ═══ ÉCRAN ROUGE ═══ -->
+<div id="rage" aria-hidden="true">
+  <div class="stamp">
+    <b>NON.</b>
+    <small>Réponse enregistrée à ta place</small>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   ⚙️  TOUT CE QUI SE MODIFIE FACILEMENT EST ICI
+
+   📸 LES PHOTOS
+   Dépose tes images dans le dossier « photos » à côté de ce fichier,
+   puis écris leur nom ci-dessous. Si une photo n'existe pas encore,
+   le quiz affiche juste un joli cadre vide — rien ne casse.
+
+   ✍️  LES QUESTIONS
+   Modifie le texte, les réponses et les points (0 à 10) dans la liste
+   QUESTIONS. Tu peux en ajouter ou en enlever : le score se recalcule
+   tout seul sur 100.
+   ═══════════════════════════════════════════════════════════════════ */
+
+const PHOTOS = {
+  intro : 'photos/louis.jpg',   // photo de Louis sur l'accueil
+  result: 'photos/nous.jpg',    // photo sur l'écran du score
+  final : 'photos/louis-moi.jpg' // photo de la dernière question
+};
+
+const QUESTIONS = [
+  {
+    q:"Il est 23h04, un mardi. Louis t'écrit : « t'es réveillée ? »",
+    photo:null,
+    a:[
+      ["Je l'appelle direct, on verra demain pour dormir.",10],
+      ["Je réponds « oui » et j'attends la suite.",6],
+      ["Je réponds demain matin, faut qu'il mérite.",1],
+      ["Je dors. Sacré sommeil.",4]
+    ]
+  },
+  {
+    q:"Il raconte pour la quatrième fois exactement la même anecdote.",
+    photo:null,
+    a:[
+      ["Je réécoute et je ris pareil que la première fois.",10],
+      ["Je la finis à sa place, en mieux.",7],
+      ["« Louis. Tu me l'as déjà racontée. »",3],
+      ["Je hoche la tête en scrollant.",0]
+    ]
+  },
+  {
+    q:"Grand repas de famille chez nous. Tu débarques…",
+    photo:null,
+    a:[
+      ["en avance, avec un dessert fait maison.",10],
+      ["pile à l'heure, les mains vides mais le sourire.",5],
+      ["avec 25 minutes de retard et une très bonne excuse.",2],
+      ["collée à lui, tu ne parles à personne d'autre.",1]
+    ]
+  },
+  {
+    q:"Le vrai test : qui doit absolument te valider ?",
+    photo:null,
+    a:[
+      ["Moi. Évidemment.",10],
+      ["Sa mère.",5],
+      ["Ses potes.",2],
+      ["Personne, on est en 2026.",0]
+    ]
+  },
+  {
+    q:"Louis se plante complètement devant tout le monde.",
+    photo:null,
+    a:[
+      ["Je change de sujet en deux secondes et je le sors de là.",10],
+      ["Je fais comme si je n'avais rien vu.",5],
+      ["Je ris avec les autres, il a l'habitude.",2],
+      ["Je filme. Ça fera une story.",0]
+    ]
+  },
+  {
+    q:"Il te fait écouter SA musique dans la voiture.",
+    photo:null,
+    a:[
+      ["J'apprends les paroles pour la prochaine fois.",10],
+      ["Je râle, mais je connais déjà tout par cœur.",7],
+      ["Je vole l'aux au deuxième feu rouge.",3],
+      ["Écouteurs. Silence. Paix.",0]
+    ]
+  },
+  {
+    q:"Anniversaire de Louis. Ton cadeau :",
+    photo:null,
+    a:[
+      ["un truc qu'il a mentionné une seule fois, il y a huit mois.",10],
+      ["un week-end quelque part, tous les deux.",8],
+      ["une carte cadeau, au moins il choisit.",3],
+      ["« ma présence ».",1]
+    ]
+  },
+  {
+    q:"Il t'envoie : « faut qu'on parle ».",
+    photo:null,
+    a:[
+      ["Je l'appelle tout de suite.",10],
+      ["« ok, de quoi ? » et j'attends tranquillement.",8],
+      ["Je panique en silence pendant quatre heures.",5],
+      ["Je réponds « ok » et je prépare mes valises.",2]
+    ]
+  },
+  {
+    q:"Combien de temps tu tiens sans lui parler ?",
+    photo:null,
+    a:[
+      ["La question ne se pose même pas.",10],
+      ["Deux jours, grand maximum.",8],
+      ["Trois heures et je craque.",6],
+      ["Dix jours. Je suis très indépendante.",4]
+    ]
+  },
+  {
+    /* 🔒 LA DERNIÈRE QUESTION — ne change pas « type » : c'est elle
+       qui déclenche le bouton fuyard et l'écran rouge. */
+    type:"finale",
+    q:"Dernière question. La vraie. Penses-tu être meilleure que moi pour prendre ma place dans le cœur de Louis ?",
+    photo:PHOTOS.final,
+    points:10
+  }
+];
+
+/* Les petites piques quand elle essaie de cliquer sur « Oui » */
+const TAUNTS = [
+  "Essaie encore, pour voir.",
+  "Deuxième tentative. Courageuse.",
+  "Troisième. Tu l'auras cherché."
+];
+
+/* Les verdicts (seuil = score minimum en %) */
+const VERDICTS = [
+  [88,"Validée. Officiellement.","Je te la confie. Prends-en soin, je vérifie tous les dimanches."],
+  [70,"Dossier accepté sous conditions.","C'est très bien. Pas parfait. On surveille, mais avec bienveillance."],
+  [50,"Période d'essai.","Il y a du potentiel. Il y a aussi beaucoup de travail. On y croit."],
+  [0 ,"Le comité demande un second entretien.","Refusée pour l'instant. Mais entre nous : Louis fera ce qu'il veut, il fait toujours ce qu'il veut."]
+];
+
+/* ═══════════════════════════════════════════════════════════════════
+   Le moteur du quiz — pas besoin d'y toucher
+   ═══════════════════════════════════════════════════════════════════ */
+
+const $ = s => document.querySelector(s);
+const screens = {intro:$('#intro'), quiz:$('#quiz'), result:$('#result')};
+const MAX = QUESTIONS.reduce((t,q)=>t + (q.type==="finale" ? (q.points||10) : Math.max(...q.a.map(a=>a[1]))),0);
+
+let index = 0, score = 0, tries = 0, locked = false;
+
+const HEART_SVG = '<svg class="pip" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-8.5-5.3-8.5-11A4.7 4.7 0 0 1 12 7.2 4.7 4.7 0 0 1 20.5 10c0 5.7-8.5 11-8.5 11z"/></svg>';
+
+function show(name){
+  Object.values(screens).forEach(s=>s.classList.remove('active'));
+  screens[name].classList.add('active');
+  window.scrollTo(0,0);
+}
+
+/* Affiche une photo, ou un cadre « à remplir » si le fichier manque */
+function photo(fig, src, caption){
+  if(!fig) return;
+  if(!src){ fig.hidden = true; return; }
+  fig.hidden = false;
+  const img = new Image();
+  img.alt = caption || 'photo';
+  img.onload = ()=>{
+    fig.className = 'photo';
+    fig.innerHTML = '';
+    fig.appendChild(img);
+    if(caption){ const c = document.createElement('figcaption'); c.textContent = caption; fig.appendChild(c); }
+  };
+  img.onerror = ()=>{
+    fig.className = 'photo empty';
+    fig.innerHTML = '<span class="ph-heart">🖼️</span><code>'+src+'</code><p>Dépose l\'image ici et elle apparaîtra.</p>';
+  };
+  img.src = src;
+}
+
+function buildPips(){
+  $('#pips').innerHTML = QUESTIONS.map(()=>HEART_SVG).join('');
+}
+function paintPips(){
+  [...$('#pips').children].forEach((p,i)=>{
+    p.classList.toggle('done', i < index);
+    p.classList.toggle('now',  i === index);
+  });
+  $('#counter').textContent = String(index+1).padStart(2,'0') + ' / ' + String(QUESTIONS.length).padStart(2,'0');
+}
+
+function render(){
+  const q = QUESTIONS[index];
+  locked = false;
+  paintPips();
+  $('#qtext').textContent = q.q;
+  photo($('#qphoto'), q.photo, null);
+
+  if(q.type === 'finale'){
+    $('#answers').hidden = true;
+    $('#answers').innerHTML = '';
+    $('#arena').hidden = false;
+    setupFinale();
+  }else{
+    $('#arena').hidden = true;
+    $('#answers').hidden = false;
+    $('#answers').innerHTML = '';
+    q.a.forEach(([label,pts])=>{
+      const b = document.createElement('button');
+      b.className = 'ans';
+      b.type = 'button';
+      b.textContent = label;
+      b.addEventListener('click', ()=>{
+        if(locked) return;
+        locked = true;
+        b.classList.add('picked');
+        score += pts;
+        buzz(12);
+        setTimeout(next, 320);
+      });
+      $('#answers').appendChild(b);
+    });
+  }
+}
+
+function next(){
+  index++;
+  if(index >= QUESTIONS.length){ finish(); return; }
+  screens.quiz.classList.remove('active');
+  void screens.quiz.offsetWidth;      // relance l'animation d'entrée
+  screens.quiz.classList.add('active');
+  render();
+}
+
+function buzz(ms){ if(navigator.vibrate) try{ navigator.vibrate(ms); }catch(e){} }
+
+/* ── La dernière question : le bouton qui s'enfuit ─────────────── */
+function setupFinale(){
+  tries = 0;
+  const oui = $('#btnOui'), arena = $('#arena'), taunt = $('#taunt');
+  oui.classList.remove('gone');
+  taunt.classList.remove('show');
+  taunt.textContent = '';
+  requestAnimationFrame(()=>place(oui, arena, true));
+}
+
+function place(oui, arena, first){
+  const aw = arena.clientWidth, ah = arena.clientHeight;
+  const bw = oui.offsetWidth || 160, bh = oui.offsetHeight || 56;
+  if(first){
+    oui.style.left = Math.round((aw - bw)/2) + 'px';
+    oui.style.top  = '40px';
+    return;
+  }
+  const maxX = Math.max(0, aw - bw), maxY = Math.max(0, ah - bh - 80);
+  let x, y, tries2 = 0;
+  const cx = parseFloat(oui.style.left) || 0, cy = parseFloat(oui.style.top) || 0;
+  do{
+    x = Math.random()*maxX; y = Math.random()*maxY; tries2++;
+  }while(tries2 < 12 && Math.hypot(x-cx, y-cy) < Math.min(maxX,maxY)*0.55);
+  oui.style.left = Math.round(x)+'px';
+  oui.style.top  = Math.round(y)+'px';
+}
+
+$('#btnOui').addEventListener('pointerdown', e=>{
+  e.preventDefault();
+  if(locked) return;
+  const oui = $('#btnOui'), arena = $('#arena'), taunt = $('#taunt');
+  tries++;
+  buzz(25);
+
+  if(tries >= 3){
+    oui.classList.add('gone');
+    taunt.textContent = TAUNTS[2];
+    taunt.classList.add('show');
+    rageQuit();
+    return;
+  }
+  taunt.textContent = TAUNTS[tries-1];
+  taunt.classList.add('show');
+  place(oui, arena, false);
+});
+
+$('#btnNon').addEventListener('click', ()=>{
+  if(locked) return;
+  locked = true;
+  score += QUESTIONS[QUESTIONS.length-1].points || 10;
+  buzz(15);
+  setTimeout(finish, 260);
+});
+
+/* L'écran rouge, puis « Non » appuyé automatiquement */
+function rageQuit(){
+  locked = true;
+  const rage = $('#rage');
+  rage.classList.add('on');
+  buzz([60,40,60,40,140]);
+  setTimeout(()=>{
+    $('#btnNon').classList.add('auto');
+  }, 900);
+  setTimeout(()=>{
+    score += QUESTIONS[QUESTIONS.length-1].points || 10;
+    rage.classList.remove('on');
+    finish();
+  }, 1900);
+}
+
+/* ── Le score ──────────────────────────────────────────────────── */
+function finish(){
+  const pct = Math.round(score / MAX * 100);
+  const [,title,sub] = VERDICTS.find(v => pct >= v[0]);
+  $('#verdict').textContent = title;
+  $('#verdictSub').textContent = sub;
+  show('result');
+  countTo(pct);
+  hearts.start();
+}
+
+function countTo(target){
+  const el = $('#scoreNum'), t0 = performance.now(), dur = 1400;
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduce){ el.textContent = target; return; }
+  (function tick(now){
+    const p = Math.min(1,(now-t0)/dur);
+    el.textContent = Math.round(target * (1 - Math.pow(1-p,3)));
+    if(p < 1) requestAnimationFrame(tick);
+  })(t0);
+}
+
+/* ── Pluie de cœurs (canvas) ───────────────────────────────────── */
+const hearts = (()=>{
+  const cv = $('#hearts'), ctx = cv.getContext('2d');
+  let parts = [], raf = null, w = 0, h = 0;
+  const COLORS = ['#FF2E7E','#FFAE8F','#FFC94D','#FF7AA8','#FFE9F0'];
+
+  function size(){
+    const d = Math.min(devicePixelRatio||1, 2);
+    w = cv.width  = innerWidth  * d;
+    h = cv.height = innerHeight * d;
+    ctx.setTransform(d,0,0,d,0,0);
+  }
+  function heart(x,y,s,rot,color,alpha){
+    ctx.save(); ctx.translate(x,y); ctx.rotate(rot); ctx.scale(s,s);
+    ctx.globalAlpha = alpha; ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(0,3);
+    ctx.bezierCurveTo(-5,-2,-5,-8,0,-5);
+    ctx.bezierCurveTo(5,-8,5,-2,0,3);
+    ctx.closePath(); ctx.fill(); ctx.restore();
+  }
+  function spawn(initial){
+    return {
+      x: Math.random()*innerWidth,
+      y: initial ? Math.random()*innerHeight*1.15 : innerHeight + 30 + Math.random()*innerHeight*0.5,
+      s: 1.4 + Math.random()*3.2,
+      v: .35 + Math.random()*1.05,
+      sway: Math.random()*Math.PI*2,
+      swaySpeed: .008 + Math.random()*.02,
+      rot: (Math.random()-.5)*.7,
+      spin: (Math.random()-.5)*.012,
+      color: COLORS[(Math.random()*COLORS.length)|0],
+      alpha: .28 + Math.random()*.48
+    };
+  }
+  function frame(){
+    ctx.clearRect(0,0,innerWidth,innerHeight);
+    parts.forEach(p=>{
+      p.y -= p.v; p.sway += p.swaySpeed; p.rot += p.spin;
+      const x = p.x + Math.sin(p.sway)*22;
+      heart(x, p.y, p.s, p.rot, p.color, p.alpha);
+      if(p.y < -50) Object.assign(p, spawn(false));
+    });
+    raf = requestAnimationFrame(frame);
+  }
+  addEventListener('resize', ()=>{ size(); });
+
+  return {
+    start(){
+      size();
+      cv.classList.add('on');
+      const n = innerWidth < 480 ? 46 : 75;
+      parts = Array.from({length:n}, ()=>spawn(true));
+      if(matchMedia('(prefers-reduced-motion: reduce)').matches){
+        parts.forEach(p=>{ p.y = Math.random()*innerHeight; heart(p.x,p.y,p.s,p.rot,p.color,p.alpha); });
+        return;
+      }
+      if(!raf) frame();
+    },
+    stop(){
+      cv.classList.remove('on');
+      if(raf){ cancelAnimationFrame(raf); raf = null; }
+      ctx.clearRect(0,0,innerWidth,innerHeight);
+    }
+  };
+})();
+
+/* ── Boutons d'écran ───────────────────────────────────────────── */
+$('#start').addEventListener('click', ()=>{ index = 0; score = 0; show('quiz'); render(); });
+$('#again').addEventListener('click', ()=>{
+  hearts.stop(); index = 0; score = 0; locked = false;
+  $('#scoreNum').textContent = '0';
+  show('intro');
+});
+$('#share').addEventListener('click', async e=>{
+  const url = location.href;
+  try{
+    if(navigator.share){ await navigator.share({title:"Es-tu digne de Louis ?", url}); }
+    else{ await navigator.clipboard.writeText(url); e.target.textContent = "Lien copié ❤"; setTimeout(()=>e.target.textContent="Copier le lien",1800); }
+  }catch(err){ /* partage annulé : rien à faire */ }
+});
+
+/* ── Démarrage ─────────────────────────────────────────────────── */
+buildPips();
+photo(document.querySelector('[data-photo="intro"]'), PHOTOS.intro, "Le concerné.");
+photo(document.querySelector('[data-photo="result"]'), PHOTOS.result, "Pour toujours.");
+</script>
+</body>
+</html>

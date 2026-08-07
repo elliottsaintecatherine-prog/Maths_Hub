@@ -25,14 +25,31 @@ aucun envoi vers un serveur.
 - Chaque question est une **carte postale par avion** : la photo est au dos, la
   carte s'incline quand on bouge le doigt dessus (relief + ombre portée), et on
   **appuie dessus pour voir la photo en entier**.
-- **Dernière carte** : le bouton « Oui » ne se téléporte pas, il est *lancé*.
-  Chaque tentative lui donne une impulsion et il traverse l'écran en glissant,
-  en tournant, en rebondissant sur les bords, puis il ralentit et s'arrête —
-  masse 2 kg, frottement visqueux, rebonds amortis (les réglages sont dans
-  l'objet `PHYS` : masse, impulsion, frottement, rebond). Un petit compteur
-  affiche sa vitesse en temps réel. À la troisième tentative il part pour de
-  bon, l'écran devient rouge avec un tampon « NON. », la réponse « Non » est
-  validée automatiquement, puis on passe au score.
+- **Correction après chaque réponse** : les bonnes réponses passent en vert,
+  les mauvaises en rouge, chacune affiche ses points, la meilleure et celle que
+  tu as choisie sont étiquetées. On reste sur la carte jusqu'à ce que tu appuies
+  sur **Continuer**, n'importe où sur l'écran, ou sur Entrée. Le seuil est réglable
+  avec `SEUIL_BON` (7 points sur 10 par défaut).
+- **Dernière carte** : le bouton « Oui » ne se téléporte pas, il est un objet
+  physique de 2 kg qui réagit en trois temps.
+  1. **Premier appui** : il décroche et **tombe**, avec la vraie pesanteur
+     (9,81 m/s²). Sur téléphone la pesanteur suit l'**inclinaison de l'appareil** :
+     penche l'écran et il glisse, il rebondit un peu, puis se pose à plat.
+     iOS demande l'autorisation d'accéder aux capteurs à ce moment-là ; si elle
+     est refusée, il tombe simplement vers le bas.
+  2. **Deuxième appui** : il devient un **palet de hockey** — plus de pesanteur,
+     plus de frottement, il rebondit sur les bords **sans jamais s'arrêter**.
+     Au bout de dix secondes il ralentit progressivement (jusqu'à 1,7 m/s) pour
+     rester attrapable.
+  3. **Troisième appui** : il est **éjecté** et sort de l'écran. Un
+     **compte à rebours de 5 secondes** s'affiche, le bouton « Non » grossit
+     légèrement et se met à respirer. On peut appuyer sur « Non » à tout moment ;
+     sinon, à zéro, l'écran devient rouge avec un tampon « NON. » et la réponse
+     est validée toute seule.
+
+  Les réglages sont dans l'objet `PHYS` : masse, pesanteur, poussée du premier
+  appui, vitesse du palet, force d'éjection, rebond et freinage au sol. Un petit
+  compteur affiche l'état et la vitesse en direct.
 - Écran **Souvenir** : score sur 100, verdict tamponné, pluie de cœurs.
 
 ## Modifier les questions

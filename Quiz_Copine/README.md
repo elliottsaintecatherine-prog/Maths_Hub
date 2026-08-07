@@ -28,7 +28,9 @@ aucun envoi vers un serveur.
   retourne** : l'angle est piloté image par image, la carte se soulève vers
   l'écran, un reflet glisse sur le papier glacé, la photo s'assombrit en se
   mettant sur la tranche et se décale dans son cadre comme une image sous
-  vernis. Chaque face indique la photo affichée
+  vernis. **Un appui maintenu** (une demi-seconde) affiche la photo visible
+  **en entier**, sans rognage, sur fond sombre ; elle se referme au
+  relâchement. Ça marche aussi sur la carte d'accueil et celle du souvenir. Chaque face indique la photo affichée
   (`photo R3`, `photo V1`).
 - Les photos vivent dans **deux listes**, *recto* et *verso*, gérées séparément
   dans « Mes photos » : chaque liste a son compteur, son bouton d'ajout et ses

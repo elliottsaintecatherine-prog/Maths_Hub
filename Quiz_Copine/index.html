@@ -337,6 +337,28 @@ body{
 #btnNon.auto{animation:slam .5s ease;}
 @keyframes slam{0%{transform:translateX(-50%) scale(1);}40%{transform:translateX(-50%) scale(1.16);}100%{transform:translateX(-50%) scale(1);}}
 
+/* ══ PHOTO EN ENTIER ══ */
+#loupe{
+  position:fixed;inset:0;z-index:95;display:grid;place-items:center;gap:14px;
+  grid-template-rows:1fr auto;padding:18px 12px max(18px,env(safe-area-inset-bottom));
+  background:rgba(24,18,10,.94);backdrop-filter:blur(6px);
+  animation:loupeArrive .18s ease-out;pointer-events:none;
+}
+#loupe[hidden]{display:none;}
+#loupeImg{
+  max-width:100%;max-height:100%;object-fit:contain;
+  border:6px solid #FBF6E9;box-shadow:0 10px 40px rgba(0,0,0,.55);
+  animation:loupeZoom .22s cubic-bezier(.2,.9,.3,1);
+}
+.loupe-note{
+  font-family:var(--f-stamp);font-size:10.5px;font-weight:700;letter-spacing:.16em;
+  text-transform:uppercase;color:#E8DCC2;opacity:.8;text-align:center;
+}
+@keyframes loupeArrive{from{opacity:0;}to{opacity:1;}}
+@keyframes loupeZoom{from{transform:scale(.88);opacity:.4;}to{transform:none;opacity:1;}}
+/* pendant un appui maintenu, l'appareil ne doit rien proposer d'autre */
+.card{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;}
+
 /* ══ TAMPON REFUSÉ ══ */
 #rage{position:fixed;inset:0;z-index:80;display:none;place-items:center;background:#B92A22;
   background-image:radial-gradient(circle at 50% 42%,#D8382C,#8E1E17 72%);}
@@ -551,6 +573,12 @@ input[type=file]{display:none;}
       <button class="mini" id="openAlbum2" data-t="mesPhotos">📷 Mes photos</button>
     </div>
   </section>
+</div>
+
+<!-- ══ PHOTO EN ENTIER (appui maintenu) ══ -->
+<div id="loupe" hidden aria-hidden="true">
+  <img id="loupeImg" alt="">
+  <span class="loupe-note" id="loupeNote"></span>
 </div>
 
 <button id="btnOui" hidden data-t="oui">Oui</button>
@@ -2166,7 +2194,8 @@ fr:{
   ticket4:"<b>La dernière question</b> décide de tout.",
   ouvrir:"Ouvrir le carnet", mesPhotos:"📷 Mes photos",
   depart:"Départ", carte:"Carte {n}", derniereCarte:"Dernière carte", verso:"Verso",
-  peekRecto:"appuie pour retourner la carte", peekVerso:"appuie pour revenir", photoRef:"photo {r} · ",
+  peekRecto:"appuie pour retourner · maintiens pour la photo entière", peekVerso:"appuie pour revenir · maintiens pour la photo entière",
+  photoRef:"photo {r} · ", loupeRelache:"relâche pour revenir",
   tonChoix:"ton choix", laMeilleure:"la meilleure",
   continuer:"Continuer", nimporteOu:"ou appuie n'importe où",
   oui:"Oui", non:"Non",
@@ -2212,7 +2241,8 @@ en:{
   ticket4:"<b>The last question</b> decides everything.",
   ouvrir:"Open the logbook", mesPhotos:"📷 My photos",
   depart:"Departure", carte:"Card {n}", derniereCarte:"Last card", verso:"Back",
-  peekRecto:"tap to flip the card", peekVerso:"tap to flip back", photoRef:"photo {r} · ",
+  peekRecto:"tap to flip · hold for the full photo", peekVerso:"tap to flip back · hold for the full photo",
+  photoRef:"photo {r} · ", loupeRelache:"release to go back",
   tonChoix:"your answer", laMeilleure:"the best one",
   continuer:"Continue", nimporteOu:"or tap anywhere",
   oui:"Yes", non:"No",
@@ -2258,7 +2288,8 @@ vi:{
   ticket4:"<b>Câu hỏi cuối cùng</b> quyết định tất cả.",
   ouvrir:"Mở cuốn sổ", mesPhotos:"📷 Ảnh của tôi",
   depart:"Khởi hành", carte:"Tấm {n}", derniereCarte:"Tấm cuối", verso:"Mặt sau",
-  peekRecto:"chạm để lật tấm thiệp", peekVerso:"chạm để lật lại", photoRef:"ảnh {r} · ",
+  peekRecto:"chạm để lật · giữ để xem trọn ảnh", peekVerso:"chạm để lật lại · giữ để xem trọn ảnh",
+  photoRef:"ảnh {r} · ", loupeRelache:"thả ra để quay lại",
   tonChoix:"bạn chọn", laMeilleure:"hay nhất",
   continuer:"Tiếp tục", nimporteOu:"hoặc chạm bất kỳ đâu",
   oui:"Có", non:"Không",
@@ -2504,8 +2535,13 @@ function rafraichirCartesFixes(){
 }
 
 /* ── relief : la carte suit le doigt / la souris ─────────────────── */
-function rendreVivante(cible, images, auClic){
+/* `cible` reçoit l'inclinaison, `zone` reçoit les appuis : ce ne peut pas
+   être le même élément. Un élément incliné en 3D devient difficile à viser
+   pour le navigateur, et les appuis se perdaient. La zone est le bloc qui
+   entoure la carte, jamais transformé en profondeur.                     */
+function rendreVivante(cible, images, auClic, zone){
   const stage = cible.closest('.stage');
+  zone = zone || cible;
   let raf = null, rx = 0, ry = 0, px = 0, py = 0;
   const appliquer = ()=>{
     raf = null;
@@ -2526,11 +2562,62 @@ function rendreVivante(cible, images, auClic){
   stage.addEventListener('pointerleave', repos);
   stage.addEventListener('pointercancel', repos);
   stage.addEventListener('pointerup', ()=>setTimeout(repos,900));
-  cible.addEventListener('click', auClic);
+  zone.addEventListener('click', auClic);
 }
+/* ── appui maintenu : la photo en entier ──────────────────────────
+   Un appui court garde son rôle (retourner la carte, ou découvrir la
+   photo sur les cartes fixes). Au-delà d'une demi-seconde, la photo
+   s'affiche en entier, sans être rognée, et se referme au relâchement. */
+const TENUE = 480;                      /* millisecondes avant la loupe */
+let aTenu = false, minuteurTenue = null;
+
+function sourcePhoto(img){
+  const b = img && img.style.backgroundImage;
+  if(!b) return null;
+  const m = b.match(/url\(["']?(.*?)["']?\)/);
+  return m ? m[1] : null;
+}
+function ouvreLoupe(src, ref){
+  if(!src) return;
+  $('#loupeImg').src = src;
+  $('#loupeNote').textContent = (ref ? T('photoRef', {r:ref}) : '') + T('loupeRelache');
+  $('#loupe').hidden = false;
+  buzz(12);
+}
+function fermeLoupe(){
+  const l = $('#loupe');
+  if(l.hidden) return;
+  l.hidden = true;
+  $('#loupeImg').removeAttribute('src');
+}
+/* branche l'appui maintenu sur une carte ; quelleImage() rend l'image
+   actuellement visible et sa référence (« R3 », « V1 »)               */
+function activeLoupe(zone, quelleImage){
+  const debut = e=>{
+    if(e.pointerType === 'mouse' && e.button !== 0) return;
+    clearTimeout(minuteurTenue);
+    aTenu = false;
+    minuteurTenue = setTimeout(()=>{
+      const q = quelleImage();
+      if(!q || !q.src) return;
+      aTenu = true;                      /* l'appui ne comptera pas comme un clic */
+      ouvreLoupe(q.src, q.ref);
+    }, TENUE);
+  };
+  const fin = ()=>{ clearTimeout(minuteurTenue); fermeLoupe(); };
+  zone.addEventListener('pointerdown', debut);
+  zone.addEventListener('pointerup', fin);
+  zone.addEventListener('pointercancel', fin);
+  zone.addEventListener('pointerleave', fin);
+  zone.addEventListener('contextmenu', e=>e.preventDefault());
+}
+addEventListener('pointerup', ()=>{ clearTimeout(minuteurTenue); fermeLoupe(); });
+addEventListener('blur', ()=>{ clearTimeout(minuteurTenue); fermeLoupe(); });
+
 /* les cartes fixes (accueil, souvenir) : un appui découvre la photo */
 function regarderPhoto(carte){
   return ()=>{
+    if(aTenu){ aTenu = false; return; }        /* c'était un appui maintenu */
     if(!carte.classList.contains('has-photo')) return;
     carte.classList.toggle('looking');
     buzz(8);
@@ -2569,6 +2656,7 @@ function pasFlip(t){
   }
 }
 function retourner(){
+  if(aTenu){ aTenu = false; return; }           /* c'était un appui maintenu */
   if(FLIP.raf) return;                          /* un retournement à la fois */
   FLIP.dep = FLIP.angle;
   FLIP.cible = FLIP.angle >= 90 ? 0 : 180;
@@ -3197,9 +3285,23 @@ $('#again').addEventListener('click', ()=>{
 });
 
 /* ═══ démarrage ══════════════════════════════════════════════════ */
-rendreVivante($('#introCard'),  [$('#introCard .card-img')],  regarderPhoto($('#introCard')));
-rendreVivante($('#resultCard'), [$('#resultCard .card-img')], regarderPhoto($('#resultCard')));
-rendreVivante($('#relief'),     [$('#cardImg'), $('#cardDosImg')], retourner);
+const zoneIntro  = $('#intro .float');
+const zoneQuiz   = $('#quiz .float');
+const zoneResult = $('#result .float');
+
+rendreVivante($('#introCard'),  [$('#introCard .card-img')],  regarderPhoto($('#introCard')),  zoneIntro);
+rendreVivante($('#resultCard'), [$('#resultCard .card-img')], regarderPhoto($('#resultCard')), zoneResult);
+rendreVivante($('#relief'),     [$('#cardImg'), $('#cardDosImg')], retourner, zoneQuiz);
+
+/* l'appui maintenu, sur les trois cartes */
+activeLoupe(zoneIntro,  ()=>({src:sourcePhoto($('#introCard .card-img')),  ref:''}));
+activeLoupe(zoneResult, ()=>({src:sourcePhoto($('#resultCard .card-img')), ref:''}));
+activeLoupe(zoneQuiz, ()=>{
+  const ph = tirage.length ? photosPour(index) : {};
+  return surLeDos()
+    ? {src:sourcePhoto($('#cardDosImg')), ref:ph.refAr}
+    : {src:sourcePhoto($('#cardImg')),    ref:ph.refAv};
+});
 nouveauTirage();
 rafraichirCartesFixes();
 appliqueLangue(album.langue || languePreferee());   /* la langue enregistrée, sinon celle du téléphone */

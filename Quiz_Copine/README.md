@@ -81,8 +81,22 @@ Il traduit toute l'interface : titres, boutons, cachets, timbres, verdicts,
 piques du bouton « Oui », panneau des photos, jusqu'aux petites étiquettes
 « ton choix » et « la meilleure » qui sont écrites en CSS.
 
-**Les 100 questions et la dernière carte restent en français dans tous les
-cas** — c'est la liste que tu modifies, elle n'existe qu'à un seul endroit.
+**La liste des 100 questions n'existe qu'en français** — c'est la tienne, tu la
+modifies sans jamais toucher à autre chose. Pour l'anglais et le vietnamien, le
+quiz demande au **navigateur** de traduire lui-même la question et ses réponses
+au moment de les afficher, puis garde le résultat en mémoire pour ne pas
+recommencer.
+
+Cette traduction automatique fonctionne là où le navigateur embarque un
+traducteur : **Chrome et Edge récents, sur ordinateur et sur Android**. Elle se
+fait alors sur l'appareil, sans rien envoyer nulle part.
+
+**Sur iPhone, aucun navigateur ne propose encore cette fonction à une page** :
+les questions restent en français, l'interface est traduite, et un petit mot
+l'explique une fois par langue. Pour tout traduire malgré tout sur iPhone :
+ouvrir le fichier dans Safari, puis « Traduire la page » dans le menu de la
+barre d'adresse. Un fichier hors-ligne ne peut pas embarquer son propre moteur
+de traduction : il n'y a ni modèle ni réseau à l'intérieur.
 
 Au premier lancement la langue du téléphone est utilisée si c'est l'une des
 trois, sinon le français. Ton choix est ensuite mémorisé et **voyage avec le

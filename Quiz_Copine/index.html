@@ -77,6 +77,12 @@ body{
   box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 2px 5px rgba(52,40,20,.22);
 }
 #langue:active{transform:rotate(-2.5deg) translateY(2px);box-shadow:0 1px 2px rgba(52,40,20,.2);}
+.notrad{
+  font-family:var(--f-stamp);font-size:10.5px;line-height:1.4;letter-spacing:.02em;
+  color:var(--ink-2);background:rgba(255,252,240,.6);border-left:2px solid rgba(193,51,43,.4);
+  padding:5px 8px;margin:-8px 0 10px;
+}
+.notrad[hidden]{display:none;}
 .route{display:flex;align-items:center;gap:9px;padding:4px 0 14px;}
 #quiz .route{padding-right:44px;}   /* on laisse la place au bouton de langue */
 .route-line{position:relative;flex:1;height:18px;}
@@ -457,6 +463,7 @@ input[type=file]{display:none;}
       <span class="route-line"><span class="plane" id="plane">✈</span></span>
       <span class="trip" id="trip">01/11</span>
     </div>
+    <p class="notrad" id="notrad" hidden></p>
 
     <div class="stage"><div class="float"><div class="relief" id="relief">
       <div class="flip" id="flip">
@@ -839,6 +846,7 @@ fr:{
   oui:"Oui", non:"Non",
   taunts:["Essaie encore, pour voir.","Deuxième tentative. Courageuse.","Troisième. Tu l'auras cherché."],
   resteUne:"Il ne reste qu'une réponse.",
+  pasDeTrad:"Les questions restent en français : ce navigateur ne sait pas les traduire tout seul. Sur iPhone, ouvre le fichier dans Safari puis « Traduire la page ».",
   nonPoint:"NON.", aTaPlace:"Réponse enregistrée à ta place",
   tampon:"Tampon du comité familial", classe:"Classé sans suite",
   resCarte:"Et tu as reconnu, de ton plein gré, que ma place dans son cœur est intouchable.",
@@ -881,6 +889,7 @@ en:{
   oui:"Yes", non:"No",
   taunts:["Go on, try again.","Second attempt. Brave.","Third one. You asked for it."],
   resteUne:"Only one answer left.",
+  pasDeTrad:"The questions stay in French: this browser cannot translate them on its own. On iPhone, open the file in Safari and choose “Translate page”.",
   nonPoint:"NO.", aTaPlace:"Answer recorded on your behalf",
   tampon:"Stamped by the family committee", classe:"Case closed",
   resCarte:"And you acknowledged, of your own free will, that my place in his heart is untouchable.",
@@ -923,6 +932,7 @@ vi:{
   oui:"Có", non:"Không",
   taunts:["Thử lại xem nào.","Lần thứ hai. Gan đấy.","Lần thứ ba. Tự bạn chuốc lấy."],
   resteUne:"Chỉ còn một lựa chọn.",
+  pasDeTrad:"Câu hỏi vẫn ở tiếng Pháp: trình duyệt này không tự dịch được. Trên iPhone, hãy mở tệp bằng Safari rồi chọn « Dịch trang ».",
   nonPoint:"KHÔNG.", aTaPlace:"Câu trả lời đã được ghi thay bạn",
   tampon:"Con dấu của hội đồng gia đình", classe:"Khép hồ sơ",
   resCarte:"Và bạn đã tự nguyện thừa nhận rằng chỗ của tôi trong tim anh ấy là bất khả xâm phạm.",
@@ -1040,6 +1050,90 @@ function volVers(frac, direct){
 }
 addEventListener('resize', ()=>{ if(!avion.raf) poseAvion(0, 0); });
 
+/* ── traduction automatique des questions ─────────────────────────
+   La liste des questions n'existe qu'en français : c'est la tienne, tu la
+   modifies sans jamais toucher à autre chose. Pour l'anglais et le
+   vietnamien, on demande au navigateur de traduire lui-même, au moment
+   d'afficher la carte, et on garde le résultat en mémoire.
+
+   Ça marche là où le navigateur embarque un traducteur (Chrome et Edge
+   récents, sur ordinateur et sur Android) : la traduction se fait sur
+   l'appareil, sans rien envoyer nulle part. Sur iPhone, aucun navigateur
+   ne propose encore cette fonction à une page : les questions restent
+   alors en français et un petit mot le dit. Pour tout traduire malgré
+   tout sur iPhone : ouvrir le fichier dans Safari, puis « Traduire la
+   page » dans le menu de la barre d'adresse.                           */
+const cacheTrad = new Map();      /* « langue \n texte » → traduction */
+const moteurs = {};               /* langue → traducteur, ou null */
+const prevenu = {};               /* on ne prévient qu'une fois par langue */
+let minuteurNotrad = null;
+
+async function moteurPour(l){
+  if(l === 'fr') return null;
+  if(l in moteurs) return moteurs[l];
+  moteurs[l] = null;
+  try{
+    if(typeof Translator !== 'undefined' && Translator.availability){
+      const etat = await Translator.availability({sourceLanguage:'fr', targetLanguage:l});
+      if(etat && etat !== 'unavailable')
+        moteurs[l] = await Translator.create({sourceLanguage:'fr', targetLanguage:l});
+    }
+  }catch(e){ moteurs[l] = null; }
+  return moteurs[l];
+}
+async function traduis(textes, l){
+  const m = await moteurPour(l);
+  if(!m) return null;
+  const sortie = [];
+  for(const txt of textes){
+    const cle = l + '\n' + txt;
+    if(!cacheTrad.has(cle)) cacheTrad.set(cle, await m.translate(txt));
+    sortie.push(cacheTrad.get(cle));
+  }
+  return sortie;
+}
+/* on prépare la carte suivante pendant qu'elle lit celle-ci */
+function pretraduis(i){
+  if(langue === 'fr') return;
+  const c = tirage[i];
+  if(!c) return;
+  traduis([c.q].concat((c.a || []).map(r => r[0])), langue).catch(()=>{});
+}
+/* pose la question et les réponses : français d'abord, traduction ensuite */
+function poseTextesCarte(){
+  const c = tirage[index];
+  if(!c) return;
+  const boutons = [].slice.call($('#answers').children);
+  $('#qtext').textContent = c.q;
+  boutons.forEach(b=>{ if(b.dataset.fr) b.querySelector('.txt').textContent = b.dataset.fr; });
+  if(langue === 'fr'){ $('#notrad').hidden = true; return; }
+  const lg = langue, i = index;
+  let repondu = false;
+  traduis([c.q].concat(boutons.map(b => b.dataset.fr || '')), lg).then(res=>{
+    repondu = true;
+    if(lg !== langue || i !== index) return;      /* elle a changé entre-temps */
+    if(!res){ previent(lg); return; }
+    $('#notrad').hidden = true;
+    $('#qtext').textContent = res[0];
+    boutons.forEach((b,k)=>{ b.querySelector('.txt').textContent = res[k+1]; });
+  }).catch(()=>{ repondu = true; previent(lg); });
+  /* si le navigateur met trop longtemps à répondre, on le dit — et si la
+     traduction finit par arriver, elle s'affichera quand même */
+  setTimeout(()=>{ if(!repondu && lg === langue && i === index) previent(lg); }, 4000);
+}
+
+/* le petit mot quand le navigateur ne sait pas traduire : une fois par
+   langue, et il s'efface tout seul au bout de quelques secondes */
+function previent(lg){
+  if(prevenu[lg]) return;
+  prevenu[lg] = true;
+  const n = $('#notrad');
+  n.textContent = T('pasDeTrad');
+  n.hidden = false;
+  clearTimeout(minuteurNotrad);
+  minuteurNotrad = setTimeout(()=>{ n.hidden = true; }, 9000);
+}
+
 /* ── changer de langue ────────────────────────────────────────────
    Tout ce qui est écrit dans l'interface porte un attribut data-t
    (texte simple) ou data-th (texte avec du gras). Le reste est remis à
@@ -1057,6 +1151,7 @@ function appliqueLangue(l, garder){
   rafraichirCartesFixes();
   dessineGrille();
   majCarteEnCours();
+  poseTextesCarte();
   if(screens.result.classList.contains('active')) poseVerdict();
   if(garder){ album.langue = langue; sauver(); }
 }
@@ -1224,6 +1319,7 @@ function afficher(){
 
   const ph = photosPour(index);
   precharge(index + 1);                /* la carte suivante est décodée d'avance */
+  pretraduis(index + 1);
   poseCarte($('#card'),    $('#cardImg'),    ph.av);
   poseCarte($('#cardDos'), $('#cardDosImg'), ph.ar);
   remetRecto();
@@ -1245,6 +1341,7 @@ function afficher(){
       b.type = 'button'; b.className = 'ans';
       b.innerHTML = '<span class="tick">✓</span><span class="txt"></span><span class="pts"></span>';
       b.querySelector('.txt').textContent = texte;
+      b.dataset.fr = texte;                /* l'original, pour pouvoir retraduire */
       b.dataset.pts = pts;
       b.dataset.bonne = (pts >= SEUIL_BON) ? '1' : '';
       b.dataset.top = (pts === meilleure) ? '1' : '';
@@ -1255,6 +1352,7 @@ function afficher(){
       $('#answers').appendChild(b);
     });
   }
+  poseTextesCarte();
 }
 
 /* ── correction : on montre la bonne réponse et on attend un appui ── */
@@ -1305,14 +1403,21 @@ function glisse(remplacer){
     [{opacity:1, transform:'translateX(0)'}, {opacity:0, transform:'translateX(-20px)'}],
     {duration:200, easing:'cubic-bezier(.4,0,.9,.35)', fill:'forwards'}
   ));
-  Promise.all(sortie.map(a => a.finished)).then(()=>{
-    remplacer();                       /* invisible : le fill maintient l'opacité à 0 */
-    sortie.forEach(a => a.cancel());   /* et l'entrée démarre dans la même image */
-    blocs.forEach(el => el.animate(
-      [{opacity:0, transform:'translateX(20px)'}, {opacity:1, transform:'translateX(0)'}],
-      {duration:300, easing:'cubic-bezier(.15,.6,.3,1)'}
-    ));
-  }).catch(()=>{ remplacer(); sortie.forEach(a => a.cancel()); });
+  let fait = false;
+  const suite = ()=>{
+    if(fait) return;                   /* jamais deux fois : on sauterait une carte */
+    fait = true;
+    try{
+      remplacer();                     /* invisible : le fill maintient l'opacité à 0 */
+    } finally {
+      sortie.forEach(a => a.cancel()); /* et l'entrée démarre dans la même image */
+      blocs.forEach(el => el.animate(
+        [{opacity:0, transform:'translateX(20px)'}, {opacity:1, transform:'translateX(0)'}],
+        {duration:300, easing:'cubic-bezier(.15,.6,.3,1)'}
+      ));
+    }
+  };
+  Promise.all(sortie.map(a => a.finished)).then(suite, suite);
 }
 
 /* ── la carte finale : le bouton « Oui » en trois temps ──────────

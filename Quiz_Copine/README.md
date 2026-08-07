@@ -77,47 +77,50 @@ aucun envoi vers un serveur.
 ## Trois langues
 
 Un bouton en haut à droite fait tourner **français → anglais → vietnamien**.
-Il traduit toute l'interface : titres, boutons, cachets, timbres, verdicts,
-piques du bouton « Oui », panneau des photos, jusqu'aux petites étiquettes
-« ton choix » et « la meilleure » qui sont écrites en CSS.
-
-**La liste des 100 questions n'existe qu'en français** — c'est la tienne, tu la
-modifies sans jamais toucher à autre chose. Pour l'anglais et le vietnamien, le
-quiz demande au **navigateur** de traduire lui-même la question et ses réponses
-au moment de les afficher, puis garde le résultat en mémoire pour ne pas
-recommencer.
-
-Cette traduction automatique fonctionne là où le navigateur embarque un
-traducteur : **Chrome et Edge récents, sur ordinateur et sur Android**. Elle se
-fait alors sur l'appareil, sans rien envoyer nulle part.
-
-**Sur iPhone, aucun navigateur ne propose encore cette fonction à une page** :
-les questions restent en français, l'interface est traduite, et un petit mot
-l'explique une fois par langue. Pour tout traduire malgré tout sur iPhone :
-ouvrir le fichier dans Safari, puis « Traduire la page » dans le menu de la
-barre d'adresse. Un fichier hors-ligne ne peut pas embarquer son propre moteur
-de traduction : il n'y a ni modèle ni réseau à l'intérieur.
+Tout est traduit : les 100 questions, leurs 400 réponses, la dernière carte,
+et toute l'interface — titres, boutons, cachets, timbres, verdicts, piques du
+bouton « Oui », panneau des photos, jusqu'aux étiquettes « ton choix » et
+« la meilleure » qui sont écrites en CSS.
 
 Au premier lancement la langue du téléphone est utilisée si c'est l'une des
 trois, sinon le français. Ton choix est ensuite mémorisé et **voyage avec le
 fichier enregistré** : la personne qui l'ouvre retrouve la langue que tu avais
-choisie.
+choisie. On peut aussi changer de langue en pleine partie, la carte affichée
+se met à jour sans être perdue.
 
-Les textes sont regroupés dans l'objet `TEXTES`, un bloc par langue, avec les
-mêmes clés. Pour en corriger un, cherche sa clé dans le bloc `fr` puis dans les
-autres. Pour ajouter une langue : recopie un bloc, ajoute son code dans
-`LANGUES` et son étiquette dans `NOM_LANGUE`. En vietnamien la police manuscrite
-du carnet est remplacée par une italique, faute de signes diacritiques dans la
-fonte d'origine.
+Les textes de l'interface sont regroupés dans l'objet `TEXTES`, un bloc par
+langue avec les mêmes clés. Ceux des questions vivent dans la banque, à côté
+du français (voir ci-dessous). En vietnamien la police manuscrite du carnet
+est remplacée par une italique, faute de signes diacritiques dans la fonte
+d'origine.
 
 ## Modifier les questions
 
 Ouvre `index.html` dans un éditeur de texte, cherche `const BANQUE`. Chaque
-question tient sur une ligne, avec ses quatre réponses et leurs points (0 à 10) :
+texte s'écrit dans les trois langues, **toujours dans le même ordre : français,
+anglais, vietnamien**. Le dernier nombre d'une réponse, ce sont ses points
+(0 à 10) :
 
 ```js
-q("Le vrai test : qui doit absolument te valider ?",
-  ["Moi. Évidemment.",10],["Sa mère.",5],["Ses potes.",2],["Personne, on est en 2026.",0]),
+q(["Le vrai test : qui doit absolument te valider ?",
+   "The real test: whose approval do you absolutely need?",
+   "Bài kiểm tra thật sự: ai nhất định phải gật đầu với bạn?"],
+  ["Moi. Évidemment.",
+   "Mine. Obviously.",
+   "Tôi. Dĩ nhiên rồi.", 10],
+  ["Sa mère.",
+   "His mother's.",
+   "Mẹ anh ấy.", 5],
+  ...
+),
+```
+
+**Si tu n'écris qu'un seul texte, il sert pour les trois langues** — pratique
+pour ajouter une question à la va-vite :
+
+```js
+q("Une question écrite seulement en français",
+  ["Une réponse", 10], ["Une autre", 4], ...),
 ```
 
 Tu peux en ajouter, en enlever, en réécrire : le score se recalcule tout seul
@@ -129,8 +132,9 @@ Juste en dessous de la banque :
 - `NB_CARTES` — combien de cartes on tire à chaque partie (10 par défaut).
 - `FINALE` — la dernière question. Ne supprime pas son `finale:true` : c'est lui
   qui déclenche le bouton fuyard et l'écran rouge.
-- `TAUNTS` — les trois piques quand elle essaie de cliquer sur « Oui ».
-- `VERDICTS` — les verdicts de fin, avec le score minimum de chacun.
+- `SEUILS` — le score minimum de chacun des quatre verdicts.
+- `TEXTES` — tous les textes de l'interface, langue par langue : les piques du
+  bouton « Oui » (`taunts`), les verdicts (`verdicts`), et le reste.
 
 Si tu modifies les questions après avoir ajouté tes photos, réexporte le fichier
 depuis le panneau **Mes photos** pour récupérer une version à jour.

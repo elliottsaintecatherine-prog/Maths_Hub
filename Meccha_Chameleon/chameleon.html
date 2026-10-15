@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meccha Chameleon</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0a120a; --panel:#101c10; --panel2:#16261680;
+  --border:#1f3320; --border2:#2e4a2f;
+  --text:#e6efe6; --muted:#7c917c;
+  --accent:#4ade80; --accent-dark:#166534;
+  --warn:#f59e0b; --danger:#ef4444;
+}
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+html,body { height:100%; }
+body { font-family:'Inter',system-ui,sans-serif; background:var(--bg); color:var(--text); overflow:hidden; }
+button, input, select { font-family:inherit; }
+
+#game { display:block; width:100vw; height:100vh; background:var(--bg); }
+
+/* ── HUD ─────────────────────────────────── */
+#hud { position:fixed; top:0; left:0; right:0; display:flex; justify-content:space-between; align-items:flex-start; padding:10px 16px; pointer-events:none; z-index:20; }
+#hud > div { display:flex; flex-direction:column; gap:4px; }
+#hud-center { align-items:center; }
+#hud-right { align-items:flex-end; }
+#hud-phase { font-size:11px; font-weight:800; letter-spacing:2px; text-transform:uppercase; color:var(--muted); }
+#hud-timer { font-size:26px; font-weight:900; letter-spacing:1px; font-variant-numeric:tabular-nums; }
+.hud-chip { font-size:11px; font-weight:700; padding:4px 10px; border-radius:6px; background:var(--panel2); border:1px solid var(--border); backdrop-filter:blur(4px); }
+#hud-role.cham { color:var(--accent); border-color:var(--accent-dark); }
+#hud-role.hunt { color:var(--warn); border-color:#7c5a10; }
+
+/* ── Panneau peinture (cameleon) ──────────── */
+#palette-panel { position:fixed; left:16px; bottom:16px; z-index:20; background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:12px 14px; width:250px; display:flex; flex-direction:column; gap:9px; }
+.pp-row { display:flex; align-items:center; gap:8px; }
+.pp-label { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:1px; }
+#paint-color { width:44px; height:32px; border:1px solid var(--border2); border-radius:6px; background:none; padding:2px; cursor:pointer; }
+#camo-meter { flex:1; height:10px; border-radius:5px; background:#0d180d; border:1px solid var(--border); overflow:hidden; }
+#camo-fill { height:100%; width:0%; background:var(--danger); border-radius:5px; transition:width .12s, background .12s; }
+#camo-label { font-size:12px; font-weight:800; min-width:38px; text-align:right; font-variant-numeric:tabular-nums; }
+.pp-hint { font-size:11px; color:var(--muted); min-height:14px; line-height:1.35; }
+.pp-hint strong { color:var(--accent); }
+
+/* ── Sifflet ─────────────────────────────── */
+#whistle-box { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); z-index:25; background:var(--panel); border:2px solid var(--warn); border-radius:12px; padding:12px 18px; text-align:center; animation:pulse-w 1s infinite; }
+@keyframes pulse-w { 0%,100% { box-shadow:0 0 0 0 #f59e0b44; } 50% { box-shadow:0 0 0 10px #f59e0b00; } }
+#whistle-label { font-size:11px; font-weight:800; letter-spacing:2px; color:var(--warn); margin-bottom:8px; }
+
+/* ── Boutons ─────────────────────────────── */
+.btn { border:1px solid var(--border2); background:transparent; color:var(--text); border-radius:8px; padding:9px 18px; font-size:13px; font-weight:700; cursor:pointer; transition:all .15s; text-decoration:none; display:inline-block; text-align:center; }
+.btn:hover { border-color:var(--accent); color:var(--accent); }
+.btn.primary { background:var(--accent); border-color:var(--accent); color:#04120a; }
+.btn.primary:hover { opacity:.88; color:#04120a; }
+.btn.warn { background:var(--warn); border-color:var(--warn); color:#1a1000; }
+.btn.small { padding:5px 12px; font-size:11px; }
+.btn.ghost { color:var(--muted); }
+.btn.active-mode { border-color:var(--accent); color:var(--accent); }
+
+/* ── Overlays plein ecran ─────────────────── */
+.overlay { position:fixed; inset:0; z-index:40; display:flex; align-items:center; justify-content:center; background:rgba(4,10,4,.88); backdrop-filter:blur(3px); }
+.ov-inner { background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:28px 32px; max-width:480px; width:92%; max-height:88vh; overflow-y:auto; text-align:center; display:flex; flex-direction:column; gap:14px; }
+.ov-inner h2 { font-size:22px; font-weight:900; letter-spacing:-.3px; }
+.big-num { font-size:56px; font-weight:900; color:var(--accent); font-variant-numeric:tabular-nums; }
+.ov-sub { font-size:13px; color:var(--muted); line-height:1.5; }
+.row { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+
+/* ── Lobby ───────────────────────────────── */
+#lobby-code { color:var(--accent); font-variant-numeric:tabular-nums; letter-spacing:2px; }
+.lobby-list { display:flex; flex-direction:column; gap:6px; text-align:left; }
+.lobby-row { display:flex; align-items:center; gap:10px; padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-size:13px; font-weight:600; }
+.lobby-dot { width:9px; height:9px; border-radius:50%; background:var(--accent); flex-shrink:0; }
+.lobby-tag { font-size:10px; font-weight:800; letter-spacing:1px; color:var(--warn); margin-left:auto; }
+#host-controls { display:flex; flex-direction:column; gap:10px; text-align:left; border-top:1px solid var(--border); padding-top:14px; }
+#host-controls label { display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:12px; font-weight:700; color:var(--muted); }
+#host-controls select, #host-controls input[type=number] { background:#0d180d; color:var(--text); border:1px solid var(--border2); border-radius:6px; padding:6px 10px; font-size:13px; width:170px; }
+#lobby-status { font-size:12px; color:var(--muted); min-height:16px; }
+
+/* ── Bandeau de role ──────────────────────── */
+#role-banner { position:fixed; inset:0; z-index:50; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px; background:rgba(4,10,4,.82); pointer-events:none; opacity:1; transition:opacity .5s; }
+#role-banner.fading { opacity:0; }
+#role-banner .rb-title { font-size:42px; font-weight:900; letter-spacing:-1px; }
+#role-banner .rb-sub { font-size:15px; color:var(--muted); }
+#role-banner.cham .rb-title { color:var(--accent); }
+#role-banner.hunt .rb-title { color:var(--warn); }
+
+/* ── Fin ─────────────────────────────────── */
+#end-scores { display:flex; flex-direction:column; gap:5px; text-align:left; }
+.end-row { display:flex; justify-content:space-between; padding:7px 12px; border:1px solid var(--border); border-radius:8px; font-size:13px; }
+.end-row .er-val { font-weight:800; color:var(--accent); }
+
+/* ── Toast ───────────────────────────────── */
+#toast { position:fixed; top:64px; left:50%; transform:translateX(-50%); z-index:60; background:var(--panel); border:1px solid var(--border2); border-radius:8px; padding:9px 18px; font-size:13px; font-weight:600; pointer-events:none; transition:opacity .3s; }
+
+.hidden { display:none !important; }
+</style>
+</head>
+<body>
+
+<canvas id="game"></canvas>
+
+<!-- HUD -->
+<div id="hud">
+  <div id="hud-left">
+    <span class="hud-chip" id="hud-room">SOLO</span>
+    <span class="hud-chip" id="hud-role">&mdash;</span>
+  </div>
+  <div id="hud-center">
+    <div id="hud-phase">&mdash;</div>
+    <div id="hud-timer">--:--</div>
+  </div>
+  <div id="hud-right">
+    <span class="hud-chip" id="hud-alive"></span>
+    <span class="hud-chip hidden" id="hud-clicks"></span>
+  </div>
+</div>
+
+<!-- Panneau peinture (cameleons) -->
+<div id="palette-panel" class="hidden">
+  <div class="pp-row">
+    <span class="pp-label">Peinture</span>
+    <input type="color" id="paint-color" value="#f2f2f2">
+    <button class="btn small" id="btn-pipette">Pipette (P)</button>
+  </div>
+  <div class="pp-row">
+    <span class="pp-label">Camo</span>
+    <div id="camo-meter"><div id="camo-fill"></div></div>
+    <span id="camo-label">0%</span>
+  </div>
+  <div class="pp-hint" id="spot-hint"></div>
+</div>
+
+<!-- Sifflet anti-camping -->
+<div id="whistle-box" class="hidden">
+  <div id="whistle-label">SIFFLET OBLIGATOIRE</div>
+  <button class="btn warn" id="btn-whistle">SIFFLER (Espace) &mdash; <span id="whistle-count">5</span>s</button>
+</div>
+
+<!-- Bandeau chasseurs pendant la phase de cache -->
+<div id="blindfold" class="overlay hidden">
+  <div class="ov-inner">
+    <h2>Les cam&eacute;l&eacute;ons se cachent&hellip;</h2>
+    <div class="big-num" id="blind-count">20</div>
+    <div class="ov-sub">Ferme les yeux, chasseur. Ta traque commence bient&ocirc;t.</div>
+  </div>
+</div>
+
+<!-- Annonce de role -->
+<div id="role-banner" class="hidden">
+  <div class="rb-title"></div>
+  <div class="rb-sub"></div>
+</div>
+
+<!-- Salon multijoueur -->
+<div id="lobby-overlay" class="overlay hidden">
+  <div class="ov-inner">
+    <h2>Salon <span id="lobby-code">&mdash;</span></h2>
+    <div class="row">
+      <button class="btn small" id="btn-copy">Copier le code</button>
+    </div>
+    <div class="lobby-list" id="lobby-players"></div>
+    <div id="host-controls" class="hidden">
+      <label>Mode
+        <select id="sel-mode">
+          <option value="classic">Classique</option>
+          <option value="infection">Infection</option>
+          <option value="double">Double</option>
+        </select>
+      </label>
+      <label>Carte
+        <select id="sel-map"></select>
+      </label>
+      <label id="lbl-hunters">Chasseurs
+        <input type="number" id="inp-hunters" min="1" value="1">
+      </label>
+      <button class="btn primary" id="btn-start">Lancer la manche</button>
+    </div>
+    <div id="guest-wait" class="ov-sub hidden">En attente du lancement par l'h&ocirc;te&hellip;</div>
+    <div id="lobby-status"></div>
+    <a class="btn ghost" href="index.html">Quitter le salon</a>
+  </div>
+</div>
+
+<!-- Fin de manche -->
+<div id="end-overlay" class="overlay hidden">
+  <div class="ov-inner">
+    <h2 id="end-title">&mdash;</h2>
+    <div class="ov-sub" id="end-detail"></div>
+    <div id="end-scores"></div>
+    <div class="row">
+      <button class="btn primary" id="btn-again">Rejouer</button>
+      <a class="btn ghost" href="index.html">Menu</a>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="hidden"></div>
+
+<script src="chameleon-maps.js"></script>
+<script src="palette.js"></script>
+<script src="network.js"></script>
+<script src="chameleon.js"></script>
+</body>
+</html>

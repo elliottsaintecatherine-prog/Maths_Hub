@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meccha Chameleon — Cache-toi en couleurs</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0a120a; --panel:#101c10;
+  --border:#1f3320; --border2:#2e4a2f;
+  --text:#e6efe6; --muted:#7c917c;
+  --accent:#4ade80; --warn:#f59e0b;
+}
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+body {
+  font-family:'Inter',system-ui,sans-serif; background:var(--bg); color:var(--text);
+  min-height:100vh; display:flex; flex-direction:column; align-items:center;
+  background-image:radial-gradient(ellipse at 50% -20%, #16321699 0%, transparent 60%);
+  padding:40px 16px 60px;
+}
+.wrap { max-width:560px; width:100%; display:flex; flex-direction:column; gap:22px; }
+
+.title { text-align:center; }
+.title h1 { font-size:38px; font-weight:900; letter-spacing:-1px; }
+.title h1 span { color:var(--accent); }
+.title p { color:var(--muted); font-size:14px; margin-top:6px; line-height:1.5; }
+
+.card { background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:20px 22px; display:flex; flex-direction:column; gap:12px; }
+.card h2 { font-size:15px; font-weight:800; letter-spacing:.5px; }
+.card p { font-size:12px; color:var(--muted); line-height:1.5; }
+
+input[type=text] {
+  background:#0d180d; color:var(--text); border:1px solid var(--border2);
+  border-radius:8px; padding:10px 14px; font-size:14px; font-family:inherit; outline:none; width:100%;
+}
+input[type=text]:focus { border-color:var(--accent); }
+select {
+  background:#0d180d; color:var(--text); border:1px solid var(--border2);
+  border-radius:8px; padding:8px 12px; font-size:13px; font-family:inherit;
+}
+.row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.row > input[type=text] { flex:1; min-width:140px; }
+
+.btn {
+  border:1px solid var(--border2); background:transparent; color:var(--text);
+  border-radius:8px; padding:10px 20px; font-size:13px; font-weight:700;
+  cursor:pointer; font-family:inherit; transition:all .15s; white-space:nowrap;
+}
+.btn:hover { border-color:var(--accent); color:var(--accent); }
+.btn.primary { background:var(--accent); border-color:var(--accent); color:#04120a; }
+.btn.primary:hover { opacity:.88; color:#04120a; }
+
+.rules { font-size:12.5px; color:var(--muted); line-height:1.7; }
+.rules strong { color:var(--text); }
+.rules .k { display:inline-block; border:1px solid var(--border2); border-radius:4px; padding:0 6px; font-size:11px; font-weight:700; color:var(--text); }
+
+.err { color:#ef4444; font-size:12px; min-height:14px; }
+.back { text-align:center; }
+.back a { color:var(--muted); font-size:12px; text-decoration:none; }
+.back a:hover { color:var(--text); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="title">
+    <h1>MECCHA <span>CHAMELEON</span></h1>
+    <p>Peins-toi pour te fondre dans le d&eacute;cor&hellip; ou d&eacute;busque ceux qui s'y cachent.<br>
+       De 2 &agrave; 10 joueurs en ligne, ou en solo contre des bots.</p>
+  </div>
+
+  <div class="card">
+    <h2>Ton pseudo</h2>
+    <input type="text" id="inp-name" maxlength="14" placeholder="Ex : LezardVert" autocomplete="off">
+  </div>
+
+  <div class="card">
+    <h2>Entra&icirc;nement solo</h2>
+    <p>Tu es le cam&eacute;l&eacute;on : survis au chrono face &agrave; des chasseurs contr&ocirc;l&eacute;s par la machine.</p>
+    <div class="row">
+      <select id="sel-bots">
+        <option value="1">1 chasseur</option>
+        <option value="2" selected>2 chasseurs</option>
+        <option value="3">3 chasseurs</option>
+        <option value="4">4 chasseurs</option>
+      </select>
+      <button class="btn primary" id="btn-solo">Jouer en solo</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Multijoueur en ligne</h2>
+    <p>Cr&eacute;e un salon et partage le code, ou rejoins celui d'un ami. L'h&ocirc;te choisit le mode (Classique, Infection, Double) et la carte.</p>
+    <div class="row">
+      <button class="btn primary" id="btn-create">Cr&eacute;er un salon</button>
+    </div>
+    <div class="row">
+      <input type="text" id="inp-code" maxlength="8" placeholder="Code du salon (ex : CHM-A2F4)" autocomplete="off">
+      <button class="btn" id="btn-join">Rejoindre</button>
+    </div>
+    <div class="err" id="err"></div>
+  </div>
+
+  <div class="card rules">
+    <h2 style="color:var(--text); margin-bottom:4px;">Comment jouer</h2>
+    <strong>Cam&eacute;l&eacute;on</strong> — d&eacute;place-toi (<span class="k">ZQSD</span> / fl&egrave;ches), copie la couleur du d&eacute;cor
+    avec la pipette (<span class="k">P</span> puis clic) ou peins-toi &agrave; la main, et fige-toi sur un
+    spot (<span class="k">E</span>) pour un bonus de camouflage. Toutes les 25 s, le sifflet obligatoire
+    r&eacute;v&egrave;le ta zone approximative : ne campe pas trop&hellip;<br><br>
+    <strong>Chasseur</strong> — patrouille et clique pour inspecter une zone. Plus le cam&eacute;l&eacute;on est mal
+    peint et proche de ton clic, plus tu as de chances de le capturer.<br><br>
+    <strong>Modes</strong> — <strong>Classique</strong> : survivre au chrono. <strong>Infection</strong> : chaque captur&eacute;
+    devient chasseur. <strong>Double</strong> : tout le monde se cache, puis tout le monde accuse — le plus
+    fin observateur gagne.
+  </div>
+
+  <div class="back"><a href="../index.html">&larr; Retour au Hub</a></div>
+</div>
+
+<script>
+'use strict';
+
+const inpName = document.getElementById('inp-name');
+const err = document.getElementById('err');
+
+// prefill du pseudo
+try { inpName.value = localStorage.getItem('chm_name') || ''; } catch (e) {}
+
+function getName() {
+  const n = inpName.value.trim().slice(0, 14);
+  if (!n) {
+    err.textContent = 'Choisis un pseudo d\'abord.';
+    inpName.focus();
+    return null;
+  }
+  try {
+    localStorage.setItem('chm_name', n);
+    sessionStorage.setItem('chm_name', n);
+  } catch (e) {}
+  err.textContent = '';
+  return n;
+}
+
+document.getElementById('btn-solo').addEventListener('click', () => {
+  if (!getName()) return;
+  const bots = document.getElementById('sel-bots').value;
+  location.href = 'chameleon.html?solo=1&bots=' + bots;
+});
+
+document.getElementById('btn-create').addEventListener('click', () => {
+  if (!getName()) return;
+  const code = 'CHM-' + Math.random().toString(36).substring(2, 6).toUpperCase();
+  location.href = 'chameleon.html?room=' + code + '&host=1';
+});
+
+document.getElementById('btn-join').addEventListener('click', () => {
+  if (!getName()) return;
+  let code = document.getElementById('inp-code').value.toUpperCase().trim();
+  if (!code) { err.textContent = 'Entre le code du salon.'; return; }
+  if (!code.startsWith('CHM-')) code = 'CHM-' + code;
+  location.href = 'chameleon.html?room=' + code;
+});
+
+document.getElementById('inp-code').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('btn-join').click();
+});
+</script>
+</body>
+</html>

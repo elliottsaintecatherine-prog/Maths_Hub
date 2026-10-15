@@ -64,7 +64,7 @@ export const SHOP = [
   {
     id:    'vecthorreur_shield',
     name:  'Bouclier Spectral',
-    desc:  'Absorbe le prochain coup du monstre dans Vecthorreur (1 utilisation).',
+    desc:  'Absorbe le prochain coup dans Vecthorreur : mur, trappe ou griffe du monstre (1 utilisation).',
     price: 200,
     icon:  '🛡️',
     game:  'vecthorreur',

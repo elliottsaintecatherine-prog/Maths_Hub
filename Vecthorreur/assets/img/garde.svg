@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 400" width="200" height="400">
+  <!-- Silhouette gardien — VectHorreur menu backdrop -->
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="30%" r="50%">
+      <stop offset="0%" stop-color="#8a6a2a" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#000" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="200" height="400" fill="none"/>
+  <!-- Corps -->
+  <ellipse cx="100" cy="60" rx="28" ry="32" fill="#1a1208"/>
+  <rect x="60" y="88" width="80" height="120" rx="8" fill="#1a1208"/>
+  <!-- Bras gauche -->
+  <rect x="30" y="90" width="32" height="14" rx="7" fill="#1a1208"/>
+  <rect x="22" y="100" width="14" height="70" rx="7" fill="#1a1208"/>
+  <!-- Bras droit -->
+  <rect x="138" y="90" width="32" height="14" rx="7" fill="#1a1208"/>
+  <rect x="164" y="100" width="14" height="70" rx="7" fill="#1a1208"/>
+  <!-- Jambe gauche -->
+  <rect x="68" y="204" width="28" height="100" rx="10" fill="#1a1208"/>
+  <!-- Jambe droite -->
+  <rect x="104" y="204" width="28" height="100" rx="10" fill="#1a1208"/>
+  <!-- Yeux -->
+  <ellipse cx="88" cy="50" rx="5" ry="6" fill="#8a6a2a" opacity="0.8"/>
+  <ellipse cx="112" cy="50" rx="5" ry="6" fill="#8a6a2a" opacity="0.8"/>
+  <!-- Aura -->
+  <ellipse cx="100" cy="200" rx="80" ry="200" fill="url(#glow)"/>
+</svg>

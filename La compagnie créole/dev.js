@@ -1,19 +1,12 @@
 /**
- * dev.js — Mode développeur : éditeur Piano Roll
- * Dépend de : app.js (song, selectEl, playerInstru, …), catalogue.js
- * Accès : cliquer sur le logo, puis entrer le PIN
+ * dev.js — Éditeur de notes (piano roll)
+ * Dépend de : app.js (song, selectEl, playerInstru, sanitizeSongData, …), catalogue.js
+ * Accès libre : bouton « Éditeur de notes » de la barre de navigation (ou clic sur le logo).
+ * L'éditeur n'écrit que dans le navigateur de l'élève (localStorage).
  */
-
-// SHA-256 de '1702' — ne jamais stocker le PIN en clair
-const DEV_PIN_HASH = '7a64ce427ce0ca963ce9c3ab0da2db27c1f3ac9620444e1b4312422af8e093b9';
-async function hashPin(pin) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
 
 /* ===== ÉTAT DE L'ÉDITEUR ===== */
 let devOpen      = false;
-let devUnlocked  = false;
 let autoSaveTimer = null;
 let editorDirty  = false; // flag pour throttler renderEditor() via rAF
 
@@ -111,10 +104,14 @@ function nextSyll() {
 }
 
 // Sauvegarde les paroles en cours dans localStorage
+// (paroles d'une chanson intégrée identiques à l'original : rien à garder)
 function saveDraft() {
   const entry = CATALOGUE[+selectEl.value || 0];
   const val   = (devLyrics?.value || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-  if (entry) try { localStorage.setItem(draftKey(entry.file), val); } catch {}
+  if (entry) try {
+    if (entry.source === 'builtin' && val === entry.draft) localStorage.removeItem(draftKey(entry.file));
+    else localStorage.setItem(draftKey(entry.file), val);
+  } catch {}
 }
 
 // Sauvegarde automatique différée (450 ms après la dernière modification)
@@ -135,7 +132,7 @@ function autoApplySyllsOnSave() {
     notes[i].lyric = { ...(notes[i].lyric || {}), text: i < sylls.length ? sylls[i] : '' };
     if (i < sylls.length) applied++;
   }
-  if (applied) setLyricsStatus(`✅ ${applied} syllabe(s) appliquée(s) sur ${notes.length} note(s)`);
+  if (applied) setLyricsStatus(`${applied} syllabe(s) appliquée(s) sur ${notes.length} note(s)`);
 }
 
 /* ===== PLAGE MIDI ===== */
@@ -289,7 +286,7 @@ function updateNoteList() {
     const div = document.createElement('div');
     div.className = 'dev-note-item' + (n.id === editor.selectedId ? ' sel' : '');
     div.innerHTML =
-      `<div style="font-weight:700">${lyricDisp(n.lyric?.text) || '♪'} <span style="color:var(--muted);font-size:11px">${NOTE_NAMES[n.midi % 12]}${Math.floor(n.midi / 12) - 1}</span></div>` +
+      `<div style="font-weight:700">${escapeHtml(lyricDisp(n.lyric?.text)) || '♪'} <span style="color:var(--muted);font-size:11px">${NOTE_NAMES[n.midi % 12]}${Math.floor(n.midi / 12) - 1}</span></div>` +
       `<div class="dev-note-meta">${n.t0.toFixed(2)}s — ${n.d.toFixed(2)}s</div>`;
     div.addEventListener('click', () => { editor.selectedId = n.id; renderEditor(); });
     devNoteList.appendChild(div);
@@ -527,7 +524,7 @@ async function startAutoListen() {
   if (!song) { alert("Charge une chanson d'abord."); return; }
   setTool('select');
 
-  // ① Lancer la musique EN PREMIER (indépendamment du routing)
+  // (1) Lancer la musique EN PREMIER (indépendamment du routing)
   if (playerInstru.paused) {
     // Résoudre la suspension possible du contexte Web Audio avant de jouer
     if (window.routingReady && typeof Tone !== 'undefined' && Tone.context.state !== 'running') {
@@ -535,7 +532,7 @@ async function startAutoListen() {
     }
     playerInstru.play().catch(() => {});
     playerOrig.play().catch(() => {});
-    isPlaying = true; btnPlay.textContent = '⏸';
+    isPlaying = true; btnPlay.textContent = '▮▮';
   }
   document.getElementById('btn-auto-start').disabled = true;
   document.getElementById('btn-auto-stop').disabled  = false;
@@ -544,7 +541,7 @@ async function startAutoListen() {
   if (tbs) tbs.style.display = 'flex';
   Object.assign(devAuto, { running:true, iid:null, analyser:null, buffer:null, segment:null, notesAdded:0 });
 
-  // ② Brancher un analyseur pour l'auto-placement de notes
+  // (2) Brancher un analyseur pour l'auto-placement de notes
   let analyserSrc, ctxRaw;
   const src = devAutoSrc.value;
 
@@ -589,7 +586,7 @@ async function startAutoListen() {
     return; // musique joue, mais pas d'analyse de pitch
   }
 
-  // ③ Analyse de pitch et placement automatique des notes
+  // (3) Analyse de pitch et placement automatique des notes
   const a = ctxRaw.createAnalyser(); a.fftSize = 2048; analyserSrc.connect(a);
   devAuto.analyser = a; devAuto.buffer = new Float32Array(a.fftSize);
 
@@ -634,7 +631,7 @@ function stopAutoListen() {
   // Libérer la capture audio système si active
   if (sysAudioStream) { sysAudioStream.getTracks().forEach(t => t.stop()); sysAudioStream = null; }
   if (sysAudioCtx)    { sysAudioCtx.close().catch(() => {}); sysAudioCtx = null; }
-  // La lecture continue — l'utilisateur peut la stopper avec le bouton ▶/⏸ principal
+  // La lecture continue — l'utilisateur peut la stopper avec le bouton ▶/▮▮ principal
   if (devAuto.segment) { commitSegment(devAuto.segment, devAuto.segment.last); devAuto.segment = null; sortNotes(); scheduleAutoSave(); renderEditor(); }
   document.getElementById('btn-auto-start').disabled = false;
   document.getElementById('btn-auto-stop').disabled  = true;
@@ -681,10 +678,19 @@ function openDev() {
   setLyricsStatus(`${s.length} ligne(s) · ${s.reduce((a, l) => a + l.length, 0)} syllabe(s) · ${laneNotes().length} note(s)`);
   setSaveStatus('Sauvegarde : chargée');
 
+  syncResetButton();
+
   devOpen = true; devOverlay.classList.add('open');
   resizeEditorCanvas();
   updateZoomDisplay();
   if (laneNotes().length) autoFitMidi(); else renderEditor();
+}
+
+// « Rétablir la version d'origine » : seulement pour les chansons intégrées
+function syncResetButton() {
+  const btn = document.getElementById('btn-dev-reset');
+  const e   = CATALOGUE[+selectEl.value || 0];
+  if (btn) btn.style.display = e && e.source === 'builtin' ? '' : 'none';
 }
 
 function closeDev() {
@@ -696,17 +702,12 @@ function closeDev() {
 }
 
 /* ===== EVENTS DE LA SIDEBAR ===== */
+// Éditeur ouvert à tous : il n'écrit que dans le navigateur de l'élève et sert aux titres importés
+document.getElementById('btn-open-editor')?.addEventListener('click', openDev);
 document.getElementById('logo').addEventListener('click', e => {
   e.preventDefault();
-  devUnlocked ? openDev() : promptPin();
+  openDev();
 });
-function promptPin() {
-  const p = prompt('Mode Développeur — entre le code PIN :');
-  if (p === null) return;
-  hashPin(String(p).trim()).then(h => {
-    h === DEV_PIN_HASH ? (devUnlocked = true, openDev()) : alert('Code incorrect.');
-  });
-}
 
 document.getElementById('btn-dev-close').addEventListener('click', closeDev);
 devOverlay.addEventListener('click', e => { if (e.target === devOverlay) closeDev(); });
@@ -728,12 +729,44 @@ devSongSel.addEventListener('change', () => {
   devLyrics.value = loadDraft(idx);
   editor.selectedId = null;
   editor.selectedIds.clear();
+  syncResetButton();
   if (laneNotes().length) autoFitMidi(); else renderEditor();
+});
+
+// Tempo, grille et décalage : enregistrés dans la chanson (bornés comme à l'import)
+function applyTimingInputs() {
+  if (!song) return;
+  const clean = sanitizeSongData({ timing: { bpm: +devBpm.value, stepsPerBeat: +devSteps.value, startOffsetSec: +devOffset.value } });
+  if (clean) song.timing = clean.timing;
+}
+[devBpm, devSteps, devOffset].forEach(el => {
+  el.addEventListener('input',  applyTimingInputs);
+  el.addEventListener('change', applyTimingInputs);
 });
 
 [devBpm, devSteps, devOffset, devZoom, devScroll].forEach(el => {
   el.addEventListener('input',  () => scheduleAutoSave());
   el.addEventListener('change', () => { scheduleAutoSave(); renderEditor(); });
+});
+
+// Rétablit les notes et paroles d'origine d'une chanson intégrée (efface les modifications de l'élève)
+document.getElementById('btn-dev-reset')?.addEventListener('click', () => {
+  const idx = +selectEl.value || 0;
+  const e   = CATALOGUE[idx];
+  if (!e || e.source !== 'builtin') return;
+  if (!confirm(`Rétablir la version d'origine de « ${e.title} » ? Tes notes et paroles modifiées pour ce titre seront effacées.`)) return;
+  clearTimeout(autoSaveTimer);
+  try { localStorage.removeItem(storeKey(e.file)); localStorage.removeItem(draftKey(e.file)); } catch {}
+  undoStack.length = 0; redoStack.length = 0;
+  loadSong(idx);
+  devBpm.value    = String(song?.timing?.bpm         ?? 120);
+  devSteps.value  = String(song?.timing?.stepsPerBeat ?? 4);
+  devOffset.value = String(song?.timing?.startOffsetSec ?? 0);
+  devLyrics.value = loadDraft(idx);
+  editor.selectedId = null; editor.selectedIds.clear();
+  if (laneNotes().length) autoFitMidi(); else renderEditor();
+  loadNormalLyrics(idx);
+  setSaveStatus("Version d'origine rétablie");
 });
 
 devLyrics.addEventListener('input', () => {
@@ -777,7 +810,7 @@ document.getElementById('btn-dev-export').addEventListener('click', () => {
   a.download = `karaoke-data-${date}.json`;
   document.body.appendChild(a); a.click(); a.remove();
 
-  setSaveStatus(`✅ Export : ${Object.keys(notes).length} chanson(s) exportée(s)`);
+  setSaveStatus(`Export : ${Object.keys(notes).length} chanson(s) exportée(s)`);
 });
 
 /* ===== IMPORT GLOBAL ===== */
@@ -794,17 +827,23 @@ document.getElementById('input-dev-import').addEventListener('change', function 
   reader.onload = e => {
     try {
       const payload = JSON.parse(e.target.result);
-      if (!payload.notes || !payload.drafts) throw new Error('Format invalide');
+      const isObj = v => v && typeof v === 'object' && !Array.isArray(v);
+      if (!isObj(payload) || (!isObj(payload.notes) && !isObj(payload.drafts))) throw new Error('Format invalide');
 
-      let countN = 0, countD = 0;
+      // Seules les clés du karaoké sont acceptées ; notes vérifiées, brouillons limités à 20 000 caractères
+      const CLE = /^karaoke:(notes|draft):[a-z0-9-]{1,120}$/;
+      let countN = 0, countD = 0, ignored = 0;
 
-      for (const [key, val] of Object.entries(payload.notes)) {
-        if (!key.startsWith(STORE_PREFIX)) continue;
-        localStorage.setItem(key, JSON.stringify(val));
+      for (const [key, val] of Object.entries(isObj(payload.notes) ? payload.notes : {})) {
+        const m = CLE.exec(key);
+        const clean = m && m[1] === 'notes' ? sanitizeSongData(val) : null;
+        if (!clean) { ignored++; continue; }
+        localStorage.setItem(key, JSON.stringify(clean));
         countN++;
       }
-      for (const [key, val] of Object.entries(payload.drafts)) {
-        if (!key.startsWith(DRAFT_PREFIX)) continue;
+      for (const [key, val] of Object.entries(isObj(payload.drafts) ? payload.drafts : {})) {
+        const m = CLE.exec(key);
+        if (!m || m[1] !== 'draft' || typeof val !== 'string' || val.length > 20000) { ignored++; continue; }
         localStorage.setItem(key, val);
         countD++;
       }
@@ -821,9 +860,11 @@ document.getElementById('input-dev-import').addEventListener('change', function 
       loadNormalLyrics(idx);
       rebuildLyrics();
 
-      setStatus(`✅ ${countN} chanson(s), ${countD} brouillon(s) importé(s)`);
+      const pl = (n, un, plusieurs) => n + ' ' + (n > 1 ? plusieurs : un);
+      setStatus(`${pl(countN, 'chanson', 'chansons')}, ${pl(countD, 'brouillon importé', 'brouillons importés')}, `
+        + pl(ignored, 'entrée ignorée', 'entrées ignorées'));
     } catch (err) {
-      setStatus('❌ Erreur : ' + err.message);
+      setStatus('Erreur : ' + err.message);
     }
     this.value = ''; // reset pour permettre un ré-import du même fichier
   };

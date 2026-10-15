@@ -3,11 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>🎤 Karaoké Studio</title>
+<title>Karaoké Studio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+<link rel="stylesheet" href="style.css?v=5">
+<script>/* Thème mémorisé appliqué avant l'affichage (voir app.js) */try{var t=localStorage.getItem('karaoke:theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<script src="vendor/Tone.js?v=5"></script>
 </head>
 <body>
 
@@ -15,8 +16,9 @@
 <nav class="navbar">
   <div class="logo" id="logo">Karaoké Studio</div>
   <div class="nav-right">
+    <button class="btn-nav" id="btn-open-editor" type="button">Éditeur de notes</button>
     <button class="btn-nav" id="btn-theme">Mode Clair</button>
-    <button class="btn-nav" id="btn-duo">👥 Duo</button>
+    <button class="btn-nav" id="btn-duo" aria-pressed="false">Duo</button>
     <button class="btn-nav" id="btn-hub">Hub</button>
   </div>
 </nav>
@@ -30,10 +32,14 @@
 
     <!-- Combobox de recherche -->
     <div class="song-combo" id="song-combo">
-      <input type="text" id="song-search" class="song-search" placeholder="Rechercher une chanson…" autocomplete="off">
-      <div class="song-dropdown" id="song-dropdown"></div>
+      <input type="text" id="song-search" class="song-search" placeholder="Rechercher une chanson…" autocomplete="off"
+             role="combobox" aria-label="Rechercher une chanson" aria-expanded="false" aria-controls="song-dropdown" aria-autocomplete="list">
+      <div class="song-dropdown" id="song-dropdown" role="listbox" aria-label="Chansons"></div>
     </div>
     <select id="song-select" style="display:none"></select>
+    <div class="import-row" style="margin:-6px 0 14px">
+      <button class="btn btn-auto btn-sm" id="btn-import" type="button" aria-haspopup="dialog" aria-controls="import-dialog">Importer mes fichiers</button>
+    </div>
 
     <!-- Lecteur audio -->
     <div class="player-box">
@@ -44,21 +50,23 @@
       </div>
       <div class="controls-row">
         <div class="playback-btns">
-          <button class="btn-icon" id="btn-stop" title="Stop">⏮</button>
-          <button class="btn-icon btn-play-main" id="btn-play">▶</button>
+          <button class="btn-icon" id="btn-stop" title="Revenir au début" aria-label="Revenir au début">▮◀</button>
+          <button class="btn-icon btn-play-main" id="btn-play" aria-label="Lecture">▶</button>
         </div>
         <div class="mixer">
-          🗣️
+          <label for="vol-orig">Voix</label>
           <input type="range" id="vol-orig" min="0" max="1" step="0.01" value="0.5">
           <span id="vol-val">50%</span>
         </div>
+        <button class="btn btn-auto btn-sm" id="btn-isolate-voice" aria-pressed="false" title="Coupe l'instrumental pour s'entraîner en suivant la voix originale">Guide vocal</button>
       </div>
     </div>
+    <div class="track-status" id="track-status" aria-live="polite" style="font-size:12px;color:var(--muted);min-height:1em;margin:-8px 0 12px"></div>
 
     <!-- Paroles + Mode Apprendre -->
     <div class="lyrics-editor">
       <div class="lyrics-toolbar">
-        <button class="btn btn-auto btn-sm" id="btn-learn-toggle">📖 Apprendre</button>
+        <button class="btn btn-auto btn-sm" id="btn-learn-toggle" aria-pressed="false">Apprendre</button>
       </div>
       <!-- Vue normale -->
       <textarea id="normal-lyrics" rows="6" readonly style="cursor:default;opacity:.7;resize:none"></textarea>
@@ -72,7 +80,7 @@
     </div>
   </section>
 
-  <!-- PANNEAU DROIT : Enregistrement + Harmonie -->
+  <!-- PANNEAU DROIT : Enregistrement + Transposition -->
   <section class="panel rec-panel">
 
     <!-- Éléments cachés pour la synchronisation des paroles -->
@@ -81,37 +89,41 @@
       <div id="lyric-nxt"></div>
     </div>
 
-    <div class="panel-title" style="font-size:22px;margin-bottom:16px">🎙️ Enregistrement</div>
-    <button class="btn btn-primary" id="btn-mic">🎤 Activer le micro</button>
+    <div class="panel-title" style="font-size:22px;margin-bottom:16px">Enregistrement</div>
+    <button class="btn btn-primary" id="btn-mic">Activer le micro</button>
+    <p class="rec-hint" id="mic-hint" style="margin:-2px 0 8px">Mets un casque : sinon le micro capte la musique et fausse la justesse.</p>
+    <div class="rec-status" id="rec-status" aria-live="polite" style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:6px"></div>
     <div class="rec-row">
-      <button class="btn btn-danger btn-auto" id="btn-rec-start" disabled>🔴 Enregistrer</button>
-      <button class="btn btn-auto" id="btn-rec-stop" disabled>⏹️ Fin</button>
+      <button class="btn btn-danger btn-auto" id="btn-rec-start" disabled>Enregistrer</button>
+      <button class="btn btn-auto" id="btn-rec-stop" disabled>Arrêter</button>
     </div>
     <div id="rec-select-row" style="display:none">
       <select id="rec-select"></select>
-      <button class="btn btn-auto" id="btn-rec-dots" title="Renommer">✏️</button>
-      <button class="btn btn-auto" id="btn-rec-delete" title="Supprimer">🗑️</button>
+      <button class="btn btn-auto" id="btn-rec-dots" title="Renommer la prise">Renommer</button>
+      <button class="btn btn-auto" id="btn-rec-delete" title="Supprimer la prise">Supprimer</button>
     </div>
     <input id="rec-rename" type="text" placeholder="Nouveau nom…" style="display:none">
     <div class="rec-listen-row">
       <button class="btn btn-auto" id="btn-rec-listen" disabled>▶ Réécouter</button>
-      <button class="btn btn-auto" id="btn-rec-restart" disabled>⏮</button>
-      <button class="btn btn-auto" id="btn-rec-export" disabled>⬇️ Export</button>
+      <button class="btn btn-auto" id="btn-rec-restart" disabled title="Revenir au début" aria-label="Revenir au début">▮◀</button>
+      <button class="btn btn-auto" id="btn-rec-export" disabled>Exporter</button>
     </div>
 
     <!-- Score en temps réel (pendant enregistrement) -->
     <div class="score-live" id="score-live" style="display:none">
-      <span>🎯 Justesse en direct</span>
-      <span class="score-live-val" id="score-live-val">—</span>
+      <span>Justesse en direct</span>
+      <span class="score-live-val" id="score-live-val" aria-live="polite">—</span>
     </div>
+    <!-- Score de la dernière prise et record local de la chanson -->
+    <div class="best-line" id="best-line" aria-live="polite" style="font-size:13px;font-weight:600;text-align:center;margin:2px 0 6px;min-height:1em"></div>
     <!-- Comparaison voix après enregistrement -->
     <div class="compare-section" id="compare-section" style="display:none">
-      <button class="btn btn-auto btn-sm" id="btn-compare-toggle">📊 Comparer avec l'artiste</button>
+      <button class="btn btn-auto btn-sm" id="btn-compare-toggle" aria-expanded="false" aria-controls="compare-wrap">Comparer avec la voix guide</button>
       <div class="compare-wrap" id="compare-wrap" style="display:none">
         <canvas id="compare-canvas" class="compare-canvas"></canvas>
         <div class="compare-legend">
           <span><span class="compare-dot" style="background:var(--primary)"></span>Ta voix</span>
-          <span><span class="compare-dot" style="background:#f59e0b"></span>Artiste</span>
+          <span><span class="compare-dot" style="background:#f59e0b"></span>Voix guide</span>
         </div>
         <div class="score-result" id="score-result"></div>
       </div>
@@ -124,19 +136,20 @@
       <canvas id="pitch-canvas"></canvas>
     </div>
     <div class="gh-toggle-row">
-      <button class="gh-toggle-btn" id="btn-gh-toggle" title="Masquer/afficher la visualisation">Mode</button>
+      <button class="gh-toggle-btn" id="btn-gh-toggle" aria-pressed="false" title="Mode Guitar Hero : notes qui défilent">Mode</button>
     </div>
     <p class="rec-hint">Chante dans le micro pour voir ta justesse en temps réel.</p>
 
-    <!-- Harmonie IA -->
+    <!-- Transposition -->
     <div class="harmony-box">
-      <div class="panel-title">✨ Harmonie IA</div>
-      <label class="sub">Source :</label>
+      <div class="panel-title">Transposition</div>
+      <p class="harmony-help" style="font-size:12px;color:var(--muted);margin:-6px 0 10px">Rejoue la voix décalée de l'intervalle choisi (ce n'est pas une harmonie à plusieurs voix).</p>
+      <label class="sub" for="harmony-src">Source :</label>
       <select id="harmony-src">
-        <option value="original">🎵 Voix artiste</option>
-        <option value="record">🎙️ Mon enregistrement</option>
+        <option value="original">Voix</option>
+        <option value="record">Mon enregistrement</option>
       </select>
-      <label class="sub">Intervalle :</label>
+      <label class="sub" for="harmony-semi">Intervalle :</label>
       <select id="harmony-semi">
         <option value="3">Tierce Mineure (+3)</option>
         <option value="4" selected>Tierce Majeure (+4)</option>
@@ -146,8 +159,8 @@
         <option value="-12">Octave Inf. (−12)</option>
       </select>
       <div class="harmony-row">
-        <button class="btn btn-primary btn-auto" id="btn-harmony-play">▶️ Harmoniser</button>
-        <button class="btn btn-auto" id="btn-harmony-stop" disabled>⏹️</button>
+        <button class="btn btn-primary btn-auto" id="btn-harmony-play">Transposer</button>
+        <button class="btn btn-auto" id="btn-harmony-stop" disabled title="Arrêter la transposition" aria-label="Arrêter la transposition">■</button>
       </div>
     </div>
 
@@ -159,17 +172,17 @@
 <audio id="player-instru" preload="metadata"></audio>
 <audio id="player-orig"   preload="metadata"></audio>
 
-<!-- MODE DÉVELOPPEUR (overlay plein écran, PIN : 1702) -->
+<!-- ÉDITEUR DE NOTES (overlay plein écran) -->
 <div class="dev-overlay" id="dev-overlay">
   <div class="dev-shell">
 
     <aside class="dev-sidebar">
       <div class="dev-header">
         <div class="dev-title-block">
-          <div class="dev-title">🛠️ Éditeur de Notes</div>
+          <div class="dev-title">Éditeur de notes</div>
           <div class="dev-sub">Blocs = notes MIDI + syllabe</div>
         </div>
-        <button class="btn btn-auto btn-sm" id="btn-dev-close">✕</button>
+        <button class="btn btn-auto btn-sm" id="btn-dev-close" title="Fermer l'éditeur" aria-label="Fermer l'éditeur">✕</button>
       </div>
 
       <div class="dev-sidebar-scroll">
@@ -177,7 +190,7 @@
         <!-- Chanson -->
         <div class="dev-card">
           <div class="dev-card-head">
-            <div class="dev-card-head-left"><div class="accent" style="background:#6366f1"></div>🎵 Chanson</div>
+            <div class="dev-card-head-left"><div class="accent" style="background:#6366f1"></div>Chanson</div>
             <div class="dev-card-head-right">
               <button class="info-btn" data-tip="Sélectionne la chanson à éditer. Le piano roll charge automatiquement les notes sauvegardées.">?</button>
               <span class="dev-chevron">▾</span>
@@ -186,13 +199,14 @@
           <div class="dev-card-body">
             <div class="dev-field"><label>Titre à éditer</label><select id="dev-song-sel"></select></div>
             <div class="dev-status" id="dev-save-status">Sauvegarde : —</div>
+            <button class="btn btn-auto btn-sm" id="btn-dev-reset" type="button" style="display:none;margin-top:8px !important">Rétablir la version d'origine</button>
           </div>
         </div>
 
         <!-- Tempo -->
         <div class="dev-card">
           <div class="dev-card-head">
-            <div class="dev-card-head-left"><div class="accent" style="background:#f59e0b"></div>⏱️ Tempo & Grille</div>
+            <div class="dev-card-head-left"><div class="accent" style="background:#f59e0b"></div>Tempo &amp; grille</div>
             <div class="dev-card-head-right">
               <button class="info-btn" data-tip="BPM : vitesse de la chanson. Steps/Beat : précision de la grille. Offset : décalage en secondes avant la première note.">?</button>
               <span class="dev-chevron">▾</span>
@@ -216,18 +230,18 @@
         <!-- Outils -->
         <div class="dev-card">
           <div class="dev-card-head">
-            <div class="dev-card-head-left"><div class="accent" style="background:#10b981"></div>🧱 Outils</div>
+            <div class="dev-card-head-left"><div class="accent" style="background:#10b981"></div>Outils</div>
             <div class="dev-card-head-right">
-              <button class="info-btn" data-tip="✏️ Note : clic-glisser pour créer. 🧹 Gomme : clic/glisser pour effacer. 🖱️ Sélection : déplacer/redimensionner, double-clic = syllabe. Clic droit (n'importe où) = boîte de sélection multiple.">?</button>
+              <button class="info-btn" data-tip="Note : clic-glisser pour créer. Gomme : clic/glisser pour effacer. Sélection : déplacer/redimensionner, double-clic = syllabe. Clic droit (n'importe où) = boîte de sélection multiple.">?</button>
               <span class="dev-chevron">▾</span>
             </div>
           </div>
           <div class="dev-card-body">
             <div class="dev-row" style="margin-bottom:8px">
               <div class="dev-toolbar" role="group">
-                <button class="btn active-tool" id="dev-tool-draw">✏️ Note</button>
-                <button class="btn" id="dev-tool-erase">🧹 Gomme</button>
-                <button class="btn" id="dev-tool-sel">🖱️ Sélection</button>
+                <button class="btn active-tool" id="dev-tool-draw">Note</button>
+                <button class="btn" id="dev-tool-erase">Gomme</button>
+                <button class="btn" id="dev-tool-sel">Sélection</button>
               </div>
             </div>
             <div class="dev-grid2">
@@ -240,7 +254,7 @@
         <!-- Auto-écoute -->
         <div class="dev-card">
           <div class="dev-card-head">
-            <div class="dev-card-head-left"><div class="accent" style="background:#ec4899"></div>🤖 Auto-écoute</div>
+            <div class="dev-card-head-left"><div class="accent" style="background:#ec4899"></div>Auto-écoute</div>
             <div class="dev-card-head-right">
               <button class="info-btn" data-tip="Lance la musique et génère des blocs automatiquement en analysant la hauteur de la piste choisie. Nécessite un serveur HTTP.">?</button>
               <span class="dev-chevron">▾</span>
@@ -251,9 +265,9 @@
               <div class="dev-field">
                 <label>Source <button class="info-btn" data-tip="Voix/Instru : nécessite un serveur HTTP. Son système : partage l'audio de l'onglet via le navigateur (Chrome/Edge → sélectionner l'onglet + cocher « Partager le son »).">?</button></label>
                 <select id="dev-auto-src">
-                  <option value="orig" selected>🗣️ Voix</option>
-                  <option value="instru">🎵 Instru</option>
-                  <option value="system">🖥️ Son système</option>
+                  <option value="orig" selected>Voix</option>
+                  <option value="instru">Instru</option>
+                  <option value="system">Son système</option>
                 </select>
               </div>
               <div class="dev-field">
@@ -262,9 +276,9 @@
               </div>
             </div>
             <div class="dev-row">
-              <button class="btn btn-primary btn-auto" id="btn-auto-start">▶️ Auto</button>
-              <button class="btn btn-auto" id="btn-auto-stop" disabled>⏹️ Stop</button>
-              <button class="btn btn-auto btn-sm" id="btn-auto-clear">🧹 Effacer</button>
+              <button class="btn btn-primary btn-auto" id="btn-auto-start">▶ Auto</button>
+              <button class="btn btn-auto" id="btn-auto-stop" disabled>Stop</button>
+              <button class="btn btn-auto btn-sm" id="btn-auto-clear">Effacer</button>
             </div>
             <div class="dev-status" id="dev-auto-status">Auto : prêt</div>
           </div>
@@ -273,7 +287,7 @@
         <!-- Paroles -->
         <div class="dev-card">
           <div class="dev-card-head">
-            <div class="dev-card-head-left"><div class="accent" style="background:#0ea5e9"></div>📝 Paroles</div>
+            <div class="dev-card-head-left"><div class="accent" style="background:#0ea5e9"></div>Paroles</div>
             <div class="dev-card-head-right">
               <button class="info-btn" data-tip="Colle les paroles. Espace = séparateur. '--' entre deux syllabes d'un même mot. Saut de ligne = nouvelle ligne karaoké.">?</button>
               <span class="dev-chevron">▾</span>
@@ -281,14 +295,14 @@
           </div>
           <div class="dev-card-body">
             <div class="dev-field">
-              <label>Syllabes <button class="info-btn" data-tip="Ex : An--dro--me--da look what you've done — chaque espace ou '--' = une note.">?</button></label>
+              <label>Syllabes <button class="info-btn" data-tip="Ex : Ma--ri--on--net--te joue — chaque espace ou -- = une note.">?</button></label>
               <textarea class="dev-field" id="dev-lyrics" rows="5" style="resize:vertical;margin:0"></textarea>
             </div>
             <div class="dev-row" style="margin-top:8px;justify-content:space-between">
               <label style="display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted);cursor:pointer">
                 <input type="checkbox" id="dev-lyrics-auto" checked> Auto-assign
               </label>
-              <button class="btn btn-primary btn-sm" id="btn-lyrics-apply">✅ Appliquer</button>
+              <button class="btn btn-primary btn-sm" id="btn-lyrics-apply">Appliquer</button>
             </div>
             <div class="dev-status" id="dev-lyrics-status">Paroles : —</div>
           </div>
@@ -297,15 +311,15 @@
         <!-- Export / Import -->
         <div class="dev-card">
           <div class="dev-card-head">
-            <div class="dev-card-head-left"><div class="accent" style="background:#a855f7"></div>⬇️ Export / Import</div>
+            <div class="dev-card-head-left"><div class="accent" style="background:#a855f7"></div>Export / Import</div>
             <div class="dev-card-head-right">
               <button class="info-btn" data-tip="Export : télécharge toutes les paroles et notes de toutes les chansons dans un fichier JSON. Import : charge ce fichier pour mettre à jour le navigateur.">?</button>
               <span class="dev-chevron">▾</span>
             </div>
           </div>
           <div class="dev-card-body" style="display:flex;flex-direction:column;gap:8px">
-            <button class="btn btn-primary btn-auto btn-sm" id="btn-dev-export">📤 Exporter tout</button>
-            <button class="btn btn-auto btn-sm" id="btn-dev-import">📥 Importer un fichier</button>
+            <button class="btn btn-primary btn-auto btn-sm" id="btn-dev-export">Exporter tout</button>
+            <button class="btn btn-auto btn-sm" id="btn-dev-import">Importer un fichier</button>
             <input type="file" id="input-dev-import" accept=".json" style="display:none">
             <div class="dev-status" id="dev-import-status"></div>
           </div>
@@ -314,7 +328,7 @@
         <!-- Liste des notes -->
         <div class="dev-card">
           <div class="dev-card-head">
-            <div class="dev-card-head-left"><div class="accent" style="background:#64748b"></div>🧾 Notes créées</div>
+            <div class="dev-card-head-left"><div class="accent" style="background:#64748b"></div>Notes créées</div>
             <div class="dev-card-head-right">
               <button class="info-btn" data-tip="Liste de tous les blocs du piano roll, triés par temps.">?</button>
               <span class="dev-chevron">▾</span>
@@ -327,7 +341,7 @@
 
       </div><!-- /sidebar-scroll -->
 
-      <button type="button" class="dev-save-btn" id="btn-dev-save">💾 Enregistrer</button>
+      <button type="button" class="dev-save-btn" id="btn-dev-save">Enregistrer</button>
     </aside>
 
     <!-- CANVAS PIANO ROLL -->
@@ -340,19 +354,19 @@
         <div class="dev-row" style="gap:14px;align-items:center;flex-wrap:wrap">
           <!-- Outils -->
           <div class="topbar-tools" role="group" title="D = Dessiner · E = Gomme · S = Sélection">
-            <button class="topbar-tool active-topbar-tool" id="topbar-tool-draw"  title="Dessiner (D)">✏️</button>
-            <button class="topbar-tool"                    id="topbar-tool-erase" title="Gomme (E)">🧹</button>
-            <button class="topbar-tool"                    id="topbar-tool-sel"   title="Sélection (S)">🖱️</button>
+            <button class="topbar-tool active-topbar-tool" id="topbar-tool-draw"  title="Dessiner (D)">Note</button>
+            <button class="topbar-tool"                    id="topbar-tool-erase" title="Gomme (E)">Gomme</button>
+            <button class="topbar-tool"                    id="topbar-tool-sel"   title="Sélection (S)">Sélection</button>
           </div>
           <div style="width:1px;height:24px;background:var(--border)"></div>
           <div class="topbar-zoom">
-            <button class="topbar-zoom-btn" id="btn-zoom-out" title="Dézoomer (Ctrl+Molette bas)">−</button>
+            <button class="topbar-zoom-btn" id="btn-zoom-out" title="Dézoomer (Ctrl+Molette bas)" aria-label="Dézoomer">−</button>
             <span id="zoom-pct">140px/s</span>
-            <button class="topbar-zoom-btn" id="btn-zoom-in"  title="Zoomer (Ctrl+Molette haut)">+</button>
+            <button class="topbar-zoom-btn" id="btn-zoom-in"  title="Zoomer (Ctrl+Molette haut)" aria-label="Zoomer">+</button>
           </div>
           <div style="width:1px;height:24px;background:var(--border)"></div>
-          <button id="btn-topbar-auto" style="background:var(--success);border:none;color:#fff;border-radius:8px;padding:5px 14px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px" title="Lance la lecture et place les notes automatiquement">🎙️ Enregistrer les notes</button>
-          <button id="btn-topbar-auto-stop" style="background:transparent;border:1px solid var(--border);color:var(--text);border-radius:8px;padding:5px 14px;font-size:13px;font-weight:700;cursor:pointer;display:none" title="Arrêter l'enregistrement automatique">⏹️ Stop</button>
+          <button id="btn-topbar-auto" style="background:var(--success);border:none;color:#fff;border-radius:8px;padding:5px 14px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px" title="Lance la lecture et place les notes automatiquement">Enregistrer les notes</button>
+          <button id="btn-topbar-auto-stop" style="background:transparent;border:1px solid var(--border);color:var(--text);border-radius:8px;padding:5px 14px;font-size:13px;font-weight:700;cursor:pointer;display:none" title="Arrêter l'enregistrement automatique">Stop</button>
           <div style="width:1px;height:24px;background:var(--border)"></div>
           <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)">
             Min <input type="range" id="midi-min-slider" min="0" max="100" value="40" style="width:80px;accent-color:var(--primary)">
@@ -376,17 +390,18 @@
 
 <!-- MODE DUO -->
 <div class="duo-section" id="duo-section">
+  <div class="duo-warning" id="duo-warning" role="status" style="grid-column:1/-1;display:none;padding:10px 14px;border-radius:10px;border:1px solid var(--warn);color:var(--text);font-size:13px;font-weight:600"></div>
   <div class="duo-player">
-    <div class="duo-title">🎤 Chanteur 1</div>
+    <div class="duo-title">Chanteur 1</div>
     <div class="duo-device-row">
-      <span class="duo-device-icon">🎙️</span>
-      <select class="duo-dev-sel" id="duo-dev-sel1"><option>Chargement…</option></select>
+      <label class="duo-device-icon" for="duo-dev-sel1">Micro</label>
+      <select class="duo-dev-sel" id="duo-dev-sel1" aria-label="Micro du chanteur 1"><option value="">Chargement…</option></select>
     </div>
     <div class="duo-device-active" id="duo-device1"></div>
     <div class="duo-controls">
-      <button class="btn btn-primary btn-auto" id="duo-mic1">🎤 Activer</button>
-      <button class="btn btn-danger btn-auto" id="duo-rec1-start" disabled>🔴 Rec</button>
-      <button class="btn btn-auto" id="duo-rec1-stop" disabled>⏹️</button>
+      <button class="btn btn-primary btn-auto" id="duo-mic1">Activer</button>
+      <button class="btn btn-danger btn-auto" id="duo-rec1-start" disabled title="Lance le morceau et le score du chanteur 1 (sans enregistrer)">Lancer</button>
+      <button class="btn btn-auto" id="duo-rec1-stop" disabled>Arrêter</button>
     </div>
     <div class="duo-pitch-wrap"><canvas id="duo-canvas1"></canvas></div>
     <div class="duo-score-row">
@@ -395,16 +410,16 @@
     </div>
   </div>
   <div class="duo-player">
-    <div class="duo-title">🎤 Chanteur 2</div>
+    <div class="duo-title">Chanteur 2</div>
     <div class="duo-device-row">
-      <span class="duo-device-icon">🎙️</span>
-      <select class="duo-dev-sel" id="duo-dev-sel2"><option>Chargement…</option></select>
+      <label class="duo-device-icon" for="duo-dev-sel2">Micro</label>
+      <select class="duo-dev-sel" id="duo-dev-sel2" aria-label="Micro du chanteur 2"><option value="">Chargement…</option></select>
     </div>
     <div class="duo-device-active" id="duo-device2"></div>
     <div class="duo-controls">
-      <button class="btn btn-primary btn-auto" id="duo-mic2">🎤 Activer</button>
-      <button class="btn btn-danger btn-auto" id="duo-rec2-start" disabled>🔴 Rec</button>
-      <button class="btn btn-auto" id="duo-rec2-stop" disabled>⏹️</button>
+      <button class="btn btn-primary btn-auto" id="duo-mic2">Activer</button>
+      <button class="btn btn-danger btn-auto" id="duo-rec2-start" disabled title="Lance le score du chanteur 2 (sans enregistrer)">Lancer</button>
+      <button class="btn btn-auto" id="duo-rec2-stop" disabled>Arrêter</button>
     </div>
     <div class="duo-pitch-wrap"><canvas id="duo-canvas2"></canvas></div>
     <div class="duo-score-row">
@@ -417,11 +432,11 @@
 <!-- OVERLAY ERREUR MICRO -->
 <div class="mic-error-overlay" id="mic-error-overlay" style="display:none">
   <div class="mic-error-box">
-    <div class="mic-error-icon">🎤</div>
-    <div class="mic-error-title">Micro inaccessible</div>
-    <div class="mic-error-msg" id="mic-error-msg">L'accès au microphone a été refusé.</div>
-    <ul class="mic-error-steps">
-      <li>Clique sur l'icône 🔒 dans la barre d'adresse</li>
+    <div class="mic-error-icon" aria-hidden="true" style="width:48px;height:48px;border-radius:50%;border:5px solid var(--danger);margin:0 auto"></div>
+    <div class="mic-error-title" id="mic-error-title">Micro inaccessible</div>
+    <div class="mic-error-msg" id="mic-error-msg"></div>
+    <ul class="mic-error-steps" id="mic-error-steps">
+      <li>Clique sur l'icône de cadenas dans la barre d'adresse</li>
       <li>Autorise l'accès au <strong>Microphone</strong></li>
       <li>Recharge la page</li>
     </ul>
@@ -429,13 +444,47 @@
   </div>
 </div>
 
+<!-- IMPORT LOCAL (les fichiers restent sur l'appareil, voir import-local.js) -->
+<div class="mic-error-overlay import-overlay" id="import-dialog" role="dialog" aria-modal="true" aria-labelledby="import-title" style="display:none">
+  <div class="mic-error-box import-box" style="text-align:left;max-width:440px">
+    <div class="panel-title" id="import-title" style="margin-bottom:0">Importer mes fichiers</div>
+    <p class="import-note" style="font-size:13px;color:var(--muted);line-height:1.5">Tes fichiers restent sur ton appareil : rien n'est envoyé en ligne. N'importe que des fichiers que tu as le droit d'utiliser.</p>
+    <div class="import-field">
+      <label class="sub" for="import-instru">Accompagnement (instrumental)</label>
+      <input type="file" id="import-instru" accept="audio/*" required>
+    </div>
+    <div class="import-field">
+      <label class="sub" for="import-voice">Voix (facultatif)</label>
+      <input type="file" id="import-voice" accept="audio/*">
+    </div>
+    <div class="import-field">
+      <label class="sub" for="import-lyrics">Paroles .txt ou .lrc (facultatif)</label>
+      <input type="file" id="import-lyrics" accept=".txt,.lrc,text/plain">
+    </div>
+    <div class="import-field">
+      <label class="sub" for="import-cover">Pochette (facultatif)</label>
+      <input type="file" id="import-cover" accept="image/*">
+    </div>
+    <div class="import-msg" id="import-msg" aria-live="polite" style="font-size:13px;color:var(--danger);min-height:1em"></div>
+    <div class="harmony-row">
+      <button class="btn btn-primary btn-auto" id="import-confirm" type="button">Ajouter</button>
+      <button class="btn btn-auto" id="import-cancel" type="button">Annuler</button>
+    </div>
+  </div>
+</div>
+
 <!-- TOOLTIP -->
 <div id="tooltip-popup"></div>
 
 <!-- SCRIPTS -->
-<script src="catalogue.js"></script>
-<script src="app.js"></script>
-<script src="dev.js"></script>
+<script src="paroles.js?v=5"></script>
+<script src="chansons-libres.js?v=5"></script>
+<script src="synth.js?v=5"></script>
+<script src="catalogue.js?v=5"></script>
+<script src="isolation.js?v=5"></script>
+<script src="app.js?v=5"></script>
+<script src="import-local.js?v=5"></script>
+<script src="dev.js?v=5"></script>
 
 </body>
 </html>
